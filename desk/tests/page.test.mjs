@@ -3538,8 +3538,12 @@ test("How it works and Designs show the developer's process; simple mode leaves 
 }));
 
 test("simple mode leaves the live prototype step out of the help", (t) => open(t, DESK({ ...DESIGNER, simple: true, can: { request: true, build: true } }, [BUSY]), async (desk) => {
-  await desk.waitForSelector('#detail [data-intro="requests"] ol.steps');
-  const steps = await desk.textContent('#detail [data-intro="requests"] ol.steps');
+  await desk.waitForSelector("#detail .sboxes");
+  assert.equal(await desk.locator('#detail [data-intro="requests"]').count(), 0, "the list's overview stands where the intro was");
+  await desk.click("#me");
+  await desk.click("#help");
+  await desk.waitForSelector("#detail > .guide");
+  const steps = await desk.textContent("#detail > .guide");
   assert.match(steps, /New request/);
   assert.doesNotMatch(steps, /live prototype/i, "a step only about what simple mode hides leaves with it");
 }));
@@ -3719,4 +3723,249 @@ test("Product → Kit is not on the page for a PM", (t) => open(t, withKit({ ...
   await desk.click('[data-tab="product"]');
   await desk.waitForSelector('[data-filter="productFilter:decisions"]');
   assert.equal(await desk.locator('[data-filter="productFilter:kit"]').count(), 0);
+}));
+
+// Simple mode's one list (docs/desk-page.md → A request's state in the list): requests and pull
+// request changes of the viewer's side, each Open, In dev or Closed, a closed one saying how it ended.
+const at = (h) => `2026-11-18T${String(h).padStart(2, "0")}:00:00Z`;
+const merged = { kind: "pr", pr: 7, url: "https://github.com/o/r/pull/7", merged_at: at(1) };
+const SIMPLE_CARDS = [
+  { id: "r-check", kind: "request", title: "Checking", status: "triage", updated: at(20) },
+  { id: "r-busy", kind: "request", title: "Drawing", status: "variants", busy: true, updated: at(19) },
+  { id: "r-draft", kind: "request", title: "Spec draft", status: "spec", spec: { review: "draft" }, updated: at(18) },
+  { id: "r-spec", kind: "request", title: "Approved", status: "spec", spec: { review: "sent" }, updated: at(17) },
+  { id: "r-sent", kind: "request", title: "Sent", status: "handed-off", updated: at(16) },
+  { id: "r-built", kind: "request", title: "Built", status: "handed-off", built: at(15), updated: at(15) },
+  { id: "r-declined", kind: "request", title: "Declined", status: "declined", updated: at(14) },
+  { id: "r-decided", kind: "request", title: "Decided", status: "declined", decided: at(13), updated: at(13) },
+  { id: "r-small", kind: "request", title: "For developers", status: "triage", for: "developers", updated: at(12) },
+  { id: "c-open", kind: "change", title: "To review", status: "new", attention: { level: "designer", reasons: ["New"] }, source: merged, updated: at(11) },
+  { id: "c-review", kind: "change", title: "Reviewed, not merged", status: "handled", handled: at(10), source: { ...merged, merged_at: null }, updated: at(10) },
+  { id: "c-shipped", kind: "change", title: "Reviewed, merged", status: "handled", handled: at(9), source: merged, updated: at(9) },
+  { id: "c-auto", kind: "change", title: "Nothing to review", status: "new", attention: { level: "fyi", reasons: [] }, source: merged, updated: at(8) },
+  { id: "c-gone", kind: "change", title: "Archived", status: "archived", source: merged, updated: at(7) },
+  { id: "c-small", kind: "change", title: "For a lead developer", status: "new", attention: { level: "developer", reasons: ["Copy"] }, source: merged, updated: at(6) },
+];
+const SIMPLE_ME = { role: "designer", email: "d@example.com", simple: true, spec_review: true, can: { request: true } };
+const rows = (desk) => desk.$$eval("#list [data-card]", (xs) => xs.map((x) => [x.dataset.card, x.querySelector(".spill")?.textContent || ""]));
+
+test("simple mode lists requests and changes of the viewer's side in one list, each in one state, and its menu has one entry", (t) => open(t, DESK(SIMPLE_ME, SIMPLE_CARDS), async (desk) => {
+  await desk.waitForSelector('#list [data-card="r-check"]');
+  assert.equal((await desk.textContent("#nav")).replace(/\d+$/, "").trim(), "Requests & PRs", "one entry, no PR Changes");
+  assert.deepEqual(await rows(desk), [["r-check", ""], ["r-busy", ""], ["r-draft", ""], ["c-open", ""]], "Open by default, newest change first, no pill with one state");
+  assert.equal(await desk.locator('#list [data-card="r-busy"] .dd-spin').count(), 1, "Design Desk at work: the spinner, still Open");
+  await desk.click("details.sf > summary");
+  await desk.click('[data-simf="states:dev"]');
+  await desk.click('[data-simf="states:closed"]');
+  assert.deepEqual(await rows(desk), [["r-check", "Open"], ["r-busy", "Open"], ["r-draft", "Open"], ["r-spec", "In dev"], ["r-sent", "In dev"], ["r-built", "Shipped"],
+    ["r-declined", "Closed"], ["r-decided", "Closed"], ["c-open", "Open"], ["c-review", "In dev"], ["c-shipped", "Shipped"], ["c-auto", "No review needed"]],
+    "every item one state; the other side's items and an archived change are not listed");
+  assert.equal(await desk.locator("details.sf[open]").count(), 1, "the menu stays open while ticking");
+}));
+
+test("simple mode's filter shows only what narrows the list, keeps one of each group and is kept in the browser", (t) => open(t, DESK(SIMPLE_ME, SIMPLE_CARDS), async (desk) => {
+  await desk.waitForSelector('#list [data-card="r-check"]');
+  assert.deepEqual(await desk.$$eval(".sf-chip", (xs) => xs.map((x) => x.textContent.trim())), ["Open"], "the default: one chip, no ×, no kind");
+  await desk.click("details.sf > summary");
+  assert.equal(await desk.getAttribute('[data-simf="states:open"]', "disabled"), "", "the last state cannot be unticked");
+  assert.match(await desk.textContent('[data-simf="states:closed"]'), /Closed\s*5/, "a count by what the kinds let through");
+  await desk.click('[data-simf="states:dev"]');
+  await desk.click('[data-simf="kinds:change"]');
+  assert.deepEqual(await desk.$$eval(".sf-chip", (xs) => xs.map((x) => x.textContent.replace("×", "").trim())), ["Open", "In dev", "Requests"], "a kind shows once it narrows");
+  assert.deepEqual((await rows(desk)).map(([id]) => id), ["r-check", "r-busy", "r-draft", "r-spec", "r-sent"]);
+  await desk.keyboard.press("Escape");
+  await desk.click('[data-simf-drop="states:open"]');
+  assert.deepEqual((await rows(desk)).map(([id]) => id), ["r-spec", "r-sent"], "× drops it");
+  await desk.reload();
+  await desk.waitForSelector('#list [data-card="r-spec"]');
+  assert.deepEqual((await rows(desk)).map(([id]) => id), ["r-spec", "r-sent"], "kept in this browser");
+  await desk.click("details.sf > summary");
+  await desk.click("[data-simf-reset]");
+  assert.deepEqual((await rows(desk)).map(([id]) => id), ["r-check", "r-busy", "r-draft", "c-open"], "Reset goes back to Open");
+}));
+
+test("simple mode lists a developer's side for a developer", (t) => open(t, DESK({ ...SIMPLE_ME, role: "developer" }, SIMPLE_CARDS), async (desk) => {
+  await desk.waitForSelector('#list [data-card="r-small"]');
+  assert.deepEqual((await rows(desk)).map(([id]) => id), ["r-small", "c-small"]);
+}));
+
+// Simple mode's head of an item (docs/desk-page.md → Simple mode): what it is, where it stands,
+// who and when, at most two moves and ⋯ for the rest.
+const HEAD_DESK = (me, cards, asks = []) => `<script>
+window.posts = [];
+const cards = ${JSON.stringify(cards)};
+window.platform = { async request({ method, path, body }) {
+  if (method === "POST") { posts.push({ path, body: JSON.parse(body || "{}") }); return { status: 200, contentType: "application/json", body: JSON.stringify({ thread: { id: "T-9" } }) }; }
+  const answer = path === "/api/me" ? ${JSON.stringify(me)}
+    : path === "/api/cards" ? { cards } : path.startsWith("/api/cards/") ? { card: cards.find((c) => c.id === decodeURIComponent(path.split("/")[3])) }
+    : path === "/api/agenda" ? { agenda: [] } : path === "/api/notifications" ? { seen: null, unread: 0, items: [] } : path === "/api/private" ? { asks: ${JSON.stringify(asks)} } : {};
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
+</script>`;
+const HEAD_ME = { role: "designer", email: "d@example.com", simple: true, spec_review: true, link: "https://desk.example.com/a/x", names: {}, handoff: { idea: "issue" },
+  can: { comment: true, approve: true, skip: true, close: true, revise: true, change: true, handle: true, "follow-up": true } };
+const drawn = { id: "R-5", kind: "request", title: "Calmer limits", status: "feedback", created: "2026-11-17T09:30:00Z", updated: "2026-11-18T10:00:00Z",
+  by: { email: "jana.novak@example.com" }, triage: { verdict: "design", reasons: [] }, request: { problem: "Limits are missed." },
+  variants: [{ id: "v1", name: "Calm", asset: "A-1", version: 1 }], threads: [], waiting: [] };
+const slackDraft = { ...drawn, id: "R-6", title: "From Slack", status: "spec", approved: { by: { email: "d@example.com" }, at: "2026-11-18T09:00:00Z" },
+  origin: { channel: "slack", email: "sam@example.com" }, spec: { review: "draft", asset: "A-2" } };
+const prChange = { id: "P-3", kind: "change", title: "A new toggle row", status: "new", created: "2026-11-18T08:00:00Z", updated: "2026-11-18T08:00:00Z",
+  source: { kind: "pr", pr: 812, url: "https://github.com/o/r/pull/812", draft: true, author: "dana-dev" }, attention: { level: "designer", reasons: ["New"] }, threads: [], waiting: [], screens: [] };
+
+test("simple mode heads a request with its number, link, state, author and two moves; Approve sends as soon as the spec is written", (t) => open(t, HEAD_DESK(HEAD_ME, [drawn, slackDraft, prChange]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="R-5"]');
+  await desk.click('#list [data-card="R-5"]');
+  await desk.waitForSelector("#detail .shead");
+  assert.match(await desk.textContent("#detail .shead h2"), /Calmer limits\s*R-5/, "the title with its number");
+  assert.equal(await desk.locator("#detail .shead h2 [data-copy-link]").count(), 1, "and the link icon that copies its link");
+  assert.match(await desk.textContent("#detail .sh-line"), /Open[\s\S]*jana\.novak[\s\S]*\d:\d\d [AP]M/, "its state, who (no name: the part before the @) and when");
+  assert.doesNotMatch(await desk.textContent("#detail .sh-line"), /@example\.com/, "never a whole address");
+  assert.deepEqual(await desk.$$eval("#detail .sh-acts > .btn", (xs) => xs.map((x) => x.textContent.trim())), ["Request changes", "Approve"]);
+  assert.equal(await desk.locator("#detail .status.req").count(), 0, "no status box in simple mode");
+  await desk.click('#detail .sh-acts [data-act="approve"]');
+  assert.equal(await desk.locator("#cf-check2-wrap").isHidden(), true, "no box to tick: it goes as soon as it is written");
+  assert.match(await desk.textContent("#cf-body"), /as soon as it is written/);
+  await desk.click("#cf-ok");
+  await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/R-5/actions"));
+  assert.equal((await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/R-5/actions").body)).auto_send, true);
+}));
+
+test("simple mode's Request changes sends a note Design Desk draws a new version from; ⋯ holds Close", (t) => open(t, HEAD_DESK(HEAD_ME, [drawn]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="R-5"]');
+  await desk.click('#list [data-card="R-5"]');
+  await desk.waitForSelector("#detail .shead");
+  await desk.click("#detail details.sh-more > summary");
+  assert.deepEqual(await desk.$$eval("#detail .sh-more .menu > *", (xs) => xs.map((x) => x.textContent.trim())), ["Close…"]);
+  await desk.keyboard.press("Escape");
+  await desk.click('#detail [data-act="request-changes"]');
+  await desk.fill("#confirm-form [name=note]", "Make the bar thicker.");
+  await desk.click("#cf-ok");
+  await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/R-5/threads"));
+  assert.deepEqual(await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/R-5/threads").body), { kind: "change", text: "Make the bar thicker.", anchor: { variant: "v1" } });
+}));
+
+test("simple mode: a spec draft that cannot go by itself is Open with Send to developers", (t) => open(t, HEAD_DESK(HEAD_ME, [slackDraft]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="R-6"]');
+  await desk.click('#list [data-card="R-6"]');
+  await desk.waitForSelector("#detail .shead");
+  assert.match(await desk.textContent("#detail .sh-line .spill"), /Open/);
+  assert.deepEqual(await desk.$$eval("#detail .sh-acts > .btn", (xs) => xs.map((x) => x.textContent.trim())), ["Send to developers"]);
+}));
+
+test("simple mode heads a change with its pull request, Approve and Turn into a design request", (t) => open(t, HEAD_DESK(HEAD_ME, [prChange]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="P-3"]');
+  await desk.click('#list [data-card="P-3"]');
+  await desk.waitForSelector("#detail .shead");
+  assert.match(await desk.textContent("#detail .sh-pr"), /#812 Draft/);
+  assert.equal(await desk.getAttribute("#detail .sh-pr", "href"), "https://github.com/o/r/pull/812");
+  assert.match(await desk.textContent("#detail .sh-line"), /dana-dev/);
+  assert.deepEqual(await desk.$$eval("#detail .sh-acts > .btn", (xs) => xs.map((x) => x.textContent.trim())), ["Approve"], "no Request changes on a change yet");
+  assert.deepEqual(await desk.$$eval("#detail .sh-more .menu > *", (xs) => xs.map((x) => x.textContent.trim())), ["Turn into a design request", "Open on GitHub ↗"]);
+  await desk.click('#detail .sh-acts [data-handle="1"]');
+  await desk.waitForFunction(() => posts.some((p) => /P-3/.test(p.path)));
+}));
+
+// Simple mode's page under the head (docs/desk-page.md → Simple mode): a short lead, the designs,
+// what Design Desk found, the long reads folded, then the comments in threads.
+const talked = { ...drawn, id: "R-7", title: "Talked about", request: { problem: "First paragraph.\n\nSecond paragraph." },
+  conflicts: [{ decision: "D-3", status: "active", text: "One primary button per screen.", why: "Two primaries." }],
+  impact: { concept: "the limit", places: [{ where: "Usage", kind: "screen", how: "Shows the same limit." }] },
+  threads: [
+    { id: "T-1", kind: "comment", state: "open", may: { reply: true, resolve: true }, messages: [{ by: { email: "pat.lee@example.com", role: "designer" }, at: "2026-11-18T09:00:00Z", text: "Bigger?" },
+      { by: { agent: true }, at: "2026-11-18T09:10:00Z", text: "It follows D-3." }] },
+    { id: "T-2", kind: "comment", state: "resolved", resolved: { by: { email: "d@example.com" }, at: "2026-11-18T10:00:00Z" }, may: { reply: true, resolve: true },
+      messages: [{ by: { email: "dana@example.com", name: "Dana Kim", role: "developer" }, at: "2026-11-18T08:00:00Z", text: "Title a bit smaller?" }] },
+    { id: "T-3", kind: "comment", state: "open", anchor: { variant: "v1", label: "Title" }, may: { reply: true, resolve: true }, messages: [{ by: { email: "pat.lee@example.com", role: "designer" }, at: "2026-11-18T07:00:00Z", text: "Warmer title?" }] }] };
+
+test("simple mode's request page: lead, designs, what Design Desk found, folds, then threaded comments", (t) => open(t, HEAD_DESK(HEAD_ME, [talked, drawn]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="R-7"]');
+  await desk.click('#list [data-card="R-7"]');
+  await desk.waitForSelector("#detail .sthreads");
+  const order = await desk.$$eval("#detail .slead, #detail .vtabs, #detail .sfound, #detail details.fold.big:not(.vpanel details), #detail .sthreads", (xs) => xs.map((x) => x.className.split(" ")[0] === "fold" ? x.querySelector("summary").textContent.trim() : x.className.split(" ").find((k) => ["slead", "vtabs", "sfound", "sthreads"].includes(k))));
+  assert.deepEqual(order, ["slead", "The request in full", "vtabs", "sfound", "Where else this shows up", "sthreads"]);
+  assert.equal((await desk.textContent("#detail .slead")).trim(), "First paragraph.", "the lead is the first paragraph");
+  assert.match(await desk.textContent("#detail .sfound"), /Goes against D-3/);
+  assert.equal(await desk.locator("#detail .votes button.vote").count(), 0, "no vote buttons in simple mode");
+  assert.match(await desk.textContent("#th-T-1 .smsg:not(.re) .who"), /pat\.lee[\s\S]*designer/i, "who by name (the part before the @) and role");
+  assert.equal(await desk.locator("#th-T-1 .smsg.re").count(), 1, "a reply is indented under the first message");
+  assert.equal(await desk.locator("#th-T-3 [data-work-in]").count(), 1, "a comment on a design can be worked in");
+  assert.match(await desk.textContent("#th-T-3 .sjump"), /Option 1: Calm · Title/, "its option and part, a jump to them");
+  assert.equal(await desk.locator("#th-T-1 [data-work-in]").count(), 0, "one on no design cannot");
+  assert.equal(await desk.locator("#th-T-2[open]").count(), 0, "a resolved thread is one line");
+  assert.match(await desk.textContent("#th-T-2 summary"), /Dana Kim: Title a bit smaller\?[\s\S]*Resolved by you/);
+  await desk.click("#th-T-2 summary");
+  assert.equal(await desk.locator("#th-T-2[open]").count(), 1, "and opens on a click");
+}));
+
+test("simple mode's change page: lead, the changes, what to look at, comments; Nothing to flag without findings", (t) => open(t, HEAD_DESK(HEAD_ME, [prChange, { ...prChange, id: "P-4", title: "Quiet", attention: { level: "fyi", reasons: [] }, source: { ...prChange.source, draft: false } }]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="P-3"]');
+  await desk.click('#list [data-card="P-3"]');
+  await desk.waitForSelector("#detail .sfound");
+  assert.match(await desk.textContent("#detail .sfound"), /What to look at[\s\S]*New/);
+  assert.equal(await desk.locator("#detail .sthreads").count(), 1);
+  await desk.evaluate(() => { location.hash = "#P-4"; });
+  await desk.waitForFunction(() => /Quiet/.test(document.querySelector("#detail .shead h2")?.textContent || ""));
+  assert.match(await desk.textContent("#detail .sfound"), /Nothing to flag/);
+}));
+
+// Simple mode with nothing open: how many items are in each state, each box filtering the list.
+test("simple mode's overview counts the items in each state, and a box filters the list to its state", (t) => open(t, DESK(SIMPLE_ME, SIMPLE_CARDS), async (desk) => {
+  await desk.waitForSelector("#detail .sboxes");
+  assert.deepEqual(await desk.$$eval("#detail .sbox .n", (xs) => xs.map((x) => x.textContent)), ["4", "3", "5"]);
+  assert.match(await desk.textContent('#detail .sbox[data-s="open"]'), /3 requests, 1 PR change/);
+  await desk.click('#detail .sbox[data-s="dev"]');
+  assert.deepEqual((await rows(desk)).map(([id]) => id), ["r-spec", "r-sent", "c-review"], "In dev only");
+}));
+
+test("simple mode's head says, muted, who approved it and where it went; a bug says so; a reviewed change can be undone", (t) => open(t, HEAD_DESK(HEAD_ME, [
+  { ...drawn, id: "R-8", title: "Sent one", status: "handed-off", type: "bug", request: { type: "bug", problem: "Broken." }, approved: { by: { email: "jana.novak@example.com" }, at: "2026-11-18T09:00:00Z" }, spec: { issue_url: "https://github.com/o/r/issues/123" } },
+  { ...prChange, id: "P-5", status: "handled", handled: { by: { email: "d@example.com" }, at: "2026-11-18T10:00:00Z" } }]), async (desk) => {
+  await desk.waitForSelector("#list");
+  await desk.evaluate(() => { location.hash = "#R-8"; });
+  await desk.waitForSelector("#detail .sh-after");
+  assert.match(await desk.textContent("#detail .sh-after"), /Approved by jana\.novak[\s\S]*Sent to #123/);
+  assert.equal(await desk.getAttribute("#detail .sh-after a", "href"), "https://github.com/o/r/issues/123");
+  assert.match(await desk.textContent("#detail .sh-line"), /Bug/);
+  await desk.evaluate(() => { location.hash = "#P-5"; });
+  await desk.waitForFunction(() => /A new toggle row/.test(document.querySelector("#detail .shead h2")?.textContent || ""));
+  assert.match(await desk.textContent("#detail .sh-after"), /Approved by you/);
+  assert.equal(await desk.locator('#detail .sh-more [data-handle="0"]').count(), 1, "Undo approval under ⋯");
+}));
+
+// The head keeps to the store's rules (review of #184): an archived change opens, a draft waits
+// whatever spec_review says, no send past an open question, Reopen as full mode allows it, a
+// send's issue or pull request by its number, and an item's kept name.
+test("simple mode's head keeps to the store's rules", (t) => open(t, HEAD_DESK({ ...HEAD_ME, spec_review: false, can: { ...HEAD_ME.can, reopen: true } }, [
+  { ...prChange, id: "P-9", title: "Archived one", status: "archived", source: { ...prChange.source, draft: false, merged_at: "2026-11-01T00:00:00Z" } },
+  { ...slackDraft, id: "R-9", title: "Draft, no review", origin: { channel: "slack", reporter: "Sam Lee" } },
+  { ...slackDraft, id: "R-10", title: "Draft with a question", threads: [{ id: "T-9", kind: "asks", state: "open", may: { reply: true }, messages: [{ by: { agent: true }, at: "2026-11-18T09:00:00Z", text: "Which label?" }] }] },
+  { ...drawn, id: "R-11", title: "Sent, built", status: "handed-off", built: { at: "2026-11-18T09:00:00Z" }, approved: { by: { email: "d@example.com" }, at: "2026-11-17T09:00:00Z" }, spec: { pr_url: "https://github.com/o/r/pull/7#issuecomment-123" } },
+  { ...drawn, id: "R-12", title: "Declined", status: "declined" }]), async (desk) => {
+  await desk.waitForSelector("#list");
+  const go = async (id, title) => { await desk.evaluate((h) => { location.hash = h; }, `#${id}`); await desk.waitForFunction((x) => (document.querySelector("#detail .shead h2")?.textContent || "").includes(x), title); };
+  await go("P-9", "Archived one");
+  assert.match(await desk.textContent("#detail .sh-line .spill"), /No review needed/, "an archived change opens, Closed");
+  await go("R-9", "Draft, no review");
+  assert.deepEqual(await desk.$$eval("#detail .sh-acts > .btn", (xs) => xs.map((x) => x.textContent.trim())), ["Send to developers"], "a draft waits with spec_review off too");
+  assert.match(await desk.textContent("#detail .sh-line"), /Sam Lee/, "the name the request keeps");
+  await go("R-10", "Draft with a question");
+  assert.equal(await desk.locator("#detail [data-spec-send]").count(), 0, "no send past Design Desk's open question");
+  await go("R-11", "Sent, built");
+  assert.match(await desk.textContent("#detail .sh-after"), /Sent to #7 /, "the pull request's number, not the comment's");
+  assert.equal(await desk.locator('#detail .sh-more [data-act="reopen"]').count(), 0, "a sent request reopens for an admin alone");
+  await go("R-12", "Declined");
+  assert.equal(await desk.locator('#detail .sh-more [data-act="reopen"]').count(), 1, "a declined one for who may reopen");
+}));
+
+// Simple mode's private ask is its lock alone; its tooltip says the rest (docs/desk-page.md → The look).
+test("simple mode's Ask privately is its lock alone, named for a screen reader and in its tooltip", (t) => open(t, HEAD_DESK({ ...HEAD_ME, can: { ...HEAD_ME.can, ask: true } }, [drawn],
+  [{ id: "T-40", kind: "private", state: "answered", context: { card: "R-5", label: "R-5 Calmer limits" }, messages: [{ by: { email: "d@example.com" }, at: "2026-11-18T09:00:00Z", text: "Why?" }, { by: { agent: true }, at: "2026-11-18T09:01:00Z", text: "Because." }] }]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="R-5"]');
+  await desk.click('#list [data-card="R-5"]');
+  await desk.waitForSelector(".ask-fab.compact");
+  await desk.waitForSelector(".ask-fab .ask-count");
+  assert.equal(await desk.getAttribute(".ask-fab", "aria-label"), "Ask privately about this request, 2 messages so far", "its name, with its count, for a screen reader");
+  assert.equal(await desk.locator(".ask-fab .ask-lbl").isHidden(), true, "only the lock");
+  assert.match(await desk.getAttribute(".ask-fab", "data-tip"), /Ask Design Desk privately about R-5/, "its tooltip says what it asks about");
 }));

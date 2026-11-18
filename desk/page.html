@@ -235,6 +235,65 @@
   .row.item > .open { display: block; width: 100%; padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
   .row.item > .open::after { content: ""; position: absolute; inset: 0; border-radius: var(--radius); }
   .row.item:has(> .open:focus-visible) { outline: 2px solid var(--accent); outline-offset: 1px; } .row.item > .open:focus-visible { outline: 0; }
+  /* Simple mode's row: the kind's icon, the title, then when it last changed and its state. */
+  .row.item.srow > .open { display: grid; grid-template-columns: 20px 1fr; column-gap: 8px; row-gap: 4px; align-items: start; }
+  .srow .kic { grid-row: span 2; color: var(--muted); padding-top: 2px; } .kic svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; display: block; }
+  .srow .sline { display: flex; align-items: center; gap: 8px; font-size: var(--fs-meta); color: var(--muted); min-height: 20px; }
+  .srow .sline .spill { margin-left: auto; }
+  .spill { --p: var(--muted); display: inline-flex; align-items: center; gap: 4px; padding: 0 8px; border-radius: 999px; font-size: var(--fs-micro); font-weight: 500; line-height: 20px; white-space: nowrap;
+    color: var(--p); background: color-mix(in srgb, var(--p) 14%, transparent); }
+  .spill[data-s="open"] { --p: var(--ok); } .spill[data-s="dev"] { --p: var(--accent); } .spill[data-s="shipped"] { --p: var(--live); }
+  .spill[data-s="none"] { --p: var(--muted); } .spill[data-s="closed"] { --p: var(--bad); }
+  /* Simple mode's head of an item: kept in view while the page scrolls. */
+  .shead { position: sticky; top: -24px; z-index: 6; display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; margin: -24px calc(-1 * var(--pad-x)) 16px; padding: 16px var(--pad-x); background: var(--bg); border-bottom: 1px solid var(--line); }
+  .sh-main { min-width: 0; } .shead h2 { margin: 0; } .shead h2 > span:not(.kic) { margin-right: 8px; }
+  .shead h2 .kic { display: inline-block; color: var(--muted); margin-right: 8px; vertical-align: -2px; } .shead h2 .kic svg { width: 20px; height: 20px; }
+  .sh-line { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; font-size: var(--fs-meta); color: var(--muted); }
+  .sh-facts { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; } .sh-facts .sep { color: var(--line); }
+  .sh-work { display: inline-flex; align-items: center; gap: 4px; color: var(--ink); }
+  .sh-pr { color: var(--ink); text-decoration: none; font-weight: 500; } .sh-pr:hover { text-decoration: underline; }
+  .sh-acts { display: flex; gap: 8px; align-items: center; flex: none; } details.more.sh-more .menu { left: auto; right: 0; }
+  @media (max-width: 860px) { .shead { top: 28px; margin: 0 -16px 12px; padding: 12px 16px; flex-wrap: wrap; } }
+  /* Simple mode's page: a short lead, what Design Desk found, the folds, the comments. */
+  .slead { max-width: var(--measure); font-size: var(--fs-head); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+  .slead p { margin: 0; }
+  .sfound { max-width: var(--measure); margin-top: 24px; padding: 16px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--panel); }
+  .sfound h3 { margin-top: 0; } .sfound h4 { margin: 12px 0 4px; } .sfound ul { margin: 4px 0 0; padding-left: 20px; }
+  details.sfold { max-width: var(--measure); border-top: 1px solid var(--line); }
+  .sthreads { max-width: var(--measure); margin-top: 32px; }
+  .sthread { padding: 12px 16px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--panel); margin-bottom: 12px; }
+  details.sthread.done > summary { display: flex; gap: 8px; align-items: baseline; justify-content: space-between; cursor: pointer; list-style: none; color: var(--muted); font-size: var(--fs-meta); }
+  details.sthread.done > summary::-webkit-details-marker { display: none; } details.sthread.done > summary .q { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  details.sthread.done[open] > summary { margin-bottom: 12px; }
+  .smsg { display: flex; gap: 12px; align-items: flex-start; } .smsg + .smsg { margin-top: 12px; } .smsg.re { margin-left: 40px; }
+  .smsg .sm-b { min-width: 0; flex: 1; } .smsg .sm-b > p:first-of-type { margin-top: 4px; }
+  .smsg .who { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: var(--fs-meta); } .smsg .who .role, .smsg .who .at { color: var(--muted); }
+  .smsg .who .role { display: inline-flex; align-items: center; gap: 4px; }
+  .sav { width: 28px; height: 28px; flex: none; border-radius: 50%; display: grid; place-items: center; font-size: var(--fs-meta); font-weight: 600; color: var(--ink); background: var(--soft); }
+  .sav[data-r="designer"], .sav[data-r="admin"] { background: var(--live-soft); color: var(--live); } .sav[data-r="developer"], .sav[data-r="lead-developer"] { background: var(--info-soft); color: var(--accent); }
+  .sav[data-r="agent"] { background: var(--ink); color: var(--bg); } .sav svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+  .sthread .chip { margin-bottom: 8px; } .sthread .reply { margin-top: 12px; margin-left: 40px; }
+  .sh-after { margin-top: 4px; font-size: var(--fs-meta); color: var(--muted); } .sh-after a { color: inherit; }
+  .sthread .chip.sjump { cursor: pointer; border: 0; font: inherit; font-size: var(--fs-micro); } .sthread .chip.sjump:hover { text-decoration: underline; }
+  .sboxes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; max-width: 720px; margin: 16px auto 0; }
+  .sbox { --p: var(--muted); display: grid; align-content: start; gap: 4px; text-align: left; padding: 16px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--panel); color: inherit; font: inherit; cursor: pointer; }
+  .sbox:hover { border-color: var(--p); } .sbox .n { font-size: var(--fs-title); font-weight: 600; color: var(--p); line-height: 1.1; }
+  .sbox[data-s="open"] { --p: var(--ok); } .sbox[data-s="dev"] { --p: var(--accent); } .sbox[data-s="closed"] { --p: var(--live); }
+  @media (max-width: 860px) { .sboxes { grid-template-columns: 1fr; } }
+  /* Simple mode's filter: one button, its menu of ticks, and a chip for each thing it narrows by. */
+  .simfilter { align-items: center; } .simfilter details.sf > summary { display: inline-flex; align-items: center; gap: 4px; }
+  .simfilter details.sf > summary svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
+  .simfilter .menu { min-width: 220px; }
+  .sf-h { padding: 4px 8px 0; font-size: var(--fs-micro); color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .sf-opt { display: flex; align-items: center; gap: 8px; width: 100%; padding: 4px 8px; border: 0; border-radius: var(--r-sm); background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+  .sf-opt:hover:not(:disabled) { background: var(--soft); } .sf-opt:disabled { cursor: default; }
+  .sf-opt .box { width: 14px; height: 14px; border: 1px solid var(--muted); border-radius: var(--r-xs); flex: none; display: grid; place-items: center; }
+  .sf-opt[aria-checked="true"] .box { background: var(--accent); border-color: var(--accent); }
+  .sf-opt[aria-checked="true"] .box::after { content: ""; width: 6px; height: 3px; border: solid var(--accent-ink); border-width: 0 0 2px 2px; transform: rotate(-45deg) translate(1px, -1px); }
+  .sf-opt .n { margin-left: auto; color: var(--muted); font-size: var(--fs-meta); }
+  .sf-reset { margin-top: 4px; }
+  .sf-chip { display: inline-flex; align-items: center; gap: 4px; padding: 0 8px; border: 1px solid var(--line); border-radius: 999px; font-size: var(--fs-meta); line-height: 24px; }
+  .sf-chip .linkbtn { color: var(--muted); padding: 0 2px; }
   .prov { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; font-size: var(--fs-meta); color: var(--muted); }
   .prov .when { color: var(--ink); font-weight: 500; }
   .row .prov { margin-top: 4px; position: relative; z-index: 1; pointer-events: none; font-size: var(--fs-meta); }
@@ -1320,6 +1379,8 @@
   /* The private ask: the primary button's shape, floating. */
   .ask-fab { border-radius: var(--r-md); padding: 8px 16px; min-height: 36px; font-size: var(--fs-ui); font-weight: 500; gap: 8px; border-color: var(--ink); box-shadow: 0 2px 6px rgba(0,0,0,.12), 0 8px 24px rgba(0,0,0,.12); }
   .ask-fab:hover { opacity: .9; }
+  /* Simple mode: the lock alone; its tooltip, and its name for a screen reader, say the rest. */
+  .ask-fab.compact { padding: 8px 12px; } .ask-fab.compact .ask-lbl { display: none; }
   .ask-fab .spin { margin-top: 0; }
   .ask-fab .ask-count { min-width: 18px; height: 18px; padding: 0 8px; border-radius: 999px; background: var(--panel); color: var(--ink); font-size: var(--fs-micro); font-weight: 600; line-height: 18px; text-align: center; box-sizing: border-box; font-variant-numeric: tabular-nums; }
   .ask-fab .ico { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
@@ -1999,7 +2060,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const TIP = {
     act: {
       // Approve before any option: the spec comes from the request itself.
-      approve: () => S.me?.spec_review ? (S.card?.kind === "request" && !(S.card.variants || []).length ? "Design Desk writes the developer spec now, without a vote or a live prototype. It waits here for you to read; nothing goes to developers until you press Send to developers."
+      "request-changes": "Tell Design Desk what should change; it draws a new version",
+      approve: () => simple() && S.card?.kind === "request" && S.me?.spec_review && S.card.origin?.channel !== "slack" && !S.card.from_pr ? "Approves the design: Design Desk writes the developer spec and sends it to developers as soon as it is written"
+        : S.me?.spec_review ? (S.card?.kind === "request" && !(S.card.variants || []).length ? "Design Desk writes the developer spec now, without a vote or a live prototype. It waits here for you to read; nothing goes to developers until you press Send to developers."
           : "Approves the design: Design Desk writes the developer spec for you to read. Nothing goes to developers until you press Send to developers.")
         : S.card?.kind === "request" && !(S.card.variants || []).length ? "Design Desk writes the developer spec now, without a vote or a live prototype, and sends it on. You confirm first; once sent it can't be taken back."
         : "Approves the design: Design Desk writes the developer spec and sends it on. You confirm first; once sent it can't be taken back.",
@@ -2132,7 +2195,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   };
   const BTN_ICON = {
     act: { workspace: "pen", explore: "spark", build: (el) => /another option/.test(textOf(el)) ? "undo" : "screen", approve: () => S.card?.kind === "request" && !(S.card.variants || []).length ? "send" : "check",
-      reopen: "undo", revise: "redo", close: "cross", states: "layers", slack: "send", unqueue: "minus",
+      reopen: "undo", revise: "redo", "request-changes": "redo", close: "cross", states: "layers", slack: "send", unqueue: "minus",
       draw: "pen", refresh: "redo", history: "clock", "figma-import": "down", "figma-export": "up" },
     size: { small: "bolt", designer: "person" },
     adjust: "pen", addShots: "image", wsEdit: "pen", wsBuild: "screen",
@@ -2232,6 +2295,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       if (!d.contains(e.target) || e.target.closest(".menu button:not([data-keep])")) d.open = false;
   }, true);
   const moreClose = () => { for (const d of document.querySelectorAll(FOLDS)) d.open = false; };
+  // Simple mode's filter menu stays open across the list's redraws until it is closed.
+  document.addEventListener("toggle", (e) => { if (e.target.matches?.("details.sf")) S.simMenu = e.target.open; }, true);
   // A move to another page closes what floated over the one left: a More, an open dialog. A dialog
   // with something typed, picked or added in it stays open, so nothing written is lost (formState below).
   const leaveClose = () => { moreClose(); for (const d of document.querySelectorAll("dialog[open]")) if (d._clean === undefined || formState(d) === d._clean) d.close("cancel"); };
@@ -2328,7 +2393,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   })();
   // You opened a request's parts for a developer (Contact a developer): its step moves on, for you.
   const devAsked = (c) => store.get(`desk-dev-asked:${c.id}`) === "1";
-  // Simple mode (a switch in your menu, kept for you on the Desk) only hides: Designs, People,
+  // Simple mode (a switch in your menu, kept for you on the Desk) is review-first: one list of
+  // requests and changes with three states (simpleState, below). Besides, it hides: Designs, People,
   // Product and Issues leave the tabs, a sent request its Show the design, Product's pages their bar, the presentation its page and buttons,
   // and a request its buttons that build a live prototype and an option its Why it looks like
   // this strip (the design workspace keeps it). A link to anything in them still opens it: a D-3 in a request opens the decision.
@@ -2914,8 +2980,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const sep = `<span class="sep" aria-hidden="true"></span>`;
     // Designs only for developers and admins; a designer reaches one from a notification (docs/desk-page.md → Designs).
     const designs = can("designs") ? [[["designs", designCards("todo").length]]] : [];
-    const html = [[["requests", open.length, asks && plural(asks, "request waits", "requests wait") + " for an answer"]], ...designs, [["new", unseen], ["issues", openIssues]], [["product"], ["people"]]]
-      .map((group) => group.filter(([k]) => !(simple() && SIMPLE_HIDES.includes(k)))).filter((group) => group.length)
+    // Simple mode: one entry for requests and pull request changes, current on either tab.
+    const opens = simple() ? simpleCards({ states: ["open"], kinds: SIM_KINDS.map(([k]) => k) }).length : 0;
+    const one = `<button data-tab="requests" aria-current="${S.tab === "requests" || S.tab === "new"}" class="main">Requests &amp; PRs${opens ? `<span class="count" title="${opens} need a design decision">${opens}</span>` : ""}</button>`;
+    const html = simple() ? one : [[["requests", open.length, asks && plural(asks, "request waits", "requests wait") + " for an answer"]], ...designs, [["new", unseen], ["issues", openIssues]], [["product"], ["people"]]]
       .map((group) => group.map(tab).join("")).join(sep);
     // The poll redraws the menu every few seconds: an unchanged menu is left as it is, so a
     // tooltip stays open and keyboard focus stays where it was.
@@ -3007,6 +3075,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     return `<div class="process">${flow ? flow() + LEGEND() : ""}<h5>Step by step</h5><ol class="steps">${steps.map(step).join("")}</ol>${it.tip ? `<p class="tip">${it.tip}</p>` : ""}</div>`;
   }
   function renderIntro() {
+    if (simpleList()) return simpleOverview();
     const it = INTRO()[S.tab];
     if (!it) return "";
     return `<details class="intro" data-intro="${S.tab}"${store.get("desk-intro") === "hidden" ? "" : " open"}>
@@ -3137,6 +3206,153 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     && !(Array.isArray(c.conflicts) ? c.conflicts.some((x) => x.status === "active") : (c.against || []).length));
   const requestCards = (filter, aud = reqFor()) => newestFirst(S.cards.filter((c) => c.kind === "request" && forOf(c) === aud
     && (filter === "all" ? true : filter === "unread" ? c.read === false || S.justRead.has(c.id) : filter === "turn" ? myTurn(c) : filter === "open" ? !closed(c) : closed(c))));
+  // Simple mode (docs/desk-page.md → A request's state in the list): requests and changes in one
+  // list, each on the viewer's side in one of three states, by who works on it — Open (it needs a
+  // design decision), In dev (approved and being built, or reviewed and not merged), Closed (nobody
+  // works on it) — and a closed one says how it ended. Design Desk at work is no state: Open, with a spinner.
+  const mySide = () => (DEVELOPERS.includes(S.me?.role) ? "developers" : "designers");
+  // An approved request whose spec draft waits for a person to send it is theirs to move: Open.
+  // As full mode reads it: a spec draft waits until a person sends it, unless its approver asked it to go by itself.
+  const specWaits = (c) => c.status === "spec" && c.spec?.review === "draft" && !c.approved?.auto_send;
+  function simpleState(c, anySide = false) {
+    if (!c || !["request", "change"].includes(c.kind) || (!anySide && forOf(c) !== mySide())) return null;
+    if (c.kind === "request") {
+      if (c.status === "declined") return { state: "closed", pill: "closed" };
+      if (c.status === "handed-off") return c.built ? { state: "closed", pill: "shipped" } : { state: "dev", pill: null };
+      return c.status === "spec" && !specWaits(c) ? { state: "dev", pill: null } : { state: "open", pill: null };
+    }
+    // An archived change is never listed, but its link still opens it: nobody works on it.
+    if (c.status === "archived") return anySide ? { state: "closed", pill: c.source?.merged_at ? (c.handled ? "shipped" : "none") : "closed" } : null;
+    if (!c.handled && !autoHandled(c)) return { state: "open", pill: null };
+    if (!c.source?.merged_at) return { state: "dev", pill: null };
+    return { state: "closed", pill: c.handled ? "shipped" : "none" };
+  }
+  const SIM_STATES = [["open", "Open"], ["dev", "In dev"], ["closed", "Closed"]];
+  const SIM_KINDS = [["request", "Requests"], ["change", "PR changes"]];
+  const SIM_PILL = { open: "Open", dev: "In dev", shipped: "Shipped", none: "No review needed", closed: "Closed" };
+  const SIM_TIP = { open: "It needs a design decision", dev: "Approved: developers are building it", shipped: "Approved by a person and shipped",
+    none: "Merged; Design Desk found nothing to review", closed: "Closed without being built" };
+  // The filter: states and kinds, any of each; kept in this browser (desk-simFilter).
+  const SIM_DEFAULT = () => ({ states: ["open"], kinds: ["request", "change"] });
+  S.simFilter = (() => {
+    try {
+      const v = JSON.parse(store.get("desk-simFilter") || "null"), ok = (xs, all) => Array.isArray(xs) && xs.filter((x) => all.some(([k]) => k === x));
+      const states = v && ok(v.states, SIM_STATES), kinds = v && ok(v.kinds, SIM_KINDS);
+      return states?.length && kinds?.length ? { states, kinds } : SIM_DEFAULT();
+    } catch { return SIM_DEFAULT(); }
+  })();
+  const simpleList = () => simple() && (S.tab === "requests" || S.tab === "new") && !presenting();
+  const lastChange = (c) => String(c.updated || dateOf(c));
+  const simpleCards = (f = S.simFilter) => S.cards.map((c) => [c, simpleState(c)])
+    .filter(([c, s]) => s && f.states.includes(s.state) && f.kinds.includes(c.kind)).map(([c]) => c)
+    .sort((a, b) => lastChange(b).localeCompare(lastChange(a)));
+  // A row's date: Today, Yesterday or the day, with the time; the year only when it is not this year.
+  const sWhen = (iso) => {
+    if (!iso) return "";
+    const d = new Date(iso), w = dayWord(iso), t = d.toLocaleTimeString("en", { hour: "numeric", minute: "2-digit" });
+    const date = w !== day(iso) ? w : d.toLocaleDateString("en", { weekday: "short", day: "numeric", month: "short", ...(d.getFullYear() !== new Date().getFullYear() ? { year: "numeric" } : {}) });
+    return `${date}, ${t}`;
+  };
+  const simplePill = (c) => { const s = simpleState(c); const k = s?.pill || s?.state; return k ? `<span class="spill" data-s="${k}" title="${esc(SIM_TIP[k])}">${SIM_PILL[k]}</span>` : ""; };
+  const KIND_ICON = { request: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg>`,
+    change: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M6 8.5v7M18 15.5V9a3 3 0 0 0-3-3h-4"/><path d="m13 4-2 2 2 2"/></svg>` };
+  const kindIcon = (c) => `<span class="kic" title="${c.kind === "change" ? "A pull request's change" : "A design request"}">${KIND_ICON[c.kind] || ""}</span>`;
+  // One filter for the list: a button whose menu ticks any of each group, its counts by what the
+  // other group lets through; beside it only what narrows the list, each a chip that drops it.
+  function simpleFilterBar() {
+    const f = S.simFilter, n = (states, kinds) => simpleCards({ states, kinds }).length;
+    const opt = (group, k, label, on, count) => `<button class="sf-opt" data-keep data-simf="${group}:${k}" role="menuitemcheckbox" aria-checked="${on}"${on && f[group].length === 1 ? ` disabled title="Keep at least one"` : ""}><span class="box" aria-hidden="true"></span><span>${label}</span><span class="n">${count}</span></button>`;
+    const states = SIM_STATES.map(([k, l]) => opt("states", k, l, f.states.includes(k), n([k], f.kinds))).join("");
+    const kinds = SIM_KINDS.map(([k, l]) => opt("kinds", k, l, f.kinds.includes(k), n(f.states, [k]))).join("");
+    const narrowed = JSON.stringify(f) !== JSON.stringify(SIM_DEFAULT());
+    const chip = (group, k, label) => `<span class="sf-chip">${label}${f[group].length > 1 ? `<button class="linkbtn" data-simf-drop="${group}:${k}" aria-label="Stop filtering by ${esc(label)}" title="Stop filtering by ${esc(label)}">×</button>` : ""}</span>`;
+    const chips = [...SIM_STATES.filter(([k]) => f.states.includes(k)).map(([k, l]) => chip("states", k, l)),
+      ...(f.kinds.length < SIM_KINDS.length ? SIM_KINDS.filter(([k]) => f.kinds.includes(k)).map(([k, l]) => chip("kinds", k, l)) : [])].join("");
+    return `<div class="listhead"><div class="filterbar simfilter"><details class="more sf"${S.simMenu ? " open" : ""}><summary class="btn small" aria-haspopup="menu" title="Filter the list"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4-2v-4z"/></svg>Filter</summary>
+      <div class="menu" role="menu"><div class="sf-h" role="presentation">State</div>${states}<div class="sf-h" role="presentation">Kind</div>${kinds}${narrowed ? `<button class="btn small sf-reset" role="menuitem" data-simf-reset>Reset to default</button>` : ""}</div></details>${chips}</div></div>`;
+  }
+  // A person by their name on the roster, else the part of their address before the @, never the whole address.
+  const shortName = (e, name = "") => !e ? name : isMe(e) ? "you" : S.me?.names?.[String(e).toLowerCase()] || name || (String(e).includes("@") ? String(e).split("@")[0] : String(e));
+  // Simple mode's head of a request or a change (docs/desk-page.md → Simple mode): what it is,
+  // where it stands, who and when, at most two moves and ⋯ for the rest; it stays in view.
+  function simpleHead(c) {
+    const s = simpleState(c, true), k = s.pill || s.state, src = c.source || {}, change = c.kind === "change";
+    const work = atWork(c) ? `<span class="sh-work"><span class="dd-spin"></span>${esc(working(c).map((w) => WORK_SHORT[w] || "Working on it").join(", ") || "Design Desk is working on it")}</span>` : "";
+    const pr = change && src.pr ? `<a class="sh-pr" href="${safeUrl(src.url || "")}" target="_blank" rel="noopener noreferrer" title="Open the pull request on GitHub">#${esc(src.pr)}${src.merged_at ? " Merged" : src.draft ? " Draft" : ""} ↗</a>` : "";
+    const o = c.origin || {}, by = c.by || c.created_by || {};
+    const who = change ? src.author || "" : by.agent ? "Design Desk" : shortName(o.email || by.email, by.name || o.reporter);
+    const at = change ? src.merged_at || c.created : c.created;
+    const facts = [pr, who ? `<span>${esc(who)}</span>` : "", at ? `<span title="${esc(when(at))}">${esc(sWhen(at))}</span>` : ""].filter(Boolean).join(`<span class="sep">·</span>`);
+    const bug = !change && (c.request?.type || c.type) === "bug" ? `<span class="chip bad" title="Someone reported something broken on a screen">Bug${c.origin?.severity ? ` · ${esc(c.origin.severity)}` : ""}</span>` : "";
+    // Who approved it, where it went and when it shipped: one muted line once it is approved.
+    const ap = change ? c.handled?.by : c.approved?.by, sent = !change && (c.spec?.issue_url || c.spec?.pr_url);
+    const built = !change && (c.built?.at || (typeof c.built === "string" ? c.built : ""));
+    const after = [ap ? `Approved by ${esc(ap.agent ? "Design Desk" : shortName(ap.email, ap.name))}${(change ? c.handled?.at : c.approved?.at) ? `, ${esc(sWhen(change ? c.handled.at : c.approved.at))}` : ""}` : "",
+      sent ? `Sent to <a href="${safeUrl(sent)}" target="_blank" rel="noopener noreferrer">#${esc(String(sent).match(/\/(?:issues|pull)\/(\d+)/)?.[1] || "")} ↗</a>` : "",
+      built ? `Shipped ${esc(sWhen(built))}` : ""].filter(Boolean).join(" · ");
+    // At most two moves, only while it needs a design decision and only the viewer's own.
+    const btn = (attr, label, primary = false) => `<button class="btn${primary ? " primary" : ""}" ${attr}>${label}</button>`;
+    const open = s.state === "open";
+    const moves = change ? (open && mayHandle(c) ? btn('data-handle="1"', "Approve", true) : "")
+      : !open ? ""
+      : specWaits(c) ? (canApprove(c) && !(c.threads || []).some((th) => th.kind === "asks" && th.state === "open") ? btn("data-spec-send", "Send to developers", true) : "")
+      : (can("revise") && (c.variants || []).length && !locked(c) ? btn('data-act="request-changes"', "Request changes") : "")
+        + (canApprove(c) && (c.triage || (c.variants || []).length) ? btn('data-act="approve"', "Approve", true) : "");
+    const url = change ? src.url : c.spec?.issue_url || c.spec?.pr_url || "";
+    const items = [change ? (can("follow-up") && !hasRequest(c) ? btn("data-adjust", "Turn into a design request") : "") + (handledAt(c) && mayHandle(c) ? btn('data-handle="0"', "Undo approval") : "")
+        : closed(c) ? ((c.status === "handed-off" ? S.me?.role === "admin" : can("reopen")) ? btn('data-act="reopen"', "Reopen") : "") : (can("close") || can("skip") ? btn('data-act="close"', "Close…") : ""),
+      url ? `<a class="btn" href="${safeUrl(url)}" target="_blank" rel="noopener noreferrer">Open on GitHub ↗</a>` : ""].join("");
+    const more = items ? `<details class="more sh-more"><summary class="btn" aria-label="More" title="More">⋯</summary><div class="menu">${items}</div></details>` : "";
+    return `<div class="shead"><div class="sh-main"><h2>${kindIcon(c)}<span>${txt(c.title)}</span>${num(c)}${titleLink(c)}</h2>
+      <div class="sh-line"><span class="spill" data-s="${k}" title="${esc(SIM_TIP[k])}">${SIM_PILL[k]}</span>${bug}${work}${facts ? `<span class="sh-facts">${facts}</span>` : ""}</div>${after ? `<div class="sh-after">${after}</div>` : ""}</div>
+      <div class="sh-acts">${moves}${more}</div></div>`;
+  }
+  // What Design Desk found: what it checked the item against — the decisions in force, what a
+  // designer should look at and why, the approved design, Figma (when on), its check on GitHub —
+  // each with its source; "Nothing to flag" without any (docs/desk-page.md → Simple mode).
+  function simpleFound(c) {
+    const decisions = [againstBox(c), ...(c.variants || []).map((v) => againstBox(c, v.id))].join("");
+    const look = c.kind === "change" && c.attention?.level === "designer" && (c.attention.reasons || []).length
+      ? `<h4>What to look at</h4><ul>${c.attention.reasons.map((x) => `<li>${txt(x)}</li>`).join("")}</ul>` : "";
+    const ci = c.kind === "change" && c.ci?.state === "failing" ? `<p>Design Desk's check on GitHub holds the pull request until a designer approves it.</p>` : "";
+    const body = [decisions, look, c.kind === "change" ? designCheckBox(c) : "", ci, figmaBox(c)].filter((x) => x && x.trim()).join("");
+    return `<section class="sfound"><h3>What Design Desk found</h3>${body || `<p class="hint">Nothing to flag: it goes against no decision in force${c.kind === "change" ? ", and nothing in it waits for a designer" : ""}.</p>`}</section>`;
+  }
+  // Simple mode's comments: each conversation a card, its first message and the replies indented
+  // under it, each by its avatar, name, role and a short date; a resolved one folds to one line
+  // that opens on a click. Reply, Mark done and Reopen as in full mode.
+  function simpleThreads(c) {
+    const threads = (c.threads || []).filter((th) => !(th.kind === "asks" && th.state === "open") && (th.messages || []).length);
+    const last = (th) => Date.parse(th.messages[th.messages.length - 1]?.at || 0) || 0;
+    const person = (by) => by?.agent ? { n: "Design Desk", r: "", k: "agent" }
+      : { n: shortName(by?.email, by?.name) || "someone", r: by?.role && by.role !== "slack" ? by.role : "", k: by?.role || "" };
+    const av = (p) => `<span class="sav" data-r="${esc(p.k)}" aria-hidden="true">${p.k === "agent" ? `<svg viewBox="0 0 24 24">${ICON_PATH.spark}</svg>` : esc((p.n === "you" ? S.me?.my_name || "Y" : p.n)[0].toUpperCase())}</span>`;
+    const msg = (m, reply) => { const p = person(m.by);
+      return `<div class="smsg${reply ? " re" : ""}">${av(p)}<div class="sm-b"><div class="who"><b>${esc(p.n === "you" ? "You" : p.n)}</b>${p.r ? `<span class="role">${roleIcon(p.r)}${esc(roleLabel(p.r))}</span>` : ""}<span class="at" title="${esc(when(m.at))}">${esc(sWhen(m.at))}</span></div>${md(m.text)}</div></div>`; };
+    const optionOf = (th) => { const v = th.anchor?.variant && (c.variants || []).find((x) => x.id === th.anchor.variant); return v ? `<button class="chip sjump" data-goto="${esc(th.id)}" title="Open the design at the part this is about">Option ${(c.variants || []).indexOf(v) + 1}: ${esc(v.name)}${th.anchor.label ? ` · ${esc(th.anchor.label)}` : ""}</button>` : ""; };
+    const rows = [...threads].sort((a, b) => (a.state === "resolved") - (b.state === "resolved") || last(b) - last(a)).map((th) => {
+      const [first, ...replies] = th.messages;
+      const body = `${optionOf(th)}${msg(first, false)}${replies.map((m) => msg(m, true)).join("")}${th.needs_agent ? `<div class="smsg re"><span class="pending">Waiting for Design Desk…</span></div>` : ""}`;
+      const ctl = th.state !== "resolved" ? `<div class="reply">${mayIn(th, "reply") ? `<input placeholder="Reply…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small" data-send-reply="${esc(th.id)}">Reply</button>` : ""}${mayIn(th, "resolve") ? `<button class="btn small" data-resolve="${esc(th.id)}" title="Closes this conversation">Mark done</button>` : ""}${workable(c, th) ? `<button class="btn small" data-work-in="${esc(th.id)}" title="Design Desk changes the design as this comment asks">Work it in</button>` : ""}</div>`
+        : mayIn(th, "reply") ? `<div class="reply"><button class="btn small" data-reopen="${esc(th.id)}">Reopen</button></div>` : "";
+      if (th.state !== "resolved") return `<article class="sthread" id="th-${esc(th.id)}">${body}${ctl}</article>`;
+      const rb = th.resolved?.by, by = rb ? (rb.agent ? "Design Desk" : shortName(rb.email, rb.name)) : "";
+      return `<details class="sthread done" id="th-${esc(th.id)}"><summary><span class="q">${esc(person(first.by).n === "you" ? "You" : person(first.by).n)}: ${esc(String(first.text || "").replace(/\s+/g, " ").slice(0, 90))}</span><span class="hint">Resolved${by ? ` by ${esc(by)}` : ""}${th.resolved?.at ? ` · ${esc(sWhen(th.resolved.at))}` : ""}</span></summary>${body}${ctl}</details>`;
+    }).join("");
+    return `<section class="sthreads"><h3>Comments</h3>${rows}
+      <div class="composer" id="composer"><textarea id="composer-text" maxlength="4000" placeholder="A comment for the team, or a question for Design Desk…"></textarea>
+      <div class="bar"><button class="btn primary" data-post="comment">Comment</button><button class="btn" data-post="question">Ask Design Desk</button></div></div></section>`;
+  }
+  // Simple mode's overview where no item is open: how many items of the viewer's side are in each
+  // state, each a box that filters the list to it (docs/desk-page.md → Simple mode).
+  function simpleOverview() {
+    const kinds = SIM_KINDS.map(([k]) => k), n = (st, ks = kinds) => simpleCards({ states: [st], kinds: ks }).length;
+    const shipped = simpleCards({ states: ["closed"], kinds }).filter((c) => simpleState(c).pill === "shipped" && Date.now() - Date.parse(lastChange(c)) < 7 * 864e5).length;
+    const of = (st) => [[n(st, ["request"]), "request", "requests"], [n(st, ["change"]), "PR change", "PR changes"]].filter(([x]) => x).map(([x, one, many]) => plural(x, one, many)).join(", ");
+    const box = (st, word, line) => `<button class="sbox" data-simf-only="${st}" data-s="${st}" title="Show only what is ${esc(word)}"><span class="n">${n(st)}</span><b>${word}</b><span class="hint">${esc(line)}</span></button>`;
+    return `<div class="sboxes">${box("open", "Open", n("open") ? `Need a design decision: ${of("open")}` : "Nothing needs a design decision")}${box("dev", "In dev", n("dev") ? `Approved, being built: ${of("dev")}` : "Nothing is being built")}${box("closed", "Closed", `${plural(shipped, "item", "items")} shipped in the last 7 days`)}</div>`;
+  }
+  const setSimFilter = (f) => { S.simFilter = f; store.set("desk-simFilter", JSON.stringify(f)); };
   // Your turn: an open request whose next move is the viewer's own, by what they may do — answer
   // Design Desk, start the options, ask the team, vote, approve, read and send the spec, build
   // the prototype again; never while Design Desk works (docs/desk-page.md → Pages and filters). A
@@ -3184,6 +3400,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // An earlier record of a reopened request: the request as it is, with what that send had.
   const sendOf = (id) => { const m = /^([A-Z]-\d+)~(\d+)$/.exec(String(id || "")); return m ? { base: m[1], k: Number(m[2]) } : null; };
   function visibleCards() {
+    if (simpleList()) return simpleCards();
     if (S.tab === "new") return newCards(S.newFilter);
     if (S.tab === "designs") return designCards(S.designFilter);
     // History: the weekly digests, the newest week first (docs/digest.md).
@@ -3298,7 +3515,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     main.classList.toggle("wide", S.tab === "guide" || S.tab === "people");
     // Another tab, page or filter starts the list again at LIST_PAGE rows; it is
     // set before every early return, so a list that returns early still counts as another view.
-    const view = [S.tab, S.productFilter, S.histBy, S.reqFilter, reqFor(), S.newFilter, S.designFilter, S.issueFilter, S.figFilter, S.elFilter].join("|");
+    const view = [simpleList() && JSON.stringify(S.simFilter), S.tab, S.productFilter, S.histBy, S.reqFilter, reqFor(), S.newFilter, S.designFilter, S.issueFilter, S.figFilter, S.elFilter].join("|");
     if (S.listView !== view) { S.listView = view; S.listLimit = LIST_PAGE; }
     if (S.tab === "guide" || S.tab === "people") { list.innerHTML = ""; return; }
     // Differences kept from an earlier visit leaves once Figma is off, for the Desk or this person.
@@ -3328,7 +3545,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       : S.tab === "issues" ? seg("issueFilter", Object.entries({ all: "All", ...BUCKET, handled: "Handled" }).map(([k, l]) => [k, l, issueCards(k).length]))
       : S.tab === "product" && S.productFilter === "differences" ? seg("figFilter", [["differs", "Differs from Figma", figmaCards("differs").length], ["matches", "Matches", figmaCards("matches").length], ...(figmaCards("closed").length ? [["closed", "Closed", figmaCards("closed").length]] : []), ["all", "All", figmaCards("all").length]])
       : S.tab === "product" && S.productFilter === "elements" && S.cards.some((c) => c.kind === "element" && c.design) ? seg("elFilter", [["all", "All"], ["product", "In the product", S.cards.filter((c) => c.kind === "element" && !c.design).length], ["design", "✎ From approved designs", S.cards.filter((c) => c.kind === "element" && c.design).length]]) : "";
-    const filters = `<div class="listhead">${head}${filter ? `<div class="filterbar">${filter}</div>` : ""}</div>`;
+    const filters = simpleList() ? simpleFilterBar() : `<div class="listhead">${head}${filter ? `<div class="filterbar">${filter}</div>` : ""}</div>`;
     requestAnimationFrame(() => markScrolls(list));
     if (S.tab === "product" && S.productFilter === "decisions") { renderDecisionList(head); return; }
     if (S.tab === "product" && S.productFilter === "kit") { renderKitList(head); return; }
@@ -3345,7 +3562,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         : (S.productFilter === "elements" ? "No elements yet. Design Desk draws the product's main parts after it is set up; they appear here within a day."
         : "No screens yet. Design Desk maps the product's screens on its own copy of the product; they appear here once it runs.") + (can("add") ? " Missing one? Press + Add." : ""),
     }[S.tab];
-    if (!cards.length) { list.innerHTML = filters + `<div class="empty">${esc(empty)}</div>`; return; }
+    const simpleEmpty = () => { const f = S.simFilter.states; return f.length === 1 && f[0] === "open" ? "Nothing needs a design decision right now." : f.length === 1 && f[0] === "dev" ? "Nothing is being built right now." : f.length === 1 && f[0] === "closed" ? "Nothing is closed yet." : "Nothing here."; };
+    if (!cards.length) { list.innerHTML = filters + `<div class="empty">${esc(simpleList() ? simpleEmpty() : empty)}</div>`; return; }
     // Every list says where each item came from, without a description, Product included.
     const sourced = S.tab === "new" || S.tab === "requests" || S.tab === "designs" || S.tab === "issues" || S.tab === "product";
     // The list draws LIST_PAGE rows and LIST_PAGE more each time its end scrolls into view
@@ -3355,7 +3573,14 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (at >= S.listLimit) S.listLimit = Math.ceil((at + 1) / LIST_PAGE) * LIST_PAGE;
     const all = S.pf && S.pf.view === pfView();
     const drawn = all ? cards : cards.slice(0, S.listLimit);
-    list.innerHTML = filters + drawn.map((c) => `<div class="row item${overdue(c) ? " overdue" : ""}${c.design ? " fromdesign" : ""}${c.read === false ? " unread" : ""}">
+    // Simple mode's row: its kind, its title, when it last changed, and its state; the pill only
+    // when the filter shows more than one state, the spinner while Design Desk works on it.
+    const pills = S.simFilter.states.length > 1;
+    const simpleRow = (c) => `<div class="row item srow${c.read === false ? " unread" : ""}">
+      <button class="open" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}">${kindIcon(c)}<span class="t"><span>${esc(c.title)}</span></span>
+      <span class="sline"><span class="when">${esc(sWhen(lastChange(c)))}</span>${atWork(c) ? `<span class="dd-spin" title="Design Desk is working on it"></span>` : ""}${pills ? simplePill(c) : ""}</span></button></div>`;
+    if (simpleList()) list.innerHTML = filters + drawn.map(simpleRow).join("") + (drawn.length < cards.length ? `<div class="list-more" data-list-more>Loading more…</div>` : "");
+    else list.innerHTML = filters + drawn.map((c) => `<div class="row item${overdue(c) ? " overdue" : ""}${c.design ? " fromdesign" : ""}${c.read === false ? " unread" : ""}">
       <button class="open" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}"><div class="t"><span>${esc(c.title)}</span>${onDiffs() ? figNum(c) : S.tab === "designs" ? designNum(c) : num(c)}${S.tab === "designs" ? "" : rowDot(c)}</div>${againstDot(c)}</button>
       ${S.tab === "product" && S.productFilter === "differences" ? figmaFacts(c) : sourced ? origin(c) : c.summary ? `<div class="s">${esc(c.summary)}</div>` : ""}</div>`).join("")
       + (drawn.length < cards.length ? `<div class="list-more" data-list-more>Loading more…</div>` : "");
@@ -4352,7 +4577,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     askShown = { open: S.ask.open, ctx: ctxKey, said };
     askDrawn = JSON.stringify(S.ask.asks);
     if (!S.ask.open) {
-      root.innerHTML = `<button class="ask-fab" data-ask-open title="Ask Design Desk privately about ${esc(ctx.label)}. Only you see it.${said ? ` ${plural(said, "message", "messages")} here so far.` : ""}"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Ask privately about this ${askWhat(ctx)}${said ? `<span class="ask-count" aria-label="${plural(said, "message", "messages")}">${said}</span>` : ""}${waiting ? `<span class="spin"></span>` : ""}</button>`;
+      // In simple mode only its lock shows; its tooltip says what it asks about.
+      root.innerHTML = `<button class="ask-fab${simple() ? " compact" : ""}" data-ask-open aria-label="Ask privately about this ${askWhat(ctx)}${said ? `, ${plural(said, "message", "messages")} so far` : ""}${waiting ? ", Design Desk is answering" : ""}" title="Ask Design Desk privately about ${esc(ctx.label)}. Only you see it.${said ? ` ${plural(said, "message", "messages")} here so far.` : ""}"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span class="ask-lbl">Ask privately about this ${askWhat(ctx)}</span>${said ? `<span class="ask-count" aria-label="${plural(said, "message", "messages")}">${said}</span>` : ""}${waiting ? `<span class="spin"></span>` : ""}</button>`;
       if (was.open) root.querySelector(".ask-fab")?.classList.add("enter");
       return;
     }
@@ -4469,8 +4695,19 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const mapStatus = (c, buttons, more = "") => { const [w, tip] = MAP_STATE[c.status] || MAP_STATE.current; return ghStatus(MAP_TONE[c.status] || "approved", w, tip, c.status === "building" || c.status === "dropped" ? "" : mapMeta(c), buttons, more, { inline: true }); };
   function renderChange(c) {
     const src = c.source || {};
+    if (simple()) return `${backBar()}${simpleHead(c)}
+      ${c.summary ? `<div class="slead">${md(c.summary)}</div>` : ""}
+      ${c.builds ? `<p class="hint">It builds the design of <button class="anchor" data-card="${esc(c.builds.card)}">${esc(c.builds.title)}</button>${num({ id: c.builds.card })}.</p>` : ""}${requestsFrom(c)}
+      <h3>The changes</h3>${(c.screens || []).length ? shots(c.screens) : `<p class="hint">No screens yet.</p>`}
+      ${!c.instance && can("screens") ? `<div class="actions"><button class="btn" data-add-shots>Add screenshots</button></div>` : ""}
+      ${renderEnvironment(c)}${renderInstance(c)}
+      ${simpleFound(c)}
+      ${(c.elements || []).length ? `<details class="fold big sfold"><summary><h3>Parts it changed</h3></summary><div class="actions">${c.elements.map((id) => S.cards.find((x) => x.id === id)).filter(Boolean).map((e) => `<button class="anchor" data-card="${esc(e.id)}" data-made-by="${esc(c.id)}" title="How it looked before and after">${esc(e.title)} — before and after</button>`).join("")}</div></details>` : ""}
+      ${(c.sections || []).length ? `<details class="fold big sfold"><summary><h3>What changed and why</h3></summary>${sections(c)}</details>` : ""}
+      ${renderImpact(c.impact)}
+      ${simpleThreads(c)}`;
     return `${backBar()}
-      <h2>${txt(c.title)}${num(c)}${titleLink(c)}</h2>
+      ${simple() ? simpleHead(c) : `<h2>${txt(c.title)}${num(c)}${titleLink(c)}</h2>
       ${(() => {
         const [o, word, tip] = src.merged_at ? ["gh-merged", "Merged", "Its pull request is merged: the change is in the product"] : src.draft ? ["gh-draft", "Draft", "Its pull request is a draft: not ready for review, not in the product yet"] : ["gh-open", "Open", "Its pull request is open: not in the product yet"];
         // The facts in the list's style: grey words, the values in ink (docs/desk.md → Where a card came from).
@@ -4486,7 +4723,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         // As on an issue: the design action first and primary, Mark handled after it.
         const adjust = hasRequest(c) ? "" : (can("follow-up") && !handledAt(c) ? `<button class="btn primary" data-adjust>Adjust the design</button>` : can("follow-up") ? `<button class="btn" data-adjust>Adjust the design</button>` : "");
         return ghStatus(o, word, tip, meta, adjust + handle, agendaButton(c) + size, { pill, inline: true });
-      })()}
+      })()}`}
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
       ${c.builds ? `<div class="sent"><b>Builds a design from Design Desk</b><p>This pull request builds <button class="anchor" data-card="${esc(c.builds.card)}">${esc(c.builds.title)}</button>${num({ id: c.builds.card })}${c.builds.url && ghRef(c.builds.url) && !ghRef(c.builds.url).pr ? `, sent to developers as <a href="${safeUrl(c.builds.url)}" target="_blank" rel="noopener noreferrer">Issue #${esc(ghRef(c.builds.url).n)} ↗</a>` : ""}; its design and spec are there.</p></div>` : ""}
       ${requestsFrom(c)}
@@ -5107,7 +5344,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ${sizeLine(c)}
       ${c.status === "handed-off" ? `<div class="s-row">${sentBox(c, "", true)}${moves}</div>` : moves}${stageLine(c)}
     </div>
-    ${asks.length ? `<div class="s-asks">
+    ${asksBox(asks)}`;
+  }
+  // Design Desk's open questions on a request, each with its answer box.
+  function asksBox(asks) {
+    return `${asks.length ? `<div class="s-asks">
       ${asks.map((th) => th.questions ? askForm(th) : `<div class="asks" id="form-${esc(th.id)}"><b>Design Desk needs one answer from you before it can go on.</b>${md(th.messages[th.messages.length - 1].text)}
         ${mayIn(th, "reply") ? `<div class="reply"><input placeholder="Your answer…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small primary" data-send-reply="${esc(th.id)}">Answer</button></div>` : notYours}</div>`).join("")}
     </div>` : ""}`;
@@ -5196,7 +5437,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       concern: `<svg class="vi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9.5 17h-19z"/><path d="M12 10v4.5M12 17.5h.01"/></svg>` };
     const label = { prefer: "I like this one", dislike: "I don't like this one", concern: "I have a concern" };
     // Once a person ended the vote, the pills only show the count.
-    const can_ = can("vote") && !c.vote_ended;
+    const can_ = can("vote") && !c.vote_ended && !simple();
     // Who voted, by name and role, in the pill's tooltip (it was a chip beside the pills).
     const roles = (k) => Object.entries(c.votes?.[v] || {}).filter(([, x]) => has(x, k)).map(([key, x]) => `${isMe(key) || key === myKey() ? "you" : x.name || nameOf(key)} (${roleName(x.role)})`).join(", ");
     const pill = (k) => `<${can_ ? "button" : "span"} class="btn small vote ${{ prefer: "up", dislike: "down", concern: "concern" }[k]}${n(k) ? " some" : ""}${has(mine, k) || (k === "concern" && S.concern?.card === c.id && S.concern.variant === v) ? " on" : ""}"${can_ ? ` data-vote="${k}"` : ""} title="${esc(label[k])}${n(k) ? ` · ${n(k)}: ${esc(roles(k))}` : ""}${can_ ? `. ${esc(TIP.vote(k, has(mine, k)))}` : ""}" aria-label="${esc(label[k])}, ${n(k)}">${ICO[k]}<span class="n">${n(k)}</span></${can_ ? "button" : "span"}>`;
@@ -5378,7 +5619,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const theirs = (x) => !x.source || x.source === "person";
     const given = (c.screens || []).filter(theirs), found = (c.screens || []).filter((x) => !theirs(x));
     foldsFor(c);
-    return `${backBar()}
+    const head = simple() ? `${backBar()}${simpleHead(c)}
+      <div class="standing">${asksBox((c.threads || []).filter((th) => th.kind === "asks" && th.state === "open"))}${renderPolls(c)}
+      ${c.status === "spec" && c.spec?.review === "draft" && c.spec?.asset ? specPanel(c) : ""}${cannotFold(c)}${live(c) ? renderPrototype(c) : ""}</div>` : "";
+    return head ? head + simpleBody() : `${backBar()}
       <h2 class="renamable">${txt(title)}${num(c)}${titleLink(c)}${!simple() && (filedIt(c) || can("close")) ? `<button class="linkbtn rename" data-rename aria-label="Rename this request" title="Give this request a clearer name; Design Desk keeps it">${PEN_ICON}</button>` : ""}</h2>
       <div class="sub">${bug ? `<span class="chip bad" title="Someone reported something broken on a screen">🐛 Bug</span>` : ""}${c.origin?.severity ? `<span class="chip" title="How bad the reporter says it is">${esc(c.origin.severity)} severity</span>` : ""}${simple() ? "" : c.agenda?.status === "queued" ? `<span class="chip info" title="The team looks at it at its next design meeting">▶ On the presentation${c.agenda.variant ? ` · ${esc(optionName(c, c.agenda.variant))}` : ""}</span>` : c.agenda?.status === "presented" ? `<span class="chip ok" title="The meeting it was shown at">✓ Presented ${esc(day(c.agenda.call))}</span>` : ""}${verdictChip(c)}<span>${esc(when(c.created))}</span></div>
       <div class="standing">
@@ -5389,7 +5633,23 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ${cannotFold(c)}
       ${live(c) ? renderPrototype(c) : ""}
       </div>
-      <div class="top2">
+      ${requestBody()}`;
+    // Simple mode's page under the head: a short lead, the designs, what Design Desk found, the
+    // long reads folded, then the comments (docs/desk-page.md → Simple mode).
+    function simpleBody() {
+      const lead = String(r.problem || "").split(/\n\s*\n/)[0];
+      const known = [renderResearch(c.research), renderIssueBrief(c), renderGrill(c), followsLine(c), shots(found)].join("").trim();
+      return `<div class="slead">${md(lead)}${tr ? langLink(tr, en) : ""}</div>
+      <details class="fold big sfold"><summary><h3>The request in full</h3></summary><div class="section">${renderLinked(c)}${bug ? `<h4>What happens</h4>` : ""}${md(r.problem)}${r.vision ? `<h4>How they picture it</h4>${md(r.vision)}` : ""}${more}${shots(given)}</div></details>
+      ${live(c) ? `<details class="fold"><summary>The design options</summary>${renderOptions(c)}</details>` : `${renderOptions(c)}${renderPrototype(c)}`}
+      ${simpleFound(c)}
+      ${known ? `<details class="fold big sfold"><summary><h3>What's already known</h3></summary><div class="section">${known}</div></details>` : ""}
+      ${(c.sections || []).length ? `<details class="fold big sfold"><summary><h3>Details</h3></summary>${sections(c)}</details>` : ""}
+      ${renderImpact(c.impact)}
+      ${c.spec?.asset && !(c.status === "spec" && c.spec?.review === "draft") ? specPanel(c) : ""}
+      ${simpleThreads(c)}`;
+    }
+    function requestBody() { return `<div class="top2">
       <div class="brief${S.folds.brief ? " clamped" : ""}"><div class="brief-k">${askHead(c)}${tr ? langLink(tr, en) : ""}</div><div class="brief-body">
       ${renderLinked(c)}
       <div class="section">${bug ? `<h4>What happens</h4>` : ""}${md(r.problem)}${r.vision ? `<h4>How they picture it</h4>${md(r.vision)}` : ""}${more ? `<details class="fold"><summary>${bug && r.goal ? (r.steps ? "What should happen and the steps" : "What should happen") : "Steps"}</summary><div class="panel">${more}</div></details>` : ""}${skillLine(r.skills)}${r.figma ? `<p class="hint"><a href="${safeUrl(r.figma)}" target="_blank" rel="noopener noreferrer">The Figma design ↗</a></p>` : ""}</div>
@@ -5406,7 +5666,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ${renderImpact(c.impact)}
       ${c.spec?.asset && !(c.status === "spec" && c.spec?.review === "draft") ? specPanel(c) : ""}
       ${(c.sections || []).length ? `<h3>Details</h3>${sections(c)}` : ""}
-      ${renderThreads(c, { skipAsks: true })}`;
+      ${renderThreads(c, { skipAsks: true })}`; }
   }
 
   // The EN link in a request's head: the asker's words in English, and back to their own language.
@@ -7270,17 +7530,28 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       // With the spec read before it goes, the approver may send it unread; never a request from Slack (docs/handoff.md → Review before it goes).
       // From a pull request still open, the spec waits too: Send to developers picks a new issue or a comment on it.
       const unread = Boolean(S.me?.spec_review) && c.origin?.channel !== "slack" && !c.from_pr;
-      const waits = Boolean(S.me?.spec_review || c.from_pr);
-      res = await ask({ title: options.length ? "Approve a design" : "Approve without design options", body: `${waits ? `Design Desk writes the developer spec for ${what}. It waits here for you to read and edit; nothing goes to ${to} until you press **Send to developers**${c.from_pr ? `, where you pick a new issue or a comment on PR #${c.from_pr.pr}` : ""}${unread ? ", unless you tick the box below" : ""}.` : `Design Desk writes the developer spec for ${what} and sends it to ${to}. Once sent, it can't be taken back.`}${against.length ? `\n\n⚠ **It goes against ${against.join(", ")}.** Approve it only if the team means to; then revoke the decision, or Design Desk records this approval as going against it.` : ""}${earlier ? `\n\n${earlier.line}` : ""}`, ok: "Approve", choices: options.length && !built ? options : null, pick: options.length === 1 ? options[0].id : null, note: options.length ? null : "What should developers build? (optional)",
+      // Simple mode asks nothing: the spec goes as soon as it is written, wherever the store lets it.
+      const auto = simple() && unread;
+      const waits = Boolean(S.me?.spec_review || c.from_pr) && !auto;
+      res = await ask({ title: options.length ? "Approve a design" : "Approve without design options", body: `${waits ? `Design Desk writes the developer spec for ${what}. It waits here for you to read and edit; nothing goes to ${to} until you press **Send to developers**${c.from_pr ? `, where you pick a new issue or a comment on PR #${c.from_pr.pr}` : ""}${unread ? ", unless you tick the box below" : ""}.` : `Design Desk writes the developer spec for ${what} and sends it to ${to}${auto ? " as soon as it is written" : ""}. Once sent, it can't be taken back.`}${against.length ? `\n\n⚠ **It goes against ${against.join(", ")}.** Approve it only if the team means to; then revoke the decision, or Design Desk records this approval as going against it.` : ""}${earlier ? `\n\n${earlier.line}` : ""}`, ok: "Approve", choices: options.length && !built ? options : null, pick: options.length === 1 ? options[0].id : null, note: options.length ? null : "What should developers build? (optional)",
         ...(against.length ? { check: `I know it goes against ${against.join(", ")}` } : {}),
-        ...(github && !waits ? { check2: `Straight to implementation: the spec goes on ${to.startsWith("the GitHub issue it came from") ? "that issue" : "a GitHub issue (a new one, with the spec and pictures, if none is filed)"} with the coding agent's label, when its manifest names one` } : {}),
-        ...(unread ? { check2: `Send it to ${to} as soon as the spec is written, without waiting for me to read it. Once sent, it can't be taken back` } : {}),
+        ...(github && !waits && !simple() ? { check2: `Straight to implementation: the spec goes on ${to.startsWith("the GitHub issue it came from") ? "that issue" : "a GitHub issue (a new one, with the spec and pictures, if none is filed)"} with the coding agent's label, when its manifest names one` } : {}),
+        ...(unread && !auto ? { check2: `Send it to ${to} as soon as the spec is written, without waiting for me to read it. Once sent, it can't be taken back` } : {}),
         ...(earlier?.open ? { check3: unread ? `${earlier.check} (only with the box above ticked; else you pick it when you send)` : earlier.check } : {}),
-        send: (a) => post(built?.id || a.choice || a.note || "", { ...(against.length ? { overrule: a.check } : {}), ...(a.check2 ? (unread ? { auto_send: true } : { implement: true }) : {}), ...(a.check3 && (!unread || a.check2) ? { close_earlier: true } : {}) }) });
+        send: (a) => post(built?.id || a.choice || a.note || "", { ...(against.length ? { overrule: a.check } : {}), ...(auto ? { auto_send: true } : a.check2 ? (unread ? { auto_send: true } : { implement: true }) : {}), ...(a.check3 && (!unread || a.check2) ? { close_earlier: true } : {}) }) });
       if (!res) return;
     }
     // Build: pick the option, then look at its latest version and states once more in the
     // final check, which builds exactly what it shows (docs/prototype.md → Build).
+    // Request changes: a note to Design Desk, which draws the next version from it (a change note).
+    if (name === "request-changes") {
+      const v = S.variant || options[0]?.id;
+      res = await ask({ title: "Request changes", body: "Say what should change. Design Desk draws a new version from it; this request shows it here when it is ready.", ok: "Send",
+        note: "What should change?", send: (a) => { if (!a.note) throw new Error("Say what should change."); return api("POST", `/api/cards/${c.id}/threads`, { kind: "change", text: a.note, ...(v ? { anchor: { variant: v } } : {}) }); } });
+      if (!res) return;
+      toast("Sent. Design Desk draws a new version; this page updates by itself.");
+      await refreshList(); await openCard(c.id); return;
+    }
     if (name === "build" && options.length) {
       const pick = options.length > 1 ? await ask({ title: "Build a live prototype", body: "Design Desk makes a private copy of the product with the option you pick, with made-up data, that everyone on the list can open. Pick the option; next you see its latest version and every state for a final check before it is built.", ok: "Next: final check", choices: options, pick: S.ws.check ? S.variant : null, send: async (a) => a.choice }) : options[0].id;
       if (!pick) return;
@@ -7541,6 +7812,20 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       const el = document.getElementById(`ag-${ds.jump}`);
       if (el) { el.scrollIntoView({ block: "start", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); el.classList.remove("hit"); void el.offsetWidth; el.classList.add("hit"); }
       return;
+    }
+    // Simple mode's filter: a tick toggles one state or kind (never the last of its group); a
+    // chip's × drops one; Reset goes back to Open. The open item stays open.
+    if (ds.simf || ds.simfDrop || ds.simfOnly || "simfReset" in ds) {
+      const f = S.simFilter, all = { states: SIM_STATES, kinds: SIM_KINDS };
+      if ("simfReset" in ds) { setSimFilter(SIM_DEFAULT()); S.simMenu = false; }
+      else if (ds.simfOnly) setSimFilter({ states: [ds.simfOnly], kinds: SIM_KINDS.map(([k]) => k) });
+      else {
+        const [g, k] = (ds.simf || ds.simfDrop).split(":"), on = f[g].includes(k);
+        const next = ds.simfDrop || on ? f[g].filter((x) => x !== k) : [...f[g], k];
+        if (!next.length) return;
+        setSimFilter({ ...f, [g]: all[g].map(([x]) => x).filter((x) => next.includes(x)) });
+      }
+      renderList(); renderNav(); return;
     }
     if (ds.filter) {
       // Presentation sits beside For Designers and For Developers; either of those leaves it.

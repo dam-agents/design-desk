@@ -240,5 +240,22 @@ export const NOTES = [
   note("n5", 60, "resolved", "T-3", 1, AGENT, "Done in version 2: 26 px.", { for_you: false }),
 ];
 
-export const CARDS = [r1, r2, r3];
+// Simple mode's three states (docs/desk-page.md → A request's state in the list): one item in each.
+const bare = { threads: [], waiting: [], variants: [], prototype: { state: "none" } };
+const req = (id, title, status, min, extra = {}) => ({ id, kind: "request", title, status, created: ago(min + 60 * 24), updated: ago(min), by: PAT,
+  triage: { verdict: "design", reasons: [] }, request: { type: "idea", problem: title }, ...bare, ...extra });
+const pr = (id, n, title, min, extra = {}) => ({ id, kind: "change", title, status: "new", created: ago(min), updated: ago(min), summary: `${title}.`,
+  source: { kind: "pr", pr: n, url: `https://github.com/example/product/pull/${n}`, repo: "example/product", ...(extra.merged === false ? {} : { merged_at: ago(min) }) },
+  attention: { level: "designer", reasons: ["A new element: the diff adds it."] }, screens: [], ...bare, ...extra });
+const r4 = req("R-4", "Settings: group the toggles by topic", "spec", 90, { approved: { by: ALICE, at: ago(90) }, spec: { review: "sent" } });
+const r5 = req("R-5", "Login: a calmer error state", "handed-off", 60 * 26, { approved: { by: ALICE, at: ago(60 * 30) }, built: { by: DEV, at: ago(60 * 26) } });
+const r6 = req("R-6", "A second primary button on Billing", "declined", 60 * 50);
+const r7 = req("R-7", "Rounded corners on every table", "declined", 60 * 24 * 400, { decided: { by: ALICE, at: ago(60 * 24 * 400), text: "Tables keep square corners." } });
+const p1 = pr("P-1", 812, "Settings: a new toggle row", 25, { merged: false, source: { kind: "pr", pr: 812, url: "https://github.com/example/product/pull/812", repo: "example/product", draft: true } });
+const p2 = pr("P-2", 806, "Reports: denser table rows", 60 * 5, { status: "handled", handled: { by: ALICE, at: ago(60 * 4) }, merged: false });
+const p3 = pr("P-3", 799, "Empty state for the provider list", 60 * 30, { status: "handled", handled: { by: ALICE, at: ago(60 * 29) } });
+const p4 = pr("P-4", 790, "Billing: copy fix in the footer", 60 * 48, { attention: { level: "fyi", reasons: ["Nothing differs from the catalog."] } });
+const p5 = pr("P-5", 785, "Table: one more column", 60 * 3, { attention: { level: "developer", reasons: ["A column in an existing table."] } });
+
+export const CARDS = [r1, r2, r3, r4, r5, r6, r7, p1, p2, p3, p4, p5];
 export const ASSETS = A;

@@ -52,7 +52,8 @@ sent; the developer or coding agent gets only answers.
 3. Upload it (`design desk asset spec.md --kind spec`) and set `spec: {asset, acceptance,
    review: "draft"}`; the card shows it under **The developer spec**. With `spec_review:
    disabled`, or the card's `approved.auto_send` (the approver ticked **Send it as soon as the
-   spec is written**; the store never sets it on a request from Slack), write `review: "sent"`, except for a request with a Slack `origin` or a `from_pr`, which always
+   spec is written**, or approved in simple mode, which asks for it; the store never sets it on a
+   request from Slack or from an open pull request), write `review: "sent"`, except for a request with a Slack `origin` or a `from_pr`, which always
    waits (until a person's Send to developers, the store refuses `review: "sent"` and
    `status: handed-off` on it, and reads the stored `origin`, not the one a write gives): a
    spec without it waits for a person.
@@ -76,7 +77,9 @@ Approve), its state word (*Spec draft — read it, then send*), and Approve's wo
 Desk; nothing goes to developers until **Send to developers**).
 Nothing leaves the Desk until a person sends it (`spec_review`, default `enabled`; `disabled`, or the card's `approved.auto_send`
 → go straight on to step 5 as an issue for developers, never for a request with a Slack `origin` or one from a pull request still open (the card's `from_pr`), and never past an open question of step 4). After step 4 with no open question: keep `status: spec`,
-`done --outcome review` and stop. On the
+`done --outcome review` and stop. Simple mode's Approve asks for the send as soon as the spec is written (`auto_send`) wherever
+that is allowed — not for a Slack origin or a request from an open pull request, whose spec
+waits as above ([desk-page.md](desk-page.md) → The page). On the
 card the people who may approve it read the spec, and:
 - **Edit the spec** — their text becomes the newest version (`spec.history` keeps the others);
 - **Ask for changes…** — a `handoff` item with `scope: "spec-revise"` and their note: rewrite
