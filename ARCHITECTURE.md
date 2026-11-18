@@ -106,7 +106,7 @@ These parts are written against the platform's documented contracts but were not
   against recorded answers only) cannot write layers, and `generate_figma_design` is limited
   to some clients. Finding a screen's frame in a team's files and the REST rate limits of a
   real seat were not tried.
-- Pictures attached to GitHub issues with `gh … --attach`, which needs a GitHub CLI that has it.
+- Pictures on GitHub issues without `prototype_remote`: `gh … --attach` needs an upload host the DAM sandbox sends no token to; with it they ride on the pushed bundle.
 - The screens instance end to end: an install of the default branch in an Environment, the
   demo data a recipe makes through the product's screens, and the capture over the tunnel.
 - The design workspace against the real relay: element picking and text editing run inside
