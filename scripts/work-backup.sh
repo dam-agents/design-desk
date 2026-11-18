@@ -102,9 +102,9 @@ seed_clone() {
 # and the bulk set, then lay down the current state. tar keeps this a pure READ of work/.
 sync_state() {
   find "$LOCAL" -mindepth 1 -maxdepth 1 ! -name .git ! -name output ! -name logs -exec rm -rf {} + 2>/dev/null || true
-  # The Desk's agent token stays on this machine; a restore makes the server mint none
-  # and keep the one it has.
-  ( cd "$WORK" && tar -c --exclude='./.git' --exclude='./desk/.agent-token' --exclude='./.desk-down-ticks' \
+  # The Desk's tokens and the Satellite's serve key stay on this machine; a restore makes
+  # the server mint none and keep the ones it has.
+  ( cd "$WORK" && tar -c --exclude='./.git' --exclude='./desk/.agent-token' --exclude='./desk/.peer-token' --exclude='./desk/.satellite-key' --exclude='./.desk-down-ticks' \
       --exclude='./output' --exclude='./logs' -f - . ) \
     | ( cd "$LOCAL" && tar -xf - )
   copy_ok state "${PIPESTATUS[@]}"
@@ -266,7 +266,7 @@ restore() {
   # existing files
   # with the same names are overwritten, nothing is deleted.
   if ( cd "$LOCAL" && git rev-parse HEAD >/dev/null 2>&1 ); then
-    ( cd "$LOCAL" && tar -c --exclude='./.git' --exclude='./desk/.agent-token' -f - . ) | ( cd "$WORK" && tar -xf - )
+    ( cd "$LOCAL" && tar -c --exclude='./.git' --exclude='./desk/.agent-token' --exclude='./desk/.peer-token' --exclude='./desk/.satellite-key' -f - . ) | ( cd "$WORK" && tar -xf - )
     if copy_ok restore "${PIPESTATUS[@]}"; then say "restored work/ from remote."; logev info work_backup "restored work/ from remote"
     else say "restore copy failed."; fi
   else

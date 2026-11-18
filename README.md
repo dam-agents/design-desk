@@ -84,6 +84,8 @@ chat. The list, with defaults: [`docs/config.md`](docs/config.md).
   with an expiry. They run the product with demo accounts and demo data only.
 - **GitHub** — reads only, unless `prototype_remote` or `handoff` say otherwise.
 - **Slack** — replies in threads; announcements only with `notify: slack`.
+- **MCP for the owner's other agents** — off by default: a DAM Satellite that reads the Desk
+  and files questions, comments, requests and bug reports ([docs/mcp.md](docs/mcp.md)).
 
 ## Runs
 

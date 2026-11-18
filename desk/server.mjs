@@ -114,6 +114,8 @@ function settings() {
     slack: cfg("slack_polls", "disabled") === "enabled",
     // Pictures of the options posted to the Slack channel; a request from Slack goes to its thread anyway.
     slackSend: cfg("slack_send", "disabled") === "enabled",
+    // Whether the owner's other agents reach the Desk over MCP, for How it works (docs/mcp.md).
+    mcp: ((v) => (["when-awake", "always"].includes(v) ? v : "disabled"))(cfg("mcp_satellite", "disabled")),
     // The Desk's share link: the page builds an item's link from it (docs/desk.md → Links to an item).
     link: ((v) => (/^https?:\/\/[^\s#]+$/.test(v) ? v : null))(cfg("desk_link", "")),
     // Days a change may wait to be handled before the page shows it overdue; 0 or off: never.
@@ -146,6 +148,31 @@ function isAgent(req) {
   const t = Buffer.from(String(req.headers["x-desk-agent-token"] || "")), want = agentToken();
   return want.length > 0 && t.length === want.length && timingSafeEqual(t, want);
 }
+
+// Other agents through the Desk's Satellite (docs/mcp.md): desk/mcp.mjs sends the token in
+// work/desk/.peer-token (mode 600) on the /peer/ routes. Every peer is one caller, `PEER`, with
+// the role `mcp_role` names; its calls run through the page's own route, checks and limits, and
+// only the few PEER_ROUTES reach it. Its text is data, as a viewer's is.
+const peerTokenPath = join(DIR, ".peer-token");
+if (!existsSync(peerTokenPath)) { writeFileSync(peerTokenPath, randomBytes(24).toString("hex"), { mode: 0o600 }); chmodSync(peerTokenPath, 0o600); }
+const peerToken = () => { try { return Buffer.from(readFileSync(peerTokenPath, "utf8").trim()); } catch { return Buffer.alloc(0); } };
+function isPeer(req) {
+  const t = Buffer.from(String(req.headers["x-desk-peer-token"] || "")), want = peerToken();
+  return want.length > 0 && t.length === want.length && timingSafeEqual(t, want);
+}
+const PEER_EMAIL = "agents@mcp.design-desk.invalid";
+const PEER_ROLES = ["guest", "developer", "pm"];
+const peerWho = () => {
+  const role = readRole(cfg("mcp_role", "developer"));
+  return { role: "viewer", email: PEER_EMAIL, emails: [PEER_EMAIL], sub: "satellite", deskRole: PEER_ROLES.includes(role) ? role : "guest" };
+};
+const ID = "[A-Za-z]+-\\d+";
+const PEER_ROUTES = [
+  ["GET", new RegExp(`^/(cards|decisions)(/${ID})?$`)],
+  ["POST", new RegExp(`^/cards/${ID}/threads$`)],
+  ["POST", /^\/threads\/[A-Za-z0-9_-]+\/messages$/],
+  ["POST", /^\/requests$/],
+];
 
 // Only loopback names: a web page that rebinds its own name to 127.0.0.1 (opened in
 // this machine's browser by a screenshot) arrives with its own Host and is refused.
@@ -194,7 +221,7 @@ async function viewerRoute(req, res, url, who) {
     // The page asks who it is once, when it loads: that is the sign-in People reads (docs/desk.md → People).
     // A read never fails for it: a full store keeps no record, and a failed write is dropped.
     try { if (!store.full()) store.markOpened(actor); } catch {}
-    return send(res, 200, { email: who.email, emails: who.emails, my_name: rowOf(who.email)?.name || null, names: namesOf(roster()), key: who.email || who.sub, role: who.deskRole, theme: store.prefsOf(actor).theme, simple: store.prefsOf(actor).simple, figma_pref: store.prefsOf(actor).figma, platformRole: who.role, can: canAll(who.deskRole, s), pings: s.ping && who.deskRole !== "guest", name: s.name, repo: s.repo, contact: s.contact, figma: s.figma, slack: s.slack, slack_send: s.slackSend, screens: s.screens, handoff: s.handoff, spec_review: s.specReview, due_days: s.dueDays, auto_days: s.autoDays, env_days: s.envDays, link: s.link, skills: offerSkills(s.figma) });
+    return send(res, 200, { email: who.email, emails: who.emails, my_name: rowOf(who.email)?.name || null, names: namesOf(roster()), key: who.email || who.sub, role: who.deskRole, theme: store.prefsOf(actor).theme, simple: store.prefsOf(actor).simple, figma_pref: store.prefsOf(actor).figma, platformRole: who.role, can: canAll(who.deskRole, s), pings: s.ping && who.deskRole !== "guest", name: s.name, repo: s.repo, contact: s.contact, figma: s.figma, slack: s.slack, slack_send: s.slackSend, screens: s.screens, handoff: s.handoff, spec_review: s.specReview, due_days: s.dueDays, auto_days: s.autoDays, env_days: s.envDays, link: s.link, skills: offerSkills(s.figma), mcp: s.mcp });
   }
   // Who is on the Desk and what each role may do; only people the owner shared the Desk with get here.
   if (m === "GET" && p[1] === "people") { const ppl = roster(); return send(res, 200, { people: ppl, activity: store.peopleActivity(ppl), roles: Object.fromEntries(ROLES.map((r) => [r, canAll(r, s)])), asks: store.peopleAsks(), addable: ADDABLE_ROLES }); }
@@ -461,6 +488,14 @@ const server = createServer(async (req, res) => {
     if (url.pathname.startsWith("/agent/")) {
       if (!isAgent(req)) throw new DeskError(401, "agent routes need the agent token");
       return await agentRoute(req, res, url);
+    }
+    if (url.pathname.startsWith("/peer/")) {
+      if (!isPeer(req)) throw new DeskError(401, "peer routes need the peer token");
+      if (settings().mcp === "disabled") throw new DeskError(403, "The Desk's MCP server is turned off (mcp_satellite).");
+      const rest = url.pathname.slice("/peer".length);
+      if (!PEER_ROUTES.some(([m, re]) => m === req.method && re.test(rest))) throw new DeskError(404, `no route ${req.method} ${url.pathname}`);
+      url.pathname = "/api" + rest;
+      return await viewerRoute(req, res, url, peerWho());
     }
     if (url.pathname.startsWith("/api/")) {
       const who = callerOf(req);

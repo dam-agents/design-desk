@@ -12,7 +12,8 @@
 # `debug` lines are written only when work/CONFIG.md has `log_level: debug`.
 # Logging must never break a run: every failure path is swallowed. Retention
 # (delete files older than ~14 days) belongs to the audit-mode pre-flight.
-# Masks also cover the Desk agent token (48 hex characters, work/desk/.agent-token)
+# Masks also cover the Desk's tokens (48 hex characters, work/desk/.agent-token and
+# .peer-token), a platform API key (pk_…, the Satellite's serve key)
 # and demo passwords a profile prints (`password=…`).
 
 LOG_WORK="${WORK_DIR:-${HOME:-/home/agent}/work}"
@@ -31,6 +32,7 @@ _LOG_MASK=(
   -e 's/gh[pousr]_[A-Za-z0-9]{20,}/gh*_MASKED/g'
   -e 's/github_pat_[A-Za-z0-9_]{20,}/github_pat_MASKED/g'
   -e 's/xox[baprs]-[A-Za-z0-9-]{10,}/xox*-MASKED/g'
+  -e 's/pk_[A-Za-z0-9_-]{16,}/pk_MASKED/g'
   -e 's/[Bb]earer[[:space:]]+[A-Za-z0-9._~+/=-]{16,}/Bearer MASKED/g'
   -e 's/(^|[^0-9a-f])[0-9a-f]{48}([^0-9a-f]|$)/\1HEX48_MASKED\2/g'
   -e 's/(password|passwd|secret)([=:][[:space:]]*)[^[:space:]"]+/\1\2MASKED/Ig'

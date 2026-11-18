@@ -207,6 +207,10 @@ Read [docs/config.md](docs/config.md) first. If Step 2a restored a `CONFIG.md`,
 11. **Decisions page** (`decisions_page`) — "Should I publish the team's design decisions,
     without names, as one public text page that coding agents read before they change the
     screens?" Yes → `dam` ([docs/decisions-page.md](docs/decisions-page.md)); default `off`.
+12. **Other agents** (`mcp_satellite`) — "Should your other agents read the Desk and send it
+    questions, requests and bug reports over MCP?" Yes → [docs/mcp.md](docs/mcp.md) → Turn it on,
+    with `when-awake` unless they want it always reachable (`always` keeps this machine awake);
+    default `disabled`.
 
 The keys under **Advanced** are never asked about and no later step writes them: write them
 with these defaults, and change one only when the operator asks ([docs/config.md](docs/config.md) says what each does).
@@ -240,6 +244,9 @@ Write the file in exactly this shape with `design config write` (a restored file
 - work_repo: none
 - agent_manifest: dam
 - decisions_page: off
+- mcp_satellite: disabled
+- mcp_role: developer
+- mcp_server:
 - figma: disabled
 - figma_file:
 - slack_polls: disabled
@@ -270,6 +277,7 @@ Write the file in exactly this shape with `design config write` (a restored file
 - log_level: info
 - council_sync_min: 30
 - slack_stale_days: 0
+- mcp_satellite_name: design-desk
 
 ## Desk people
 
