@@ -87,3 +87,21 @@ test("a sticky part is cut where it is seen, the page scrolled under it", async 
   // two screen pixels per CSS pixel.
   assert.deepEqual(jpegSize(readFileSync(join(dir, "bar-element.jpg"))), { w: 2 * 308, h: 2 * 68 });
 });
+
+test("a part taller than the window is cut from the whole page", async (t) => {
+  const page = `<!doctype html><html><body style="margin:0"><div style="height:200px"></div><div id="tall" style="margin-left:50px;width:200px;height:1500px;background:#3a3"></div><div style="height:400px"></div></body></html>`;
+  const server = createServer((_, res) => { res.setHeader("content-type", "text/html"); res.end(page); });
+  await new Promise((r) => server.listen(0, "127.0.0.1", r));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const dir = mkdtempSync(join(tmpdir(), "dd-capture-tall-"));
+  writeFileSync(join(dir, "recipe.json"), JSON.stringify({ setup: [{ goto: "/" }], shots: [{ name: "Tall", element: "#tall" }] }));
+  let out;
+  try { ({ stdout: out } = await promisify(execFile)(process.execPath, [design, "capture", base, dir, "--recipe", join(dir, "recipe.json")], { timeout: 150000 })); }
+  catch (e) { server.close(); if (/Chromium|browser/i.test(String(e.stderr))) return t.skip("no browser here"); throw e; }
+  server.close();
+  const line = JSON.parse(out.trim().split("\n")[0]);
+  assert.equal(line.element, true, line.error);
+  assert.deepEqual(line.box, { x: 50, y: 200, w: 200, h: 1500 });
+  // All of it, 8 px round it, though the window is 900 px high.
+  assert.deepEqual(jpegSize(readFileSync(join(dir, "tall-element.jpg"))), { w: 2 * 216, h: 2 * 1516 });
+});

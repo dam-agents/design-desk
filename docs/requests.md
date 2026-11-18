@@ -262,9 +262,13 @@ Compare with the product); a note from **Work into the design** is a `revise` li
   5. Set it beside the part cut from `now` (`design shot <now.html> <dir> --element <its
      selector>`): when they plainly differ, `now` is out of date or wrong — say so in the done
      outcome and redraw `now` with its places.
+  6. Close the item: `design desk done Q-<n> --session <id> --outcome "<part> taken from the
+     product at <commit>"` (and that `now` was redrawn, when it was). Until it is done the dialog
+     shows Design Desk at work on the part, and the button does not come back.
 
-  Like `scope: "now"`, it is drawn without the decisions check, changes nothing else on the card
-  and blocks no one's work; one waits per part.
+  It is whitelisted Desk work (CLAUDE.md → Instruction sources & trust boundary). Like `scope:
+  "now"`, it is drawn without the decisions check, changes nothing else on the card and blocks no
+  one's work; one waits per part.
 - **A person's own option** (`fidelity: picture`): **+ New option** → *Use my own pictures*
   puts their pictures on the card as an option as they are, with `by`; no item is queued and
   nothing is drawn. Keep it as it is (send it back with its `version`); change it only when a
