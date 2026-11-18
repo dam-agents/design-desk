@@ -185,7 +185,19 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   ticked, and **Reset to default** (Open, both kinds); beside the button only what narrows the
   list, a chip each, × dropping it (a kind's chip only while one kind is ticked). This browser
   keeps it (`desk-simFilter`). There is no Your turn, Unread or Needs a designer filter, and no
-  For Designers / For Developers switch. Otherwise it hides: **Designs**, **Issues**, **Product** and **People** leave the menu (a sent
+  For Designers / For Developers switch. An opened request or change starts with one head that
+  stays in view while the page scrolls: the kind's icon, the title with its number and the link
+  icon, its state's pill, Design Desk's work in words beside the spinner, a change's pull request
+  (`#812`, with **Draft** or **Merged**) as a link to GitHub, who filed it or wrote it and when (a
+  person with no name on the roster by the part of their address before the @), then at most two
+  buttons and ⋯. While it is Open, a request offers **Request changes** (with options drawn: a note
+  Design Desk draws the next version from, a change note) and **Approve** — which sends the spec
+  as soon as it is written, with no box to tick, or, for one the Desk may not send by itself (a
+  Slack origin, an open pull request; [handoff.md](handoff.md) → Review before it goes), leaves it
+  Open with **Send to developers** — and a change **Approve** (marks it handled); each only for
+  who may. ⋯ holds **Close…** or **Reopen** on a request, **Turn into a design request** on a
+  change, and **Open on GitHub** where there is a link. No vote buttons, rename or For Developers
+  move. Otherwise it hides: **Designs**, **Issues**, **Product** and **People** leave the menu (a sent
   request offers no **Show the design**), Product's pages their bar, the presentation leaves Requests (its page, its buttons on a card and in an intro), a
   request offers no **Build a live prototype** (a prototype already up still shows), and an
   option shows no **Why it looks like this** section (the design workspace keeps it

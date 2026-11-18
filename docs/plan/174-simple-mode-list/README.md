@@ -100,7 +100,7 @@ Should every Design Desk request be a pull request — a draft pull request with
 | #  | Title | Scope | Depends on | Done |
 |----|-------|-------|------------|------|
 | 01 | States and the merged list | `simpleState`, the one list, the filter menu, the rows, the menu entry | — | [[x] |
-| 02 | The item header and its actions | sticky header, Approve / Request changes / Send to developers, the ⋯ menu | 01 | [ ] |
+| 02 | The item header and its actions | sticky header, Approve / Request changes / Send to developers, the ⋯ menu | 01 | [[x] |
 | 03 | The calmer page and comments | lead, designs or changes, What Design Desk found, folds, threads; version and changelog | 02 | [ ] |
 
 ## Conventions & glossary

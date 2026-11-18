@@ -3757,3 +3757,80 @@ test("simple mode lists a developer's side for a developer", (t) => open(t, DESK
   await desk.waitForSelector('#list [data-card="r-small"]');
   assert.deepEqual((await rows(desk)).map(([id]) => id), ["r-small", "c-small"]);
 }));
+
+// Simple mode's head of an item (docs/desk-page.md → Simple mode): what it is, where it stands,
+// who and when, at most two moves and ⋯ for the rest.
+const HEAD_DESK = (me, cards) => `<script>
+window.posts = [];
+const cards = ${JSON.stringify(cards)};
+window.platform = { async request({ method, path, body }) {
+  if (method === "POST") { posts.push({ path, body: JSON.parse(body || "{}") }); return { status: 200, contentType: "application/json", body: JSON.stringify({ thread: { id: "T-9" } }) }; }
+  const answer = path === "/api/me" ? ${JSON.stringify(me)}
+    : path === "/api/cards" ? { cards } : path.startsWith("/api/cards/") ? { card: cards.find((c) => c.id === decodeURIComponent(path.split("/")[3])) }
+    : path === "/api/agenda" ? { agenda: [] } : path === "/api/notifications" ? { seen: null, unread: 0, items: [] } : {};
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
+</script>`;
+const HEAD_ME = { role: "designer", email: "d@example.com", simple: true, spec_review: true, link: "https://desk.example.com/a/x", names: {}, handoff: { idea: "issue" },
+  can: { comment: true, approve: true, skip: true, close: true, revise: true, handle: true, "follow-up": true } };
+const drawn = { id: "R-5", kind: "request", title: "Calmer limits", status: "feedback", created: "2026-11-17T09:30:00Z", updated: "2026-11-18T10:00:00Z",
+  by: { email: "jana.novak@example.com" }, triage: { verdict: "design", reasons: [] }, request: { problem: "Limits are missed." },
+  variants: [{ id: "v1", name: "Calm", asset: "A-1", version: 1 }], threads: [], waiting: [] };
+const slackDraft = { ...drawn, id: "R-6", title: "From Slack", status: "spec", approved: { by: { email: "d@example.com" }, at: "2026-11-18T09:00:00Z" },
+  origin: { channel: "slack", email: "sam@example.com" }, spec: { review: "draft", asset: "A-2" } };
+const prChange = { id: "P-3", kind: "change", title: "A new toggle row", status: "new", created: "2026-11-18T08:00:00Z", updated: "2026-11-18T08:00:00Z",
+  source: { kind: "pr", pr: 812, url: "https://github.com/o/r/pull/812", draft: true, author: "dana-dev" }, attention: { level: "designer", reasons: ["New"] }, threads: [], waiting: [], screens: [] };
+
+test("simple mode heads a request with its number, link, state, author and two moves; Approve sends as soon as the spec is written", (t) => open(t, HEAD_DESK(HEAD_ME, [drawn, slackDraft, prChange]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="R-5"]');
+  await desk.click('#list [data-card="R-5"]');
+  await desk.waitForSelector("#detail .shead");
+  assert.match(await desk.textContent("#detail .shead h2"), /Calmer limits\s*R-5/, "the title with its number");
+  assert.equal(await desk.locator("#detail .shead h2 [data-copy-link]").count(), 1, "and the link icon that copies its link");
+  assert.match(await desk.textContent("#detail .sh-line"), /Open[\s\S]*jana\.novak[\s\S]*\d:\d\d [AP]M/, "its state, who (no name: the part before the @) and when");
+  assert.doesNotMatch(await desk.textContent("#detail .sh-line"), /@example\.com/, "never a whole address");
+  assert.deepEqual(await desk.$$eval("#detail .sh-acts > .btn", (xs) => xs.map((x) => x.textContent.trim())), ["Request changes", "Approve"]);
+  assert.equal(await desk.locator("#detail .status.req").count(), 0, "no status box in simple mode");
+  await desk.click('#detail .sh-acts [data-act="approve"]');
+  assert.equal(await desk.locator("#cf-check2-wrap").isHidden(), true, "no box to tick: it goes as soon as it is written");
+  assert.match(await desk.textContent("#cf-body"), /as soon as it is written/);
+  await desk.click("#cf-ok");
+  await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/R-5/actions"));
+  assert.equal((await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/R-5/actions").body)).auto_send, true);
+}));
+
+test("simple mode's Request changes sends a note Design Desk draws a new version from; ⋯ holds Close", (t) => open(t, HEAD_DESK(HEAD_ME, [drawn]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="R-5"]');
+  await desk.click('#list [data-card="R-5"]');
+  await desk.waitForSelector("#detail .shead");
+  await desk.click("#detail details.sh-more > summary");
+  assert.deepEqual(await desk.$$eval("#detail .sh-more .menu > *", (xs) => xs.map((x) => x.textContent.trim())), ["Close…"]);
+  await desk.keyboard.press("Escape");
+  await desk.click('#detail [data-act="request-changes"]');
+  await desk.fill("#confirm-form [name=note]", "Make the bar thicker.");
+  await desk.click("#cf-ok");
+  await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/R-5/threads"));
+  assert.deepEqual(await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/R-5/threads").body), { kind: "change", text: "Make the bar thicker.", anchor: { variant: "v1" } });
+}));
+
+test("simple mode: a spec draft that cannot go by itself is Open with Send to developers", (t) => open(t, HEAD_DESK(HEAD_ME, [slackDraft]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="R-6"]');
+  await desk.click('#list [data-card="R-6"]');
+  await desk.waitForSelector("#detail .shead");
+  assert.match(await desk.textContent("#detail .sh-line .spill"), /Open/);
+  assert.deepEqual(await desk.$$eval("#detail .sh-acts > .btn", (xs) => xs.map((x) => x.textContent.trim())), ["Send to developers"]);
+}));
+
+test("simple mode heads a change with its pull request, Approve and Turn into a design request", (t) => open(t, HEAD_DESK(HEAD_ME, [prChange]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="P-3"]');
+  await desk.click('#list [data-card="P-3"]');
+  await desk.waitForSelector("#detail .shead");
+  assert.match(await desk.textContent("#detail .sh-pr"), /#812 Draft/);
+  assert.equal(await desk.getAttribute("#detail .sh-pr", "href"), "https://github.com/o/r/pull/812");
+  assert.match(await desk.textContent("#detail .sh-line"), /dana-dev/);
+  assert.deepEqual(await desk.$$eval("#detail .sh-acts > .btn", (xs) => xs.map((x) => x.textContent.trim())), ["Approve"], "no Request changes on a change yet");
+  assert.deepEqual(await desk.$$eval("#detail .sh-more .menu > *", (xs) => xs.map((x) => x.textContent.trim())), ["Turn into a design request", "Open on GitHub ↗"]);
+  await desk.click('#detail .sh-acts [data-handle="1"]');
+  await desk.waitForFunction(() => posts.some((p) => /P-3/.test(p.path)));
+}));

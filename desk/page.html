@@ -244,6 +244,16 @@
     color: var(--p); background: color-mix(in srgb, var(--p) 14%, transparent); }
   .spill[data-s="open"] { --p: var(--ok); } .spill[data-s="dev"] { --p: var(--accent); } .spill[data-s="shipped"] { --p: var(--live); }
   .spill[data-s="none"] { --p: var(--muted); } .spill[data-s="closed"] { --p: var(--bad); }
+  /* Simple mode's head of an item: kept in view while the page scrolls. */
+  .shead { position: sticky; top: -24px; z-index: 6; display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; margin: -24px calc(-1 * var(--pad-x)) 16px; padding: 16px var(--pad-x); background: var(--bg); border-bottom: 1px solid var(--line); }
+  .sh-main { min-width: 0; } .shead h2 { margin: 0; } .shead h2 > span:not(.kic) { margin-right: 8px; }
+  .shead h2 .kic { display: inline-block; color: var(--muted); margin-right: 8px; vertical-align: -2px; } .shead h2 .kic svg { width: 20px; height: 20px; }
+  .sh-line { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; font-size: var(--fs-meta); color: var(--muted); }
+  .sh-facts { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; } .sh-facts .sep { color: var(--line); }
+  .sh-work { display: inline-flex; align-items: center; gap: 4px; color: var(--ink); }
+  .sh-pr { color: var(--ink); text-decoration: none; font-weight: 500; } .sh-pr:hover { text-decoration: underline; }
+  .sh-acts { display: flex; gap: 8px; align-items: center; flex: none; } details.more.sh-more .menu { left: auto; right: 0; }
+  @media (max-width: 860px) { .shead { top: 28px; margin: 0 -16px 12px; padding: 12px 16px; flex-wrap: wrap; } }
   /* Simple mode's filter: one button, its menu of ticks, and a chip for each thing it narrows by. */
   .simfilter { align-items: center; } .simfilter details.sf > summary { display: inline-flex; align-items: center; gap: 4px; }
   .simfilter details.sf > summary svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
@@ -2016,7 +2026,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const TIP = {
     act: {
       // Approve before any option: the spec comes from the request itself.
-      approve: () => S.me?.spec_review ? (S.card?.kind === "request" && !(S.card.variants || []).length ? "Design Desk writes the developer spec now, without a vote or a live prototype. It waits here for you to read; nothing goes to developers until you press Send to developers."
+      "request-changes": "Tell Design Desk what should change; it draws a new version",
+      approve: () => simple() && S.card?.kind === "request" && S.me?.spec_review && S.card.origin?.channel !== "slack" && !S.card.from_pr ? "Approves the design: Design Desk writes the developer spec and sends it to developers as soon as it is written"
+        : S.me?.spec_review ? (S.card?.kind === "request" && !(S.card.variants || []).length ? "Design Desk writes the developer spec now, without a vote or a live prototype. It waits here for you to read; nothing goes to developers until you press Send to developers."
           : "Approves the design: Design Desk writes the developer spec for you to read. Nothing goes to developers until you press Send to developers.")
         : S.card?.kind === "request" && !(S.card.variants || []).length ? "Design Desk writes the developer spec now, without a vote or a live prototype, and sends it on. You confirm first; once sent it can't be taken back."
         : "Approves the design: Design Desk writes the developer spec and sends it on. You confirm first; once sent it can't be taken back.",
@@ -2149,7 +2161,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   };
   const BTN_ICON = {
     act: { workspace: "pen", explore: "spark", build: (el) => /another option/.test(textOf(el)) ? "undo" : "screen", approve: () => S.card?.kind === "request" && !(S.card.variants || []).length ? "send" : "check",
-      reopen: "undo", revise: "redo", close: "cross", states: "layers", slack: "send", unqueue: "minus",
+      reopen: "undo", revise: "redo", "request-changes": "redo", close: "cross", states: "layers", slack: "send", unqueue: "minus",
       draw: "pen", refresh: "redo", history: "clock", "figma-import": "down", "figma-export": "up" },
     size: { small: "bolt", designer: "person" },
     adjust: "pen", addShots: "image", wsEdit: "pen", wsBuild: "screen",
@@ -3166,8 +3178,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const mySide = () => (DEVELOPERS.includes(S.me?.role) ? "developers" : "designers");
   // An approved request whose spec draft waits for a person to send it is theirs to move: Open.
   const specWaits = (c) => c.status === "spec" && c.spec?.review === "draft" && Boolean(S.me?.spec_review) && !c.approved?.auto_send;
-  function simpleState(c) {
-    if (!c || !["request", "change"].includes(c.kind) || forOf(c) !== mySide()) return null;
+  function simpleState(c, anySide = false) {
+    if (!c || !["request", "change"].includes(c.kind) || (!anySide && forOf(c) !== mySide())) return null;
     if (c.kind === "request") {
       if (c.status === "declined") return { state: "closed", pill: "closed" };
       if (c.status === "handed-off") return c.built ? { state: "closed", pill: "shipped" } : { state: "dev", pill: null };
@@ -3221,6 +3233,35 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ...(f.kinds.length < SIM_KINDS.length ? SIM_KINDS.filter(([k]) => f.kinds.includes(k)).map(([k, l]) => chip("kinds", k, l)) : [])].join("");
     return `<div class="listhead"><div class="filterbar simfilter"><details class="more sf"${S.simMenu ? " open" : ""}><summary class="btn small" aria-haspopup="menu" title="Filter the list"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4-2v-4z"/></svg>Filter</summary>
       <div class="menu" role="menu"><div class="sf-h">State</div>${states}<div class="sf-h">Kind</div>${kinds}${narrowed ? `<button class="btn small sf-reset" data-simf-reset>Reset to default</button>` : ""}</div></details>${chips}</div></div>`;
+  }
+  // A person by their name on the roster, else the part of their address before the @, never the whole address.
+  const shortName = (e) => !e ? "" : isMe(e) ? "you" : S.me?.names?.[String(e).toLowerCase()] || (String(e).includes("@") ? String(e).split("@")[0] : String(e));
+  // Simple mode's head of a request or a change (docs/desk-page.md → Simple mode): what it is,
+  // where it stands, who and when, at most two moves and ⋯ for the rest; it stays in view.
+  function simpleHead(c) {
+    const s = simpleState(c, true), k = s.pill || s.state, src = c.source || {}, change = c.kind === "change";
+    const work = atWork(c) ? `<span class="sh-work"><span class="dd-spin"></span>${esc(working(c).map((w) => WORK_SHORT[w] || "Working on it").join(", ") || "Design Desk is working on it")}</span>` : "";
+    const pr = change && src.pr ? `<a class="sh-pr" href="${safeUrl(src.url || "")}" target="_blank" rel="noopener noreferrer" title="Open the pull request on GitHub">#${esc(src.pr)}${src.merged_at ? " Merged" : src.draft ? " Draft" : ""} ↗</a>` : "";
+    const o = c.origin || {}, by = c.by || c.created_by || {};
+    const who = change ? src.author || "" : by.agent ? "Design Desk" : shortName(o.email || by.email || o.reporter);
+    const at = change ? src.merged_at || c.created : c.created;
+    const facts = [pr, who ? `<span>${esc(who)}</span>` : "", at ? `<span title="${esc(when(at))}">${esc(sWhen(at))}</span>` : ""].filter(Boolean).join(`<span class="sep">·</span>`);
+    // At most two moves, only while it needs a design decision and only the viewer's own.
+    const btn = (attr, label, primary = false) => `<button class="btn${primary ? " primary" : ""}" ${attr}>${label}</button>`;
+    const open = s.state === "open";
+    const moves = change ? (open && mayHandle(c) ? btn('data-handle="1"', "Approve", true) : "")
+      : !open ? ""
+      : specWaits(c) ? (canApprove(c) ? btn("data-spec-send", "Send to developers", true) : "")
+      : (can("revise") && (c.variants || []).length && !locked(c) ? btn('data-act="request-changes"', "Request changes") : "")
+        + (canApprove(c) && (c.triage || (c.variants || []).length) ? btn('data-act="approve"', "Approve", true) : "");
+    const url = change ? src.url : c.spec?.issue_url || c.spec?.pr_url || "";
+    const items = [change ? (can("follow-up") && !hasRequest(c) ? btn("data-adjust", "Turn into a design request") : "")
+        : closed(c) ? (can("close") ? btn('data-act="reopen"', "Reopen") : "") : (can("close") || can("skip") ? btn('data-act="close"', "Close…") : ""),
+      url ? `<a class="btn" href="${safeUrl(url)}" target="_blank" rel="noopener noreferrer">Open on GitHub ↗</a>` : ""].join("");
+    const more = items ? `<details class="more sh-more"><summary class="btn" aria-label="More" title="More">⋯</summary><div class="menu">${items}</div></details>` : "";
+    return `<div class="shead"><div class="sh-main"><h2>${kindIcon(c)}<span>${txt(c.title)}</span>${num(c)}${titleLink(c)}</h2>
+      <div class="sh-line"><span class="spill" data-s="${k}" title="${esc(SIM_TIP[k])}">${SIM_PILL[k]}</span>${work}${facts ? `<span class="sh-facts">${facts}</span>` : ""}</div></div>
+      <div class="sh-acts">${moves}${more}</div></div>`;
   }
   const setSimFilter = (f) => { S.simFilter = f; store.set("desk-simFilter", JSON.stringify(f)); };
   // Your turn: an open request whose next move is the viewer's own, by what they may do — answer
@@ -4565,7 +4606,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   function renderChange(c) {
     const src = c.source || {};
     return `${backBar()}
-      <h2>${txt(c.title)}${num(c)}${titleLink(c)}</h2>
+      ${simple() ? simpleHead(c) : `<h2>${txt(c.title)}${num(c)}${titleLink(c)}</h2>
       ${(() => {
         const [o, word, tip] = src.merged_at ? ["gh-merged", "Merged", "Its pull request is merged: the change is in the product"] : src.draft ? ["gh-draft", "Draft", "Its pull request is a draft: not ready for review, not in the product yet"] : ["gh-open", "Open", "Its pull request is open: not in the product yet"];
         // The facts in the list's style: grey words, the values in ink (docs/desk.md → Where a card came from).
@@ -4581,7 +4622,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         // As on an issue: the design action first and primary, Mark handled after it.
         const adjust = hasRequest(c) ? "" : (can("follow-up") && !handledAt(c) ? `<button class="btn primary" data-adjust>Adjust the design</button>` : can("follow-up") ? `<button class="btn" data-adjust>Adjust the design</button>` : "");
         return ghStatus(o, word, tip, meta, adjust + handle, agendaButton(c) + size, { pill, inline: true });
-      })()}
+      })()}`}
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
       ${c.builds ? `<div class="sent"><b>Builds a design from Design Desk</b><p>This pull request builds <button class="anchor" data-card="${esc(c.builds.card)}">${esc(c.builds.title)}</button>${num({ id: c.builds.card })}${c.builds.url && ghRef(c.builds.url) && !ghRef(c.builds.url).pr ? `, sent to developers as <a href="${safeUrl(c.builds.url)}" target="_blank" rel="noopener noreferrer">Issue #${esc(ghRef(c.builds.url).n)} ↗</a>` : ""}; its design and spec are there.</p></div>` : ""}
       ${requestsFrom(c)}
@@ -5202,7 +5243,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ${sizeLine(c)}
       ${c.status === "handed-off" ? `<div class="s-row">${sentBox(c, "", true)}${moves}</div>` : moves}${stageLine(c)}
     </div>
-    ${asks.length ? `<div class="s-asks">
+    ${asksBox(asks)}`;
+  }
+  // Design Desk's open questions on a request, each with its answer box.
+  function asksBox(asks) {
+    return `${asks.length ? `<div class="s-asks">
       ${asks.map((th) => th.questions ? askForm(th) : `<div class="asks" id="form-${esc(th.id)}"><b>Design Desk needs one answer from you before it can go on.</b>${md(th.messages[th.messages.length - 1].text)}
         ${mayIn(th, "reply") ? `<div class="reply"><input placeholder="Your answer…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small primary" data-send-reply="${esc(th.id)}">Answer</button></div>` : notYours}</div>`).join("")}
     </div>` : ""}`;
@@ -5473,7 +5518,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const theirs = (x) => !x.source || x.source === "person";
     const given = (c.screens || []).filter(theirs), found = (c.screens || []).filter((x) => !theirs(x));
     foldsFor(c);
-    return `${backBar()}
+    const head = simple() ? `${backBar()}${simpleHead(c)}
+      <div class="standing">${asksBox((c.threads || []).filter((th) => th.kind === "asks" && th.state === "open"))}${renderPolls(c)}
+      ${c.status === "spec" && c.spec?.review === "draft" && c.spec?.asset ? specPanel(c) : ""}${cannotFold(c)}${live(c) ? renderPrototype(c) : ""}</div>` : "";
+    return head ? head + requestBody() : `${backBar()}
       <h2 class="renamable">${txt(title)}${num(c)}${titleLink(c)}${!simple() && (filedIt(c) || can("close")) ? `<button class="linkbtn rename" data-rename aria-label="Rename this request" title="Give this request a clearer name; Design Desk keeps it">${PEN_ICON}</button>` : ""}</h2>
       <div class="sub">${bug ? `<span class="chip bad" title="Someone reported something broken on a screen">🐛 Bug</span>` : ""}${c.origin?.severity ? `<span class="chip" title="How bad the reporter says it is">${esc(c.origin.severity)} severity</span>` : ""}${simple() ? "" : c.agenda?.status === "queued" ? `<span class="chip info" title="The team looks at it at its next design meeting">▶ On the presentation${c.agenda.variant ? ` · ${esc(optionName(c, c.agenda.variant))}` : ""}</span>` : c.agenda?.status === "presented" ? `<span class="chip ok" title="The meeting it was shown at">✓ Presented ${esc(day(c.agenda.call))}</span>` : ""}${verdictChip(c)}<span>${esc(when(c.created))}</span></div>
       <div class="standing">
@@ -5484,7 +5532,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ${cannotFold(c)}
       ${live(c) ? renderPrototype(c) : ""}
       </div>
-      <div class="top2">
+      ${requestBody()}`;
+    function requestBody() { return `<div class="top2">
       <div class="brief${S.folds.brief ? " clamped" : ""}"><div class="brief-k">${askHead(c)}${tr ? langLink(tr, en) : ""}</div><div class="brief-body">
       ${renderLinked(c)}
       <div class="section">${bug ? `<h4>What happens</h4>` : ""}${md(r.problem)}${r.vision ? `<h4>How they picture it</h4>${md(r.vision)}` : ""}${more ? `<details class="fold"><summary>${bug && r.goal ? (r.steps ? "What should happen and the steps" : "What should happen") : "Steps"}</summary><div class="panel">${more}</div></details>` : ""}${skillLine(r.skills)}${r.figma ? `<p class="hint"><a href="${safeUrl(r.figma)}" target="_blank" rel="noopener noreferrer">The Figma design ↗</a></p>` : ""}</div>
@@ -5501,7 +5550,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ${renderImpact(c.impact)}
       ${c.spec?.asset && !(c.status === "spec" && c.spec?.review === "draft") ? specPanel(c) : ""}
       ${(c.sections || []).length ? `<h3>Details</h3>${sections(c)}` : ""}
-      ${renderThreads(c, { skipAsks: true })}`;
+      ${renderThreads(c, { skipAsks: true })}`; }
   }
 
   // The EN link in a request's head: the asker's words in English, and back to their own language.
@@ -7353,17 +7402,28 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       // With the spec read before it goes, the approver may send it unread; never a request from Slack (docs/handoff.md → Review before it goes).
       // From a pull request still open, the spec waits too: Send to developers picks a new issue or a comment on it.
       const unread = Boolean(S.me?.spec_review) && c.origin?.channel !== "slack" && !c.from_pr;
-      const waits = Boolean(S.me?.spec_review || c.from_pr);
-      res = await ask({ title: options.length ? "Approve a design" : "Approve without design options", body: `${waits ? `Design Desk writes the developer spec for ${what}. It waits here for you to read and edit; nothing goes to ${to} until you press **Send to developers**${c.from_pr ? `, where you pick a new issue or a comment on PR #${c.from_pr.pr}` : ""}${unread ? ", unless you tick the box below" : ""}.` : `Design Desk writes the developer spec for ${what} and sends it to ${to}. Once sent, it can't be taken back.`}${against.length ? `\n\n⚠ **It goes against ${against.join(", ")}.** Approve it only if the team means to; then revoke the decision, or Design Desk records this approval as going against it.` : ""}${earlier ? `\n\n${earlier.line}` : ""}`, ok: "Approve", choices: options.length && !built ? options : null, pick: options.length === 1 ? options[0].id : null, note: options.length ? null : "What should developers build? (optional)",
+      // Simple mode asks nothing: the spec goes as soon as it is written, wherever the store lets it.
+      const auto = simple() && unread;
+      const waits = Boolean(S.me?.spec_review || c.from_pr) && !auto;
+      res = await ask({ title: options.length ? "Approve a design" : "Approve without design options", body: `${waits ? `Design Desk writes the developer spec for ${what}. It waits here for you to read and edit; nothing goes to ${to} until you press **Send to developers**${c.from_pr ? `, where you pick a new issue or a comment on PR #${c.from_pr.pr}` : ""}${unread ? ", unless you tick the box below" : ""}.` : `Design Desk writes the developer spec for ${what} and sends it to ${to}${auto ? " as soon as it is written" : ""}. Once sent, it can't be taken back.`}${against.length ? `\n\n⚠ **It goes against ${against.join(", ")}.** Approve it only if the team means to; then revoke the decision, or Design Desk records this approval as going against it.` : ""}${earlier ? `\n\n${earlier.line}` : ""}`, ok: "Approve", choices: options.length && !built ? options : null, pick: options.length === 1 ? options[0].id : null, note: options.length ? null : "What should developers build? (optional)",
         ...(against.length ? { check: `I know it goes against ${against.join(", ")}` } : {}),
-        ...(github && !waits ? { check2: `Straight to implementation: the spec goes on ${to.startsWith("the GitHub issue it came from") ? "that issue" : "a GitHub issue (a new one, with the spec and pictures, if none is filed)"} with the coding agent's label, when its manifest names one` } : {}),
-        ...(unread ? { check2: `Send it to ${to} as soon as the spec is written, without waiting for me to read it. Once sent, it can't be taken back` } : {}),
+        ...(github && !waits && !simple() ? { check2: `Straight to implementation: the spec goes on ${to.startsWith("the GitHub issue it came from") ? "that issue" : "a GitHub issue (a new one, with the spec and pictures, if none is filed)"} with the coding agent's label, when its manifest names one` } : {}),
+        ...(unread && !auto ? { check2: `Send it to ${to} as soon as the spec is written, without waiting for me to read it. Once sent, it can't be taken back` } : {}),
         ...(earlier?.open ? { check3: unread ? `${earlier.check} (only with the box above ticked; else you pick it when you send)` : earlier.check } : {}),
-        send: (a) => post(built?.id || a.choice || a.note || "", { ...(against.length ? { overrule: a.check } : {}), ...(a.check2 ? (unread ? { auto_send: true } : { implement: true }) : {}), ...(a.check3 && (!unread || a.check2) ? { close_earlier: true } : {}) }) });
+        send: (a) => post(built?.id || a.choice || a.note || "", { ...(against.length ? { overrule: a.check } : {}), ...(auto ? { auto_send: true } : a.check2 ? (unread ? { auto_send: true } : { implement: true }) : {}), ...(a.check3 && (!unread || a.check2) ? { close_earlier: true } : {}) }) });
       if (!res) return;
     }
     // Build: pick the option, then look at its latest version and states once more in the
     // final check, which builds exactly what it shows (docs/prototype.md → Build).
+    // Request changes: a note to Design Desk, which draws the next version from it (a change note).
+    if (name === "request-changes") {
+      const v = S.variant || options[0]?.id;
+      res = await ask({ title: "Request changes", body: "Say what should change. Design Desk draws a new version from it; this request shows it here when it is ready.", ok: "Send",
+        note: "What should change?", send: (a) => { if (!a.note) throw new Error("Say what should change."); return api("POST", `/api/cards/${c.id}/threads`, { kind: "change", text: a.note, ...(v ? { anchor: { variant: v } } : {}) }); } });
+      if (!res) return;
+      toast("Sent. Design Desk draws a new version; this page updates by itself.");
+      await refreshList(); await openCard(c.id); return;
+    }
     if (name === "build" && options.length) {
       const pick = options.length > 1 ? await ask({ title: "Build a live prototype", body: "Design Desk makes a private copy of the product with the option you pick, with made-up data, that everyone on the list can open. Pick the option; next you see its latest version and every state for a final check before it is built.", ok: "Next: final check", choices: options, pick: S.ws.check ? S.variant : null, send: async (a) => a.choice }) : options[0].id;
       if (!pick) return;

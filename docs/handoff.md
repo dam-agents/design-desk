@@ -76,7 +76,8 @@ Approve), its state word (*Spec draft — read it, then send*), and Approve's wo
 Desk; nothing goes to developers until **Send to developers**).
 Nothing leaves the Desk until a person sends it (`spec_review`, default `enabled`; `disabled`, or the card's `approved.auto_send`
 → go straight on to step 5 as an issue for developers, never for a request with a Slack `origin` or one from a pull request still open (the card's `from_pr`), and never past an open question of step 4). After step 4 with no open question: keep `status: spec`,
-`done --outcome review` and stop. On the
+`done --outcome review` and stop. Simple mode's Approve always asks for the send as soon as the spec is written
+([desk-page.md](desk-page.md) → The page). On the
 card the people who may approve it read the spec, and:
 - **Edit the spec** — their text becomes the newest version (`spec.history` keeps the others);
 - **Ask for changes…** — a `handoff` item with `scope: "spec-revise"` and their note: rewrite
