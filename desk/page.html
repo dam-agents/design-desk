@@ -456,6 +456,12 @@
   .eltile .elpic iframe { width: 100%; height: 100%; border: 0; display: block; pointer-events: none; }
   .eltile .elname { font-weight: 600; font-size: var(--fs-ui); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .eltile .elmeta { display: flex; flex-wrap: wrap; gap: 4px; align-self: end; }
+  /* A part of the request this option leaves out keeps its place, so the options line up. */
+  .eltile.elgap { border-style: dashed; background: none; }
+  .eltile.elgap:hover { border-color: var(--line); }
+  .eltile.elgap .elopen { cursor: default; }
+  .eltile.elgap .elpic { display: grid; place-items: center; background: none; border-style: dashed; color: var(--muted); }
+  .eltile .elwhy { font-size: var(--fs-meta); color: var(--muted); }
   /* Product → Kit: the product's named values and its components' variants, a tile each, as the elements are. */
   .kit-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 12px; margin: 12px 0 0; padding: 0; list-style: none; }
   .kit-tile { display: grid; gap: 8px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); padding: 8px; min-width: 0; }
@@ -6028,17 +6034,29 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (id) return `<button class="anchor" data-el-goto="${esc(id)}" title="It is in Product → Elements, marked as from this approved design; open it there">✓ In the catalog</button>`;
     return can("add") ? `<button class="btn small" data-add-catalog="${esc(e.key)}" title="Add to the design catalog: it goes to Product → Elements with its states, marked as from this approved design">Add to catalog</button>` : "";
   }
+  // The request's elements (docs/requests.md → The same elements in every option): every option
+  // shows them in one order; one this option leaves out keeps its place, with why.
+  function alignedElements(c, v) {
+    const els = elementsOf(v), shared = c.shared_elements || [];
+    if (!shared.length || v.fidelity === "picture" || (!(v.elements || []).length && !(v.left_out || []).length)) return els;
+    const gap = (s) => ({ key: `gap-${s.id}`, gap: true, name: s.name, why: (v.left_out || []).find((x) => x.id === s.id)?.why || "" });
+    // States drawn of a part before the option left it out show no second tile beside its gap.
+    const out = shared.filter((s) => (v.left_out || []).some((x) => x.id === s.id)), outIds = new Set(out.map((s) => s.id)), outNames = new Set(out.map((s) => partKey(s.name)));
+    const leftOver = (e) => e.derived && (e.states.some((x) => outIds.has(x.element)) || outNames.has(e.name_key));
+    return [...shared.map((s) => els.find((e) => !e.derived && e.id === s.id) || gap(s)), ...els.filter((e) => !leftOver(e) && (e.derived || !shared.some((s) => s.id === e.id)))];
+  }
   function renderOptionElements(c, v) {
-    const els = elementsOf(v);
+    const els = alignedElements(c, v);
     // Nothing listed yet: no section, there is nothing to do with it.
     if (!els.length) return "";
     const tile = (e) => {
+      if (e.gap) return `<div class="eltile elgap"><div class="elopen"><span class="elpic">Not in this option</span><span class="elname">${esc(e.name)}</span>${e.why ? `<span class="elwhy">${esc(e.why)}</span>` : ""}</div></div>`;
       const busy = drawingStates(c, v, e), ch = CHANGE[e.change];
       const cat = catalogButton(c, v, e);
       return `<div class="eltile"><button class="elopen" data-el="${esc(e.key)}" title="Open ${esc(e.name)}: every state of it and the use case each covers"><span class="elpic">${elementPic(v, e)}</span><span class="elname">${esc(e.name)}</span>
-        <span class="elmeta">${ch ? `<span class="chip ${ch[1]}" title="${esc(ch[2])}">${ch[0]}</span>` : ""}${busy ? `<span class="chip info" title="Design Desk is drawing its states">● Drawing states</span>` : statesComplete(v, e) ? `<span class="chip ok" title="Every state of it is drawn for the option's latest version; nothing is left to draw">✓ All ${plural(e.states.length, "state", "states")}</span>` : `<span class="chip" title="${e.states.length ? "States drawn of it" : "Open it to have its states drawn"}">${e.states.length ? plural(e.states.length, "state", "states") : "No states yet"}</span>`}</span></button>${cat ? `<div class="elcat">${cat}</div>` : ""}</div>`;
+        <span class="elmeta">${ch ? `<span class="chip ${ch[1]}" title="${esc(ch[2])}">${ch[0]}</span>` : ""}${e.only_here && (c.shared_elements || []).length ? `<span class="chip" title="${esc(`Only this option has it: ${e.only_here}`)}">Only in this option</span>` : ""}${busy ? `<span class="chip info" title="Design Desk is drawing its states">● Drawing states</span>` : statesComplete(v, e) ? `<span class="chip ok" title="Every state of it is drawn for the option's latest version; nothing is left to draw">✓ All ${plural(e.states.length, "state", "states")}</span>` : `<span class="chip" title="${e.states.length ? "States drawn of it" : "Open it to have its states drawn"}">${e.states.length ? plural(e.states.length, "state", "states") : "No states yet"}</span>`}</span></button>${cat ? `<div class="elcat">${cat}</div>` : ""}</div>`;
     };
-    return sect("elements", "All elements", els.length, "The parts this option changes or adds, each on its own. Open one to see it in every state.", `<div class="elgrid">${els.map(tile).join("")}</div>`);
+    return sect("elements", "All elements", els.filter((e) => !e.gap).length, "The parts this option changes or adds, each on its own. Open one to see it in every state.", `<div class="elgrid">${els.map(tile).join("")}</div>`);
   }
 
   // The element dialog: which design it is of, what it is, and every state drawn of it; without

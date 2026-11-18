@@ -347,17 +347,29 @@ Compare with the product); a note from **Work into the design** is a `revise` li
   different; `selector` its CSS path in the option's page, or `shot` a picture of it alone
   (`design shot --element`, `--kind image`); `element` the product's element card it changes
   (`E-<n>`, [catalog.md](catalog.md)), when the catalog has one; `controls` its smart controls
-  ([Smart controls](#smart-controls)). The page shows them above the
+  ([Smart controls](#smart-controls)); `only_here` why only this option has it (next item). The page shows them above the
   option's design as **All elements**; one opens in a dialog with its states. A part picked in the design workspace
   that is (or sits inside) an element with states drawn offers **See every state**: the same
   dialog, only to look through them, with no button that draws or adds. A state belongs to the
   element its `element` names, else to the one named as its `part`. An entry without `elements`
   keeps the option's; a revise that adds, removes or moves a part sends them anew. The tiles
   are cut from the option's latest version, so they follow every change of it.
+- **The same elements in every option.** The options answer one brief, so they show the same
+  parts, drawn differently. Before drawing, list the parts the brief touches on the request:
+  `shared_elements: [{id, name, how}]` (at most 24; `how` what the brief needs of it), and give
+  every option an entry under each `id`; its `name` is the request's. The exception is said out
+  loud: a part an option leaves out goes in its `left_out: [{id, why}]` (sent alone, it replaces
+  the option's; `elements` sent without it clears it), and one only it has carries `only_here`, why. The store refuses (400) an option that neither draws nor leaves out a
+  part of the list, or has one off the list without `only_here`, and keeps the request's order and
+  names, the option's own parts after them. A person's own picture and an option that lists no
+  elements are not held to it; a request without the list (one drawn before it) keeps each
+  option's own. A list changed later is checked against every option in the same upsert: send
+  their elements anew. Under **All elements**, a part left out keeps its place, as **Not in this
+  option** with its `why`, so the options line up.
 - Upload each variant: `design desk asset <file.html> --kind variant --name <name>`, and a new
   version of one already on the card with `--card R-<n> --option <id>` ([Names notes hang
   on](#names-notes-hang-on)); set
-  `variants: [{id, version, name, rationale, fidelity, asset, stories, reasons, elements, states}]` (rationale: one
+  `variants: [{id, version, name, rationale, fidelity, asset, stories, reasons, elements, left_out, states}]` (rationale: one
   line on when this one wins) and `status: feedback` in one `design desk upsert` (a Desk-filed request may stay at `variants`: [desk.md](desk.md) → Team feedback). The list is
   every option on the card: one already there goes with the `version` (and each of its states
   with its `version`) the card gave you, a new one without; one to take off goes as `{id,

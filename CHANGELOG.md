@@ -7,7 +7,7 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
-## 1.99.0 — 2026-11-18
+## 1.100.0 — 2026-11-18
 
 **Upgrade:**
 1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): simple mode becomes
@@ -15,6 +15,16 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
    Closed) and one filter, a head on every item with at most two moves, and a calmer page with
    threaded comments. In simple mode Approve sends the spec as soon as it is written. No data
    migration.
+
+## 1.99.0 — 2026-11-18
+
+**Upgrade:**
+1. Restart the Desk server ([desk.md](docs/desk.md) → Server): the store takes a request's
+   `shared_elements` and an option's `left_out` and `only_here`, and holds every option to the list
+   ([requests.md](docs/requests.md) → The same elements in every option). Then republish the page
+   ([desk.md](docs/desk.md) → Publishing the page): a part an option leaves out keeps its place under
+   All elements.
+2. Nothing to migrate: a request drawn before has no list and keeps each option's own elements.
 
 ## 1.98.1 — 2026-11-18
 
