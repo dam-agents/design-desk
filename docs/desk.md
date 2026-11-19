@@ -455,6 +455,42 @@ A message of a run acting on its own names no one.
 A question that asks to see something ("how does it look when…") is answered with a picture
 of the product in that state: the `show` action ([actions.md](actions.md)).
 
+## Reviews
+
+A person can collect comments on a request or a pull request's change before sending them
+together. **Drafts** are kept by the Desk server, per person and item (`GET`, `POST
+/api/cards/<id>/drafts`, `DELETE …/drafts/<draft>`), so they follow the person to every
+device; nobody else sees them, no run of the agent reads them, and no card read, list, count or
+notification carries one. A draft is checked as the comment it becomes (its option and state
+exist), at most 50 wait per person and item, and a deleted request takes its drafts and reviews with it.
+
+**Sending** them (`POST /api/cards/<id>/reviews {verdict, note, variant}`) makes a **review**
+(`U-<n>`, on the card's `reviews`: who, when, the verdict, the note, its conversations): each
+draft becomes its own conversation tagged `review`, all or none. The verdicts:
+
+- **Request changes** — on a request, by whoever may write a change note: the drafts are
+  change notes (one without an option goes on the option shown), queued as one `revise`; a
+  note alone becomes one. On a change, by whoever may mark it handled: the drafts are comments,
+  and the review keeps the pull request's head commit (`sha`) the Desk last read, or the first it
+  reads, until its post names the last commit from before it (judged by the next read, never the post).
+- **Approve** — on a change, by whoever may mark it handled: it is marked handled. On a request,
+  only after the same person approved it: the review goes with that approval.
+- **Comment only** — by whoever may comment: comments, nothing else changes.
+
+A card read carries `responsible` after the newest review that asked for changes, until the
+next version: `design-desk` on a request until an option is drawn after it, `developer` on a
+change until its pull request's head is no longer `sha` (`next_at`; a later approval, a merge or the
+handled mark ends it too). A review never holds Design Desk's check on GitHub: Request changes
+leaves the handled mark and the check as they are; Approve marks the change handled, which passes
+a held check as the mark always does. Only Comment only is sent on a closed or sent request or a
+merged change. A draft about an option no longer drawn goes on the option shown under Request changes, and as one
+about the whole request otherwise. What exists stays as it is: a vote
+is not a verdict and counts on its own; **Work it in** turns a review's comment into a change note
+like any other; the design workspace's notes go to Design Desk at once, never into a review; a question
+for Design Desk (**Ask Design Desk**) is asked at once in the conversation and is never drafted. With `review_post`
+enabled, a review of a change with an open pull request is also posted there by the agent, as a
+comment ([watch.md](watch.md) → Reviews on GitHub); off (the default), it stays on the Desk.
+
 ## GitHub on the Desk
 
 The Desk keeps a copy of every issue and pull request its cards point at — the card's

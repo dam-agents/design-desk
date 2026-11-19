@@ -7,6 +7,19 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.102.0 — 2026-11-19
+
+**Upgrade:**
+1. Restart the Desk server ([desk.md](docs/desk.md) → Server) and republish the page
+   ([desk.md](docs/desk.md) → Publishing the page): people keep draft comments and send them as
+   one review with a verdict ([desk.md](docs/desk.md) → Reviews). The store starts `drafts` and
+   `reviews` empty; no data migration.
+2. Offer the operator `review_post` (default `disabled`): `enabled` posts a person's Desk review
+   of a pull request's change on that pull request, as a comment, with their name, from the
+   agent's account ([watch.md](docs/watch.md) → Reviews on GitHub). The step is the offer, never
+   the enabling.
+3. Nothing else to do: the next watch run's GitHub read records each pull request's head commit.
+
 ## 1.101.0 — 2026-11-18
 
 **Upgrade:**

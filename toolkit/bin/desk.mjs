@@ -98,6 +98,9 @@ const USAGE = `usage: design desk <command>   (<card> is any card's number, <R-n
   find-council <thread ts>                 which card and council a Slack thread belongs to; with no
                                            council, the request the thread filed ({council: null})
   find-finding <ref>                       the request an automated test finding was already filed as
+  review-posted <U-n> --url <url> [--sha <head>]
+                                           record that a person's review is posted on its pull request
+                                           (docs/watch.md → Reviews on GitHub)
   enqueue <kind> <card> [--note <text>]     put work on the inbox (e.g. teardown)
   github-sync [--card <card>]               read every issue and pull request the cards point at (or one
                                            card's) on GitHub with its comments and keep it on the Desk;
@@ -292,6 +295,9 @@ export function ghRecord(key, gh = (args) => run("gh", args)) {
   const [it] = api(`repos/${repo}/issues/${n}`);
   const pr = Boolean(it.pull_request);
   const said = api(`repos/${repo}/issues/${n}/comments`).map((c) => ({ author: c.user?.login || "", at: c.created_at, url: c.html_url, body: c.body || "" }));
+  // An open pull request's head commit: a review that asked for changes waits for it to move (docs/desk.md → Reviews).
+  // One it cannot read leaves the Desk's earlier one in place.
+  const head = pr && it.state === "open" ? (() => { try { return api(`repos/${repo}/pulls/${n}`)[0]?.head?.sha || null; } catch { return null; } })() : null;
   const reviews = pr ? api(`repos/${repo}/pulls/${n}/reviews`).filter((v) => v.body).map((v) => ({ author: v.user?.login || "", at: v.submitted_at, url: v.html_url, body: `[review: ${v.state}] ${v.body}` })) : [];
   // An issue's pull requests: the ones that mention it, newest last; the Desk follows the work on it.
   // A timeline it cannot read gives no list at all (`null`): the Desk keeps the one it had.
@@ -301,7 +307,7 @@ export function ghRecord(key, gh = (args) => run("gh", args)) {
     .map((e) => e.source.issue).filter((p, i, all) => all.findIndex((q) => q.html_url === p.html_url) === i)
     .map((p) => ({ title: p.title, url: p.html_url, state: p.pull_request?.merged_at ? "merged" : p.draft ? "draft" : p.state, author: p.user?.login || "" }));
   return { key, kind: pr ? "pr" : "issue", title: it.title, state: it.pull_request?.merged_at ? "merged" : it.state, url: it.html_url, author: it.user?.login || "",
-    labels: (it.labels || []).map((l) => l.name), assignees: (it.assignees || []).map((a) => a.login), ...(linked === null ? {} : { linked }), body: it.body || "", updated: it.updated_at, comments: [...said, ...reviews].sort((a, b) => String(a.at).localeCompare(String(b.at))) };
+    labels: (it.labels || []).map((l) => l.name), assignees: (it.assignees || []).map((a) => a.login), ...(linked === null ? {} : { linked }), body: it.body || "", updated: it.updated_at, ...(head ? { head } : {}), comments: [...said, ...reviews].sort((a, b) => String(a.at).localeCompare(String(b.at))) };
 }
 // Only the watched repositories (`repos`) are read: a ref a person's text names in another one
 // is never fetched with the agent's token, so no one reads a private repository through the Desk.
@@ -457,6 +463,9 @@ export async function main(_cmd, argv) {
     case "github-mark":
       if (typeof f.at !== "string" || typeof f.author !== "string") fail("pass --at <the comment's at> and --author <its login>, as github-sync's fresh gives them");
       return out(await call("POST", "/agent/github/marks", { key: pos[0] || "", at: f.at, author: f.author, design: !f.off }));
+    case "review-posted":
+      if (typeof f.url !== "string") fail("pass --url <the review's html_url on GitHub>");
+      return out(await call("POST", `/agent/reviews/${encodeURIComponent(pos[0] || "")}/posted`, { url: f.url, sha: typeof f.sha === "string" ? f.sha : null }));
     case "enqueue": return out(await call("POST", "/agent/enqueue", { kind: pos[0], card: pos[1], note: typeof f.note === "string" ? f.note : "" }));
     default: process.stdout.write(USAGE); process.exit(sub ? 2 : 0);
   }

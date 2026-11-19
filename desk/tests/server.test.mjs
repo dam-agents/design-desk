@@ -643,3 +643,50 @@ test("a redraw uploaded with --option carries the notes' names; a note whose par
   await d.agent("/agent/cards", { id: card.id, variants: [{ id: "v1", name: "Lists", asset: v3, version: 2 }] });
   assert.equal((await d.agent(`/agent/cards/${card.id}`)).body.card.threads.find((x) => x.id === c).anchor.gone, undefined, "a name the new version has again clears it");
 });
+
+test("drafts: a person adds, reads and removes their own draft comments; nobody else sees them", async (t) => {
+  const d = await desk(t);
+  const { body: { card } } = await d.viewer("alice@example.com", "/api/requests", { problem: "People miss the upload button." });
+  const add = await d.viewer("guest@example.com", `/api/cards/${card.id}/drafts`, { text: "Bigger, please" });
+  assert.equal(add.status, 201, "whoever may comment keeps drafts");
+  assert.equal((await d.viewer("guest@example.com", `/api/cards/${card.id}/drafts`)).body.drafts[0].text, "Bigger, please");
+  assert.deepEqual((await d.viewer("alice@example.com", `/api/cards/${card.id}/drafts`)).body.drafts, [], "another person sees none");
+  assert.doesNotMatch(JSON.stringify((await d.viewer("alice@example.com", `/api/cards/${card.id}`)).body), /Bigger, please/);
+  assert.equal((await d.agent(`/api/cards/${card.id}/drafts`)).status >= 400, true, "the agent keeps none");
+  const del = (email, id) => fetch(`http://127.0.0.1:${d.env.DESK_PORT}/api/cards/${card.id}/drafts/${id}`, { method: "DELETE", headers: { "x-platform-caller-role": "viewer", "x-platform-caller-email": email } });
+  assert.equal((await del("alice@example.com", add.body.draft.id)).status, 404, "nobody removes another person's draft");
+  assert.equal((await del("guest@example.com", add.body.draft.id)).status, 200);
+  assert.deepEqual((await d.viewer("guest@example.com", `/api/cards/${card.id}/drafts`)).body.drafts, []);
+});
+
+test("reviews: a guest sends Comment only; asking changes of a request takes the change ability, of a change who may mark it handled", async (t) => {
+  const d = await desk(t);
+  const { body: { card } } = await d.viewer("alice@example.com", "/api/requests", { problem: "People miss the upload button." });
+  const { body: { asset } } = await d.agent("/agent/assets", { kind: "variant", name: "v1", contentType: "text/html", data: "<button>Upload</button>", encoding: "utf8" });
+  assert.equal((await d.agent("/agent/cards", { id: card.id, status: "feedback", variants: [{ id: "v1", name: "Big", asset: asset.id }] })).status, 200);
+  const chg = (await d.agent("/agent/cards", { kind: "change", title: "Spend", source: { repo: "acme/widgets", pr: 7 } })).body.card.id;
+  const review = (email, id, verdict) => d.viewer(email, `/api/cards/${id}/reviews`, { verdict, note: "A note." });
+  assert.equal((await review("guest@example.com", card.id, "request-changes")).status, 403);
+  const guest = await review("guest@example.com", card.id, "comment");
+  assert.equal(guest.status, 201);
+  assert.equal(guest.body.review.verdict, "comment");
+  const pm = await review("pat@example.com", card.id, "request-changes");
+  assert.equal(pm.status, 201, "a PM asks Design Desk for the next version");
+  assert.equal(pm.body.inbox.kind, "revise");
+  assert.equal((await review("bob@example.com", chg, "request-changes")).status, 403, "a developer does not hold a change For Designers");
+  const designer = await review("alice@example.com", chg, "approve");
+  assert.equal(designer.status, 201);
+  const read = (await d.viewer("alice@example.com", `/api/cards/${chg}`)).body;
+  assert.deepEqual([(read.card || read).status, (read.card || read).reviews.length], ["handled", 1]);
+});
+
+test("reviews: a pull request's review is queued for GitHub only with review_post enabled", async (t) => {
+  for (const [config, kind] of [["", null], ["- review_post: enabled\n", "review"]]) {
+    const d = await desk(t, config);
+    const chg = (await d.agent("/agent/cards", { kind: "change", title: "Spend", source: { repo: "acme/widgets", pr: 7 } })).body.card.id;
+    const r = await d.viewer("alice@example.com", `/api/cards/${chg}/reviews`, { verdict: "comment", note: "Fine." });
+    assert.equal(r.status, 201);
+    assert.equal(r.body.inbox?.kind ?? null, kind, config || "the default");
+    assert.equal((await d.viewer("alice@example.com", "/api/me")).body.review_post, kind === "review");
+  }
+});

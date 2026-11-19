@@ -281,7 +281,9 @@ Compare with the product); a note from **Work into the design** is a `revise` li
     `[{prop, from, to}]`, CSS values, `var(--name)` for a product color; `anchor.controls` the smart
     controls picked: `[{control, label, from, to, source}]`, applied by the kit's own way, such as the
     component's prop or the token, in the option's source). A comment a designer, PM or developer pressed **Work it in** on is one
-    too (`was` keeps its first kind, `work_in` who asked); read its replies, the last word wins. Apply
+    too (`was` keeps its first kind, `work_in` who asked); read its replies, the last word wins. So are
+    a review's comments when it asked for changes (`review`, [desk.md](desk.md) → Reviews): the
+    review's note, on the card's `reviews`, is the whole review's. Apply
     every open `change` thread of the card to the option's own source (kept under
     `work/output/`), rebuild, look, and upload the result as the **same option id** with its
     new asset, uploaded with `--option` ([Names notes hang on](#names-notes-hang-on)): the Desk numbers the version and keeps the earlier one. An option with `states` gets

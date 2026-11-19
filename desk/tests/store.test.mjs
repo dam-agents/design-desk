@@ -3008,3 +3008,263 @@ test("a request in another language keeps its English beside the asker's words",
   s.upsertCard({ id: card.id, translation: null });
   assert.equal(s.card(card.id).translation, null);
 });
+
+test("drafts: a person's comments not sent yet are theirs alone, on every device, and in no read", () => {
+  const s = fresh();
+  const a = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: "<p>v</p>", encoding: "utf8" }).asset;
+  const req = s.upsertCard({ kind: "request", title: "Calmer list" }).card;
+  s.upsertCard({ id: req.id, status: "feedback", variants: [{ id: "v1", name: "Big", asset: a.id }] });
+  const chg = s.upsertCard({ kind: "change", title: "Spend", source: { repo: "acme/widgets", pr: 7 } }).card;
+  const one = s.addDraft(req.id, alice, { text: "Tighter rows", anchor: { variant: "v1", label: "Row" } }).draft;
+  s.addDraft(req.id, alice, { text: "Whole thing" });
+  s.addDraft(chg.id, alice, { text: "The chip", change: "Spend list" });
+  assert.deepEqual(s.drafts(req.id, alice).drafts.map((d) => [d.text, d.anchor?.variant || null]), [["Tighter rows", "v1"], ["Whole thing", null]]);
+  assert.equal(s.drafts(chg.id, alice).drafts[0].change, "Spend list");
+  assert.deepEqual(s.drafts(req.id, bob).drafts, [], "another person sees none");
+  assert.throws(() => s.drafts(req.id, { agent: true }), /Only a person/);
+  // Kept across a reload; in no card read, list or notification.
+  const again = new Store(s.dir, { needsApproval: everyCounts });
+  assert.equal(again.drafts(req.id, alice).drafts.length, 2);
+  assert.doesNotMatch(JSON.stringify([again.getCard(req.id, { viewer: "alice@example.com" }), again.listCards({}), again.notifications(bob)]), /Tighter rows/);
+  // Checked as the comment it becomes; at most so many per person and item.
+  assert.throws(() => s.addDraft(req.id, alice, { text: "x", anchor: { variant: "v9" } }), /not on this request/);
+  assert.throws(() => s.addDraft(req.id, alice, { text: " " }), /text/);
+  const dec = s.upsertCard({ kind: "digest", title: "Week" }).card;
+  assert.throws(() => s.addDraft(dec.id, alice, { text: "x" }), /request or a pull request/);
+  s.removeDraft(req.id, alice, one.id);
+  assert.deepEqual(s.drafts(req.id, alice).drafts.map((d) => d.text), ["Whole thing"]);
+  assert.throws(() => s.removeDraft(req.id, bob, one.id), /no draft/);
+  for (let i = s.drafts(chg.id, alice).drafts.length; i < LIMITS.draftsPerCard; i++) s.addDraft(chg.id, alice, { text: `n${i}` });
+  assert.throws(() => s.addDraft(chg.id, alice, { text: "one more" }), /At most/);
+  // A deleted request takes its drafts with it.
+  s.act(req.id, alice, "close", "Not now");
+  for (const i of Object.values(s.db.inbox)) i.state = "done";
+  s.deleteRequest(req.id, alice);
+  assert.equal(Object.values(s.db.drafts).some((mine) => Object.hasOwn(mine, req.id)), false);
+});
+
+test("reviews: drafts go out as one review; each verdict does what the Desk already does; who makes the next version", () => {
+  let t = 0;
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { needsApproval: everyCounts, clock: () => new Date(Date.UTC(2026, 10, 18, 10, 0, t++)).toISOString().replace(/\.\d{3}Z$/, "Z") });
+  const a = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: "<p>v</p>", encoding: "utf8" }).asset;
+  const req = s.upsertCard({ kind: "request", title: "Calmer list" }).card;
+  s.upsertCard({ id: req.id, status: "feedback", triage: { verdict: "design", reasons: ["Only the look."] }, variants: [{ id: "v1", name: "Quiet", asset: a.id }, { id: "v2", name: "Bold", asset: a.id }] });
+  for (const i of Object.values(s.db.inbox)) i.state = "done";
+  assert.throws(() => s.sendReview(req.id, alice, { verdict: "comment" }), /Write a comment/);
+  s.addDraft(req.id, alice, { text: "Rows tighter", anchor: { variant: "v2", label: "Row" } });
+  s.addDraft(req.id, alice, { text: "Overall calmer" });
+  assert.throws(() => s.sendReview(req.id, alice, { verdict: "nope" }), /verdict/);
+  const r = s.sendReview(req.id, alice, { verdict: "request-changes", note: "Close, two things.", variant: "v1" });
+  assert.match(r.review.id, /^U-\d+$/);
+  const threads = r.review.threads.map((id) => s.thread(id));
+  assert.deepEqual(threads.map((x) => [x.kind, x.anchor?.variant, x.review]), [["change", "v2", r.review.id], ["change", "v1", r.review.id]], "change notes, the unanchored one on the option shown");
+  assert.equal(Object.values(s.db.inbox).filter((i) => i.card === req.id && i.kind === "revise" && i.state === "open").length, 1, "one revise for the whole review");
+  assert.deepEqual(s.drafts(req.id, alice).drafts, [], "the drafts are gone");
+  const read = s.getCard(req.id);
+  assert.deepEqual([read.reviews.length, read.reviews[0].note, read.responsible.who], [1, "Close, two things.", "design-desk"]);
+  assert.equal(s.listCards({}).find((x) => x.id === req.id).responsible.who, "design-desk");
+  // A new version of an option arrives: nobody else is making it any more.
+  s.card(req.id).variants.find((x) => x.id === "v2").drawn = s.clock();
+  assert.equal(s.getCard(req.id).responsible, null);
+  // Approve on a request goes with the person's own approval, never instead of it.
+  s.addDraft(req.id, alice, { text: "Good now" });
+  assert.throws(() => s.sendReview(req.id, alice, { verdict: "approve" }), /Approve the request first/);
+  // Comment only changes nothing but the conversation.
+  const status = s.card(req.id).status;
+  const plain = s.sendReview(req.id, alice, { verdict: "comment" });
+  assert.deepEqual([s.thread(plain.review.threads[0]).kind, s.card(req.id).status, plain.inbox], ["comment", status, null]);
+
+  // A pull request's change: the developer makes the next version, until its head moves on.
+  const chg = s.upsertCard({ kind: "change", title: "Spend", source: { repo: "acme/widgets", pr: 7 } }).card;
+  s.putGithub([{ key: "acme/widgets#7", kind: "pr", title: "Spend", head: "a".repeat(40), comments: [] }]);
+  s.addDraft(chg.id, alice, { text: "The chip is too loud", change: "Spend list" });
+  assert.throws(() => s.sendReview(chg.id, bob, { verdict: "request-changes" }), /Only designers/);
+  const rc = s.sendReview(chg.id, alice, { verdict: "request-changes" });
+  assert.deepEqual([rc.review.sha, s.thread(rc.review.threads[0]).change, s.card(chg.id).status], ["a".repeat(40), "Spend list", "new"]);
+  assert.equal(s.getCard(chg.id).responsible.who, "developer");
+  s.putGithub([{ key: "acme/widgets#7", kind: "pr", title: "Spend", head: "b".repeat(40), comments: [] }]);
+  assert.equal(s.getCard(chg.id).responsible, null, "new commits: Open again");
+  // Approve marks it handled.
+  s.addDraft(chg.id, alice, { text: "Fine" });
+  s.sendReview(chg.id, alice, { verdict: "approve" });
+  assert.equal(s.card(chg.id).status, "handled");
+
+  // A refused draft leaves everything as it was.
+  s.addDraft(req.id, alice, { text: "On a state", anchor: { variant: "v1" } });
+  s.card(req.id).variants = [];
+  const before = JSON.stringify(s.db);
+  assert.throws(() => s.sendReview(req.id, alice, { verdict: "request-changes" }), /options are drawn/);
+  assert.equal(JSON.stringify(s.db), before);
+});
+
+test("reviews on GitHub: with review_post on, a pull request's review is queued for the agent to post; the Desk keeps its head commit", () => {
+  const s = fresh();
+  const chg = s.upsertCard({ kind: "change", title: "Spend", source: { repo: "acme/widgets", pr: 7 } }).card;
+  s.putGithub([{ key: "acme/widgets#7", kind: "pr", title: "Spend", head: "a".repeat(40), comments: [] }]);
+  assert.equal(s.github(["acme/widgets#7"])[0].head, "a".repeat(40));
+  s.putGithub([{ key: "acme/widgets#7", kind: "pr", title: "Spend", comments: [] }]);
+  assert.equal(s.github(["acme/widgets#7"])[0].head, "a".repeat(40), "a read without it keeps the one before");
+  s.addDraft(chg.id, alice, { text: "Too loud" });
+  s.addDraft(chg.id, alice, { text: "Off" });
+  assert.equal(s.sendReview(chg.id, alice, { verdict: "comment" }).inbox, null, "review_post off: it stays on the Desk");
+  s.addDraft(chg.id, alice, { text: "Too loud" });
+  const r = s.sendReview(chg.id, alice, { verdict: "comment", post: true });
+  assert.deepEqual([r.inbox.kind, r.inbox.review, r.review.sha], ["review", r.review.id, "a".repeat(40)]);
+  assert.deepEqual(inbox(s).open.filter((i) => i.kind === "review").map((i) => i.review), [r.review.id], "the worklist names the review");
+  // A request's review stays on the Desk.
+  const req = s.upsertCard({ kind: "request", title: "Calmer" }).card;
+  s.addDraft(req.id, alice, { text: "Hm" });
+  assert.equal(s.sendReview(req.id, alice, { verdict: "comment", post: true }).inbox, null);
+  // Posted: where, and the head GitHub posted it on, which wins over the Desk's copy.
+  assert.throws(() => s.reviewPosted(r.review.id, { url: "https://example.com/x" }), /url/);
+  const posted = s.reviewPosted(r.review.id, { url: "https://github.com/acme/widgets/pull/7#pullrequestreview-1", sha: "b".repeat(40) }).review;
+  assert.deepEqual([posted.posted.url.endsWith("review-1"), posted.sha], [true, "b".repeat(40)]);
+});
+
+test("reviews in the bell: a review sent, and a pull request's new commits after one asked for changes", () => {
+  const s = fresh();
+  const chg = s.upsertCard({ kind: "change", title: "Spend", source: { repo: "acme/widgets", pr: 7 } }).card;
+  s.putGithub([{ key: "acme/widgets#7", kind: "pr", title: "Spend", head: "a".repeat(40), comments: [] }]);
+  s.addDraft(chg.id, alice, { text: "Too loud" });
+  const r = s.sendReview(chg.id, alice, { verdict: "request-changes", note: "One thing." }).review;
+  const lead = { email: "lee@example.com", role: "admin" };
+  const sent = s.notifications(lead).items.find((x) => x.event === "review");
+  assert.deepEqual([sent.item, sent.review, sent.detail], [chg.id, r.id, "Changes requested: One thing."]);
+  assert.equal(s.notifications(alice).items.some((x) => x.event === "review"), false, "never your own doings");
+  assert.equal(s.notifications(bob).items.find((x) => x.event === "review").for_you, true, "a developer hears of a review of a pull request");
+  s.putGithub([{ key: "acme/widgets#7", kind: "pr", title: "Spend", head: "b".repeat(40), comments: [] }]);
+  const next = s.notifications(alice).items.find((x) => x.event === "new-version");
+  assert.deepEqual([next.item, next.for_you], [chg.id, true], "the reviewer hears the next version arrived");
+  assert.equal(s.getCard(chg.id).responsible, null);
+});
+
+test("reviews hold up: a stale option, a closed item, two reviews in one second, a head read after the review, GitHub's own head", () => {
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { needsApproval: everyCounts, clock: () => "2026-11-18T10:00:00Z" });
+  const a = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: "<p>v</p>", encoding: "utf8" }).asset;
+  const req = s.upsertCard({ kind: "request", title: "Calmer" }).card;
+  s.upsertCard({ id: req.id, status: "feedback", triage: { verdict: "design", reasons: ["Look."] }, variants: [{ id: "v1", name: "Quiet", asset: a.id }, { id: "v2", name: "Bold", asset: a.id }] });
+  s.addDraft(req.id, alice, { text: "On Bold", anchor: { variant: "v2" } });
+  s.card(req.id).variants = s.card(req.id).variants.filter((v) => v.id !== "v2");
+  const r = s.sendReview(req.id, alice, { verdict: "request-changes" }).review;
+  assert.equal(s.thread(r.threads[0]).anchor.variant, "v1", "a draft about a removed option goes on the one shown");
+  // A change: request changes, then approve, in the same second: approved.
+  const chg = s.upsertCard({ kind: "change", title: "Spend", source: { repo: "acme/widgets", pr: 7 } }).card;
+  s.addDraft(chg.id, alice, { text: "x" });
+  const rc = s.sendReview(chg.id, alice, { verdict: "request-changes" }).review;
+  assert.equal(rc.sha, undefined, "no head known yet");
+  assert.equal(s.getCard(chg.id).responsible.who, "developer");
+  // The first head read after it is the one it is about; the next one is the new version.
+  s.putGithub([{ key: "acme/widgets#7", kind: "pr", title: "Spend", head: "a".repeat(40), comments: [] }]);
+  assert.equal(s.db.reviews[rc.id].sha, "a".repeat(40));
+  assert.equal(s.getCard(chg.id).responsible.who, "developer");
+  // GitHub's head at posting wins over a copy that was behind.
+  s.reviewPosted(rc.id, { url: "https://github.com/acme/widgets/pull/7#r", sha: "b".repeat(40) });
+  s.putGithub([{ key: "acme/widgets#7", kind: "pr", title: "Spend", head: "b".repeat(40), comments: [] }]);
+  assert.equal(s.getCard(chg.id).responsible.who, "developer", "the head the review was posted on is no new version");
+  s.addDraft(chg.id, alice, { text: "fine" });
+  s.sendReview(chg.id, alice, { verdict: "approve" });
+  assert.equal(s.getCard(chg.id).responsible, null, "the later review wins, whatever the second");
+  // A merged change takes Comment only.
+  s.card(chg.id).source.merged_at = "2026-11-18T10:00:00Z";
+  s.addDraft(chg.id, alice, { text: "late" });
+  assert.throws(() => s.sendReview(chg.id, alice, { verdict: "request-changes" }), /Comment only/);
+  assert.equal(s.sendReview(chg.id, alice, { verdict: "comment" }).review.verdict, "comment");
+});
+
+test("a new version is judged against what the reviewer saw: a copy that was behind, or a push before the post, never fools it", () => {
+  const s = fresh();
+  const chg = s.upsertCard({ kind: "change", title: "Spend", source: { repo: "acme/widgets", pr: 7 } }).card;
+  const read = (head) => s.putGithub([{ key: "acme/widgets#7", kind: "pr", title: "Spend", head, comments: [] }]);
+  const [h1, h2, h3] = ["1", "2", "3"].map((x) => x.repeat(40));
+  // The copy holds h1 while h2 is already pushed: the review is about h2.
+  read(h1);
+  s.addDraft(chg.id, alice, { text: "Loud" });
+  const r = s.sendReview(chg.id, alice, { verdict: "request-changes" }).review;
+  read(h2);
+  assert.equal(s.getCard(chg.id).responsible, null, "for now it looks new");
+  s.reviewPosted(r.id, { url: "https://github.com/acme/widgets/pull/7#r", sha: h2 });
+  assert.equal(s.getCard(chg.id).responsible?.who, "developer", "the post says h2 was what the reviewer saw");
+  assert.equal(s.notifications(alice).items.some((x) => x.event === "new-version"), false, "and no New version");
+  read(h3);
+  assert.equal(s.getCard(chg.id).responsible, null, "the real next version");
+  assert.equal(s.notifications(alice).items.filter((x) => x.event === "new-version").length, 1);
+  // A push between sending and posting is the next version: the post names the commit from before.
+  const other = s.upsertCard({ kind: "change", title: "Rows", source: { repo: "acme/widgets", pr: 8 } }).card;
+  s.putGithub([{ key: "acme/widgets#8", kind: "pr", title: "Rows", head: h1, comments: [] }]);
+  s.addDraft(other.id, alice, { text: "Tight" });
+  const r8 = s.sendReview(other.id, alice, { verdict: "request-changes" }).review;
+  s.putGithub([{ key: "acme/widgets#8", kind: "pr", title: "Rows", head: h2, comments: [] }]);
+  s.reviewPosted(r8.id, { url: "https://github.com/acme/widgets/pull/8#r", sha: h1 });
+  s.putGithub([{ key: "acme/widgets#8", kind: "pr", title: "Rows", head: h2, comments: [] }]);
+  assert.equal(s.getCard(other.id).responsible, null, "the next read sees h2 is past what the reviewer saw");
+  // A post naming a commit the Desk's copy has not read yet is no new version: the next read judges.
+  const late = s.upsertCard({ kind: "change", title: "Late", source: { repo: "acme/widgets", pr: 9 } }).card;
+  s.putGithub([{ key: "acme/widgets#9", kind: "pr", title: "Late", head: h1, comments: [] }]);
+  s.addDraft(late.id, alice, { text: "Hm" });
+  const r9 = s.sendReview(late.id, alice, { verdict: "request-changes" }).review;
+  s.reviewPosted(r9.id, { url: "https://github.com/acme/widgets/pull/9#r", sha: h2 });
+  assert.equal(s.getCard(late.id).responsible?.who, "developer");
+  s.putGithub([{ key: "acme/widgets#9", kind: "pr", title: "Late", head: h2, comments: [] }]);
+  assert.equal(s.getCard(late.id).responsible?.who, "developer", "h2 is what the reviewer saw");
+  assert.equal(s.notifications(alice).items.filter((x) => x.event === "new-version" && x.item === late.id).length, 0, "no false New version");
+});
+
+test("reviews: a refused send leaves the drafts as they were; Approve on a handled change marks nothing again; a deleted request takes its reviews", () => {
+  const s = fresh();
+  const a = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: "<p>v</p>", encoding: "utf8" }).asset;
+  const req = s.upsertCard({ kind: "request", title: "Calmer" }).card;
+  s.upsertCard({ id: req.id, status: "feedback", triage: { verdict: "design", reasons: ["Look."] }, variants: [{ id: "v1", name: "Quiet", asset: a.id }, { id: "v2", name: "Bold", asset: a.id }] });
+  s.card(req.id).variants[0].states = [{ id: "hover", name: "Hover", asset: a.id }];
+  s.addDraft(req.id, alice, { text: "On Bold", anchor: { variant: "v2" } });
+  s.addDraft(req.id, alice, { text: "On hover", anchor: { variant: "v1", state: "hover" } });
+  const c = s.card(req.id);
+  c.variants = [{ ...c.variants[0], states: [] }];
+  assert.throws(() => s.sendReview(req.id, alice, { verdict: "comment" }), /no longer drawn/);
+  assert.equal(s.drafts(req.id, alice).drafts[0].anchor.variant, "v2", "untouched");
+  // Approve on a change already handled keeps who handled it.
+  const chg = s.upsertCard({ kind: "change", title: "Spend", source: { repo: "acme/widgets", pr: 7 } }).card;
+  s.handle(chg.id, alice, true);
+  const lee = { email: "lee@example.com", role: "admin" };
+  s.addDraft(chg.id, lee, { text: "Fine" });
+  s.sendReview(chg.id, lee, { verdict: "approve" });
+  assert.equal(s.card(chg.id).handled.by.email, "alice@example.com");
+  // A deleted request takes its reviews with it.
+  s.removeDraft(req.id, alice, s.drafts(req.id, alice).drafts[1].id);
+  const r = s.sendReview(req.id, alice, { verdict: "comment" }).review;
+  s.act(req.id, alice, "close", "Not now");
+  for (const i of Object.values(s.db.inbox)) i.state = "done";
+  s.deleteRequest(req.id, alice);
+  assert.equal(Object.hasOwn(s.db.reviews, r.id), false);
+});
+
+test("a post keeps a New version the Desk read after the review was sent", () => {
+  let t = 0;
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { needsApproval: everyCounts, clock: () => new Date(Date.UTC(2026, 10, 19, 9, 0, t++)).toISOString().replace(/\.\d{3}Z$/, "Z") });
+  const chg = s.upsertCard({ kind: "change", title: "Spend", source: { repo: "acme/widgets", pr: 7 } }).card;
+  const read = (head) => s.putGithub([{ key: "acme/widgets#7", kind: "pr", title: "Spend", head, comments: [] }]);
+  const [h1, h2, h3] = ["1", "2", "3"].map((x) => x.repeat(40));
+  read(h1);
+  s.addDraft(chg.id, alice, { text: "Loud" });
+  const r = s.sendReview(chg.id, alice, { verdict: "request-changes" }).review;
+  read(h3);
+  assert.equal(s.getCard(chg.id).responsible, null, "h3 came after the review");
+  s.reviewPosted(r.id, { url: "https://github.com/acme/widgets/pull/7#r", sha: h2 });
+  assert.equal(s.getCard(chg.id).responsible, null, "the post names h2, the Desk read h3 after the review: still the next version");
+  assert.equal(s.notifications(alice).items.filter((x) => x.event === "new-version").length, 1);
+  // A pull request on another GitHub host is recorded too.
+  assert.match(s.reviewPosted(r.id, { url: "https://github.example.com/acme/widgets/pull/7#pullrequestreview-9", sha: h2 }).review.posted.url, /example\.com/);
+});
+
+test("a Comment-only review never waits for a next version, posted or not", () => {
+  let t = 0;
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { needsApproval: everyCounts, clock: () => new Date(Date.UTC(2026, 10, 19, 9, 0, t++)).toISOString().replace(/\.\d{3}Z$/, "Z") });
+  const chg = s.upsertCard({ kind: "change", title: "Spend", source: { repo: "acme/widgets", pr: 7 } }).card;
+  const read = (head) => s.putGithub([{ key: "acme/widgets#7", kind: "pr", title: "Spend", head, comments: [] }]);
+  read("1".repeat(40));
+  s.addDraft(chg.id, alice, { text: "Nice" });
+  const r = s.sendReview(chg.id, alice, { verdict: "comment" }).review;
+  read("3".repeat(40));
+  s.reviewPosted(r.id, { url: "https://ghe.example.com:8443/acme/widgets/pull/7#r", sha: "2".repeat(40) });
+  assert.equal(s.db.reviews[r.id].next_at, undefined);
+  assert.equal(s.notifications(alice).items.some((x) => x.event === "new-version"), false);
+});

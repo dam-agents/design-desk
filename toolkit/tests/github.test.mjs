@@ -31,8 +31,22 @@ test("github-sync reads each ref with its comments and reviews, posts them, merg
   assert.deepEqual([issue.kind, issue.state, issue.labels, issue.comments.map((c) => c.body)], ["issue", "open", ["design"], ["Make it red?"]]);
   assert.deepEqual(issue.linked, [{ title: "Build the red", url: "https://github.com/acme/widgets/pull/8", state: "open", author: "bot" }], "an issue knows the pull requests that build it");
   assert.deepEqual([pr.kind, pr.state, pr.comments.map((c) => c.body)], ["pr", "merged", ["[review: APPROVED] Fine."]], "a pull request's reviews with a body are its comments");
+  assert.equal(pr.head, undefined, "a merged pull request's head is not read: no review waits on it");
+  assert.equal(issue.head, undefined);
   assert.deepEqual([out.synced, out.failed.map((x) => x.key), out.fresh.map((x) => x.key)], [2, ["acme/widgets#9"], ["acme/widgets#3"]]);
   assert.match(out.failed[0].error, /404/);
   assert.deepEqual(failed, [{ keys: ["acme/widgets#9"] }], "the key it cannot read is counted on the Desk");
   assert.deepEqual(out.gave_up, ["acme/widgets#9"], "and named when the Desk gives up on it");
+});
+
+test("github-sync reads an open pull request's head commit, for a review waiting on a new version", async () => {
+  const OPEN = {
+    "repos/acme/widgets/issues/8": [{ title: "Rows", state: "open", pull_request: {}, html_url: "https://github.com/acme/widgets/pull/8", user: { login: "bob" }, labels: [], body: "", updated_at: "2026-11-02T10:00:00Z" }],
+    "repos/acme/widgets/issues/8/comments": [[]], "repos/acme/widgets/pulls/8/reviews": [[]], "repos/acme/widgets/pulls/8": [{ head: { sha: "c".repeat(40) } }],
+  };
+  const gh8 = (args) => { const path = args[args.length - 1]; return path in OPEN ? { status: 0, stdout: JSON.stringify(OPEN[path]) } : { status: 1, stderr: "HTTP 404: Not Found\n" }; };
+  const posted = [];
+  const call = async (method, path, body) => (method === "GET" ? { refs: ["acme/widgets#8"] } : (posted.push(body), { fresh: [] }));
+  await githubSync(null, { call, gh: gh8, repos: "acme/widgets" });
+  assert.equal(posted[0].records[0].head, "c".repeat(40));
 });
