@@ -65,7 +65,7 @@ function roleOf(caller) {
 // address; the role the record names only where the Desk verified it (a comment, an approval)
 // or the operator or a designer said it (chat, the meeting), never from text Design Desk read. Else a pull request, a commit or an
 // architecture page is a developer's; unknown stays null.
-const DESIGN_SIDE = ["admin", "designer", "pm"], DEVELOPER_SIDE = ["lead-developer", "developer"];
+const DESIGN_SIDE = ["admin", "designer", "pm"], DEVELOPER_SIDE = ["ui-dev-owner", "developer"];
 const SAID_ROLE = ["desk", "approval", "chat", "call"], FROM_GITHUB = ["pr", "issue", "commit", "doc"];
 function sideOf(d) {
   const email = String(d.author?.email || "").toLowerCase();
@@ -100,7 +100,7 @@ function settings() {
   const admin = roster().find((r) => r.role === "admin");
   const ideas = cfg("handoff", "desk");
   return {
-    // Read as the roster reads a role, so `lead developer` here is the roster's `lead-developer`.
+    // Read as the roster reads a role, so `UI dev owner` here is the roster's `ui-dev-owner`.
     prototypeRoles: list(cfg("prototype_requesters"), ["designer", "pm", "admin"]).map(readRole),
     ping: cfg("desk_ping", "enabled") !== "disabled",
     name: cfg("display_name", "Design Desk"),
@@ -215,7 +215,7 @@ async function viewerRoute(req, res, url, who) {
     const verb = VERBS[action] || "do that";
     throw new DeskError(403, who.deskRole === "guest"
       ? `To ${verb}, ask ${s.contact} to add ${who.email || "you"} to the Desk's members.`
-      : `Only ${action === "people" ? "an admin" : action === "size" ? "lead developers and admins" : action === "skip" ? "designers, PMs and lead developers" : action === "close" || action === "reopen" ? "designers and PMs" : action === "built" ? "developers" : "designers"} can ${verb}. Ask ${s.contact} if you need it.`);
+      : `Only ${action === "people" ? "an admin" : action === "size" ? "UI dev owners and admins" : action === "skip" ? "designers, PMs and UI dev owners" : action === "close" || action === "reopen" ? "designers and PMs" : action === "built" ? "developers" : "designers"} can ${verb}. Ask ${s.contact} if you need it.`);
   };
   const p = url.pathname.split("/").filter(Boolean); // ["api", ...]
   const m = req.method;
@@ -246,8 +246,8 @@ async function viewerRoute(req, res, url, who) {
   if (m === "GET" && p[1] === "agenda") return send(res, 200, { agenda: store.agenda(), presented: store.presented(), calls: (store.db.calls || []).slice(-5) });
   // The product's releases, for Product → History (docs/watch.md → Releases).
   if (m === "GET" && p[1] === "releases") return send(res, 200, store.getReleases());
-  // The product's kit: an admin's, a designer's and a lead developer's page (docs/desk-page.md → Product → Kit).
-  if (m === "GET" && p[1] === "kit") { if (!LOOK_ROLES.includes(who.deskRole)) throw new DeskError(403, `Only admins, designers and lead developers see the kit. Ask ${s.contact} if you need it.`); return send(res, 200, store.getKit()); }
+  // The product's kit: an admin's, a designer's and a UI dev owner's page (docs/desk-page.md → Product → Kit).
+  if (m === "GET" && p[1] === "kit") { if (!LOOK_ROLES.includes(who.deskRole)) throw new DeskError(403, `Only admins, designers and UI dev owners see the kit. Ask ${s.contact} if you need it.`); return send(res, 200, store.getKit()); }
   if (m === "GET" && p[1] === "decisions" && !p[2]) {
     // Not approved: the ones in force that wait for a designer's approval.
     const q = decisionQuery(url), pending = url.searchParams.get("state") === "unapproved";
@@ -400,7 +400,7 @@ async function viewerRoute(req, res, url, who) {
   }
   if (m === "POST" && p[1] === "cards" && p[3] === "actions") {
     const action = String(b.action);
-    // A request For Developers is approved by a developer too, and a lead developer approves any request;
+    // A request For Developers is approved by a developer too, and a UI dev owner approves any request;
     // the store checks who (docs/desk.md → For Developers or For Designers, Deciding straight away).
     // Drawing every state of a part is changing the option: a designer's, a PM's or a developer's.
     // A request's author removes its options whatever their role (docs/desk.md → Roles).

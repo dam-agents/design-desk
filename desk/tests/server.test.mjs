@@ -54,7 +54,7 @@ test("only an admin asks for a new person; the owner's ask says so; the agent ca
 
   const people = await d.viewer("alice@example.com", "/api/people");
   assert.deepEqual(people.body.asks.map((a) => a.email).sort(), ["alex@example.com", "dee@example.com"]);
-  assert.deepEqual(people.body.addable, ["designer", "pm", "lead-developer", "developer"]);
+  assert.deepEqual(people.body.addable, ["designer", "pm", "ui-dev-owner", "developer"]);
 
   const enqueue = await d.agent("/agent/enqueue", { kind: "person", card: "C-1" });
   assert.equal(enqueue.status, 400);
@@ -148,7 +148,7 @@ test("a request's author removes an option whatever their role; anyone else need
   assert.deepEqual(guest.body.card.variants.map((v) => v.id), ["v2", "v3"]);
 });
 
-test("For Developers: only a lead developer moves it there, any developer but its author approves it", async (t) => {
+test("For Developers: only a UI dev owner moves it there, any developer but its author approves it", async (t) => {
   const d = await desk(t);
   const filed = await d.viewer("bob@example.com", "/api/requests", { problem: "Rows are too airy.", options: 0 });
   assert.equal(filed.status, 201);
@@ -158,7 +158,7 @@ test("For Developers: only a lead developer moves it there, any developer but it
   const size = (email, small) => d.viewer(email, `/api/cards/${id}/size`, { small });
 
   const me = await d.viewer("lou@example.com", "/api/me");
-  assert.deepEqual([me.body.role, me.body.can.size, me.body.can.approve, me.body.can.explore], ["lead-developer", true, false, true], "a roster role with a space reads as lead-developer");
+  assert.deepEqual([me.body.role, me.body.can.size, me.body.can.approve, me.body.can.explore], ["ui-dev-owner", true, false, true], "a roster role written `Lead developer`, its old name, reads as ui-dev-owner");
   assert.equal((await approve("dana@example.com")).status, 403, "For Designers: a designer's");
   for (const email of ["bob@example.com", "guest@example.com"]) assert.equal((await size(email, true)).status, 403, email);
 
@@ -198,7 +198,7 @@ test("a person by any address of their row: the same role, still the author, the
   assert.equal(relayed.body.thread.messages[0].by.role, "developer", "Slack's address carries the row's role");
 });
 
-test("deciding straight away: a lead developer approves or decides and closes, a developer does not", async (t) => {
+test("deciding straight away: a UI dev owner approves or decides and closes, a developer does not", async (t) => {
   const d = await desk(t);
   const filed = await d.viewer("bob@example.com", "/api/requests", { problem: "The header shouts.", options: 0 });
   const id = filed.body.card.id;
@@ -250,10 +250,10 @@ test("a request sent, reopened by an admin and sent again: Approve and Send to d
   assert.deepEqual([sent.status, sent.body.inbox.close_earlier], [200, "https://github.com/acme/widgets/issues/142"]);
 });
 
-test("prototype_requesters reads a role as the roster does: `Lead developer` is lead-developer", async (t) => {
+test("prototype_requesters reads a role as the roster does: `Lead developer`, the old name, is ui-dev-owner", async (t) => {
   const d = await desk(t, "- prototype_requesters: designer, Lead developer\n\n");
   const build = async (email) => (await d.viewer(email, "/api/me")).body.can.build;
-  assert.equal(await build("lou@example.com"), true, "a lead developer builds");
+  assert.equal(await build("lou@example.com"), true, "a UI dev owner builds");
   assert.equal(await build("alice@example.com"), true);
   assert.equal(await build("bob@example.com"), false, "a developer is not listed");
 });
@@ -540,8 +540,8 @@ test("team feedback: a Desk request waits for a person to ask the team, one from
 });
 
 // Who files a request For Developers (docs/desk.md → For Developers or For Designers): the
-// dialog's switch counts for a lead developer and an admin; anyone else's lands For Designers.
-test("only a lead developer or an admin files a request For Developers", async (t) => {
+// dialog's switch counts for a UI dev owner and an admin; anyone else's lands For Designers.
+test("only a UI dev owner or an admin files a request For Developers", async (t) => {
   const d = await desk(t);
   const filed = async (email) => (await d.viewer(email, "/api/requests", { problem: "Rows are too airy.", options: 0, audience: "developers" })).body.card.size.small;
   for (const email of ["lou@example.com", "lee@example.com"]) assert.equal(await filed(email), true, `${email} may`);
@@ -551,7 +551,7 @@ test("only a lead developer or an admin files a request For Developers", async (
 test("a PM moves a request along — close, reopen, build by default — and marks no presentation presented", async (t) => {
   const d = await desk(t);
   const me = (await d.viewer("pat@example.com", "/api/me")).body;
-  assert.deepEqual([me.role, me.can.size, me.can.close, me.can.reopen, me.can.build, me.can.queue], ["pm", false, true, true, true, false], "prototype_requesters unset: a PM builds, and leaves the tab to a lead developer");
+  assert.deepEqual([me.role, me.can.size, me.can.close, me.can.reopen, me.can.build, me.can.queue], ["pm", false, true, true, true, false], "prototype_requesters unset: a PM builds, and leaves the tab to a UI dev owner");
   assert.equal((await d.viewer("bob@example.com", "/api/me")).body.can.build, false, "a developer does not");
   const id = (await d.viewer("alice@example.com", "/api/requests", { problem: "Rows are too airy.", options: 0 })).body.card.id;
   assert.equal((await d.agent("/agent/cards", { id, status: "feedback", triage: { verdict: "design", reasons: ["Spacing only."] } })).status, 200);

@@ -73,7 +73,7 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   note on it keeps it, and the part is found by that name first. A note whose part a redraw left
   out (`anchor.gone`) pins only on the versions before; on that version and after it stays in
   Comments with **· not in this version**, and opens as one whose place is gone.
-  **The look palette:** in Select, an admin, a designer or a lead developer gets **Change the look** in
+  **The look palette:** in Select, an admin, a designer or a UI dev owner gets **Change the look** in
   Properties, under the part selected: tabs Text, Fill, Spacing, Layout (a flex or grid
   part only) and Size, with steppers, segmented choices, colors, and a resize handle on the part's
   corner in the design. An element with smart controls opens on **Suggested** first: only the
@@ -130,7 +130,7 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   `voted_mine`), approve (not while a vote runs in Slack), read and send the spec, build the
   prototype again; never while Design Desk works), **Unread** (not opened by you), **Open**, **Closed**; Issues:
   **All** (the default, designed issues too), then the buckets, then **Handled** (what a
-  designer or a lead developer marked handled; it leaves the other lists); Decisions: In force, Not approved, Revoked, All),
+  designer or a UI dev owner marked handled; it leaves the other lists); Decisions: In force, Not approved, Revoked, All),
   counts in a quiet pill. Both stay on top while the list scrolls; a filter wider than the list
   scrolls sideways and fades at its edge. A list has no search box of its own.
 - **Counts in the menu.** Each tab counts only what is still open: Requests the open requests, PR
@@ -184,7 +184,7 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   words, in the accent when on), is review-first. The menu has one entry, **Requests & PRs**
   (current on Requests and PR Changes, its count the Open items), and **+ New request**; its one
   list holds the requests and the pull request changes of the viewer's own side — For Developers
-  for a developer or a lead developer, For Designers for everyone else, with no switch — each in
+  for a developer or a UI dev owner, For Designers for everyone else, with no switch — each in
   one state ([A request's state in the list](#a-requests-state-in-the-list)), the newest change
   first. A row is the kind's icon, the title, when it last changed (Today, Yesterday or the
   day, with the time; the year only when it is not this year), then its number in the same grey
@@ -363,7 +363,7 @@ A part under **All elements** opens in one dialog, the same in simple and full m
 ## Product → Kit
 
 The product's kit as `design kit` last read it ([requests.md](requests.md) → Smart controls),
-shown only to an admin, a designer or a lead developer (`GET /api/kit` refuses anyone else). The list has one row per
+shown only to an admin, a designer or a UI dev owner (`GET /api/kit` refuses anyone else). The list has one row per
 kind of named value (Colors, Shadows, Corners, Spacing, Text sizes…) and one per component's
 variants (`Button · variant`), each with its count and the files it comes from. A row opens its
 tiles, drawn as the elements' are: a color's swatch, a shadow on a card, a corner, a spacing bar,
@@ -499,10 +499,10 @@ private ask only its owner: Design Desk's answers to it are theirs alone, and fo
 | Design Desk answered, Design Desk asks | the agent answers a question, or asks one |
 | New options drawn, Options redrawn | a run draws options, or new versions of them |
 | New vote, Option approved, Spec ready, Closed with a decision | a request moves on |
-| Feedback asked | a person hands the drawn options to the team (**Ask for feedback**); For you for every `developer` and `lead-developer` |
+| Feedback asked | a person hands the drawn options to the team (**Ask for feedback**); For you for every `developer` and `ui-dev-owner` |
 | New decision, Decision revoked | a decision is added or revoked |
 | Developer asks, Marked done | a developer asks a design's designer, or marks it done ([Designs](#designs)) |
-| Feedback sent, New version | a person sends feedback (on a pull request's change, For you for every `developer` and `lead-developer`); new commits arrive on a pull request a review asked changes of ([desk.md](desk.md) → Reviews) |
+| Feedback sent, New version | a person sends feedback (on a pull request's change, For you for every `developer` and `ui-dev-owner`); new commits arrive on a pull request a review asked changes of ([desk.md](desk.md) → Reviews) |
 
 Every row is at most three lines, each cut short with … when long, and says the same things in the same places: an icon and what happened, who (when known),
 how long ago, the item's kind in grey (Request:, PR change:, Decision: …), its title and number, and for a message or a vote one
@@ -531,7 +531,7 @@ its messages included, is For you.
 
 ## Designs
 
-A menu tab right after Requests, only for `developer`, `lead-developer` and `admin`: the
+A menu tab right after Requests, only for `developer`, `ui-dev-owner` and `admin`: the
 requests sent to developers (`handed-off`), **To build** and **Done**, nothing else. Each send is an
 item of its own with its own number, `G-<n>` (`design_id`, given when the request is handed off; a
 send after a reopen gets a new one), shown on its row and its page. An item
