@@ -468,7 +468,8 @@ On a pull request's change with screens, a draft names the change it is about in
 screens' `pair`, or a lone screen's `asset` (`changesOf` in `desk/store.mjs`, the page's change
 view). **Looks good** is a draft with no words, `{ok: true, change}`: once per person and change,
 refused while they have notes on that change, and taken back by a note on it. Sent, it makes no
-conversation: the review keeps `looks_good: [{key, name}]`, and may hold nothing else. A card
+conversation: the review keeps `looks_good: [{key, name}]`, shown under its note as "✓ Looks
+good: <name>, …", and may hold nothing else. A card
 read carries `looks_good`, the keys of the reviews whose `sha` is the pull request's head the
 Desk has; a new version empties it.
 

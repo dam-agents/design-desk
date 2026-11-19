@@ -251,7 +251,8 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   `GET /api/me`); with no choice (null) it is off.
   The Desk opens on Requests.
 - **Changes**, on a pull request change's page in both modes: the change's screens one change at
-  a time. A change is a screen pair (`pair`, its pictures by `stage`) or a screen with no `stage`,
+  a time, in one framed panel — the tabs, the pictures under **BEFORE** / **AFTER**, and a tinted foot
+  with the feedback, **Looks good** a filled green button. A change is a screen pair (`pair`, its pictures by `stage`) or a screen with no `stage`,
   in that order (`changesOf`, [desk.md](desk.md) → Reviews). With two or more, one tab each, the
   underline tabs with a number chip ([the guidelines](../desk/guidelines.html) → Tabs and
   switchers), scrolling sideways in one row. The change shown: **Before** beside **After**, or
@@ -260,7 +261,13 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   them, for who may comment on an open item: the viewer's notes on it waiting in their feedback,
   a box, **Add to feedback** and **Looks good** (a mark with no words; then "You marked it as
   good" with **Undo**, and no Looks good while notes on it wait). No comment for the team there:
-  what is written is for the developer. "n comments on this change ↓" leads to its conversations.
+  what is written is for the developer. "n comments on this change ↓" leads to its conversations,
+  and a conversation's **◎ <change>** chip back to it. A tab's chip says how far the viewer got:
+  green for Looks good (theirs, or sent on the pull request's head, `looks_good`), amber for a note
+  of theirs on it, grey for not looked at; "✓ All looked at" beside **Changes** once none is grey.
+  Looks good shows the next change not looked at, and on the last opens the feedback, Approve
+  picked where the viewer may. The feedback's dialog names the changes not looked at yet, and
+  sends anyway. **Request changes · n** counts notes, never marks.
   With no screens, a line says how they come: Design Desk's own copy of the product while one is
   free (`screens` on), else when the pull request merges; **Add screenshots** stays, and a box
   with **Add to feedback** alone takes notes on the whole pull request.

@@ -277,14 +277,25 @@
   .dbub { display: flex; gap: 8px; align-items: flex-start; padding: 8px 12px; border-radius: var(--r-sm); background: var(--panel); } .dbub + .dbub { margin-top: 8px; }
   .dbub .db-b { min-width: 0; flex: 1; white-space: pre-wrap; overflow-wrap: anywhere; } .dbub .about { display: block; font-size: var(--fs-micro); color: var(--muted); white-space: normal; }
   .dbub .x { border: 0; background: none; color: var(--muted); cursor: pointer; font: inherit; padding: 0 4px; } .dbub .x:hover { color: var(--ink); }
-  /* A pull request's changes, one at a time: tabs, the pictures of the one shown, its feedback box. */
-  .chg-h .hint { font-weight: 400; margin-left: 4px; } .chg-one { margin: 0 0 12px; }
-  .chg-pair { max-width: 1200px; } .chg-pair[style*="--cols:1"] { max-width: 760px; }
-  .chg-foot { display: grid; gap: 8px; margin-top: 12px; max-width: var(--measure); } .chg-foot .dbub { background: var(--warn-soft); }
+  /* A pull request's changes, one at a time: one framed panel — tabs, the pictures of the change
+     shown under their labels, and a tinted foot that takes the reviewer's feedback on it. */
+  .chg-h .hint { font-weight: 400; margin-left: 4px; }
+  .cv { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); overflow: hidden; margin-bottom: 12px; }
+  .cv .cv-tabs { margin: 0; padding: 0 16px; } .cv-one { padding: 12px 16px 0; }
+  .cv-body { padding: 16px; } .cv-body > .hint { margin: 0; } .cv-body .outline-toggle { margin: 0 0 12px; }
+  .cv-pair { display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); gap: 12px; } .cv-pair[style*="--cols:1"] { max-width: 760px; }
+  .cv-lab { font-size: var(--fs-micro); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  .cv-col .shot { margin: 0; }
+  .chg-foot { display: grid; gap: 8px; padding: 16px; background: var(--soft); border-top: 1px solid var(--line); } .chg-foot .dbub { background: var(--warn-soft); }
+  .chg-foot textarea { background: var(--panel); }
   .chg-foot .bar { display: flex; gap: 8px; align-items: center; } .chg-foot .bar .grow { flex: 1; }
-  .chg-ok { display: inline-flex; gap: 8px; align-items: center; color: var(--approved); font-weight: 600; font-size: var(--fs-ui); }
-  .chg-ok svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; } .chg-ok .link { font-weight: 400; color: var(--muted); }
+  .btn.cv-ok { background: var(--approved); border-color: var(--approved); color: var(--bg); font-weight: 600; } .btn.cv-ok:hover { opacity: .88; }
+  svg.ck { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .chg-ok { display: inline-flex; gap: 8px; align-items: center; color: var(--approved); font-weight: 600; font-size: var(--fs-ui); } .chg-ok .link { font-weight: 400; color: var(--muted); }
   .chg-talk { justify-self: start; font-size: var(--fs-meta); }
+  .chg-done { margin-left: 12px; font-size: var(--fs-meta); font-weight: 600; color: var(--approved); }
+  .rv-warn { margin: 0 0 12px; padding: 8px 12px; border-radius: var(--r-sm); background: var(--warn-soft); border: 1px solid var(--warn); }
+  .rv-ok { margin: 8px 0 0; color: var(--approved); font-size: var(--fs-ui); }
   #cf-body .dbub { background: var(--soft); }
   .rvw { --v: var(--muted); max-width: var(--measure); margin-bottom: 12px; padding: 12px 16px; border: 1px solid var(--line); border-left: 2px solid var(--v); border-radius: var(--r-sm); }
   .rvw[data-v="request-changes"] { --v: var(--warn); } .rvw[data-v="approve"] { --v: var(--ok); }
@@ -3363,7 +3374,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const open = s.state === "open";
     // With drafts waiting, Request changes counts them and is the next step; either verdict opens
     // the review dialog with it picked (docs/desk.md → Reviews).
-    const n = draftsOf(c).length, verdicts = verdictsFor(c).map((x) => x.id);
+    const n = draftsOf(c).filter((d) => !d.ok).length, verdicts = verdictsFor(c).map((x) => x.id);
     const changes = verdicts.includes("request-changes") ? btn('data-review="request-changes"', n ? `Request changes · ${n}` : "Request changes", n > 0) : "";
     const approve = (attr) => (n ? btn('data-review="approve"', "Approve") : btn(attr, "Approve", true));
     const moves = change ? ((open || c.responsible?.who === "developer") && mayHandle(c) ? changes + (c.handled ? "" : approve('data-handle="1"')) : "")
@@ -3405,7 +3416,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const who = ((n) => (n === "you" ? "You" : n))(r.by?.agent ? "Design Desk" : shortName(r.by?.email, r.by?.name) || "someone");
     const gh = r.posted?.url ? `<a class="rv-gh" href="${safeUrl(r.posted.url)}" target="_blank" rel="noopener noreferrer" title="This feedback on the pull request">On GitHub ↗</a>` : "";
     return `<article class="rvw" id="rv-${esc(r.id)}" data-v="${esc(r.verdict)}"><div class="rv-h"><b>${esc(who)}</b>${r.by?.role ? `<span class="hint">${esc(roleLabel(r.by.role))}</span>` : ""}<span class="rv-v" title="What this feedback says">${esc(REVIEW_SAYS[r.verdict] || r.verdict)}</span><span class="hint" title="${esc(when(r.at))}">${esc(sWhen(r.at))}</span>${gh}</div>
-      ${r.note ? `<div class="rv-note">${md(r.note)}</div>` : ""}${rows}</article>`;
+      ${r.note ? `<div class="rv-note">${md(r.note)}</div>` : ""}${(r.looks_good || []).length ? `<p class="rv-ok">✓ Looks good: ${esc(r.looks_good.map((x) => x.name).join(", "))}</p>` : ""}${rows}</article>`;
   }
   // A review in the making (docs/desk.md → Reviews): the viewer's drafts on an item, kept by the
   // Desk server for them alone. `addDraft` is the one way a box adds one, here and in the item's other views.
@@ -3467,7 +3478,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const ds = draftsOf(c), choices = verdictsFor(c);
     if (!choices.length) return;
     const pr = S.me?.review_post && c.kind === "change" && c.source?.pr && !c.source?.merged_at;
-    const a = await ask({ title: "Send your feedback", html: `${ds.length ? ds.map((d) => draftBubble(c, d, false)).join("") : `<p class="hint">No comments yet: write a note for the whole feedback.</p>`}${pr ? `<p class="hint">It goes to the pull request on GitHub too, as a comment.</p>` : ""}`,
+    // Changes nobody marked or commented on yet: said, never in the way (docs/desk-page.md → Changes).
+    const left = c.kind === "change" && changesOf(c).length > 1 ? notLookedAt(c) : [];
+    const warn = left.length ? `<div class="rv-warn" role="status"><b>${esc(plural(left.length, "change", "changes"))} not looked at yet:</b> ${esc(left.map((x) => x.name).join(", "))}. You can still send; Cancel takes you back.</div>` : "";
+    const a = await ask({ title: "Send your feedback", html: `${warn}${ds.length ? ds.map((d) => draftBubble(c, d, false)).join("") : `<p class="hint">No comments yet: write a note for the whole feedback.</p>`}${pr ? `<p class="hint">It goes to the pull request on GitHub too, as a comment.</p>` : ""}`,
       ok: "Send feedback", choices, pick: choices.some((x) => x.id === pick) ? pick : choices[0].id, note: "A note for the whole feedback (optional)", max: 4000,
       send: async (x) => {
         if (!ds.length && !x.note) throw new Said("Write a comment or a note first.");
@@ -3497,7 +3511,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const av = (p) => `<span class="sav" data-r="${esc(p.k)}" aria-hidden="true">${p.k === "agent" ? `<svg viewBox="0 0 24 24">${ICON_PATH.spark}</svg>` : esc((p.n === "you" ? S.me?.my_name || "Y" : p.n)[0].toUpperCase())}</span>`;
     const msg = (m, reply) => { const p = person(m.by);
       return `<div class="smsg${reply ? " re" : ""}">${av(p)}<div class="sm-b"><div class="who"><b>${esc(p.n === "you" ? "You" : p.n)}</b>${p.r ? `<span class="role">${roleIcon(p.r)}${esc(roleLabel(p.r))}</span>` : ""}<span class="at" title="${esc(when(m.at))}">${esc(sWhen(m.at))}</span></div>${md(m.text)}</div></div>`; };
-    const optionOf = (th) => { const v = th.anchor?.variant && (c.variants || []).find((x) => x.id === th.anchor.variant); return v ? `<button class="chip sjump" data-goto="${esc(th.id)}" title="Open the design at the part this is about">Option ${(c.variants || []).indexOf(v) + 1}: ${esc(v.name)}${th.anchor.label ? ` · ${esc(th.anchor.label)}` : ""}</button>` : ""; };
+    const optionOf = (th) => { if (th.change && c.kind === "change") return changeChip(c, th); const v = th.anchor?.variant && (c.variants || []).find((x) => x.id === th.anchor.variant); return v ? `<button class="chip sjump" data-goto="${esc(th.id)}" title="Open the design at the part this is about">Option ${(c.variants || []).indexOf(v) + 1}: ${esc(v.name)}${th.anchor.label ? ` · ${esc(th.anchor.label)}` : ""}</button>` : ""; };
     const order = (a, b) => (a.state === "resolved") - (b.state === "resolved") || last(b) - last(a);
     const one = (th) => {
       const [first, ...replies] = th.messages;
@@ -4662,6 +4676,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       const on = av ? `Option ${(c.variants || []).indexOf(av) + 1}: ${av.name}` : "A removed option";
       const anchor = an?.variant ? `<span class="chip" title="The design option this note is on"><b>${esc(on)}</b></span><button class="anchor" data-goto="${esc(th.id)}" data-snip="${esc(snipAsset)}" data-snip-sel="${esc(an.selector || "")}" data-snip-text="${esc(an.text || "")}">◎ ${esc(an.label || an.text || "the whole option")}${an.view_name ? ` · ${esc(an.view_name)}` : ""}</button>`
         // A comment from the presentation on a picture of a change, an issue or a screen names that picture.
+        : th.change && c.kind === "change" ? changeChip(c, th)
         : an?.label ? `<span class="chip" title="The picture this comment is on">◎ ${esc(an.label)}</span>` : "";
       const state = th.state === "resolved" ? `<span class="chip ok" title="Someone marked it done">done</span>` : th.state === "answered" ? `<span class="chip" title="Design Desk answered it">answered</span>` : "";
       const kind = `<span class="chip ${tone}" title="${esc(th.dev ? "A developer asks the designer how the approved design is meant" : KIND_TIP[th.kind] || "")}">${esc(name)}</span>`;
@@ -4847,6 +4862,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   }
   const changeShown = (c) => { const xs = changesOf(c); return xs.find((x) => S.chg?.card === c.id && x.key === S.chg.key) || xs[0] || null; };
   const changeName = (c, key) => changesOf(c).find((x) => x.key === key)?.name || key;
+  // A conversation about a change leads to it; one no longer among the changes only names it.
+  const changeChip = (c, th) => changesOf(c).some((x) => x.key === th.change)
+    ? `<button class="chip sjump" data-chg-show="${esc(th.change)}" title="Shows this change, before and after">◎ ${esc(changeName(c, th.change))}</button>`
+    : `<span class="chip">◎ ${esc(th.change)}</span>`;
   // Where the pictures come from while there are none (docs/screens.md, docs/watch.md → Screens).
   const noShotsYet = (c) => c.source?.merged_at ? "No screenshots of this change."
     : S.me?.screens ? "No screenshots yet. Design Desk takes them on its own copy of the product while one is free, else once the pull request merges."
@@ -4856,36 +4875,46 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   function changeView(c) {
     const xs = changesOf(c);
     const add = !c.instance && can("screens") ? `<div class="actions"><button class="btn" data-add-shots>Add screenshots</button></div>` : "";
-    if (!xs.length) return `<h3>Changes</h3><p class="hint" style="max-width:var(--measure)">${esc(noShotsYet(c))}</p>${changeBox(c, null)}${add}`;
+    if (!xs.length) return `<h3>Changes</h3><div class="cv"><div class="cv-body"><p class="hint">${esc(noShotsYet(c))}</p></div>${changeBox(c, null)}</div>${add}`;
     const x = changeShown(c);
-    const tabs = xs.length > 1 ? `<div class="tabs vtabs vrow utabs chg-tabs" role="group" aria-label="Changes"><div class="vscroll">${xs.map((y, k) => `<button data-chg="${esc(y.key)}" aria-pressed="${y.key === x.key}"${changeMark(c, y.key)}><span class="ono">${k + 1}</span>${esc(y.name)}</button>`).join("")}</div></div>` : "";
+    const tabs = xs.length > 1 ? `<div class="tabs vtabs vrow utabs chg-tabs cv-tabs" role="group" aria-label="Changes"><div class="vscroll">${xs.map((y, k) => `<button data-chg="${esc(y.key)}" aria-pressed="${y.key === x.key}"${changeMark(c, y.key)}><span class="ono">${k + 1}</span>${esc(y.name)}</button>`).join("")}</div></div>` : "";
     // Marks are measured on the "after" picture: a "before" one with no "after" gets none.
     const before = x.before && !x.after ? { ...x.before, marks: [] } : x.before;
-    const pics = [before && figure(before, "Before", x.after?.asset), x.after && figure(x.after, "After")].filter(Boolean);
-    return `<h3 class="chg-h">Changes <span class="hint">${xs.length}</span>${changeProgress(c)}</h3>${tabs}
-      ${xs.length > 1 ? "" : `<p class="chg-one"><b>${esc(x.name)}</b></p>`}
-      ${outlineToggle([x.before, x.after].filter(Boolean))}<div class="shots stages chg-pair" style="--cols:${pics.length}">${pics.join("")}</div>
-      ${changeBox(c, x)}${add}`;
+    // Each picture under its label; its own caption and where it came from stay under it.
+    const col = (sh, label, frame) => `<div class="cv-col"><div class="cv-lab">${label}</div>${figure({ ...sh, caption: captionBeside(sh.caption, label) }, "", frame)}</div>`;
+    const pics = [before && col(before, "Before", x.after?.asset), x.after && col(x.after, "After")].filter(Boolean);
+    return `<h3 class="chg-h">Changes <span class="hint">${xs.length}</span>${changeProgress(c)}</h3>
+      <div class="cv">${tabs}${xs.length > 1 ? "" : `<div class="cv-one"><b>${esc(x.name)}</b></div>`}
+      <div class="cv-body">${outlineToggle([x.before, x.after].filter(Boolean))}<div class="cv-pair" style="--cols:${pics.length}">${pics.join("")}</div></div>
+      ${changeBox(c, x)}</div>${add}`;
   }
   // Under the change shown: the viewer's notes on it waiting in their feedback, a box, Add to
   // feedback and Looks good. No comment for the team here: what is written is for the developer.
+  const CHECK = `<svg class="ck" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`;
   // With no screens, the box is about the whole pull request: Add to feedback alone.
   function changeBox(c, x) {
     if (!x) return can("comment") && !c.send && !closed(c) ? `<div class="composer rbox chg-foot" data-rbox data-change="">${draftsOf(c).filter((d) => !d.change && !d.ok).map((d) => draftBubble(c, d)).join("")}
       <textarea maxlength="4000" placeholder="What should change?" aria-label="A comment on the pull request"></textarea>
-      <div class="bar"><span class="grow"></span><button class="btn small" data-draft-add>Add to feedback</button></div></div>` : "";
+      <div class="bar"><span class="grow"></span><button class="btn" data-draft-add>Add to feedback</button></div></div>` : "";
     const sent = (c.threads || []).filter((th) => th.change === x.key && th.state !== "resolved");
     const talk = sent.length ? `<button class="link chg-talk" data-chg-talk="${esc(sent[0].id)}" title="Shows the conversations about this change">${plural(sent.length, "comment", "comments")} on this change ↓</button>` : "";
     if (!can("comment") || c.send || closed(c)) return talk ? `<div class="chg-foot">${talk}</div>` : "";
     const ds = draftsOf(c).filter((d) => d.change === x.key), ok = ds.find((d) => d.ok), notes = ds.filter((d) => !d.ok);
-    const said = ok ? `<span class="chg-ok"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>You marked it as good<button class="link" data-draft-del="${esc(ok.id)}" title="Takes your Looks good back">Undo</button></span>` : "";
+    const said = ok ? `<span class="chg-ok">${CHECK}You marked it as good<button class="link" data-draft-del="${esc(ok.id)}" title="Takes your Looks good back">Undo</button></span>` : "";
     return `<div class="composer rbox chg-foot" data-rbox data-change="${esc(x.key)}">${talk}${notes.map((d) => draftBubble(c, d)).join("")}
       <textarea maxlength="4000" placeholder="What should change here?" aria-label="${esc(`A comment on ${x.name}`)}"></textarea>
-      <div class="bar">${said}<span class="grow"></span><button class="btn small" data-draft-add>Add to feedback</button>${ok || notes.length ? "" : `<button class="btn small" data-draft-ok>Looks good</button>`}</div></div>`;
+      <div class="bar">${said}<span class="grow"></span><button class="btn" data-draft-add>Add to feedback</button>${ok || notes.length ? "" : `<button class="btn cv-ok" data-draft-ok>${CHECK}Looks good</button>`}</div></div>`;
   }
-  // A change's mark on its tab (slice 04 fills it); nothing yet.
-  const changeMark = () => "";
-  const changeProgress = () => "";
+  // How far the viewer got with a change (desk/guidelines.html → Tabs and switchers): "changes"
+  // with a note of theirs on it, "ok" marked Looks good (theirs, or sent on this version), else "".
+  function markOf(c, key) {
+    const ds = draftsOf(c).filter((d) => d.change === key);
+    return ds.some((d) => !d.ok) ? "changes" : ds.some((d) => d.ok) || (c.looks_good || []).includes(key) ? "ok" : "";
+  }
+  const MARK_TIP = { ok: "Looks good", changes: "You ask for changes here; not sent yet", "": "Not looked at yet" };
+  const changeMark = (c, key) => { const m = markOf(c, key); return `${m ? ` data-m="${m}"` : ""} title="${esc(MARK_TIP[m])}"`; };
+  const notLookedAt = (c) => changesOf(c).filter((x) => !markOf(c, x.key));
+  const changeProgress = (c) => changesOf(c).length > 1 && !notLookedAt(c).length ? `<span class="chg-done">✓ All looked at</span>` : "";
 
   // ---------- a shipped change ----------
   // The box under a change's or an issue's title, as on a request: its state's word and dot on the
@@ -8367,8 +8396,18 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     }
     if (ds.variant) { S.variant = ds.variant; showSplit(false, false); renderDetail(); return; }
     if (ds.chg !== undefined) { S.chg = { card: S.card.id, key: ds.chg }; renderDetail(); return; }
+    if (ds.chgShow) { S.chg = { card: S.card.id, key: ds.chgShow }; renderDetail(); $("#detail .chg-h")?.scrollIntoView({ block: "start", behavior: "smooth" }); return; }
     if (ds.chgTalk) { const n = document.getElementById(`th-${ds.chgTalk}`); if (n) { n.scrollIntoView({ block: "center", behavior: "smooth" }); n.classList.add("flash"); setTimeout(() => n.classList.remove("flash"), 1600); } return; }
-    if ("draftOk" in ds) { const box = el.closest("[data-rbox]"); await addDraft(S.card, { ok: true, change: box.dataset.change }); return; }
+    if ("draftOk" in ds) {
+      // Looks good moves on to the next change not looked at; on the last, the feedback opens.
+      const c = S.card, box = el.closest("[data-rbox]");
+      await addDraft(c, { ok: true, change: box.dataset.change });
+      const xs = changesOf(c), at = xs.findIndex((x) => x.key === box.dataset.change), left = notLookedAt(c);
+      const next = left.find((x) => xs.indexOf(x) > at) || left[0];
+      if (next) { S.chg = { card: c.id, key: next.key }; renderDetail(); return; }
+      if (xs.length > 1) await reviewDialog(c, verdictsFor(c).some((v) => v.id === "approve") ? "approve" : null);
+      return;
+    }
     if ("splitTab" in ds) { showSplit(true); return; }
     if (ds.splitNow !== undefined) { startSplit(S.card, Number(ds.splitNow), "now"); return; }
     if (ds.splitClear !== undefined) { const sp = splitOf(S.card); if (!sp) return; sp.panes[Number(ds.splitClear)] = null; if (!sp.panes.some(Boolean)) endSplit(); else renderDetail(); return; }

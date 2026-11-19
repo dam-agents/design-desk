@@ -3642,9 +3642,9 @@ test("a caption that only repeats its stage is not said twice", (t) => open(t, D
   await desk.click('[data-tab="new"]');
   await desk.click('#list [data-card="ch1"]');
   await desk.waitForSelector("#detail figcaption");
-  const caps = await desk.$$eval("#detail figcaption", (els) => els.map((e) => e.textContent.replace(/\s+/g, " ").trim()));
+  const caps = await desk.$$eval("#detail .cv-col", (els) => els.map((e) => e.textContent.replace(/\s+/g, " ").trim()));
   assert.doesNotMatch(caps[0], /Before Before/, "Before under Before is said once");
-  assert.match(caps[1], /^After After the redesign/, "a caption that says more stays");
+  assert.match(caps[1], /^After ?After the redesign/, "a caption that says more stays");
 }));
 
 test("How it works and Designs show the developer's process; simple mode leaves out its steps", (t) => open(t, DESK({ role: "developer", email: "dev@example.com", simple: false, can: { request: true, designs: true, built: true } }, []), async (desk) => {
@@ -4201,8 +4201,8 @@ for (const simple of [true, false]) {
     await desk.waitForSelector("#detail .chg-tabs");
     assert.deepEqual(await desk.locator("#detail .chg-tabs button").allTextContents(), ["1Agents list", "2The limit dialog", "3The usage page"], "a pair, then each lone screen");
     assert.equal(await desk.getAttribute("#detail .chg-tabs button:first-child", "aria-pressed"), "true", "the first shown");
-    assert.deepEqual(await desk.locator("#detail .chg-pair figcaption b").allTextContents(), ["Before", "After"]);
-    assert.equal(await desk.locator('#detail .chg-pair [data-zoom="S-d"]').count(), 0, "no separate What changed picture");
+    assert.deepEqual(await desk.locator("#detail .cv-lab").allTextContents(), ["Before", "After"]);
+    assert.equal(await desk.locator('#detail .cv [data-zoom="S-d"]').count(), 0, "no separate What changed picture");
     assert.equal(await desk.locator("#detail .outline-toggle").count(), 1, "its outline still toggles");
     assert.deepEqual(await desk.locator("#detail .chg-foot .bar button").allTextContents(), ["Add to feedback", "Looks good"], "no comment for the team under a change");
     await desk.fill("#detail .chg-foot textarea", "Show the limit only when set.");
@@ -4212,10 +4212,12 @@ for (const simple of [true, false]) {
     assert.deepEqual(await desk.locator("#detail .chg-foot .bar button").allTextContents(), ["Add to feedback"], "no Looks good while a note on it waits");
     await desk.click('#detail .chg-tabs [data-chg="S-1"]');
     await desk.waitForFunction(() => document.querySelector('#detail .chg-tabs [data-chg="S-1"]')?.getAttribute("aria-pressed") === "true");
-    assert.deepEqual(await desk.locator("#detail .chg-pair figcaption b").allTextContents(), ["After"], "a lone screen: after only");
+    assert.deepEqual(await desk.locator("#detail .cv-lab").allTextContents(), ["After"], "a lone screen: after only");
     await desk.click("#detail .chg-foot [data-draft-ok]");
-    await desk.waitForSelector("#detail .chg-ok");
+    await desk.waitForFunction(() => document.querySelector('#detail .chg-tabs [data-chg="S-2"]')?.getAttribute("aria-pressed") === "true");
     assert.deepEqual(await desk.evaluate(() => posts.filter((p) => /drafts$/.test(p.path)).at(-1).body), { ok: true, change: "S-1" });
+    await desk.click('#detail .chg-tabs [data-chg="S-1"]');
+    await desk.waitForSelector("#detail .chg-ok");
     assert.match(await desk.textContent("#detail .yreview"), /The limit dialog[\s\S]*Looks good/, "the mark lists by the change's name");
     await desk.click("#detail .chg-ok [data-draft-del]");
     await desk.waitForSelector("#detail .chg-foot [data-draft-ok]");
@@ -4225,6 +4227,50 @@ for (const simple of [true, false]) {
     assert.equal(await desk.locator("#detail .chg-tabs").count(), 0);
   }));
 }
+
+test("a change's tab marks how far the viewer got; Looks good moves on, the last opens the feedback; sending warns of the changes not looked at", (t) => open(t, CHANGES_DESK(HEAD_ME), async (desk) => {
+  const marks = () => desk.$$eval("#detail .chg-tabs button", (bs) => bs.map((b) => b.dataset.m || ""));
+  const shown = () => desk.$eval('#detail .chg-tabs button[aria-pressed="true"]', (b) => b.dataset.chg);
+  await desk.waitForSelector("#list");
+  await desk.evaluate(() => { location.hash = "#P-7"; });
+  await desk.waitForSelector("#detail .chg-tabs");
+  assert.deepEqual(await marks(), ["", "", ""]);
+  await desk.click("#detail .chg-foot [data-draft-ok]");
+  await desk.waitForFunction(() => document.querySelector('#detail .chg-tabs [data-chg="S-1"]')?.getAttribute("aria-pressed") === "true");
+  assert.deepEqual(await marks(), ["ok", "", ""], "green, and the next change shown");
+  await desk.fill("#detail .chg-foot textarea", "Say the limit in words.");
+  await desk.click("#detail .chg-foot [data-draft-add]");
+  await desk.waitForFunction(() => document.querySelectorAll('#detail .chg-tabs [data-m="changes"]').length === 1);
+  assert.deepEqual(await marks(), ["ok", "changes", ""], "amber with a note");
+  assert.match(await desk.textContent('#detail .sh-acts [data-review="request-changes"]'), /Request changes · 1/, "the head counts the notes, not the marks");
+  assert.match(await desk.textContent("#detail .yreview"), /Agents list[\s\S]*✓ Looks good[\s\S]*The limit dialog[\s\S]*Say the limit in words\./);
+  // Sending with a change nobody looked at: said, never in the way.
+  await desk.click('#detail .yreview [data-review=""]');
+  await desk.waitForSelector("#cf-body .rv-warn");
+  assert.match(await desk.textContent("#cf-body .rv-warn"), /1 change not looked at yet: The usage page/);
+  await desk.click('#confirm-dialog [data-close="cancel"]');
+  await desk.click('#detail .chg-tabs [data-chg="S-2"]');
+  await desk.waitForFunction(() => document.querySelector('#detail .chg-tabs [data-chg="S-2"]')?.getAttribute("aria-pressed") === "true");
+  await desk.click("#detail .chg-foot [data-draft-ok]");
+  await desk.waitForSelector("#confirm-dialog[open]");
+  assert.equal(await desk.locator("#cf-body .rv-warn").count(), 0, "every change looked at: no warning");
+  assert.equal(await desk.$eval("#cf-choices input:checked", (x) => x.value), "approve", "the last Looks good opens the feedback, Approve picked");
+  assert.match(await desk.textContent("#detail .chg-h"), /All looked at/);
+  assert.equal(await shown(), "S-2");
+}));
+
+test("sent feedback shows its Looks good; the mark holds on this version; a conversation about a change shows it", (t) => open(t, CHANGES_DESK(HEAD_ME).replace(JSON.stringify(threeChanges), JSON.stringify({ ...threeChanges, looks_good: ["S-1"],
+  reviews: [{ id: "U-3", by: { email: "d.k@example.com", name: "Dana Kim", role: "designer" }, at: "2026-11-18T10:00:00Z", verdict: "comment", note: "", threads: ["T-31"], looks_good: [{ key: "S-1", name: "The limit dialog" }] }],
+  threads: [{ id: "T-31", kind: "comment", review: "U-3", change: "S-2", state: "open", may: { reply: true, resolve: true }, messages: [{ by: { email: "d.k@example.com", role: "designer" }, at: "2026-11-18T10:00:00Z", text: "Bigger numbers." }] }] })), async (desk) => {
+  await desk.waitForSelector("#list");
+  await desk.evaluate(() => { location.hash = "#P-7"; });
+  await desk.waitForSelector("#detail .chg-tabs");
+  assert.deepEqual(await desk.$$eval("#detail .chg-tabs button", (bs) => bs.map((b) => b.dataset.m || "")), ["", "ok", ""], "a sent Looks good on this version");
+  assert.match(await desk.textContent("#detail .rvw .rv-ok"), /✓ Looks good: The limit dialog/);
+  await desk.click('#detail .rvw [data-chg-show="S-2"]');
+  await desk.waitForFunction(() => document.querySelector('#detail .chg-tabs [data-chg="S-2"]')?.getAttribute("aria-pressed") === "true");
+  assert.match(await desk.textContent("#detail .chg-foot .chg-talk"), /1 comment on this change/);
+}));
 
 // Simple mode with nothing open: how many items are in each state, each box filtering the list.
 test("simple mode's overview counts the items in each state, and a box filters the list to its state", (t) => open(t, DESK(SIMPLE_ME, SIMPLE_CARDS), async (desk) => {
