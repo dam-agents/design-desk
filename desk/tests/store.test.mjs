@@ -3128,6 +3128,7 @@ test("reviews in the bell: a review sent, and a pull request's new commits after
   const sent = s.notifications(lead).items.find((x) => x.event === "review");
   assert.deepEqual([sent.item, sent.review, sent.detail], [chg.id, r.id, "Changes requested: One thing."]);
   assert.equal(s.notifications(alice).items.some((x) => x.event === "review"), false, "never your own doings");
+  assert.equal(s.notifications(bob).items.find((x) => x.event === "review").for_you, true, "a developer hears of a review of a pull request");
   s.putGithub([{ key: "acme/widgets#7", kind: "pr", title: "Spend", head: "b".repeat(40), comments: [] }]);
   const next = s.notifications(alice).items.find((x) => x.event === "new-version");
   assert.deepEqual([next.item, next.for_you], [chg.id, true], "the reviewer hears the next version arrived");

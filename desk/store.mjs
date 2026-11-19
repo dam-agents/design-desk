@@ -1137,7 +1137,8 @@ export class Store {
       for (const rid of c.reviews || []) {
         const r = own(this.db.reviews, rid);
         if (!r) continue;
-        push(r.at, "review", it, r.by, { detail: [REVIEW_WORDS[r.verdict], r.note].filter(Boolean).join(": ").replace(/\s+/g, " ").slice(0, 140), review: r.id }, yours);
+        // A review of a pull request's change is the developers' news too, as Feedback asked is.
+        push(r.at, "review", it, r.by, { detail: [REVIEW_WORDS[r.verdict], r.note].filter(Boolean).join(": ").replace(/\s+/g, " ").slice(0, 140), review: r.id }, yours || (c.kind === "change" && DEVELOPERS.includes(who?.role)));
         if (r.next_at) push(r.next_at, "new-version", it, { agent: true }, { review: r.id }, yours || isMine(r.by));
       }
       // A developer's question on Designs is for the designer who approved it, else for every designer (docs/desk-page.md → Designs).

@@ -468,7 +468,7 @@ private ask only its owner: Design Desk's answers to it are theirs alone, and fo
 | Feedback asked | a person hands the drawn options to the team (**Ask for feedback**); For you for every `developer` and `lead-developer` |
 | New decision, Decision revoked | a decision is added or revoked |
 | Developer asks, Marked done | a developer asks a design's designer, or marks it done ([Designs](#designs)) |
-| Review sent, New version | a person sends a review; new commits arrive on a pull request a review asked changes of ([desk.md](desk.md) → Reviews) |
+| Review sent, New version | a person sends a review (on a pull request's change, For you for every `developer` and `lead-developer`); new commits arrive on a pull request a review asked changes of ([desk.md](desk.md) → Reviews) |
 
 Every row is at most three lines, each cut short with … when long, and says the same things in the same places: an icon and what happened, who (when known),
 how long ago, the item's kind in grey (Request:, PR change:, Decision: …), its title and number, and for a message or a vote one

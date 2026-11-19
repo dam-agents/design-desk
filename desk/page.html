@@ -5818,7 +5818,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ${renderGrill(c)}
       ${shots(found)}
       </div>${briefToggle(S.folds.made, "made")}</div></div>
-      ${live(c) ? `<details class="fold"><summary>The design options — open to change the design and build the prototype again</summary>${renderOptions(c)}${canBuild() ? `<div class="actions"><button class="btn" data-act="build">Build the live prototype again…</button></div>` : ""}</details>`
+      ${live(c) ? `<details class="fold"><summary>The design options — open to change the design and build the prototype again</summary>${renderOptions(c)}${optionBox(c)}${canBuild() ? `<div class="actions"><button class="btn" data-act="build">Build the live prototype again…</button></div>` : ""}</details>`
         : `${renderOptions(c)}${optionBox(c)}${renderPrototype(c)}`}
       ${renderImpact(c.impact)}
       ${c.spec?.asset && !(c.status === "spec" && c.spec?.review === "draft") ? specPanel(c) : ""}
@@ -7614,7 +7614,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       const was = (before.variants || []).find((x) => x.id === S.variant), now = (card.variants || []).find((x) => x.id === S.variant);
       if (was && now && (now.version || 1) > (was.version || 1)) { toast(`${now.name} was updated to version ${now.version}.`); S.ws.version = null; }
     }
-    // Drafts are read again each time an item is opened: another device may have changed them.
+    // Drafts are read again each time another item is opened: another device may have changed them.
     await loadDrafts(card, before?.id !== card.id);
     S.card = card;
     // The first open marks it read for this person: its title stops being bold in their list.

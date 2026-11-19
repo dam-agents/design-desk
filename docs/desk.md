@@ -460,7 +460,7 @@ of the product in that state: the `show` action ([actions.md](actions.md)).
 A person can collect comments on a request or a pull request's change before sending them
 together. **Drafts** are kept by the Desk server, per person and item (`GET`, `POST
 /api/cards/<id>/drafts`, `DELETE …/drafts/<draft>`), so they follow the person to every
-device; nobody else sees them, the agent included, and no card read, list, count or
+device; nobody else sees them, no run of the agent reads them, and no card read, list, count or
 notification carries one. A draft is checked as the comment it becomes (its option and state
 exist), at most 50 wait per person and item, and a deleted request takes its drafts and reviews with it.
 
@@ -483,7 +483,8 @@ change until its pull request's head is no longer `sha` (`next_at`; a later appr
 handled mark ends it too). A review never holds Design Desk's check on GitHub: Request changes
 leaves the handled mark and the check as they are; Approve marks the change handled, which passes
 a held check as the mark always does. Only Comment only is sent on a closed or sent request or a
-merged change. A draft about an option no longer drawn goes as one about the whole request. What exists stays as it is: a vote
+merged change. A draft about an option no longer drawn goes on the option shown under Request changes, and as one
+about the whole request otherwise. What exists stays as it is: a vote
 is not a verdict and counts on its own; **Work it in** turns a review's comment into a change note
 like any other; the design workspace's notes go to Design Desk at once, never into a review; a question
 for Design Desk (**Ask Design Desk**) is asked at once in the conversation and is never drafted. A review of a change
