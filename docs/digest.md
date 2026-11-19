@@ -15,7 +15,9 @@ yesterday), and from those days: `changes` (each with its "after" picture, when 
 picture is on its card), `requests_new`,
 `handed_off`, `waiting` (on the presentation), `polls` (open, or closed this week with their
 result), `decisions` (with author and conflicts) and `revoked`; from the last 30 days: `feedback`, the bugs,
-automated test findings, comments, concerns and questions people left.
+automated test findings, comments, concerns and questions people left. A request still a draft or a
+proposal is in none of them, nor are its conversations; one that went to design counts as new the week
+it opened (`opened_at`; [desk.md](desk.md) → Draft and Proposal).
 
 ## Themes in the feedback
 

@@ -4406,3 +4406,10 @@ test("Close on a draft is a plain close, for its author whatever their role, wit
   await desk.waitForFunction(() => window.posts.some((p) => p.path.endsWith("/actions")));
   assert.deepEqual(await desk.evaluate(() => window.posts.filter((p) => p.path.endsWith("/actions")).map((p) => p.body.action)), ["close"]);
 }));
+
+test("full mode: a draft's author reopens it once closed, whatever their role", (t) => open(t, DESK({ ...DESIGNER, role: "developer", can: { request: true, "stage-propose": true } }, [{ ...STAGED[0], status: "declined" }]), async (desk) => {
+  await desk.click('[data-filter="reqFilter:closed"]');
+  await desk.click('#list [data-card="R-20"]');
+  await desk.waitForSelector("#detail .status");
+  assert.equal(await desk.locator('#detail .status [data-act="reopen"]').count(), 1);
+}));

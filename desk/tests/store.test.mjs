@@ -3405,3 +3405,23 @@ test("what happened before a request opened is no news to whom could not see it 
   assert.deepEqual(events(alice), ["new-request"], "a designer hears only that it opened");
   assert.ok(events({ email: "lee@example.com", role: "admin" }).includes("options-drawn"), "an admin, who could see the draft, keeps what happened in it");
 });
+
+test("the bell shows each viewer a request's history from the first stage they could see it in; a conversation's picture is the request's", () => {
+  const s = fresh();
+  const lou = { email: "lou@example.com", role: "ui-dev-owner" }, dana = { email: "dana@example.com", role: "developer" };
+  s.clock = () => "2030-01-01T09:00:00Z";
+  const id = s.createRequest(bob, { problem: "Rows are too airy.", stage: "draft" }).card.id;
+  s.upsertCard({ id, status: "feedback", triage: { verdict: "design", reasons: ["Spacing only."] }, variants: [{ id: "v1", name: "Calm", asset: s.addAsset({ kind: "variant", name: "v", contentType: "text/html", data: "<p>v</p>", encoding: "utf8" }).asset.id, drawn: "2030-01-01T09:30:00Z" }] });
+  s.clock = () => "2030-01-02T09:00:00Z";
+  s.moveStage(id, bob, "proposal");
+  s.clock = () => "2030-01-02T10:00:00Z";
+  s.openThread(id, lou, { kind: "comment", text: "Calmer still?" });
+  const events = (who) => s.notifications(who, { days: 100000 }).items.filter((n) => n.item === id).map((n) => n.event);
+  assert.equal(events(dana).includes("options-drawn"), false, "a developer did not see the draft");
+  assert.ok(events(dana).length > 0, "but sees what happened on the proposal");
+  // A picture only a hidden request's conversation holds is not served to whom the request is hidden from.
+  const shot = s.addAsset({ kind: "image", name: "s", contentType: "image/png", data: "iVBORw0KGgo=" }).asset.id;
+  s.db.threads[s.card(id).threads[0]].messages[0].shots = [shot];
+  assert.throws(() => s.getAsset(shot, alice), /no asset/);
+  assert.equal(s.getAsset(shot, dana).id, shot);
+});

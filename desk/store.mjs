@@ -714,7 +714,7 @@ export class Store {
   // one a request they see uses as well (an option carried over) stays theirs to read.
   assetVisible(a, who) {
     if (!who || who.agent) return true;
-    const uses = (c) => c.id === a.card || JSON.stringify(c).includes(`"${a.id}"`);
+    const ref = `"${a.id}"`, uses = (c) => c.id === a.card || JSON.stringify(c).includes(ref) || (c.threads || []).some((t) => JSON.stringify(own(this.db.threads, t) || {}).includes(ref));
     const hidden = Object.values(this.db.cards).filter((c) => c.stage && !this.visibleTo(c, who));
     if (!hidden.some(uses)) return true;
     return Object.values(this.db.cards).some((c) => this.visibleTo(c, who) && uses(c));
@@ -1155,7 +1155,8 @@ export class Store {
       // For you, its messages included. The bell's For you shows these alone.
       const talked = (c.threads || []).some((tid) => (own(this.db.threads, tid)?.messages || []).some((m) => isMine(m.by)));
       const filed = [c.created_by, c.origin].some(isMine);
-      cut = c.opened_at && !filed && who && !who.agent && who.role !== "admin" && !DEVELOPERS.includes(who.role) ? c.opened_at : null;
+      cut = !c.staged?.length || filed || !who || who.agent || who.role === "admin" ? null
+        : (DEVELOPERS.includes(who.role) && c.staged.find((x) => x.to === "proposal")?.at) || c.opened_at || null;
       const yours = filed || isMine(c.approved?.by) || talked || Object.values(c.votes || {}).some((x) => Object.keys(x || {}).some((e) => mine.has(e.toLowerCase())));
       const author = c.origin?.reporter && c.origin.channel !== "agent" ? { name: c.origin.reporter, email: c.origin.email || null, via: c.origin.channel } : c.created_by;
       // A request that went to design is new to everyone then (docs/desk-page.md → Notifications).

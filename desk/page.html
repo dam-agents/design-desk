@@ -5310,8 +5310,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         text: preDesign(c) === "draft" ? "A draft: only its author and admins see it. Design Desk works on it as on any request; its author sends it on when it is ready."
           : "A proposal: the dev team talks it over. The UI dev owner sends it to design, keeps it for developers, or sends it back to its author." };
     }
-    if (c.status === "declined") return { text: "This request is closed.", sub: can("reopen") ? "" : "To bring it back, say so in a comment; a designer or a PM reopens it.", buttons: "",
-      ways: can("reopen") ? [way('data-act="reopen"', "Reopen", "It goes back to where it was")] : [] };
+    // A draft's author, or the UI dev owner on a proposal, reopens it whatever their role (docs/desk.md → Draft and Proposal).
+    const reopens = can("reopen") || closesStaged(c);
+    if (c.status === "declined") return { text: "This request is closed.", sub: reopens ? "" : "To bring it back, say so in a comment; a designer or a PM reopens it.", buttons: "",
+      ways: reopens ? [way('data-act="reopen"', "Reopen", "It goes back to where it was")] : [] };
     // Sent: the next step is the design as developers build it, for who sees Designs (docs/desk-page.md → Designs).
     if (c.status === "handed-off") return { text: "", buttons: "", ways: seesDesigns() ? [way(`data-show-design="${esc(c.id)}"`, "Show the design", "Opens it on Designs, as developers build it")] : [] };
     if (busy.length) return { text: "", buttons: "", ways: [] };
