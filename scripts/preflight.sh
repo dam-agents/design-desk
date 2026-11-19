@@ -424,10 +424,10 @@ JQ
 # to its role (roster_roles). A decision counts when it is in force and is a design-side
 # person's own, or a designer approved it; one that waits for approval counts for nothing.
 DEC_SIDE_JQ="$(cat <<'JQ'
-def role: (((.origin.kind // "") as $k | if (["desk", "approval", "chat", "call"] | index($k)) != null then .author.role else null end) // $roster[(.author.email // "") | ascii_downcase] // "" | ascii_downcase | gsub("\\s+"; "-") | if . == "lead" then "admin" else . end);
+def role: (((.origin.kind // "") as $k | if (["desk", "approval", "chat", "call"] | index($k)) != null then .author.role else null end) // $roster[(.author.email // "") | ascii_downcase] // "" | ascii_downcase | gsub("\\s+"; "-") | if . == "lead" then "admin" elif . == "lead-developer" then "ui-dev-owner" else . end);
 def side: role as $r | (.origin.kind // "") as $k
   | if (["admin", "designer", "pm"] | index($r)) != null then "design"
-    elif (["lead-developer", "developer"] | index($r)) != null or (["pr", "commit", "doc"] | index($k)) != null then "developer" else null end;
+    elif (["ui-dev-owner", "developer"] | index($r)) != null or (["pr", "commit", "doc"] | index($k)) != null then "developer" else null end;
 def unapproved: (.origin.kind // "") as $k | side != "design" or (["pr", "issue", "commit", "doc"] | index($k)) != null;
 def decision_counts: type == "object" and (.status // "active") == "active" and (.approved != null or (unapproved | not));
 JQ
@@ -466,7 +466,7 @@ decisions_page() {
     def line: tostring | gsub("\\s*\\n\\s*"; " ") | gsub("^\\s+|\\s+$"; "") | scrub($nre[0]);
     def num: .id | ltrimstr("D-") | tonumber? // 0;
     def day: tostring | .[0:10];
-    def who: {admin: "an admin", designer: "a designer", pm: "a product manager", "lead-developer": "the lead developer", developer: "a developer"}[role];
+    def who: {admin: "an admin", designer: "a designer", pm: "a product manager", "ui-dev-owner": "the UI dev owner", developer: "a developer"}[role];
     def from: {pr: "a pull request", issue: "an issue", commit: "a commit", doc: "a document", slack: "Slack", desk: "the Desk",
       call: "the design meeting", approval: "an approved design", chat: "a talk with Design Desk"}[.origin.kind // ""];
     [ (.decisions // {})[] | select(type == "object" and (.id | type) == "string") ] as $all
@@ -978,13 +978,14 @@ digest_mode() {
     def day($e): ($e | strftime("%d %b %Y") | ltrimstr("0"));
     # Named by its days: "29 Oct – 4 Nov 2026", the year once when both days share it.
     [day($start), day($end - 86400)] as [$from, $to]
-    | [.cards[]] as $cards
+    # A request before design is no news yet (docs/desk.md → Draft and Proposal): it counts from when it opens.
+    | [.cards[] | select(.stage == null)] as $cards | [.cards[] | select(.stage != null) | .id] as $hidden
     | {
       done: any($cards[]; .kind == "digest" and .period == $period),
       dates: ((if $from[-4:] == $to[-4:] then $from[:-5] else $from end) + " – " + $to),
       changes: [ $cards[] | select(.kind == "change" and ((.source.merged_at // .created) | inweek))
                  | {id, title, merged_at: .source.merged_at, in_progress: (.source.merged_at == null), screen: ([.screens[]? | select(.stage == "after" or .stage == null) | .asset][0])} ],
-      requests_new: [ $cards[] | select(.kind == "request" and (.created | inweek)) | {id, title, type: .request.type, status} ],
+      requests_new: [ $cards[] | select(.kind == "request" and ((.opened_at // .created) | inweek)) | {id, title, type: .request.type, status} ],
       handed_off: [ $cards[] | select(.kind == "request" and .status == "handed-off" and (.updated | inweek)) | {id, title} ],
       waiting: [ $cards[] | select(.agenda.status == "queued") | {id, title, note: .agenda.note} ],
       polls: [ $cards[] | . as $c | (.polls // [])[] | select(.state == "open" or (.closed | inweek)) | {card: $c.id, title: $c.title, state, closes, result} ],
@@ -992,7 +993,7 @@ digest_mode() {
       revoked: [ (.decisions // {})[] | select(.revoked.at | inweek) | {id, text, reason: .revoked.reason, replaced_by: .revoked.replaced_by} ],
       feedback: ([ ($cards[] | select(.kind == "request" and .request.type == "bug" and (.created | within($month)))
                    | {card: .id, kind: (if .origin.automated then "test finding" else "bug" end), text: ((.title + ": " + (.request.problem // ""))[0:240])}),
-                 (.threads[]? | select((.kind == "comment" or .kind == "concern" or .kind == "question") and (.dev != true) and (.created | within($month)) and (.messages[0].by.agent != true))
+                 (.threads[]? | select((.kind == "comment" or .kind == "concern" or .kind == "question") and (.dev != true) and (.created | within($month)) and (.messages[0].by.agent != true) and ((.card as $k | $hidden | index($k)) == null))
                    | {card, kind, text: (.messages[0].text[0:240])}) ] | .[0:150])
     }' "$DB" 2>/dev/null)" || fail_out "cannot read the Desk store at $DB"
   if [ "$(jq -r .done <<<"$out")" = true ]; then log "the digest of $period is written"; quiet_out; fi

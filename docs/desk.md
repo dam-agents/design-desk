@@ -284,27 +284,29 @@ and `D-12` in text link to it as to a card (Links to an item).
 
 The server reads the role from `## Desk people` by the email the platform verified; the
 owner is `admin`, anyone else on the share list is `guest`. A roster role is read in lower case
-with spaces as hyphens (`Lead developer` → `lead-developer`).
+with spaces as hyphens (`UI dev owner` → `ui-dev-owner`); `lead-developer`, its name before 1.104.0, reads as
+`ui-dev-owner` (in `prototype_requesters` and `mcp_role` too).
 
 | Role | May |
 | --- | --- |
 | everyone | read, mark reviewed, ask, comment; reply in a conversation, and mark their own done |
 | members (every role but `guest`) | also mark someone else's conversation done, and have a part of a request taken from the product ([requests.md](requests.md) → The part before, from the product) |
-| `pm`, `developer`, `lead-developer` | also vote, file a request, start a follow-up from a change, add screenshots |
-| `pm`, `developer`, `lead-developer`, `designer`, `admin` | draw an issue: how it looks now and a sketch ([issues.md](issues.md)) |
-| `pm`, `developer`, `lead-developer`, `designer`, `admin` | also start, revise and redraw variants, add one more option, try three ways of a part and pick one, draw every state of a part, draw how a request's screen looks today, draw how a screen or part looked before, note changes on an element, add a screen or part to Product, use Figma, share in Slack |
-| a request's author; `pm`, `developer`, `lead-developer`, `designer`, `admin` on any | ask the team for feedback on a Desk request's drawn options, and end its vote (Team feedback, below) |
+| `pm`, `developer`, `ui-dev-owner` | also vote, file a request, start a follow-up from a change, add screenshots |
+| `pm`, `developer`, `ui-dev-owner`, `designer`, `admin` | draw an issue: how it looks now and a sketch ([issues.md](issues.md)) |
+| `pm`, `developer`, `ui-dev-owner`, `designer`, `admin` | also start, revise and redraw variants, add one more option, try three ways of a part and pick one, draw every state of a part, draw how a request's screen looks today, draw how a screen or part looked before, note changes on an element, add a screen or part to Product, use Figma, share in Slack |
+| a request's author; `pm`, `developer`, `ui-dev-owner`, `designer`, `admin` on any | ask the team for feedback on a Desk request's drawn options, and end its vote (Team feedback, below) |
 | a request's author, whatever their role; `designer`, `admin` on any | remove a design option (the ✕ on its tab; [requests.md](requests.md) → Variants) |
 | a request's author; `pm`, `designer`, `admin` on any | rename a request (a small ✎ right after its title, on hover): the name stays theirs, and `design desk upsert` no longer changes it |
-| `developer`, `lead-developer` | approve a request For Developers they did not file ([For Developers or For Designers](#for-developers-or-for-designers)) |
-| `lead-developer`, `admin` | move a request, a change or an issue between For Developers and For Designers, and pick one when filing a request |
-| `lead-developer`, `pm`, `designer`, `admin` | approve or decide a request straight away ([Deciding straight away](#deciding-straight-away)) |
+| `developer`, `ui-dev-owner` | approve a request For Developers they did not file ([For Developers or For Designers](#for-developers-or-for-designers)) |
+| `ui-dev-owner`, `admin` | move a request, a change or an issue between For Developers and For Designers |
+| `ui-dev-owner`, `pm`, `designer`, `admin` | approve or decide a request straight away ([Deciding straight away](#deciding-straight-away)) |
 | `pm`, `designer`, `admin` | close and reopen a request, delete a closed one |
+| a draft's author, `ui-dev-owner` and `admin` | move a request on before it goes to design, and close it ([Draft and Proposal](#draft-and-proposal)) |
 | `designer`, `admin` | also decide: approve (a design against a decision too), choose what the presentation shows and mark it presented, mark a change handled, remove an option from any request, record or approve a decision |
-| `lead-developer` | mark a change or an issue For Developers handled ([For Developers or For Designers](#for-developers-or-for-designers)) |
+| `ui-dev-owner` | mark a change or an issue For Developers handled ([For Developers or For Designers](#for-developers-or-for-designers)) |
 | roles in `prototype_requesters` (default `designer`, `pm`, `admin`) | start a live prototype |
 | `admin` | also ask you to add a person to the list ([People](#people)) |
-| `developer`, `lead-developer`, `admin` | see **Designs** in the menu, ask a design's designer, mark a design done ([Designs](#designs)) |
+| `developer`, `ui-dev-owner`, `admin` | see **Designs** in the menu, ask a design's designer, mark a design done ([Designs](#designs)) |
 
 The page's **People** tab shows the roster, each role's actions and an admin's asks to add
 someone, from `GET /api/people`; everyone the Desk is shared with sees it, guests included.
@@ -326,21 +328,20 @@ roster.
 **Requests** has two tabs, **For Designers** and **For Developers** (with **Presentation**
 beside them in full mode); each request is in one (the card's `size: {small, by, at}`,
 `small: true` for developers; the list's `for`). The page opens Requests on the viewer's own tab
-every visit — For Developers for a developer or a lead developer, For Designers for everyone
+every visit — For Developers for a developer or a UI dev owner, For Designers for everyone
 else; another tab picked holds until the page is left, and the browser does not keep it. Where it starts:
 
-- **Filed on the Desk**: New request has a **For Designers / For Developers** switch,
-  For Designers by default (`POST /api/requests {audience}`), for the roles that move a request
-  below; anyone else files For Designers.
+- **Filed on the Desk**: For Designers; one that starts as a draft takes its tab when it opens
+  ([Draft and Proposal](#draft-and-proposal)).
 - **Filed by you** (`design desk request`, `design desk report`): `audience` as you set it;
   without it, a request with a Slack `origin` is For Developers and any other For Designers.
   From Slack, set `audience: "designers"` only when the message asks for a designer.
 
-A lead developer or an admin moves an open, unapproved request between the two (**More** →
+A UI dev owner or an admin moves an open, unapproved request between the two (**More** →
 For Developers / For Designers; `POST /api/cards/<id>/size {small}`). The tab chosen when a
 request is filed carries `size.filed` and the page names no one for it; a later move shows who
 moved it and when. A request For Developers is approved by a designer or
-by any `developer` or `lead-developer` except the person who filed it (`created_by`, or
+by any `developer` or `ui-dev-owner` except the person who filed it (`created_by`, or
 `origin.email` when you filed it for them); the store refuses the author, by any address on their row of `## Desk people`, and the page names them **you** by any of them, from Slack, GitHub or chat as from the Desk. A request whose
 `origin` names its reporter only by name or login (a GitHub issue) has no author to refuse. A request For Developers
 that goes against a decision in force is approved by a designer only. Every approval writes `approved: {by, at, small}` on the card (`implement: true` when the approver ticked **Straight to implementation**, [handoff.md](handoff.md) step 5); the
@@ -352,21 +353,51 @@ worked like any other ([handoff.md](handoff.md)); the approver is `approved.by`.
 starts where you judged it (`attention.level`: `developer` → For Developers, else For
 Designers; [watch.md](watch.md) step 7, [issues.md](issues.md) → Read an issue) until a lead
 developer or an admin moves it (**For Developers** / **For Designers** on the card, the same
-`size`, any one not handled). One For Developers is marked handled by a lead developer or a
+`size`, any one not handled). One For Developers is marked handled by a UI dev owner or a
 designer, one that goes against a decision in force by a designer only; a change For
 Developers is in Needs a designer only for such a decision.
 
+### Draft and Proposal
+
+A request a person files on the Desk starts before design: a **draft**, then a **proposal**
+(`stage` on the card and the list's row; none: open). The statuses go on underneath as for an open
+request — Design Desk checks it and draws its options — and only a designer's request, and every
+one you file (Slack, GitHub, chat, a run, an agent over MCP), opens at once.
+
+| Who files it | Moves it on with (`POST /api/cards/<id>/stage {to}`) |
+| --- | --- |
+| `pm` | **Send to design** (`design`) |
+| `ui-dev-owner` | **Propose** (`proposal`), **Send to design**, **Keep for developers** (`developers`) |
+| `developer` | **Propose** |
+
+On a proposal the `ui-dev-owner` (any of them) picks **Send to design**, **Keep for developers**,
+**Back to draft** (`draft`) or **Close**; an `admin` makes any move on either. A draft's author
+closes and reopens it whatever their role, and a closed one keeps its stage. Leaving its last stage
+opens it, never to go back: For Designers, or For Developers for Keep for developers
+([For Developers or For Designers](#for-developers-or-for-designers)), with `opened_at`;
+`staged` keeps each move (`from`, `to`, `by`, `at`). Until it opens the store refuses approving
+it (an Approve review too), deciding it, team feedback and votes, Slack, the presentation, a
+live prototype and moving its side; comments, reviews with Comment or Request changes, and
+Design Desk's work go on.
+
+**Who sees it**: its author (by any of their addresses), an `admin`, and on a proposal every
+`developer` and `ui-dev-owner`; you see every one. For anyone else the server has none: not in a
+list, the bell, a decision's items or an MCP peer's reads; its page, its conversations, its
+pictures and every write on it answer as for a card that does not exist. The bell tells of it as
+new when it opens, and nothing from before the first stage each viewer could see it in. Never name, quote or link one where anyone else reads (Slack, another card, the
+digest), and never add a report to one: file a new request.
+
 ### Deciding straight away
 
-A designer, a PM, an admin or a lead developer (`skip`) may skip the options, the vote and the live
+A designer, a PM, an admin or a UI dev owner (`skip`) may skip the options, the vote and the live
 prototype once Design Desk has checked a request:
 
 - **Approve** at any open step from Checking on (the same **Approve** before options: the spec then comes from the request);
   the store writes `approved` as any approval. Without options the item's `note` is what to build,
-  in the person's words ([handoff.md](handoff.md)). A PM or a lead developer does not overrule a
+  in the person's words ([handoff.md](handoff.md)). A PM or a UI dev owner does not overrule a
   decision in force: that stays a designer's.
 - **Close** is one button and one dialog: **Just close it** (a designer, a PM or an admin; `close`), or **Close
-  it and record a decision** (a designer, a PM or a lead developer; `POST /api/cards/<id>/decide {text}`): the request closes with
+  it and record a decision** (a designer, a PM or a UI dev owner; `POST /api/cards/<id>/decide {text}`): the request closes with
   `decided: {by, at, text}`, a `decision` item without a thread (Decisions → `decisions_due`) and
   a `teardown`. Reopen clears `decided`; the decision stays until revoked.
 - **While the live prototype is up**, the page folds the options (and building again) under it,

@@ -12,7 +12,8 @@ and feedback before any live prototype ([prototype.md](prototype.md)) and the ha
 | 2. Small, built first | a developer's pull request with a basic UI (a change card, open or merged) → **Adjust the design** | `adjustment` | the adjusted design sent to the coding agent (`implementer`) to build into the product |
 | 3. Reported | a UI bug, or something that looks wrong to someone (Desk or Slack) | `bug` | as flow 2 |
 
-Ideas filed on the Desk or asked for in Slack (`idea`) and the agent's own proposals for new features
+A request a person files on the Desk is a draft or a proposal before it goes to design
+([desk.md](desk.md) → Draft and Proposal); you work on it as on any other. Ideas filed on the Desk or asked for in Slack (`idea`) and the agent's own proposals for new features
 (`proposal`, [watch.md](watch.md) step 12) end per `handoff`.
 
 **The request is the person's words.** `problem`, `goal`, `steps` and `vision` hold what the
@@ -454,7 +455,7 @@ nothing, so its notes are gone from it.
 
 ## Smart controls
 
-The design workspace's look palette offers an admin, a designer or a lead developer, for an element, the choices the product
+The design workspace's look palette offers an admin, a designer or a UI dev owner, for an element, the choices the product
 already has for it, on a **Suggested** tab ([desk-page.md](desk-page.md) → The look palette).
 Only in repo mode, where the option is drawn from the product's own code (the `variants` skill
 → Repo mode only: the profile). In brand or Carbon mode there is no product code to read:
