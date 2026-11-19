@@ -102,7 +102,7 @@ their role; "before design" is a conversation started before `opened_at`.
 |----|-------|-------|------------|------|
 | 01 | UI dev owner | Rename `lead-developer` → `ui-dev-owner` everywhere; the old name reads as the new | — | [x] |
 | 02 | Stages in the store | `stage` on a request, how it starts, the moves and their API, what a staged request refuses | 01 | [x] |
-| 03 | Hidden from who may not see it | `visibleTo` on every person's read; the bell on opening; the agent's own runs skip staged requests | 02 | [ ] |
+| 03 | Hidden from who may not see it | `visibleTo` on every person's read; the bell on opening; the agent's own runs skip staged requests | 02 | [x] |
 | 04 | Simple mode | Draft and Proposal pills, the filter and its boxes by role, the stage moves in the head, New request | 02, 03 | [ ] |
 | 05 | Full mode, Send feedback, release | Full mode's dot and filters, Send feedback in both modes, Before design; VERSION, CHANGELOG | 04 | [ ] |
 
