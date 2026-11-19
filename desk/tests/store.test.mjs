@@ -3177,3 +3177,17 @@ test("a post keeps a New version the Desk read after the review was sent", () =>
   // A pull request on another GitHub host is recorded too.
   assert.match(s.reviewPosted(r.id, { url: "https://github.example.com/acme/widgets/pull/7#pullrequestreview-9", sha: h2 }).review.posted.url, /example\.com/);
 });
+
+test("a Comment-only review never waits for a next version, posted or not", () => {
+  let t = 0;
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { needsApproval: everyCounts, clock: () => new Date(Date.UTC(2026, 10, 19, 9, 0, t++)).toISOString().replace(/\.\d{3}Z$/, "Z") });
+  const chg = s.upsertCard({ kind: "change", title: "Spend", source: { repo: "acme/widgets", pr: 7 } }).card;
+  const read = (head) => s.putGithub([{ key: "acme/widgets#7", kind: "pr", title: "Spend", head, comments: [] }]);
+  read("1".repeat(40));
+  s.addDraft(chg.id, alice, { text: "Nice" });
+  const r = s.sendReview(chg.id, alice, { verdict: "comment" }).review;
+  read("3".repeat(40));
+  s.reviewPosted(r.id, { url: "https://ghe.example.com:8443/acme/widgets/pull/7#r", sha: "2".repeat(40) });
+  assert.equal(s.db.reviews[r.id].next_at, undefined);
+  assert.equal(s.notifications(alice).items.some((x) => x.event === "new-version"), false);
+});
