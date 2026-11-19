@@ -525,6 +525,7 @@
   .el-said .anchor { display: block; width: 100%; max-width: none; white-space: normal; overflow: visible; text-overflow: clip; text-align: left; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--panel); color: inherit; font: inherit; font-size: var(--fs-ui); cursor: pointer; }
   .el-said .anchor:hover { border-color: var(--accent); }
   .el-said .tx { color: var(--ink); }
+  .el-drafts { display: grid; gap: 8px; margin: 8px 0; } .el-drafts .dbub { background: var(--warn-soft); }
   .el-box textarea { width: 100%; box-sizing: border-box; }
   .el-box .bar { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
   .elbar h2 { margin: 0 0 4px; font-size: var(--fs-head); }

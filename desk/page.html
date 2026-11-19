@@ -537,6 +537,7 @@
   .el-said .anchor { display: block; width: 100%; max-width: none; white-space: normal; overflow: visible; text-overflow: clip; text-align: left; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--panel); color: inherit; font: inherit; font-size: var(--fs-ui); cursor: pointer; }
   .el-said .anchor:hover { border-color: var(--accent); }
   .el-said .tx { color: var(--ink); }
+  .el-drafts { display: grid; gap: 8px; margin: 8px 0; } .el-drafts .dbub { background: var(--warn-soft); }
   .el-box textarea { width: 100%; box-sizing: border-box; }
   .el-box .bar { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
   .elbar h2 { margin: 0 0 4px; font-size: var(--fs-head); }
@@ -2194,6 +2195,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     draftNow: "Posts this comment now, here on the Desk; it is not part of your feedback",
     draftDel: "Removes this comment from your feedback",
     draftOk: "This change is fine as it is; your Looks good goes with your feedback",
+    elDraft: "Keeps this note on the part in your feedback: nobody sees it until you send it",
+    elComment: "A comment for the team on this part, posted now; Design Desk works it in only when someone asks",
     reopen: "Opens this note again; Design Desk looks at it again",
     workIn: (v) => v.includes(",") ? "Design Desk changes the design as every open comment asks" : "Design Desk changes the design as this comment asks",
     sendForm: "Sends your answers; Design Desk goes on with them",
@@ -6364,18 +6367,22 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       : `<button class="btn small" data-act="take-before" title="Design Desk takes ${esc(e.name)} as it is in the product, on its own copy of the product with made-up data. One picture serves every option.">${bf?.source === "instance" ? "Take it again" : "Take it from the product"}</button>`;
     return `<div class="el-pair"><div class="el-col"><span class="el-lab">Before</span>${pic}<p class="el-from">${from}</p>${take ? `<div class="el-take">${take}</div>` : ""}</div>${after(e.change === "changed" || bf ? "After" : "In the design")}</div>`;
   }
-  // The comments on a part, under its pictures: those still open, then a box that comments on it
-  // at once, as Just comment in the design workspace does (docs/desk-page.md → The element dialog).
+  // The comments on a part, under its pictures: those still open, the viewer's notes on it waiting
+  // in their feedback, then a box: Add to feedback, or Comment at once (docs/desk-page.md → The element dialog).
   const notesOnPart = (c, v, e) => (c.threads || []).filter((th) => th.state !== "resolved" && th.anchor?.variant === v.id
     && (e.selector ? th.anchor.selector === e.selector : String(th.anchor.label || "").split(" · ")[0] === e.name));
+  // The anchor a note on the part carries, the same whether it is posted or kept in the feedback.
+  const partAnchor = (v, e) => ({ variant: v.id, ...(e.selector ? { selector: e.selector, text: "", tag: "", view: e.view || null, view_name: e.view_name || null } : {}), label: e.name });
+  const draftsOnPart = (c, v, e) => draftsOf(c).filter((d) => !d.ok && d.anchor?.variant === v.id && (e.selector ? d.anchor.selector === e.selector : String(d.anchor.label || "") === e.name));
   function elementTalk(c, v, e) {
     if (S.el?.look) return "";
-    const notes = notesOnPart(c, v, e);
+    const notes = notesOnPart(c, v, e), mine = draftsOnPart(c, v, e);
     const list = notes.length ? `<ul class="el-said">${notes.map((th) => { const m = th.messages?.[0], more = (th.messages || []).length - 1;
       return `<li><button class="anchor" data-goto="${esc(th.id)}" title="Open it in the design workspace"><b>${esc((noteBy(m?.by) || "someone").replace(/^./, (x) => x.toUpperCase()))}</b> <span class="tx">${esc(String(m?.text || "").replace(/\s+/g, " "))}</span>${more > 0 ? ` <span class="hint">${plural(more, "reply", "replies")}</span>` : ""}</button></li>`; }).join("")}</ul>` : "";
+    const waiting = mine.length ? `<div class="el-drafts">${mine.map((d) => `<div class="dbub"><div class="db-b"><span class="about">Not sent yet</span>${esc(d.text)}</div><button class="x" data-draft-del="${esc(d.id)}" aria-label="Remove this comment from your feedback" title="Remove from your feedback">✕</button></div>`).join("")}</div>` : "";
     const box = (can("comment") || can("change")) && !closed(c) ? `<div class="el-box"><textarea id="el-text" rows="2" maxlength="4000" placeholder="What should change here?" aria-label="Comment on ${esc(e.name)}"></textarea>
-        <div class="bar"><span class="grow"></span><button class="btn" data-el-comment title="A comment for the team on this part; Design Desk works it in only when someone asks">Comment</button></div></div>` : "";
-    return list || box ? `<div class="el-talk"><span class="el-lab">Comments${notes.length ? ` · ${notes.length}` : ""}</span>${list}${box}</div>` : "";
+        <div class="bar"><span class="grow"></span><button class="btn" data-el-comment>Comment</button><button class="btn" data-el-draft>Add to feedback</button></div></div>` : "";
+    return list || waiting || box ? `<div class="el-talk"><span class="el-lab">Comments${notes.length ? ` · ${notes.length}` : ""}</span>${list}${waiting}${box}</div>` : "";
   }
   // `look`: only to look through the states drawn (from the design workspace): nothing is drawn or added from it.
   function openElement(variant, key, { look = false } = {}) { S.el = { card: S.card?.id, variant, key, look }; renderElementDialog(); const d = $("#element-dialog"); if (!d.open) d.showModal(); }
@@ -8417,12 +8424,19 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (ds.wsStatesOf) { const v = wsVariant(S.card); if (v) openElement(v.id, ds.wsStatesOf, { look: true }); return; }
     if ("elClose" in ds) { $("#element-dialog").close(); return; }
     // A comment on the part, from its dialog: on it at once, the dialog stays on the part.
+    if ("elDraft" in ds) {
+      const c = S.card, v = (c?.variants || []).find((x) => x.id === S.el?.variant), e = v && elementsOf(v).find((x) => x.key === S.el.key), box = $("#el-text"), text = box?.value.trim();
+      if (!e) return;
+      if (!text) { box?.focus(); toast("Write your comment first."); return; }
+      box.value = "";
+      await addDraft(c, { text, anchor: partAnchor(v, e) });
+      return;
+    }
     if ("elComment" in ds) {
       const c = S.card, v = (c?.variants || []).find((x) => x.id === S.el?.variant), e = v && elementsOf(v).find((x) => x.key === S.el.key), box = $("#el-text"), text = box?.value.trim();
       if (!e) return;
       if (!text) { box?.focus(); toast("Write your comment first."); return; }
-      const anchor = { variant: v.id, ...(e.selector ? { selector: e.selector, text: "", tag: "", view: e.view || null, view_name: e.view_name || null } : {}), label: e.name };
-      await api("POST", `/api/cards/${c.id}/threads`, { kind: "comment", text, anchor });
+      await api("POST", `/api/cards/${c.id}/threads`, { kind: "comment", text, anchor: partAnchor(v, e) });
       box.value = "";
       toast("Comment added.");
       await openCard(c.id); return;

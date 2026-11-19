@@ -2064,6 +2064,7 @@ window.platform = { async request({ method, path, body }) {
     : path === "/api/cards" ? { cards: [{ ...request, variants: 1, threads: undefined }] } : path === "/api/agenda" ? { agenda: [] }
     : path === "/api/cards/r7" ? { card: request }
     : path === "/api/cards/r7/actions" ? { inbox: { kind: "explore", scope: "before" } }
+    : path === "/api/cards/r7/drafts" ? { drafts: (window.drafts = method === "POST" ? [...(window.drafts || []), { id: "d" + calls.length, ...JSON.parse(body), at: "2026-11-18T10:00:00Z" }] : window.drafts || []) }
     : path === "/api/assets/A-1" ? { contentType: "text/html", encoding: "utf8", data: ${JSON.stringify(BEFORE_PAGE).replace(/</g, "\\u003c")} }
     : path === "/api/assets/A-now" ? { contentType: "text/html", encoding: "utf8", data: ${JSON.stringify(NOW_PAGE).replace(/</g, "\\u003c")} }
     : path === "/api/assets/A-shot" ? { contentType: "image/svg+xml", encoding: "utf8", data: ${JSON.stringify(SHOT).replace(/</g, "\\u003c")} } : {};
@@ -2131,6 +2132,14 @@ test("an element's dialog lists the part's open comments and comments on the par
     await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/r7/threads"));
     const body = JSON.parse((await posts("/api/cards/r7/threads"))[0].body);
     assert.deepEqual([body.kind, body.text, body.anchor.variant, body.anchor.selector, body.anchor.label, body.anchor.view, body.anchor.view_name], ["comment", "Make the label shorter", "v1", "#label", "Limit label", "1", "Agents"]);
+    // Add to feedback keeps a note on the part, with the same anchor, until the feedback is sent.
+    await desk.fill("#el-text", "Bigger, too");
+    await desk.click("#element-dialog [data-el-draft]");
+    await desk.waitForSelector("#element-dialog .el-drafts .dbub");
+    const draft = JSON.parse((await posts("/api/cards/r7/drafts"))[0].body);
+    assert.deepEqual([draft.text, draft.anchor.variant, draft.anchor.selector, draft.anchor.label], ["Bigger, too", "v1", "#label", "Limit label"]);
+    assert.match(await desk.textContent("#element-dialog .el-drafts"), /Not sent yet[\s\S]*Bigger, too/);
+    assert.equal(await desk.inputValue("#el-text"), "", "the box is empty again");
     // A note in the list opens the design workspace at it.
     await desk.click('#element-dialog [data-goto="T-1"]');
     await desk.waitForSelector("#ws-frame");
