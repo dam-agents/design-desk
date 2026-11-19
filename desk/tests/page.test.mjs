@@ -3884,6 +3884,20 @@ test("simple mode lists requests and changes of the viewer's side in one list, e
   assert.equal(await desk.locator("details.sf[open]").count(), 1, "the menu stays open while ticking");
 }));
 
+test("a simple mode row says when it last changed, then its number: a change its pull request's, a request its own", (t) => open(t, DESK(SIMPLE_ME, SIMPLE_CARDS), async (desk) => {
+  await desk.waitForSelector('#list [data-card="r-check"]');
+  const line = (id) => desk.$eval(`#list [data-card="${id}"] .sline`, (l) => {
+    const n = l.querySelector(".snum"), w = l.querySelector(".when"), font = (x) => { const s = getComputedStyle(x); return [s.fontFamily, s.fontSize, s.fontWeight, s.color].join(); };
+    return { order: [...l.children].map((x) => x.className), num: n.textContent, title: n.title || n.dataset.tip, same: font(n) === font(w) };
+  });
+  const change = await line("c-open"), request = await line("r-check");
+  assert.equal(change.num, "PR#7", "a change: PR and its pull request's number");
+  assert.match(change.title, /pull request/);
+  assert.equal(request.num, "r-check", "a request: its number on the Desk");
+  assert.deepEqual(request.order.slice(0, 3), ["when", "ssep", "snum"], "the number after when it last changed");
+  assert.ok(change.same && request.same, "in the date's font, size and grey");
+}));
+
 test("simple mode's filter shows only what narrows the list, keeps one of each group and is kept in the browser", (t) => open(t, DESK(SIMPLE_ME, SIMPLE_CARDS), async (desk) => {
   await desk.waitForSelector('#list [data-card="r-check"]');
   assert.deepEqual(await desk.$$eval(".sf-chip", (xs) => xs.map((x) => x.textContent.trim())), ["Open"], "the default: one chip, no ×, no kind");

@@ -179,8 +179,10 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   for a developer or a lead developer, For Designers for everyone else, with no switch — each in
   one state ([A request's state in the list](#a-requests-state-in-the-list)), the newest change
   first. A row is the kind's icon, the title, when it last changed (Today, Yesterday or the
-  day, with the time; the year only when it is not this year), the Desk's spinner while Design
-  Desk works on it, and its state's pill, left out while the filter shows one state only. The
+  day, with the time; the year only when it is not this year), then its number in the same grey
+  words (a change its pull request's, `PR#812`; a request its own, `R-12`), the Desk's spinner
+  while Design Desk works on it, and its state's pill, left out while the filter shows one state
+  only. The
   filter is one **Filter** button: its menu ticks any of State (**Open**, **In dev**,
   **Closed**) and Kind (**Requests**, **PR changes**), each with its count, at least one of each
   ticked, and **Reset to default** (Open, both kinds); beside the button only what narrows the
