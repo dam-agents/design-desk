@@ -7312,8 +7312,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       const f = x.target.querySelector(":scope > iframe[data-snip-wide]");
       if (!f) continue;
       // A frame whose box had no size yet (a folded section) is drawn once it has one, scaled for it.
-      if (f.dataset.wideWait) { if (widen(f) > 0) { delete f.dataset.wideWait; loadPictures(x.target).catch(() => {}); } }
-      else widen(f);
+      if (f.dataset.wideWait) { if (widen(f) > 0) { delete f.dataset.wideWait; loadPictures(x.target).catch(() => {}); } continue; }
+      // How far the part may be enlarged was set for the box's first size: a box much wider or
+      // narrower draws it again, so before and after stay alike.
+      const was = Number(f.dataset.wideK) || 0, k = widen(f);
+      if (was && k && f.srcdoc && Math.abs(k / was - 1) > 0.25) { f.removeAttribute("srcdoc"); loadPictures(x.target).catch(() => {}); }
     }
   });
   function widen(f) {
@@ -7336,6 +7339,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         const sel = f.dataset.snipSel || (base ? diffPath(decode(await asset(base)), html) : "");
         const wide = f.hasAttribute("data-snip-wide"), k = wide ? widen(f) : 1;
         if (!k) { f.dataset.wideWait = "1"; continue; }
+        if (wide) f.dataset.wideK = String(k);
         f.srcdoc = snipDoc(html, sel, "", !f.dataset.snipSel && !!sel, 2.5 / k, wide);
       } catch {}
     }

@@ -88,13 +88,13 @@ test("a sticky part is cut where it is seen, the page scrolled under it", async 
   assert.deepEqual(jpegSize(readFileSync(join(dir, "bar-element.jpg"))), { w: 2 * 308, h: 2 * 68 });
 });
 
-test("a part taller than the window is cut from the whole page", async (t) => {
-  const page = `<!doctype html><html><body style="margin:0"><div style="height:200px"></div><div id="tall" style="margin-left:50px;width:200px;height:1500px;background:#3a3"></div><div style="height:400px"></div></body></html>`;
+test("a part taller or wider than the window is shot whole", async (t) => {
+  const page = `<!doctype html><html><body style="margin:0"><div style="height:200px"></div><div id="tall" style="margin-left:50px;width:200px;height:1500px;background:#3a3"></div><div style="height:400px"></div><div id="wide" style="width:2000px;height:100px;background:#33a"></div></body></html>`;
   const server = createServer((_, res) => { res.setHeader("content-type", "text/html"); res.end(page); });
   await new Promise((r) => server.listen(0, "127.0.0.1", r));
   const base = `http://127.0.0.1:${server.address().port}`;
   const dir = mkdtempSync(join(tmpdir(), "dd-capture-tall-"));
-  writeFileSync(join(dir, "recipe.json"), JSON.stringify({ setup: [{ goto: "/" }], shots: [{ name: "Tall", element: "#tall" }] }));
+  writeFileSync(join(dir, "recipe.json"), JSON.stringify({ setup: [{ goto: "/" }], shots: [{ name: "Tall", element: "#tall" }, { name: "Wide", element: "#wide" }] }));
   let out;
   try { ({ stdout: out } = await promisify(execFile)(process.execPath, [design, "capture", base, dir, "--recipe", join(dir, "recipe.json")], { timeout: 150000 })); }
   catch (e) { server.close(); if (/Chromium|browser/i.test(String(e.stderr))) return t.skip("no browser here"); throw e; }
@@ -102,6 +102,9 @@ test("a part taller than the window is cut from the whole page", async (t) => {
   const line = JSON.parse(out.trim().split("\n")[0]);
   assert.equal(line.element, true, line.error);
   assert.deepEqual(line.box, { x: 50, y: 200, w: 200, h: 1500 });
-  // All of it, 8 px round it, though the window is 900 px high.
-  assert.deepEqual(jpegSize(readFileSync(join(dir, "tall-element.jpg"))), { w: 2 * 216, h: 2 * 1516 });
+  // All of it, though the window is 900 px high: the element itself, without padding.
+  assert.deepEqual(jpegSize(readFileSync(join(dir, "tall-element.jpg"))), { w: 2 * 200, h: 2 * 1500 });
+  const wide = JSON.parse(out.trim().split("\n")[1]);
+  assert.equal(wide.element, true, wide.error);
+  assert.deepEqual(jpegSize(readFileSync(join(dir, "wide-element.jpg"))), { w: 2 * 2000, h: 2 * 100 }, "a part wider than the window is not cut at its edge");
 });

@@ -2918,7 +2918,7 @@ test("a request keeps where its shared parts sit in how it looks today, and pict
   assert.throws(() => s.upsertCard({ id: card.id, now: { asset: page, elements: [{ id: "card", selector: ".card" }] } }), /shared_elements/);
   // The list and the places in one upsert, in either order of fields.
   s.upsertCard({ id: card.id, now: { asset: page, name: "Agents", elements: [{ id: "card", selector: "[data-view=\"1\"] .card", view: 1, view_name: "Agents" }] }, shared_elements: shared });
-  assert.deepEqual(s.card(card.id).now.elements, [{ id: "card", selector: "[data-view=\"1\"] .card", view: 1, view_name: "Agents" }]);
+  assert.deepEqual(s.card(card.id).now.elements, [{ id: "card", selector: "[data-view=\"1\"] .card", view: "1", view_name: "Agents" }]);
   // The same drawing sent again without them keeps them; a new drawing without them has none.
   s.upsertCard({ id: card.id, now: { asset: page, name: "Agents" } });
   assert.equal(s.card(card.id).now.elements.length, 1, "the same drawing keeps its parts' places");

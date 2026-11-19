@@ -14,7 +14,7 @@
 //                (`<shot>[-dark]-element.jpg`): a part as it is in the product, for its dialog on
 //                the Desk (docs/requests.md → The part before, from the product). A recipe of parts
 //                alone shoots at two screen pixels per CSS pixel, so a small part stays sharp.
-import { readFileSync, statSync } from "node:fs";
+import { readFileSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { ensureDir, fail, launch } from "../lib/core.mjs";
 
@@ -96,8 +96,8 @@ async function step(pg, st, { url, base }) {
 
 // One part of the page alone, 8 px round it and never past the page's edge; a part that is
 // missing or not shown fails the shot like a step that failed. A part that fits the window is cut
-// from what the window shows, so a sticky or fixed part is cut where it is seen; a taller one
-// from the whole page. Past 700 KiB (the Desk takes at most 720 KiB) it is shot again at one
+// from what the window shows, so a sticky or fixed part is cut where it is seen; a larger one is
+// shot as the element itself, without the padding. Past 700 KiB (the Desk takes at most 720 KiB) it is shot again at one
 // screen pixel per CSS pixel, then at a lower quality.
 const PAD = 8, MAX_BYTES = 700 * 1024;
 async function cutTo(pg, selector, file) {
@@ -106,15 +106,18 @@ async function cutTo(pg, selector, file) {
   await el.scrollIntoViewIfNeeded().catch(() => {});
   const b = await el.evaluate((e) => { const r = e.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height, sx: scrollX, sy: scrollY, vw: innerWidth, vh: innerHeight, pw: document.documentElement.scrollWidth, ph: document.documentElement.scrollHeight }; });
   if (!b.w || !b.h) throw new Error(`element ${selector} has no size`);
-  const inView = b.h + 2 * PAD <= b.vh && b.y >= 0;
-  const [ox, oy, maxW, maxH] = inView ? [0, 0, b.vw, b.vh] : [b.sx, b.sy, b.pw, b.ph];
-  const x = Math.max(0, b.x + ox - PAD), y = Math.max(0, b.y + oy - PAD);
-  const clip = { x, y, width: Math.min(maxW - x, b.x + ox + b.w + PAD - x), height: Math.min(maxH - y, b.y + oy + b.h + PAD - y) };
+  // Whole in the window, either way: cut from what it shows. Taller or wider: Playwright shoots
+  // the element itself, which handles a part larger than the window (no padding round it then).
+  const inView = b.h + 2 * PAD <= b.vh && b.y >= 0 && b.w + 2 * PAD <= b.vw && b.x >= 0;
+  const x = Math.max(0, b.x - PAD), y = Math.max(0, b.y - PAD);
+  const clip = { x, y, width: Math.min(b.vw - x, b.x + b.w + PAD - x), height: Math.min(b.vh - y, b.y + b.h + PAD - y) };
   for (const opts of [{ quality: 80 }, { quality: 80, scale: "css" }, { quality: 60, scale: "css" }]) {
-    await pg.screenshot({ path: file, type: "jpeg", fullPage: !inView, clip, ...opts });
+    if (inView) await pg.screenshot({ path: file, type: "jpeg", clip, ...opts });
+    else await el.screenshot({ path: file, type: "jpeg", ...opts });
     if (statSync(file).size <= MAX_BYTES) break;
   }
-  if (statSync(file).size > MAX_BYTES) throw new Error(`element ${selector} is more than 700 KiB even at one screen pixel per CSS pixel: shoot a smaller part`);
+  // A picture too large is never left under the name of one taken: the next run would upload it.
+  if (statSync(file).size > MAX_BYTES) { rmSync(file, { force: true }); throw new Error(`element ${selector} is more than 700 KiB even at one screen pixel per CSS pixel: shoot a smaller part`); }
   return { x: Math.round(b.x + b.sx), y: Math.round(b.y + b.sy), w: Math.round(b.w), h: Math.round(b.h) };
 }
 

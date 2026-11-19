@@ -643,11 +643,9 @@ export class Store {
     return { ...c, conflicts, cited, attention: this.attentionOf(c), ...(["request", "change", "issue"].includes(c.kind) ? { for: this.forOf(c) } : {}), ...(c.kind === "request" ? { from_pr: this.fromPr(c) } : {}), designed: this.designedOf(c), sent_card: this.sentCardOf(c), builds: this.buildsOf(c), threads: (c.threads || []).map((t) => this.db.threads[t]).filter((t) => sees(t, viewer)), waiting: this.waitingFor(c.id, viewer) };
   }
 
-  // The ids of a request's shared parts, as this upsert leaves them (docs/requests.md → The same elements in every option).
-  sharedIds(next, fields = {}) {
-    const list = fields.shared_elements !== undefined ? cleanSharedElements(fields.shared_elements) : next.shared_elements || [];
-    return new Set(list.map((s) => s.id));
-  }
+  // The ids of a request's shared parts (docs/requests.md → The same elements in every option). The
+  // upsert sets shared_elements before now and before_shots (AGENT_FIELDS' order), so this is the list it leaves.
+  sharedIds(next) { return new Set((next.shared_elements || []).map((s) => s.id)); }
 
   // Work the agent has been asked for on a card and not finished, oldest first.
   waitingFor(cardId, viewer) {
@@ -1772,7 +1770,8 @@ export class Store {
     // before it goes); never a request from Slack, whose spec always waits for a person.
     // Nor one from an open pull request: a person picks there between a new issue and a comment on it.
     if (action === "approve" && autoSend && c.origin?.channel !== "slack" && !this.fromPr(c)) c.approved.auto_send = true;
-    c.updated = this.clock();
+    // A picture of a part from the product documents the design; it changes nothing on it.
+    if (action !== "take-before") c.updated = this.clock();
     const item = this.enqueue(kinds[action], cardId, null, who, optText(note, action === "add-option" ? LIMITS.optionAsk : 1000, "note"));
     if (action === "draw-now") item.scope = "now";
     if (action === "take-before") { item.scope = "before"; item.element = beforeOf.id; }
@@ -2272,7 +2271,7 @@ export class Store {
         // Where each of the request's shared parts sits in it, so a part's dialog cuts it out as
         // it was before the design: kept while the drawing is the same, gone with a new one.
         const was = next.now, same = was && fields.now && was.asset === fields.now.asset;
-        const els = fields.now && fields.now.elements !== undefined ? cleanNowElements(fields.now.elements, this.sharedIds(next, fields))
+        const els = fields.now && fields.now.elements !== undefined ? cleanNowElements(fields.now.elements, this.sharedIds(next))
           : same && was.elements?.length ? was.elements : null;
         next.now = fields.now === null ? null : { asset: fields.now.asset, name: optText(fields.now.name, 80, "now name") || null, at: this.clock(), ...(els?.length ? { elements: els } : {}) };
       }
@@ -2280,7 +2279,7 @@ export class Store {
       // merged by id; `asset: null` takes one off (docs/requests.md → The part before, from the product).
       else if (k === "before_shots") {
         if (next.kind !== "request") throw bad("before_shots belong to a request");
-        next.before_shots = mergeBeforeShots(next.before_shots || [], fields.before_shots, this.sharedIds(next, fields), this.db.assets, this.clock());
+        next.before_shots = mergeBeforeShots(next.before_shots || [], fields.before_shots, this.sharedIds(next), this.db.assets, this.clock());
       }
       else if (k === "sheet") { if (fields.sheet !== null && !own(this.db.assets, fields.sheet)) throw bad(`sheet: no asset ${fields.sheet}`); next.sheet = fields.sheet; }
       else if (k === "states") next.states = cleanStates(fields.states);
@@ -3563,8 +3562,9 @@ function cleanNowElements(list, shared) {
     if (!shared.has(id)) throw bad(`now.elements ${i + 1}: ${id || "its id"} is not one of the request's shared_elements`);
     if (ids.has(id)) throw bad(`now.elements ${i + 1}: ${id} is there twice`);
     ids.add(id);
-    const view = x?.view === undefined || x?.view === null || x?.view === "" ? null : Number(x.view);
-    if (view !== null && !Number.isInteger(view)) throw bad(`now.elements ${i + 1}: view is a number`);
+    // A view as an option's element names one: its number, as text.
+    const view = x?.view === undefined || x?.view === null || x?.view === "" ? null : String(x.view);
+    if (view !== null && !/^\d{1,4}$/.test(view)) throw bad(`now.elements ${i + 1}: view is a number`);
     return { id, selector: clean(x?.selector, 500, "selector"), view, view_name: optText(x?.view_name, 80, "view_name") || null };
   });
 }
