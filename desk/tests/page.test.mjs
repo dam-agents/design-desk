@@ -4243,3 +4243,78 @@ test("simple mode's Ask privately is its lock alone, named for a screen reader a
   assert.equal(await desk.locator(".ask-fab .ask-lbl").isHidden(), true, "only the lock");
   assert.match(await desk.getAttribute(".ask-fab", "data-tip"), /Ask Design Desk privately about R-5/, "its tooltip says what it asks about");
 }));
+
+// Draft and Proposal in simple mode (docs/desk-page.md → Simple mode): their own states, for whom
+// they can hold anything, and the stage's moves in the head.
+const STAGED = [
+  { id: "R-20", kind: "request", title: "My draft", status: "triage", stage: "draft", by: { email: "d@example.com" }, updated: at(25) },
+  { id: "R-21", kind: "request", title: "A proposal", status: "feedback", stage: "proposal", by: { email: "pat@example.com" }, updated: at(24) },
+  { id: "R-22", kind: "request", title: "Open, For Designers", status: "triage", updated: at(23) },
+];
+const DEV_ME = { ...SIMPLE_ME, role: "developer", can: { request: true, "stage-propose": true } };
+test("simple mode: Draft and Proposal are states of their own, for whom they can hold anything, ticked by default", (t) => open(t, DESK(DEV_ME, [...STAGED, ...SIMPLE_CARDS]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="R-20"]');
+  assert.deepEqual((await rows(desk)).slice(0, 2), [["R-20", "Draft"], ["R-21", "Proposal"]], "on a developer's list whatever the side, each with its pill");
+  assert.deepEqual(await desk.$$eval(".sf-chip", (xs) => xs.map((x) => x.textContent.replace("×", "").trim())), ["Draft", "Proposal", "Open"], "every state before In dev by default");
+  await desk.click("details.sf > summary");
+  assert.deepEqual(await desk.$$eval('[data-simf^="states:"]', (xs) => xs.map((x) => x.dataset.simf.slice(7))), ["draft", "proposal", "open", "dev", "closed"]);
+  await desk.keyboard.press("Escape");
+  await desk.evaluate(() => { location.hash = ""; });
+  await desk.waitForSelector(".sboxes");
+  assert.deepEqual(await desk.$$eval(".sbox b", (xs) => xs.map((x) => x.textContent)), ["Draft", "Proposal", "Open", "In dev", "Closed"], "the boxes, Draft and Proposal while they hold something");
+}));
+
+test("simple mode: a PM has Draft and no Proposal; a designer's list and filter stay as they were", async (t) => {
+  await open(t, DESK({ ...SIMPLE_ME, role: "pm", can: { request: true, "stage-design": true } }, [STAGED[0], STAGED[2]]), async (desk) => {
+    await desk.waitForSelector('#list [data-card="R-20"]');
+    await desk.click("details.sf > summary");
+    assert.deepEqual(await desk.$$eval('[data-simf^="states:"]', (xs) => xs.map((x) => x.dataset.simf.slice(7))), ["draft", "open", "dev", "closed"]);
+  });
+  await open(t, DESK(SIMPLE_ME, [STAGED[2]]), async (desk) => {
+    await desk.evaluate(() => localStorage.setItem("desk-simFilter", JSON.stringify({ states: ["proposal"], kinds: ["request", "change"] })));
+    await desk.reload();
+    await desk.waitForSelector('#list [data-card="R-22"]');
+    assert.deepEqual(await desk.$$eval(".sf-chip", (xs) => xs.map((x) => x.textContent.trim())), ["Open"], "a kept state they cannot see is left out");
+  });
+});
+
+const stageButtons = (desk) => desk.$$eval("#detail .sh-acts [data-stage], #detail .sh-acts [data-act=close]", (xs) => xs.map((x) => `${x.closest(".sh-more") ? "⋯ " : ""}${x.textContent.trim()}`));
+for (const [who, me, card, want] of [
+  ["a developer proposes their draft", DEV_ME, STAGED[0], ["Propose", "⋯ Close…"]],
+  ["a PM sends their draft to design", { ...DEV_ME, role: "pm", can: { request: true, "stage-design": true, close: true } }, STAGED[0], ["Send to design", "⋯ Close…"]],
+  ["the UI dev owner sends their draft on, proposes it or keeps it for developers", { ...DEV_ME, role: "ui-dev-owner", can: { request: true, "stage-propose": true, "stage-design": true, "stage-own": true } }, STAGED[0],
+    ["Send to design", "⋯ Propose", "⋯ Keep for developers", "⋯ Close…"]],
+  ["the UI dev owner moves a proposal on", { ...DEV_ME, role: "ui-dev-owner", can: { request: true, "stage-propose": true, "stage-design": true, "stage-own": true } }, STAGED[1],
+    ["Send to design", "⋯ Keep for developers", "⋯ Back to draft", "⋯ Close…"]],
+  ["a developer does not move another's proposal", DEV_ME, STAGED[1], []],
+]) test(`simple mode's head before design: ${who}`, (t) => open(t, HEAD_DESK({ ...HEAD_ME, ...me }, [{ ...drawn, ...card, variants: drawn.variants }]), async (desk) => {
+  await desk.waitForSelector("#list");
+  await desk.evaluate((id) => { location.hash = `#${id}`; }, card.id);
+  await desk.waitForSelector("#detail .shead");
+  assert.deepEqual(await stageButtons(desk), want);
+  assert.equal(await desk.locator('#detail [data-review="approve"], #detail [data-act="approve"]').count(), 0, "no Approve before design");
+}));
+
+test("simple mode: Propose moves a draft on at once; Send to design asks first", (t) => open(t, HEAD_DESK({ ...HEAD_ME, role: "ui-dev-owner", can: { ...HEAD_ME.can, request: true, "stage-propose": true, "stage-design": true, "stage-own": true } }, [{ ...drawn, ...STAGED[0] }]), async (desk) => {
+  await desk.waitForSelector("#list");
+  await desk.evaluate(() => { location.hash = "#R-20"; });
+  await desk.waitForSelector('#detail [data-stage="design"]');
+  await desk.click('#detail .sh-more > summary');
+  await desk.click('#detail [data-stage="proposal"]');
+  await desk.waitForFunction(() => window.posts.some((p) => p.path.endsWith("/stage")));
+  assert.deepEqual(await desk.evaluate(() => window.posts.filter((p) => p.path.endsWith("/stage"))), [{ path: "/api/cards/R-20/stage", body: { to: "proposal" } }]);
+  await desk.click('#detail [data-stage="design"]');
+  await desk.waitForSelector("#confirm-dialog[open]");
+  assert.match(await desk.textContent("#cf-title"), /Send it to design\?/);
+  await desk.click("#cf-ok");
+  await desk.waitForFunction(() => window.posts.filter((p) => p.path.endsWith("/stage")).length === 2);
+  assert.deepEqual(await desk.evaluate(() => window.posts.filter((p) => p.path.endsWith("/stage")).map((p) => p.body.to)), ["proposal", "design"]);
+}));
+
+test("New request makes a draft for anyone but a designer, and says who sees it", async (t) => {
+  for (const [me, word] of [[DEV_ME, "Create draft"], [{ ...SIMPLE_ME, can: { request: true } }, "Send"]]) await open(t, DESK(me, []), async (desk) => {
+    await desk.click("#new-request");
+    assert.equal((await desk.textContent("#request-form [data-close=send]")).trim(), word, me.role);
+    assert.equal(/only you see it/.test(await desk.textContent("#rq-hint")), word === "Create draft");
+  });
+});
