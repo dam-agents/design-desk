@@ -29,10 +29,10 @@ migration.
 - `POST /api/cards/<id>/stage {to}` with `to` one of:
   - `"proposal"` — Propose: from `draft`.
   - `"design"` — Send to design: from `draft` or `proposal`; opens it For Designers.
-  - `"developers"` — Keep for developers: from `proposal`; opens it For Developers (`size.small`).
+  - `"developers"` — Keep for developers: from `proposal`, or the UI dev owner's own `draft`; opens it For Developers (`size.small`).
   - `"draft"` — Back to draft: from `proposal`.
   Returns `{card}`; refuses with 403 (who) or 400 (from which stage) in plain words.
-- `GET /api/me` → `can.stage_propose`, `can.stage_design`, `can.stage_own` (the page shows
+- `GET /api/me` → `can["stage-propose"]`, `can["stage-design"]`, `can["stage-own"]` (the page shows
   only the moves the viewer may make; the store has the final word per card).
 - Agent routes (`/agent/cards`, `/agent/cards/<id>`) carry `stage` too and see every request.
 
@@ -42,9 +42,9 @@ migration.
 | --- | --- | --- |
 | `designer` | open (no stage) | — |
 | `pm`, `admin` | draft | Send to design |
-| `ui-dev-owner` | draft | Propose, Send to design |
+| `ui-dev-owner` | draft | Propose, Send to design, Keep for developers |
 | `developer` | draft | Propose |
-| the agent (Slack, GitHub, chat, a run) | open, as today | — |
+| the agent (Slack, GitHub, chat, a run), an MCP peer | open, as today | — |
 
 On a proposal, the `ui-dev-owner` and `admin` (any of them, author or not): Send to design,
 Keep for developers, Back to draft, Close. The author of a draft may close it whatever their
@@ -92,7 +92,8 @@ Taken with the operator before planning (and written on #189):
 - When a request opens, its earlier conversations come with it, folded under **Before design**.
 
 Taken while planning, from the code (flag in review if wrong): the author always sees their
-request; an MCP peer is treated as its `mcp_role`; the author of a draft may close it whatever
+request; an MCP peer reads as its `mcp_role`, but files open, as an agent; the UI dev owner may keep their
+own draft for developers (it replaces New request's side switch for them); the author of a draft may close it whatever
 their role; "before design" is a conversation started before `opened_at`.
 
 ## Slices
@@ -100,7 +101,7 @@ their role; "before design" is a conversation started before `opened_at`.
 | #  | Title | Scope | Depends on | Done |
 |----|-------|-------|------------|------|
 | 01 | UI dev owner | Rename `lead-developer` → `ui-dev-owner` everywhere; the old name reads as the new | — | [x] |
-| 02 | Stages in the store | `stage` on a request, how it starts, the moves and their API, what a staged request refuses | 01 | [ ] |
+| 02 | Stages in the store | `stage` on a request, how it starts, the moves and their API, what a staged request refuses | 01 | [x] |
 | 03 | Hidden from who may not see it | `visibleTo` on every person's read; the bell on opening; the agent's own runs skip staged requests | 02 | [ ] |
 | 04 | Simple mode | Draft and Proposal pills, the filter and its boxes by role, the stage moves in the head, New request | 02, 03 | [ ] |
 | 05 | Full mode, Send feedback, release | Full mode's dot and filters, Send feedback in both modes, Before design; VERSION, CHANGELOG | 04 | [ ] |

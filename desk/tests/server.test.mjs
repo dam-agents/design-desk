@@ -12,6 +12,9 @@ import { fileURLToPath } from "node:url";
 
 const SERVER = join(dirname(fileURLToPath(import.meta.url)), "..", "server.mjs");
 const ROSTER = "## Desk people\n\n| email | role |\n| --- | --- |\n| lee@example.com | admin |\n| alice@example.com | designer |\n| pat@example.com | pm |\n| lou@example.com | Lead developer |\n| bob@example.com | developer |\n| dana@example.com | developer |\n";
+// A person's request is a draft unless a designer files it (docs/desk.md → Draft and Proposal): a
+// test about what follows has an admin send it to design first.
+const opened = async (d, filing) => { const r = await filing; if (r.body?.card?.stage) assert.equal((await d.viewer("lee@example.com", `/api/cards/${r.body.card.id}/stage`, { to: "design" })).status, 200); return r; };
 
 const freePort = () => new Promise((ok) => { const s = createServer(); s.listen(0, "127.0.0.1", () => { const { port } = s.address(); s.close(() => ok(port)); }); });
 
@@ -126,7 +129,7 @@ test("a request's author removes an option whatever their role; anyone else need
   const three = [{ id: "v1", name: "Big", asset: asset.id }, { id: "v2", name: "Small", asset: asset.id }, { id: "v3", name: "Wide", asset: asset.id }];
   const drop = (email, id, variant) => d.viewer(email, `/api/cards/${id}/actions`, { action: "drop-option", variant });
 
-  const id = (await d.viewer("bob@example.com", "/api/requests", { problem: "Rows are too airy.", options: 0 })).body.card.id;
+  const id = (await opened(d, d.viewer("bob@example.com", "/api/requests", { problem: "Rows are too airy.", options: 0 }))).body.card.id;
   assert.equal((await d.agent("/agent/cards", { id, status: "feedback", variants: three })).status, 200);
   const other = await drop("dana@example.com", id, "v1");
   assert.equal(other.status, 403, "another developer may not");
@@ -150,7 +153,7 @@ test("a request's author removes an option whatever their role; anyone else need
 
 test("For Developers: only a UI dev owner moves it there, any developer but its author approves it", async (t) => {
   const d = await desk(t);
-  const filed = await d.viewer("bob@example.com", "/api/requests", { problem: "Rows are too airy.", options: 0 });
+  const filed = await opened(d, d.viewer("bob@example.com", "/api/requests", { problem: "Rows are too airy.", options: 0 }));
   assert.equal(filed.status, 201);
   const id = filed.body.card.id;
   assert.equal((await d.agent("/agent/cards", { id, status: "feedback", triage: { verdict: "design", reasons: ["Spacing only."] } })).status, 200);
@@ -185,7 +188,7 @@ test("a person by any address of their row: the same role, still the author, the
   assert.deepEqual(me.body.emails, ["bob@slack.example.com", "bob@example.com"]);
   assert.equal(me.body.names["bob@example.com"], "Bob Stone");
 
-  const filed = await d.viewer("bob@example.com", "/api/requests", { problem: "Rows are too airy.", options: 0 });
+  const filed = await opened(d, d.viewer("bob@example.com", "/api/requests", { problem: "Rows are too airy.", options: 0 }));
   const id = filed.body.card.id;
   assert.equal((await d.agent("/agent/cards", { id, status: "feedback", triage: { verdict: "design", reasons: ["Spacing only."] } })).status, 200);
   assert.equal((await d.viewer("lou@example.com", `/api/cards/${id}/size`, { small: true })).status, 200);
@@ -200,7 +203,7 @@ test("a person by any address of their row: the same role, still the author, the
 
 test("deciding straight away: a UI dev owner approves or decides and closes, a developer does not", async (t) => {
   const d = await desk(t);
-  const filed = await d.viewer("bob@example.com", "/api/requests", { problem: "The header shouts.", options: 0 });
+  const filed = await opened(d, d.viewer("bob@example.com", "/api/requests", { problem: "The header shouts.", options: 0 }));
   const id = filed.body.card.id;
   assert.equal((await d.agent("/agent/cards", { id, triage: { verdict: "design", reasons: ["Only the look."] } })).status, 200);
   const me = await d.viewer("lou@example.com", "/api/me");
@@ -212,7 +215,7 @@ test("deciding straight away: a UI dev owner approves or decides and closes, a d
   assert.equal(ok.status, 200);
   assert.deepEqual([ok.body.inbox.kind, ok.body.card.approved.by.email, ok.body.card.approved.implement], ["handoff", "lou@example.com", undefined]);
 
-  const other = (await d.viewer("bob@example.com", "/api/requests", { problem: "The badge is hard to see.", options: 0 })).body.card.id;
+  const other = (await opened(d, d.viewer("bob@example.com", "/api/requests", { problem: "The badge is hard to see.", options: 0 }))).body.card.id;
   assert.equal((await d.viewer("lou@example.com", `/api/cards/${other}/decide`, { text: "Too early." })).status, 400, "not before Design Desk checked it");
   assert.equal((await d.agent("/agent/cards", { id: other, triage: { verdict: "design", reasons: ["Only the look."] } })).status, 200);
   const decided = await d.viewer("lou@example.com", `/api/cards/${other}/decide`, { text: "Badges stay: colour is for errors only." });
@@ -222,7 +225,7 @@ test("deciding straight away: a UI dev owner approves or decides and closes, a d
 
 test("straight to implementation where the spec reaches GitHub: the approval and its handoff carry it", async (t) => {
   const d = await desk(t, "- handoff: issue\n\n");
-  const id = (await d.viewer("bob@example.com", "/api/requests", { problem: "The header shouts.", options: 0 })).body.card.id;
+  const id = (await opened(d, d.viewer("bob@example.com", "/api/requests", { problem: "The header shouts.", options: 0 }))).body.card.id;
   assert.equal((await d.agent("/agent/cards", { id, triage: { verdict: "design", reasons: ["Only the look."] } })).status, 200);
   const ok = await d.viewer("lou@example.com", `/api/cards/${id}/actions`, { action: "approve", note: "Grey header.", implement: true });
   assert.equal(ok.status, 200);
@@ -231,7 +234,7 @@ test("straight to implementation where the spec reaches GitHub: the approval and
 
 test("a request sent, reopened by an admin and sent again: Approve and Send to developers both pass close_earlier on", async (t) => {
   const d = await desk(t, "- handoff: issue\n\n");
-  const id = (await d.viewer("bob@example.com", "/api/requests", { problem: "The header shouts.", options: 0 })).body.card.id;
+  const id = (await opened(d, d.viewer("bob@example.com", "/api/requests", { problem: "The header shouts.", options: 0 }))).body.card.id;
   assert.equal((await d.agent("/agent/cards", { id, triage: { verdict: "design", reasons: ["Only the look."] } })).status, 200);
   const first = (await d.viewer("lou@example.com", `/api/cards/${id}/actions`, { action: "approve", note: "Grey header." })).body.inbox.id;
   const finish = async (item) => { await d.agent(`/agent/items/${item}/claim`, { session: "s1" }); await d.agent(`/agent/items/${item}/done`, { session: "s1" }); };
@@ -517,7 +520,7 @@ test("team feedback: a Desk request waits for a person to ask the team, one from
   // A redraw re-sends the option with the version the card returned.
   const draw = (id, version) => d.agent("/agent/cards", { id, status: "feedback", triage: { verdict: "design", reasons: ["Look only."] }, variants: [{ id: "v1", name: "Calm", asset: asset.id, ...(version ? { version } : {}) }] });
 
-  const mine = (await d.viewer("pat@example.com", "/api/requests", { problem: "The header shouts.", options: 1 })).body.card.id;
+  const mine = (await opened(d, d.viewer("pat@example.com", "/api/requests", { problem: "The header shouts.", options: 1 }))).body.card.id;
   const triage = (await d.agent("/agent/inbox")).body.open.find((i) => i.card === mine).id;
   await d.agent(`/agent/items/${triage}/claim`, { session: "s1" }); await d.agent(`/agent/items/${triage}/done`, { session: "s1" });
   const held = await draw(mine);
@@ -535,7 +538,7 @@ test("team feedback: a Desk request waits for a person to ask the team, one from
 
   const slack = (await d.agent("/agent/cards", { kind: "request", title: "Softer colours", origin: { channel: "slack", reporter: "Carla" } })).body.card.id;
   assert.equal((await draw(slack)).body.card.status, "feedback", "from Slack: on to the team by itself");
-  const none = (await d.viewer("pat@example.com", "/api/requests", { problem: "Typo in the footer.", options: 0 })).body.card.id;
+  const none = (await opened(d, d.viewer("pat@example.com", "/api/requests", { problem: "Typo in the footer.", options: 0 }))).body.card.id;
   assert.equal((await d.agent("/agent/cards", { id: none, status: "feedback", triage: { verdict: "design", reasons: ["Words only."] } })).body.card.status, "feedback", "no options to fine-tune: on by itself");
 });
 
@@ -689,4 +692,33 @@ test("reviews: a pull request's review is queued for GitHub only with review_pos
     assert.equal(r.body.inbox?.kind ?? null, kind, config || "the default");
     assert.equal((await d.viewer("alice@example.com", "/api/me")).body.review_post, kind === "review");
   }
+});
+
+// Draft and Proposal (docs/desk.md → Draft and Proposal): where a person's request starts and how it moves on.
+test("a designer's request opens; anyone else's is a draft that its author moves on, a proposal the UI dev owner's", async (t) => {
+  const d = await desk(t);
+  const file = async (email) => (await d.viewer(email, "/api/requests", { problem: "Rows are too airy.", options: 0 })).body.card;
+  const move = (email, id, to) => d.viewer(email, `/api/cards/${id}/stage`, { to });
+  assert.equal((await file("alice@example.com")).stage, undefined, "a designer's opens at once");
+  for (const email of ["pat@example.com", "lou@example.com", "bob@example.com", "lee@example.com"]) assert.equal((await file(email)).stage, "draft", email);
+
+  const me = (await d.viewer("bob@example.com", "/api/me")).body.can;
+  assert.deepEqual([me["stage-propose"], me["stage-design"], me["stage-own"]], [true, false, false]);
+  const id = (await file("bob@example.com")).id;
+  const refused = await move("bob@example.com", id, "design");
+  assert.deepEqual([refused.status, refused.body.error], [403, "A developer's draft goes to design as a proposal: press Propose, and the UI dev owner sends it on."]);
+  assert.equal((await move("bob@example.com", id, "proposal")).body.card.stage, "proposal");
+  assert.equal((await move("dana@example.com", id, "design")).status, 403, "another developer does not send it on");
+  const sent = await move("lou@example.com", id, "design");
+  assert.deepEqual([sent.status, sent.body.card.stage, Boolean(sent.body.card.opened_at)], [200, undefined, true]);
+  assert.equal((await move("lou@example.com", id, "draft")).status, 400, "open never goes back");
+
+  // Its author closes a draft and reopens it, whatever their role; nobody else below the right role does.
+  const mine = (await file("bob@example.com")).id;
+  assert.equal((await d.viewer("dana@example.com", `/api/cards/${mine}/actions`, { action: "close" })).status, 403);
+  const closed = await d.viewer("bob@example.com", `/api/cards/${mine}/actions`, { action: "close" });
+  assert.deepEqual([closed.status, closed.body.card.status, closed.body.card.stage], [200, "declined", "draft"]);
+  assert.equal((await d.viewer("bob@example.com", `/api/cards/${mine}/actions`, { action: "reopen" })).status, 200);
+  const approve = await d.viewer("alice@example.com", `/api/cards/${mine}/actions`, { action: "approve" });
+  assert.deepEqual([approve.status, approve.body.error], [400, "This request is still a draft. That waits until it goes to design."]);
 });

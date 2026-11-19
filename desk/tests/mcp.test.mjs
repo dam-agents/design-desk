@@ -48,6 +48,8 @@ test("a peer reads, asks and files requests, as one caller of mcp_role, and reac
   const made = await d.peer("POST", "/peer/requests", { title: "Busy list", problem: "The list is busy." });
   assert.equal(made.status, 201, JSON.stringify(made.body));
   const id = made.body.card.id;
+  assert.equal(made.body.card.stage, undefined, "an agent's request opens, as Design Desk's own do, whatever mcp_role");
+  assert.equal((await d.peer("POST", `/peer/cards/${id}/stage`, { to: "design" })).status, 404, "a peer moves no request on");
   assert.equal((await d.peer("GET", `/peer/cards/${id}`)).status, 200);
   const asked = await d.peer("POST", `/peer/cards/${id}/threads`, { kind: "question", text: "Why two columns?" });
   assert.equal(asked.status, 201);
