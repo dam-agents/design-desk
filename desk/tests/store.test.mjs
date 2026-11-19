@@ -3496,3 +3496,19 @@ test("the bell shows each viewer a request's history from the first stage they c
   assert.throws(() => s.getAsset(shot, alice), /no asset/);
   assert.equal(s.getAsset(shot, dana).id, shot);
 });
+
+test("a request back to draft is out of the dev team's bell again until it is proposed anew", () => {
+  const s = fresh();
+  const lou = { email: "lou@example.com", role: "ui-dev-owner" }, dana = { email: "dana@example.com", role: "developer" };
+  const asset = s.addAsset({ kind: "variant", name: "v", contentType: "text/html", data: "<p>v</p>", encoding: "utf8" }).asset.id;
+  s.clock = () => "2030-01-01T09:00:00Z";
+  const id = s.createRequest(bob, { problem: "Rows are too airy.", stage: "draft" }).card.id;
+  s.clock = () => "2030-01-02T09:00:00Z"; s.moveStage(id, bob, "proposal");
+  s.clock = () => "2030-01-03T09:00:00Z"; s.moveStage(id, lou, "draft");
+  s.upsertCard({ id, status: "feedback", triage: { verdict: "design", reasons: ["Spacing only."] }, variants: [{ id: "v1", name: "Calm", asset, drawn: "2030-01-03T12:00:00Z" }] });
+  s.clock = () => "2030-01-04T09:00:00Z"; s.moveStage(id, bob, "proposal");
+  const events = (who) => s.notifications(who, { days: 100000 }).items.filter((n) => n.item === id).map((n) => n.event);
+  assert.equal(events(dana).includes("options-drawn"), false, "drawn while it was a draft again");
+  assert.deepEqual(s.blindSpans(s.card(id), dana), [["2030-01-01T09:00:00Z", "2030-01-02T09:00:00Z"], ["2030-01-03T09:00:00Z", "2030-01-04T09:00:00Z"]]);
+  assert.deepEqual(s.blindSpans(s.card(id), alice), [["2030-01-01T09:00:00Z", "9999"]], "a designer saw none of it yet");
+});

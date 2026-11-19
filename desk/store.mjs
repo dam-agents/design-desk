@@ -439,6 +439,20 @@ export class Store {
     if (c.stage === "proposal" && DEVELOPERS.includes(who.role)) return true;
     return [c.created_by?.email, c.origin?.email].some((x) => x && addressesOf(who).includes(String(x).toLowerCase()));
   }
+  // When a person could not see a request, from its stages' history: [from, to) spans, or null.
+  // A developer or the UI dev owner saw its proposals; anyone else nothing before it opened.
+  blindSpans(c, who) {
+    if (!c?.staged?.length) return null;
+    const dev = DEVELOPERS.includes(who?.role), sees = (st) => st === "open" || (dev && st === "proposal");
+    const spans = [], blind = (from, to) => { const last = spans[spans.length - 1]; if (last && last[1] === from) last[1] = to; else spans.push([from, to]); };
+    let st = "draft", since = c.created;
+    for (const x of c.staged) {
+      if (!sees(st)) blind(since, x.at);
+      st = ["design", "developers"].includes(x.to) ? "open" : x.to; since = x.at;
+    }
+    if (!sees(st)) blind(since, "9999");
+    return spans;
+  }
   // A card a person reads or writes on: one they may not see is not there for them, in the same words.
   cardFor(id, who) { const c = this.card(id); if (!this.visibleTo(c, who)) throw missing(`no card ${id}`); return c; }
   // A conversation a viewer acts on: another person's private ask is not there for them.
@@ -1223,8 +1237,8 @@ export class Store {
     const out = [];
     // Before a request opened, only its author, admins and the dev team could see it: what happened
     // then is not news to anyone else (docs/desk.md → Draft and Proposal).
-    let cut = null;
-    const push = (at, event, item, by, extra = {}, forYou = false) => { if (at && at >= from && (!cut || at >= cut) && !isMine(by)) out.push({ at, event, ...item, by: by || null, ...extra, for_you: forYou }); };
+    let blind = null;
+    const push = (at, event, item, by, extra = {}, forYou = false) => { if (at && at >= from && !(blind && blind.some(([a, b]) => at >= a && at < b)) && !isMine(by)) out.push({ at, event, ...item, by: by || null, ...extra, for_you: forYou }); };
     const itemOf = (c) => ({ item: c.id, kind: c.kind, title: c.title || "", screen: c.request?.screen || c.path || null, status: c.status });
     for (const c of Object.values(this.db.cards)) {
       if (c.status === "archived" || c.kind === "digest" || !this.visibleTo(c, who)) continue;
@@ -1233,8 +1247,7 @@ export class Store {
       // For you, its messages included. The bell's For you shows these alone.
       const talked = (c.threads || []).some((tid) => (own(this.db.threads, tid)?.messages || []).some((m) => isMine(m.by)));
       const filed = [c.created_by, c.origin].some(isMine);
-      cut = !c.staged?.length || filed || !who || who.agent || who.role === "admin" ? null
-        : (DEVELOPERS.includes(who.role) && c.staged.find((x) => x.to === "proposal")?.at) || c.opened_at || null;
+      blind = filed || !who || who.agent || who.role === "admin" ? null : this.blindSpans(c, who);
       const yours = filed || isMine(c.approved?.by) || talked || Object.values(c.votes || {}).some((x) => Object.keys(x || {}).some((e) => mine.has(e.toLowerCase())));
       const author = c.origin?.reporter && c.origin.channel !== "agent" ? { name: c.origin.reporter, email: c.origin.email || null, via: c.origin.channel } : c.created_by;
       // A request that went to design is new to everyone then (docs/desk-page.md → Notifications).
@@ -1279,7 +1292,7 @@ export class Store {
         });
       }
     }
-    cut = null;
+    blind = null;
     // Your private asks live outside the cards: Design Desk's answers to them are yours alone.
     for (const t of Object.values(this.db.threads)) {
       if (t.kind !== "private" || !key || t.owner !== key) continue;
