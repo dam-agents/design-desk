@@ -271,5 +271,11 @@ const p3 = pr("P-3", 799, "Empty state for the provider list", 60 * 30, { status
 const p4 = pr("P-4", 790, "Billing: copy fix in the footer", 60 * 48, { attention: { level: "fyi", reasons: ["Nothing differs from the catalog."] } });
 const p5 = pr("P-5", 785, "Table: one more column", 60 * 3, { attention: { level: "developer", reasons: ["A column in an existing table."] } });
 
-export const CARDS = [r1, r2, r3, r4, r5, r6, r7, p1, p2, p3, p4, p5];
+// Before design (docs/desk.md → Draft and Proposal): the mock's person's own draft, and Pat's
+// proposal; the page shows them to the roles that see them (?role=developer, ui-dev-owner, admin).
+const r8 = { ...r3, id: "R-8", title: "Agents list: fewer columns", stage: "draft", created: ago(90), updated: ago(20), by: ALICE,
+  request: { type: "idea", problem: "The agents list has more columns than anyone reads." }, threads: [], votes: {} };
+const r9 = { ...r3, id: "R-9", title: "A quieter usage chart", stage: "proposal", created: ago(300), updated: ago(15),
+  request: { type: "idea", problem: "The usage chart pulls the eye from the totals." }, threads: [], votes: {} };
+export const CARDS = [r1, r2, r3, r4, r5, r6, r7, r8, r9, p1, p2, p3, p4, p5];
 export const ASSETS = A;

@@ -170,7 +170,7 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     await rq.button("Cancel").click();
     assert.equal(await rq.open(), false, "Cancel closes the dialog");
     await desk.click("#new-request");
-    await rq.button("Send").click();
+    await rq.button("Create draft").click();
     assert.equal(await rq.open(), true, "an empty request stays open");
     await desk.fill("#request-dialog textarea[name=problem]", "Make the send button bigger");
     assert.equal(await desk.isVisible("#rq-skills"), true, "an idea offers the skills");
@@ -184,7 +184,7 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     assert.equal(await desk.isVisible("#rq-count"), false, "a bug asks for no options");
     assert.equal(await desk.isVisible("#rq-grill"), false, "a bug asks for no questions first");
     await desk.click("#request-dialog #type-choice button[data-type=idea]");
-    await rq.button("Send").click();
+    await rq.button("Create draft").click();
     await desk.waitForFunction(() => calls.some((c) => c.path === "/api/cards/r1"));
     assert.equal(await rq.open(), false, "Send closes the dialog");
     assert.equal(await desk.getAttribute('[data-tab="requests"]', "aria-current"), "true", "a sent request opens Requests");
@@ -210,10 +210,10 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     await desk.click("#new-request");
     await desk.fill("#request-dialog textarea[name=problem]", "Kept after a failure");
     await desk.evaluate(() => { window.failNext = true; });
-    await rq.button("Send").click();
+    await rq.button("Create draft").click();
     await desk.waitForSelector("#request-dialog[open] .toast", { state: "attached" });
     assert.equal(await desk.inputValue("#request-dialog textarea[name=problem]"), "Kept after a failure", "a failed send keeps the text");
-    await rq.button("Send").click();
+    await rq.button("Create draft").click();
     await desk.waitForFunction(() => calls.filter((c) => c.path === "/api/requests").length === 4);
     assert.equal(await rq.open(), false, "a second Send goes through");
 
@@ -1243,7 +1243,7 @@ test("the Issues tab lists the planned issues; Draw it and Design this act once"
     await desk.fill("#request-dialog input[name=options]", "0");
     assert.equal(await desk.textContent("#rq-count-say"), "None", "none: only a check of what can be done");
     await desk.click("#rq-grill input");
-    await desk.locator("#request-dialog .actions button", { hasText: "Send" }).click();
+    await desk.locator("#request-dialog .actions button", { hasText: "Create draft" }).click();
     await desk.waitForFunction(() => calls.some((c) => c.path === "/api/requests"));
     const body = JSON.parse((await posts("/api/requests"))[0].body);
     assert.deepEqual([body.from, body.options, body.grill], ["is1", 0, true], "from the issue, with no options and questions first");
@@ -3708,10 +3708,12 @@ test("a dialog with work in it asks before Escape or a click outside closes it; 
   assert.deepEqual([await isOpen("confirm-dialog"), await isOpen("request-dialog")], [false, false], "the dialog's own Cancel closes it at once");
 }));
 
-test("a UI dev owner picks For Designers or For Developers when filing", (t) => open(t, DESK({ ...DESIGNER, role: "ui-dev-owner", can: { request: true, size: true } }, [BUSY]), async (desk) => {
+// A UI dev owner's request starts as a draft, which takes its tab when it opens (docs/desk.md → Draft and Proposal).
+test("a UI dev owner files a draft, with no For Designers or For Developers switch", (t) => open(t, DESK({ ...DESIGNER, role: "ui-dev-owner", can: { request: true, size: true } }, [BUSY]), async (desk) => {
   await desk.waitForSelector("#new-request");
   await desk.click("#new-request");
-  assert.equal(await desk.isVisible("#rq-for"), true);
+  assert.equal(await desk.isVisible("#rq-for"), false);
+  assert.equal((await desk.textContent("#request-form [data-close=send]")).trim(), "Create draft");
 }));
 
 // A picture dropped anywhere on a dialog is added as if chosen with "choose a file".
@@ -4275,3 +4277,78 @@ test("the bell's For you / All stays inside its panel", (t) => open(t, BELL, asy
   assert.equal(btns.length, 2);
   for (const r of btns) assert.ok(r <= panel, `a switch ends at ${r}, past the panel's edge at ${panel}`);
 }));
+
+// Draft and Proposal in simple mode (docs/desk-page.md → Simple mode): their own states, for whom
+// they can hold anything, and the stage's moves in the head.
+const STAGED = [
+  { id: "R-20", kind: "request", title: "My draft", status: "triage", stage: "draft", by: { email: "d@example.com" }, updated: at(25) },
+  { id: "R-21", kind: "request", title: "A proposal", status: "feedback", stage: "proposal", by: { email: "pat@example.com" }, updated: at(24) },
+  { id: "R-22", kind: "request", title: "Open, For Designers", status: "triage", updated: at(23) },
+];
+const DEV_ME = { ...SIMPLE_ME, role: "developer", can: { request: true, "stage-propose": true } };
+test("simple mode: Draft and Proposal are states of their own, for whom they can hold anything, ticked by default", (t) => open(t, DESK(DEV_ME, [...STAGED, ...SIMPLE_CARDS]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="R-20"]');
+  assert.deepEqual((await rows(desk)).slice(0, 2), [["R-20", "Draft"], ["R-21", "Proposal"]], "on a developer's list whatever the side, each with its pill");
+  assert.deepEqual(await desk.$$eval(".sf-chip", (xs) => xs.map((x) => x.textContent.replace("×", "").trim())), ["Draft", "Proposal", "Open"], "every state before In dev by default");
+  await desk.click("details.sf > summary");
+  assert.deepEqual(await desk.$$eval('[data-simf^="states:"]', (xs) => xs.map((x) => x.dataset.simf.slice(7))), ["draft", "proposal", "open", "dev", "closed"]);
+  await desk.keyboard.press("Escape");
+  await desk.evaluate(() => { location.hash = ""; });
+  await desk.waitForSelector(".sboxes");
+  assert.deepEqual(await desk.$$eval(".sbox b", (xs) => xs.map((x) => x.textContent)), ["Draft", "Proposal", "Open", "In dev", "Closed"], "the boxes, Draft and Proposal while they hold something");
+}));
+
+test("simple mode: a PM has Draft and no Proposal; a designer's list and filter stay as they were", async (t) => {
+  await open(t, DESK({ ...SIMPLE_ME, role: "pm", can: { request: true, "stage-design": true } }, [STAGED[0], STAGED[2]]), async (desk) => {
+    await desk.waitForSelector('#list [data-card="R-20"]');
+    await desk.click("details.sf > summary");
+    assert.deepEqual(await desk.$$eval('[data-simf^="states:"]', (xs) => xs.map((x) => x.dataset.simf.slice(7))), ["draft", "open", "dev", "closed"]);
+  });
+  await open(t, DESK(SIMPLE_ME, [STAGED[2]]), async (desk) => {
+    await desk.evaluate(() => localStorage.setItem("desk-simFilter", JSON.stringify({ states: ["proposal"], kinds: ["request", "change"] })));
+    await desk.reload();
+    await desk.waitForSelector('#list [data-card="R-22"]');
+    assert.deepEqual(await desk.$$eval(".sf-chip", (xs) => xs.map((x) => x.textContent.trim())), ["Open"], "a kept state they cannot see is left out");
+  });
+});
+
+const stageButtons = (desk) => desk.$$eval("#detail .sh-acts [data-stage], #detail .sh-acts [data-act=close]", (xs) => xs.map((x) => `${x.closest(".sh-more") ? "⋯ " : ""}${x.textContent.trim()}`));
+for (const [who, me, card, want] of [
+  ["a developer proposes their draft", DEV_ME, STAGED[0], ["Propose", "⋯ Close…"]],
+  ["a PM sends their draft to design", { ...DEV_ME, role: "pm", can: { request: true, "stage-design": true, close: true } }, STAGED[0], ["Send to design", "⋯ Close…"]],
+  ["the UI dev owner sends their draft on, proposes it or keeps it for developers", { ...DEV_ME, role: "ui-dev-owner", can: { request: true, "stage-propose": true, "stage-design": true, "stage-own": true } }, STAGED[0],
+    ["Send to design", "⋯ Propose", "⋯ Keep for developers", "⋯ Close…"]],
+  ["the UI dev owner moves a proposal on", { ...DEV_ME, role: "ui-dev-owner", can: { request: true, "stage-propose": true, "stage-design": true, "stage-own": true } }, STAGED[1],
+    ["Send to design", "⋯ Keep for developers", "⋯ Back to draft", "⋯ Close…"]],
+  ["a developer does not move another's proposal", DEV_ME, STAGED[1], []],
+]) test(`simple mode's head before design: ${who}`, (t) => open(t, HEAD_DESK({ ...HEAD_ME, ...me }, [{ ...drawn, ...card, variants: drawn.variants }]), async (desk) => {
+  await desk.waitForSelector("#list");
+  await desk.evaluate((id) => { location.hash = `#${id}`; }, card.id);
+  await desk.waitForSelector("#detail .shead");
+  assert.deepEqual(await stageButtons(desk), want);
+  assert.equal(await desk.locator('#detail [data-review="approve"], #detail [data-act="approve"]').count(), 0, "no Approve before design");
+}));
+
+test("simple mode: Propose moves a draft on at once; Send to design asks first", (t) => open(t, HEAD_DESK({ ...HEAD_ME, role: "ui-dev-owner", can: { ...HEAD_ME.can, request: true, "stage-propose": true, "stage-design": true, "stage-own": true } }, [{ ...drawn, ...STAGED[0] }]), async (desk) => {
+  await desk.waitForSelector("#list");
+  await desk.evaluate(() => { location.hash = "#R-20"; });
+  await desk.waitForSelector('#detail [data-stage="design"]');
+  await desk.click('#detail .sh-more > summary');
+  await desk.click('#detail [data-stage="proposal"]');
+  await desk.waitForFunction(() => window.posts.some((p) => p.path.endsWith("/stage")));
+  assert.deepEqual(await desk.evaluate(() => window.posts.filter((p) => p.path.endsWith("/stage"))), [{ path: "/api/cards/R-20/stage", body: { to: "proposal" } }]);
+  await desk.click('#detail [data-stage="design"]');
+  await desk.waitForSelector("#confirm-dialog[open]");
+  assert.match(await desk.textContent("#cf-title"), /Send it to design\?/);
+  await desk.click("#cf-ok");
+  await desk.waitForFunction(() => window.posts.filter((p) => p.path.endsWith("/stage")).length === 2);
+  assert.deepEqual(await desk.evaluate(() => window.posts.filter((p) => p.path.endsWith("/stage")).map((p) => p.body.to)), ["proposal", "design"]);
+}));
+
+test("New request makes a draft for anyone but a designer, and says who sees it", async (t) => {
+  for (const [me, word] of [[DEV_ME, "Create draft"], [{ ...SIMPLE_ME, can: { request: true } }, "Send"]]) await open(t, DESK(me, []), async (desk) => {
+    await desk.click("#new-request");
+    assert.equal((await desk.textContent("#request-form [data-close=send]")).trim(), word, me.role);
+    assert.equal(/only you see it/.test(await desk.textContent("#rq-hint")), word === "Create draft");
+  });
+});
