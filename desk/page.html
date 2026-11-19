@@ -3738,7 +3738,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // Simple mode's row: its kind, its title, when it last changed and its number, and its state;
     // the pill only when the filter shows more than one state, the spinner while Design Desk works
     // on it. A change's number is its pull request's (PR#812); a request's, or a change's with no
-    // pull request, its own on the Desk (R-12).
+    // pull request, its own on the Desk (R-12, P-3).
     const pills = S.simFilter.states.length > 1;
     const sNum = (c) => {
       const pr = c.kind === "change" && c.source?.pr, n = pr ? `PR#${pr}` : c.base || c.id;

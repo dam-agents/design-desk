@@ -11,7 +11,8 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
 **Upgrade:**
 1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): in simple mode a row says
-   its number after when it last changed (`PR#812`, `R-12`). No data migration.
+   its number after when it last changed (`PR#812`; a request `R-12`, a change with no pull request
+   `P-3`). No data migration.
 
 ## 1.103.0 — 2026-11-19
 
