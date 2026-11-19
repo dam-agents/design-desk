@@ -331,9 +331,8 @@ beside them in full mode); each request is in one (the card's `size: {small, by,
 every visit — For Developers for a developer or a UI dev owner, For Designers for everyone
 else; another tab picked holds until the page is left, and the browser does not keep it. Where it starts:
 
-- **Filed on the Desk**: New request has a **For Designers / For Developers** switch,
-  For Designers by default (`POST /api/requests {audience}`), for the roles that move a request
-  below; anyone else files For Designers.
+- **Filed on the Desk**: For Designers; one that starts as a draft takes its tab when it opens
+  ([Draft and Proposal](#draft-and-proposal)).
 - **Filed by you** (`design desk request`, `design desk report`): `audience` as you set it;
   without it, a request with a Slack `origin` is For Developers and any other For Designers.
   From Slack, set `audience: "designers"` only when the message asks for a designer.

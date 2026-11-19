@@ -43,7 +43,9 @@ function shim() {
       if (c.responsible?.who === "design-desk") delete c.responsible;
     }, 25000);
   };
-  const list = () => cards.map((c) => ({ ...c, variants: c.variants.length, threads: undefined }));
+  // A request before design shows only to whom the server shows it (docs/desk.md → Draft and Proposal).
+  const seen = (c) => !c.stage || role === "admin" || (c.stage === "draft" ? !["designer", "guest"].includes(role) && c.by?.email === me.email : ["developer", "ui-dev-owner"].includes(role));
+  const list = () => cards.filter(seen).map((c) => ({ ...c, variants: c.variants.length, threads: undefined }));
   const answer = (method, path, body) => {
     const p = path.replace(/\?.*$/, ""), m = (re) => p.match(re);
     if (p === "/api/me") return me;
@@ -56,7 +58,13 @@ function shim() {
     if (p.startsWith("/api/decisions/")) { const id = decodeURIComponent(p.slice(15)); const d = cards[0].cited[id]; return d ? { decision: { id, ...d, side: "design", at: now(), concepts: [] } } : {}; }
     if (p.startsWith("/api/decisions")) return { decisions: Object.entries(cards[0].cited).map(([id, d]) => ({ id, ...d, side: "design", at: now(), concepts: [] })) };
     let x;
-    if ((x = m(/^\/api\/cards\/([^/]+)$/)) && method === "GET") return { card: structuredClone(card(decodeURIComponent(x[1]))) };
+    if ((x = m(/^\/api\/cards\/([^/]+)$/)) && method === "GET") { const c = card(decodeURIComponent(x[1])); return c && seen(c) ? { card: structuredClone(c) } : { error: "no card" }; }
+    if ((x = m(/^\/api\/cards\/([^/]+)\/stage$/)) && method === "POST") {
+      const c = card(decodeURIComponent(x[1]));
+      if (["design", "developers"].includes(body.to)) { delete c.stage; c.opened_at = now(); if (body.to === "developers") c.for = "developers"; } else c.stage = body.to;
+      c.updated = now();
+      return { card: structuredClone(c) };
+    }
     // A review (docs/desk.md → Reviews): drafts kept for this person, sent as one review whose comments are threads.
     if ((x = m(/^\/api\/cards\/([^/]+)\/drafts$/))) {
       const c = card(decodeURIComponent(x[1]));

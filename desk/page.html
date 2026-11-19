@@ -243,6 +243,7 @@
     color: var(--p); background: color-mix(in srgb, var(--p) 14%, transparent); }
   .spill[data-s="open"] { --p: var(--ok); } .spill[data-s="dev"] { --p: var(--accent); } .spill[data-s="shipped"] { --p: var(--live); }
   .spill[data-s="none"] { --p: var(--muted); } .spill[data-s="closed"] { --p: var(--bad); }
+  .spill[data-s="draft"] { --p: var(--muted); background: transparent; border: 1px dashed color-mix(in srgb, var(--p) 70%, transparent); line-height: 18px; } .spill[data-s="proposal"] { --p: var(--warn); }
   /* Simple mode's head of an item: kept in view while the page scrolls. */
   .shead { position: sticky; top: -24px; z-index: 6; display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; margin: -24px calc(-1 * var(--pad-x)) 16px; padding: 16px var(--pad-x); background: var(--bg); border-bottom: 1px solid var(--line); }
   .sh-main { min-width: 0; } .shead h2 { margin: 0; } .shead h2 > span:not(.kic) { margin-right: 8px; }
@@ -305,10 +306,10 @@
   .rvw .rv-v { color: var(--v); font-weight: 600; } .rvw .rv-gh { margin-left: auto; color: var(--muted); } .rvw .rv-note { margin-bottom: 12px; }
   .rvw .rv-note p { margin: 0; } .rvw .sthread:last-child, .rvw .thread:last-child { margin-bottom: 0; }
   .sthread .chip.sjump { cursor: pointer; border: 0; font: inherit; font-size: var(--fs-micro); } .sthread .chip.sjump:hover { text-decoration: underline; }
-  .sboxes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; max-width: 720px; margin: 16px auto 0; }
+  .sboxes { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; max-width: 720px; margin: 16px auto 0; }
   .sbox { --p: var(--muted); display: grid; align-content: start; gap: 4px; text-align: left; padding: 16px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--panel); color: inherit; font: inherit; cursor: pointer; }
   .sbox:hover { border-color: var(--p); } .sbox .n { font-size: var(--fs-title); font-weight: 600; color: var(--p); line-height: 1.1; }
-  .sbox[data-s="open"] { --p: var(--ok); } .sbox[data-s="dev"] { --p: var(--accent); } .sbox[data-s="closed"] { --p: var(--live); }
+  .sbox[data-s="proposal"] { --p: var(--warn); } .sbox[data-s="open"] { --p: var(--ok); } .sbox[data-s="dev"] { --p: var(--accent); } .sbox[data-s="closed"] { --p: var(--live); }
   @media (max-width: 860px) { .sboxes { grid-template-columns: 1fr; } }
   /* Simple mode's filter: one button, its menu of ticks, and a chip for each thing it narrows by. */
   .simfilter { align-items: center; } .simfilter details.sf > summary { display: inline-flex; align-items: center; gap: 4px; }
@@ -2437,6 +2438,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // people list, such as the one Slack knows you by (docs/config.md → Desk people).
   const isMe = (e) => Boolean(e) && (S.me?.emails?.length ? S.me.emails : [S.me?.email]).some((x) => x && String(x).toLowerCase() === String(e).toLowerCase());
   const filedIt = (c) => [c.created_by?.email, c.by?.email, c.origin?.email].some(isMe);
+  // Before design (docs/desk.md → Draft and Proposal): a request's stage, and whether one this
+  // person files starts as a draft (anyone's but a designer's).
+  const preDesign = (c) => (c?.kind === "request" && ["draft", "proposal"].includes(c.stage) ? c.stage : null);
+  const startsDraft = () => Boolean(S.me) && S.me.role !== "designer";
   // A person as the Desk names them: you, else their name from the people list, else the
   // address (or the name a channel gave) as it is.
   const nameOf = (e) => S.me?.names?.[String(e || "").toLowerCase()] || e;
@@ -3300,9 +3305,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // As full mode reads it: a spec draft waits until a person sends it, unless its approver asked it to go by itself.
   const specWaits = (c) => c.status === "spec" && c.spec?.review === "draft" && !c.approved?.auto_send;
   function simpleState(c, anySide = false) {
-    if (!c || !["request", "change"].includes(c.kind) || (!anySide && forOf(c) !== mySide())) return null;
+    // A request before design is on everyone's side who sees it: it takes one when it opens.
+    if (!c || !["request", "change"].includes(c.kind) || (!anySide && !preDesign(c) && forOf(c) !== mySide())) return null;
     if (c.kind === "request") {
       if (c.status === "declined") return { state: "closed", pill: "closed" };
+      if (preDesign(c)) return { state: c.stage, pill: null };
       if (c.status === "handed-off") return c.built ? { state: "closed", pill: "shipped" } : { state: "dev", pill: null };
       return c.status === "spec" && !specWaits(c) ? { state: "dev", pill: null } : { state: "open", pill: null };
     }
@@ -3314,23 +3321,30 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (!c.source?.merged_at) return { state: "dev", pill: null };
     return { state: "closed", pill: c.handled ? "shipped" : "none" };
   }
-  const SIM_STATES = [["open", "Open"], ["dev", "In dev"], ["closed", "Closed"]];
+  // Draft and Proposal come first, for whom they can hold anything (docs/desk-page.md → Simple mode):
+  // Draft for whoever files a request that starts as one, Proposal for the dev team.
+  const SIM_ALL = [["draft", "Draft"], ["proposal", "Proposal"], ["open", "Open"], ["dev", "In dev"], ["closed", "Closed"]];
+  const seesStage = (k) => k === "draft" ? startsDraft() && can("request") : k === "proposal" ? ["developer", "ui-dev-owner", "admin"].includes(S.me?.role) : true;
+  const simStates = () => SIM_ALL.filter(([k]) => seesStage(k));
   const SIM_KINDS = [["request", "Requests"], ["change", "PR changes"]];
-  const SIM_PILL = { open: "Open", dev: "In dev", shipped: "Shipped", none: "No review needed", closed: "Closed" };
-  const SIM_TIP = { open: "It needs a design decision", dev: "Approved: developers are building it", shipped: "Approved by a person and shipped",
+  const SIM_PILL = { draft: "Draft", proposal: "Proposal", open: "Open", dev: "In dev", shipped: "Shipped", none: "No review needed", closed: "Closed" };
+  const SIM_TIP = { draft: "A draft: only its author sees it until they send it on", proposal: "A proposal: the dev team talks it over before it goes to design",
+    open: "It needs a design decision", dev: "Approved: developers are building it", shipped: "Approved by a person and shipped",
     none: "Merged; Design Desk found nothing to review", closed: "Closed without being built" };
-  // The filter: states and kinds, any of each; kept in this browser (desk-simFilter).
-  const SIM_DEFAULT = () => ({ states: ["open"], kinds: ["request", "change"] });
+  // The filter: states and kinds, any of each; kept in this browser (desk-simFilter). By default
+  // every state before In dev the viewer can see; a kept state they cannot see is left out.
+  const SIM_DEFAULT = () => ({ states: simStates().map(([k]) => k).filter((k) => !["dev", "closed"].includes(k)), kinds: ["request", "change"] });
   S.simFilter = (() => {
     try {
       const v = JSON.parse(store.get("desk-simFilter") || "null"), ok = (xs, all) => Array.isArray(xs) && xs.filter((x) => all.some(([k]) => k === x));
-      const states = v && ok(v.states, SIM_STATES), kinds = v && ok(v.kinds, SIM_KINDS);
-      return states?.length && kinds?.length ? { states, kinds } : SIM_DEFAULT();
-    } catch { return SIM_DEFAULT(); }
+      const states = v && ok(v.states, SIM_ALL), kinds = v && ok(v.kinds, SIM_KINDS);
+      return states?.length && kinds?.length ? { states, kinds } : null;
+    } catch { return null; }
   })();
+  const simFilter = () => { const f = S.simFilter, states = (f?.states || []).filter(seesStage); return f && states.length ? { states, kinds: f.kinds } : SIM_DEFAULT(); };
   const simpleList = () => simple() && (S.tab === "requests" || S.tab === "new") && !presenting();
   const lastChange = (c) => String(c.updated || dateOf(c));
-  const simpleCards = (f = S.simFilter) => S.cards.map((c) => [c, simpleState(c)])
+  const simpleCards = (f = simFilter()) => S.cards.map((c) => [c, simpleState(c)])
     .filter(([c, s]) => s && f.states.includes(s.state) && f.kinds.includes(c.kind)).map(([c]) => c)
     .sort((a, b) => lastChange(b).localeCompare(lastChange(a)));
   // A row's date: Today, Yesterday or the day, with the time; the year only when it is not this year.
@@ -3352,19 +3366,43 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // One filter for the list: a button whose menu ticks any of each group, its counts by what the
   // other group lets through; beside it only what narrows the list, each a chip that drops it.
   function simpleFilterBar() {
-    const f = S.simFilter, n = (states, kinds) => simpleCards({ states, kinds }).length;
+    const f = simFilter(), n = (states, kinds) => simpleCards({ states, kinds }).length;
     const opt = (group, k, label, on, count) => `<button class="sf-opt" data-keep data-simf="${group}:${k}" role="menuitemcheckbox" aria-checked="${on}"${on && f[group].length === 1 ? ` disabled title="Keep at least one"` : ""}><span class="box" aria-hidden="true"></span><span>${label}</span><span class="n">${count}</span></button>`;
-    const states = SIM_STATES.map(([k, l]) => opt("states", k, l, f.states.includes(k), n([k], f.kinds))).join("");
+    const states = simStates().map(([k, l]) => opt("states", k, l, f.states.includes(k), n([k], f.kinds))).join("");
     const kinds = SIM_KINDS.map(([k, l]) => opt("kinds", k, l, f.kinds.includes(k), n(f.states, [k]))).join("");
     const narrowed = JSON.stringify(f) !== JSON.stringify(SIM_DEFAULT());
     const chip = (group, k, label) => `<span class="sf-chip">${label}${f[group].length > 1 ? `<button class="linkbtn" data-simf-drop="${group}:${k}" aria-label="Stop filtering by ${esc(label)}" title="Stop filtering by ${esc(label)}">×</button>` : ""}</span>`;
-    const chips = [...SIM_STATES.filter(([k]) => f.states.includes(k)).map(([k, l]) => chip("states", k, l)),
+    const chips = [...simStates().filter(([k]) => f.states.includes(k)).map(([k, l]) => chip("states", k, l)),
       ...(f.kinds.length < SIM_KINDS.length ? SIM_KINDS.filter(([k]) => f.kinds.includes(k)).map(([k, l]) => chip("kinds", k, l)) : [])].join("");
     return `<div class="listhead"><div class="filterbar simfilter"><details class="more sf"${S.simMenu ? " open" : ""}><summary class="btn small" aria-haspopup="menu" title="Filter the list"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4-2v-4z"/></svg>Filter</summary>
       <div class="menu" role="menu"><div class="sf-h" role="presentation">State</div>${states}<div class="sf-h" role="presentation">Kind</div>${kinds}${narrowed ? `<button class="btn small sf-reset" role="menuitem" data-simf-reset>Reset to default</button>` : ""}</div></details>${chips}</div></div>`;
   }
   // A person by their name on the roster, else the part of their address before the @, never the whole address.
   const shortName = (e, name = "") => !e ? name : isMe(e) ? "you" : S.me?.names?.[String(e).toLowerCase()] || name || (String(e).includes("@") ? String(e).split("@")[0] : String(e));
+  // Who closes a request before design: its author or an admin a draft, the UI dev owner a proposal.
+  const closesStaged = (c) => (preDesign(c) === "draft" ? filedIt(c) || S.me?.role === "admin" : preDesign(c) === "proposal" && can("stage-own"));
+  // A request's moves before design, by its stage and the viewer: [the head's first button, the ones under ⋯].
+  function stageMoves(c) {
+    const b = (to, label, primary = false) => `<button class="btn${primary ? " primary" : ""}" data-stage="${to}">${label}</button>`;
+    const lead = can("stage-own"), design = can("stage-design") || lead;
+    if (preDesign(c) === "proposal") return lead ? [b("design", "Send to design", true), b("developers", "Keep for developers") + b("draft", "Back to draft")] : ["", ""];
+    if (!(filedIt(c) || S.me?.role === "admin")) return ["", ""];
+    const first = design ? b("design", "Send to design", true) : can("stage-propose") ? b("proposal", "Propose", true) : "";
+    return [first, (design && can("stage-propose") ? b("proposal", "Propose") : "") + (lead ? b("developers", "Keep for developers") : "")];
+  }
+  const STAGE_DONE = { proposal: "Proposed: the dev team sees it now, and the UI dev owner sends it to design.", design: "Sent to design: designers see it as Open now.",
+    developers: "Kept for developers: it is Open For Developers now, and a developer approves it.", draft: "Back to draft: only its author sees it now." };
+  // Moving a request on before design; opening it, which cannot be taken back, asks first.
+  async function moveStage(c, to) {
+    const go = () => api("POST", `/api/cards/${encodeURIComponent(c.id)}/stage`, { to });
+    if (to === "design" || to === "developers") {
+      const r = await ask({ title: to === "design" ? "Send it to design?" : "Keep it for developers?", ok: to === "design" ? "Send to design" : "Keep for developers", send: go,
+        body: to === "design" ? "Designers see it as Open from now on, with what was said about it so far. It does not come back to a draft." : "It opens For Developers: a developer approves it, without a designer. It does not come back to a draft." });
+      if (!r) return;
+    } else await go();
+    toast(STAGE_DONE[to]);
+    await refreshList(); await openCard(c.id);
+  }
   // Simple mode's head of a request or a change (docs/desk-page.md → Simple mode): what it is,
   // where it stands, who and when, at most two moves and ⋯ for the rest; it stays in view.
   function simpleHead(c) {
@@ -3390,13 +3428,18 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const n = draftsOf(c).filter((d) => !d.ok).length + lookFeedback(c).length, verdicts = verdictsFor(c).map((x) => x.id);
     const changes = verdicts.includes("request-changes") ? btn('data-review="request-changes"', n ? `Request changes · ${n}` : "Request changes", n > 0) : "";
     const approve = (attr) => (n ? btn('data-review="approve"', "Approve") : btn(attr, "Approve", true));
+    // Before design the head's moves are the stage's (docs/desk.md → Draft and Proposal): Send to design or
+    // Propose first, Request changes beside it; the rest of the stage's moves go under ⋯.
+    const stage = !change && !closed(c) && preDesign(c), [stageMain, stageMore] = stage ? stageMoves(c) : ["", ""];
     const moves = change ? ((open || c.responsible?.who === "developer") && mayHandle(c) ? changes + (c.handled ? "" : approve('data-handle="1"')) : "")
+      : stage ? stageMain + changes
       : !open ? ""
       : specWaits(c) ? (canApprove(c) && !(c.threads || []).some((th) => th.kind === "asks" && th.state === "open") ? btn("data-spec-send", "Send to developers", true) : "")
       : changes + (canApprove(c) && (c.triage || (c.variants || []).length) ? approve('data-act="approve"') : "");
     const url = change ? src.url : c.spec?.issue_url || c.spec?.pr_url || "";
     const items = [change ? (can("follow-up") && !hasRequest(c) ? btn("data-adjust", "Turn into a design request") : "") + (handledAt(c) && mayHandle(c) ? btn('data-handle="0"', "Undo approval") : "")
-        : closed(c) ? ((c.status === "handed-off" ? S.me?.role === "admin" : can("reopen")) ? btn('data-act="reopen"', "Reopen") : "") : (can("close") || can("skip") ? btn('data-act="close"', "Close…") : ""),
+        : closed(c) ? ((c.status === "handed-off" ? S.me?.role === "admin" : can("reopen") || closesStaged(c)) ? btn('data-act="reopen"', "Reopen") : "")
+        : stageMore + ((preDesign(c) ? closesStaged(c) : can("close") || can("skip")) ? btn('data-act="close"', "Close…") : ""),
       url ? `<a class="btn" href="${safeUrl(url)}" target="_blank" rel="noopener noreferrer">Open on GitHub ↗</a>` : ""].join("");
     const more = items ? `<details class="more sh-more"><summary class="btn" aria-label="More" title="More">⋯</summary><div class="menu">${items}</div></details>` : "";
     return `<div class="shead"><div class="sh-main"><h2>${kindIcon(c)}<span>${txt(c.title)}</span>${num(c)}${titleLink(c)}</h2>
@@ -3488,7 +3531,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const out = [];
     if (c.kind === "request") {
       if (can("change") && (c.variants || []).length && !locked(c) && !closed(c)) out.push({ id: "request-changes", name: "Request changes", hint: "Design Desk draws the next version from your comments." });
-      if (open && !specWaits(c) && canApprove(c) && (c.triage || (c.variants || []).length) && !closed(c)) out.push({ id: "approve", name: "Approve", hint: "You approve the request; your comments go with it." });
+      if (open && !preDesign(c) && !specWaits(c) && canApprove(c) && (c.triage || (c.variants || []).length) && !closed(c)) out.push({ id: "approve", name: "Approve", hint: "You approve the request; your comments go with it." });
     } else if (mayHandle(c) && !c.source?.merged_at && c.status !== "archived") {
       out.push({ id: "request-changes", name: "Request changes", hint: S.me?.review_post ? "The developer makes the next version; your feedback goes to the pull request." : "The developer makes the next version." });
       if (!c.handled) out.push({ id: "approve", name: "Approve", hint: "Design is done with this change." });
@@ -3573,7 +3616,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const shipped = simpleCards({ states: ["closed"], kinds }).filter((c) => simpleState(c).pill === "shipped" && Date.now() - Date.parse(lastChange(c)) < 7 * 864e5).length;
     const of = (st) => [[n(st, ["request"]), "request", "requests"], [n(st, ["change"]), "PR change", "PR changes"]].filter(([x]) => x).map(([x, one, many]) => plural(x, one, many)).join(", ");
     const box = (st, word, line) => `<button class="sbox" data-simf-only="${st}" data-s="${st}" title="Show only what is ${esc(word)}"><span class="n">${n(st)}</span><b>${word}</b><span class="hint">${esc(line)}</span></button>`;
-    return `<div class="sboxes">${box("open", "Open", n("open") ? `Need a design decision: ${of("open")}` : "Nothing needs a design decision")}${box("dev", "In dev", n("dev") ? `Approved, being built: ${of("dev")}` : "Nothing is being built")}${box("closed", "Closed", `${plural(shipped, "item", "items")} shipped in the last 7 days`)}</div>`;
+    // Draft and Proposal only while they hold something, before Open.
+    const early = [["draft", "Draft", "Yours to send on"], ["proposal", "Proposal", "For the dev team to talk over"]].filter(([st]) => seesStage(st) && n(st)).map(([st, word, line]) => box(st, word, `${line}: ${of(st)}`)).join("");
+    return `<div class="sboxes">${early}${box("open", "Open", n("open") ? `Need a design decision: ${of("open")}` : "Nothing needs a design decision")}${box("dev", "In dev", n("dev") ? `Approved, being built: ${of("dev")}` : "Nothing is being built")}${box("closed", "Closed", `${plural(shipped, "item", "items")} shipped in the last 7 days`)}</div>`;
   }
   const setSimFilter = (f) => { S.simFilter = f; store.set("desk-simFilter", JSON.stringify(f)); };
   // Your turn: an open request whose next move is the viewer's own, by what they may do — answer
@@ -3738,7 +3783,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     main.classList.toggle("wide", S.tab === "guide" || S.tab === "people");
     // Another tab, page or filter starts the list again at LIST_PAGE rows; it is
     // set before every early return, so a list that returns early still counts as another view.
-    const view = [simpleList() && JSON.stringify(S.simFilter), S.tab, S.productFilter, S.histBy, S.reqFilter, reqFor(), S.newFilter, S.designFilter, S.issueFilter, S.figFilter, S.elFilter].join("|");
+    const view = [simpleList() && JSON.stringify(simFilter()), S.tab, S.productFilter, S.histBy, S.reqFilter, reqFor(), S.newFilter, S.designFilter, S.issueFilter, S.figFilter, S.elFilter].join("|");
     if (S.listView !== view) { S.listView = view; S.listLimit = LIST_PAGE; }
     if (S.tab === "guide" || S.tab === "people") { list.innerHTML = ""; return; }
     // Differences kept from an earlier visit leaves once Figma is off, for the Desk or this person.
@@ -3785,7 +3830,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         : (S.productFilter === "elements" ? "No elements yet. Design Desk draws the product's main parts after it is set up; they appear here within a day."
         : "No screens yet. Design Desk maps the product's screens on its own copy of the product; they appear here once it runs.") + (can("add") ? " Missing one? Press + Add." : ""),
     }[S.tab];
-    const simpleEmpty = () => { const f = S.simFilter.states; return f.length === 1 && f[0] === "open" ? "Nothing needs a design decision right now." : f.length === 1 && f[0] === "dev" ? "Nothing is being built right now." : f.length === 1 && f[0] === "closed" ? "Nothing is closed yet." : "Nothing here."; };
+    const simpleEmpty = () => { const f = simFilter().states; return f.length === 1 && f[0] === "draft" ? "You have no drafts." : f.length === 1 && f[0] === "proposal" ? "No proposal waits for the dev team." :  f.length === 1 && f[0] === "open" ? "Nothing needs a design decision right now." : f.length === 1 && f[0] === "dev" ? "Nothing is being built right now." : f.length === 1 && f[0] === "closed" ? "Nothing is closed yet." : "Nothing here."; };
     if (!cards.length) { list.innerHTML = filters + `<div class="empty">${esc(simpleList() ? simpleEmpty() : empty)}</div>`; return; }
     // Every list says where each item came from, without a description, Product included.
     const sourced = S.tab === "new" || S.tab === "requests" || S.tab === "designs" || S.tab === "issues" || S.tab === "product";
@@ -3800,7 +3845,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // the pill only when the filter shows more than one state, the spinner while Design Desk works
     // on it. A change's number is its pull request's (PR#812); a request's, or a change's with no
     // pull request, its own on the Desk (R-12, P-3).
-    const pills = S.simFilter.states.length > 1;
+    const pills = simFilter().states.length > 1;
     const sNum = (c) => {
       const pr = c.kind === "change" && c.source?.pr, n = pr ? `PR#${pr}` : c.base || c.id;
       return n ? `<span class="ssep" aria-hidden="true">·</span><span class="snum" title="${pr ? "Its pull request on GitHub" : "Its number on the Desk: search finds it"}">${esc(String(n))}</span>` : "";
@@ -5730,7 +5775,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   function voteButtons(c, v, mine) {
     const notes = (c.threads || []).filter((th) => th.anchor?.variant === v && th.state !== "resolved").length;
     const noteLine = notes ? `<span class="notes">${plural(notes, "note", "notes")}</span>` : "";
-    if (c.status !== "feedback") return noteLine ? `<span class="votes">${noteLine}</span>` : "";
+    // A request before design takes no votes (docs/desk.md → Draft and Proposal).
+    if (c.status !== "feedback" || preDesign(c)) return noteLine ? `<span class="votes">${noteLine}</span>` : "";
     const votes = Object.values(c.votes?.[v] || {}), has = (x, k) => k === "concern" ? worried(x) : x?.vote === k, n = (k) => votes.filter((x) => has(x, k)).length;
     const ICO = { prefer: `<svg class="vi" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10v11H4V10h3zm0 0l4-7c1.7 0 2.7 1.3 2.3 3L13 9h6a2 2 0 0 1 2 2.3l-1.3 7.5A2.5 2.5 0 0 1 17.2 21H7"/></svg>`,
       dislike: `<svg class="vi" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 14V3h3v11h-3zm0 0l-4 7c-1.7 0-2.7-1.3-2.3-3L11 15H5a2 2 0 0 1-2-2.3l1.3-7.5A2.5 2.5 0 0 1 6.8 3H17"/></svg>`,
@@ -8226,7 +8272,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // Simple mode's filter: a tick toggles one state or kind (never the last of its group); a
     // chip's × drops one; Reset goes back to Open. The open item stays open.
     if (ds.simf || ds.simfDrop || ds.simfOnly || "simfReset" in ds) {
-      const f = S.simFilter, all = { states: SIM_STATES, kinds: SIM_KINDS };
+      const f = simFilter(), all = { states: simStates(), kinds: SIM_KINDS };
       if ("simfReset" in ds) { setSimFilter(SIM_DEFAULT()); S.simMenu = false; }
       else if (ds.simfOnly) setSimFilter({ states: [ds.simfOnly], kinds: SIM_KINDS.map(([k]) => k) });
       else {
@@ -8359,6 +8405,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     }
     if (ds.draftDel) { await removeDraft(S.card, ds.draftDel); return; }
     if ("review" in ds) { await reviewDialog(S.card, ds.review || null); return; }
+    if (ds.stage && S.card) { await moveStage(S.card, ds.stage); return; }
     if ("built" in ds) { await api("POST", `/api/cards/${S.card.id}/built`, { built: ds.built === "1" }); await refreshList(); await openCard(S.card.id); return; }
     if ("devAsk" in ds) { if (!devAsked(S.card)) { store.set(`desk-dev-asked:${S.card.id}`, "1"); renderDetail(); } const d = $("#dev-parts"); if (d) { d.open = true; d.scrollIntoView({ block: "center", behavior: "smooth" }); d.classList.add("flash"); setTimeout(() => d.classList.remove("flash"), 2000); } return; }
     if ("devCopy" in ds) { await copyText(devQuestion(S.card), "a question for a developer"); return; }
@@ -8954,7 +9001,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     $("#rq-skills").open = false;
     $("#rq-skill-list").innerHTML = (S.me?.skills || []).map((k) => `<label class="switch"><input type="checkbox" role="switch" data-skill="${esc(k.name)}"${k.on ? " checked" : ""} /><span>${esc(k.does || k.name)}<small>${esc(k.name)}</small></span></label>`).join("");
     setType("idea"); sayCount(); setFor("designers");
-    $("#rq-for").hidden = !can("size"); // who may move a request between the two tabs picks it here too
+    // Who may move a request between the two tabs picks it here too, for one that opens at once; a
+    // draft takes its tab when it opens (docs/desk.md → Draft and Proposal).
+    $("#rq-for").hidden = !can("size") || startsDraft();
+    $("#request-form [data-close=send]").textContent = startsDraft() ? "Create draft" : "Send";
     $("#type-choice").hidden = Boolean(from);
     $("#rq-figma").hidden = !figmaOn(); // only with Figma on for this person (their menu switch)
     const issue = from?.kind === "issue";
@@ -8967,6 +9017,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       : from
       ? "Tell Design Desk what should look different. It draws options; once a designer, a PM or a UI dev owner approves one (or a developer, on a request For Developers), the coding agent builds it into the product."
       : "Describe it in your own words. Design Desk first tells you what can be done as a design change and what needs a developer.";
+    if (startsDraft()) $("#rq-hint").textContent += " It starts as your draft: only you see it until you send it on.";
     // From an approved request: tick the options to carry over, the approved one first.
     const vs = again ? from.variants || [] : [];
     $("#rq-carry").hidden = !vs.length;
@@ -9182,7 +9233,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ...(design ? { options: Number(f.options.value), grill: f.grill.checked } : {}),
       ...(f.from.value ? { from: f.from.value } : {}), ...(!$("#rq-carry").hidden ? { carry: [...f.querySelectorAll("input[name=carry]:checked")].map((i) => i.value) } : {}), ...(pictures.length ? { images: pictures.map(({ contentType, data }) => ({ contentType, data })) } : {}) };
     const r = await sendOrReopen(e.target, () => api("POST", "/api/requests", body));
-    toast("Sent. Design Desk first checks what can be done; this page updates by itself.");
+    toast(r.card.stage ? "Your draft is made. Design Desk checks what can be done; only you see it until you send it on." : "Sent. Design Desk first checks what can be done; this page updates by itself.");
     S.tab = "requests"; S.reqFilter = "open"; S.reqFor = body.audience; renderBanners(); await refreshList(); await openCard(r.card.id);
   }));
 
