@@ -2,7 +2,7 @@
 // Development only: serves the Desk page with a made-up Desk in the browser (desk/dev/mock-data.mjs),
 // no Desk server needed. The page is read again on every load.
 //   node desk/dev/mock.mjs 5610
-//   open "http://localhost:5610/?role=designer#R-1"        (designer; also admin, pm, developer, lead-developer, guest)
+//   open "http://localhost:5610/?role=designer#R-1"        (designer; also admin, pm, developer, ui-dev-owner, guest)
 //   open "http://localhost:5610/?role=designer&ws=1#R-1"   (opens the design workspace at once)
 // The Desk shows light by default; &theme=dark shows it dark; &simple=1 starts in simple mode (a guest does anyway).
 // What a person sends changes the made-up Desk until the page reloads; a change note is
@@ -16,7 +16,7 @@ import { CARDS, ASSETS, NOTES } from "./mock-data.mjs";
 
 const [port = "5610"] = process.argv.slice(2);
 const page = join(dirname(fileURLToPath(import.meta.url)), "..", "page.html");
-const ROLES = ["admin", "designer", "pm", "lead-developer", "developer", "guest"];
+const ROLES = ["admin", "designer", "pm", "ui-dev-owner", "developer", "guest"];
 const CAN = Object.fromEntries(ROLES.map((r) => [r, abilities(r)]));
 
 function shim() {

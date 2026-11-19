@@ -19,7 +19,7 @@ file is unchanged; exit 3 means another writer came first (an admin's roster row
   `max_changes_per_run` (`10`); `watch_paths` — UI globs for a repo without a profile;
   `watch_open_prs` (`enabled`) — open PRs get cards too; `ci_gate` (`disabled`) — `enabled`:
   Design Desk's check on GitHub passes an open PR nobody needs to look at and fails one that
-  waits for a designer or a lead developer until it is marked handled, and keeps one comment on
+  waits for a designer or a UI dev owner until it is marked handled, and keeps one comment on
   the PR that says why (both as the agent's account). It covers new cards as they
   are written and, through the inbox run, the open cards already on the Desk when it is
   turned on; a merged or closed PR is never touched ([watch.md](watch.md) → CI gate);
@@ -33,8 +33,8 @@ file is unchanged; exit 3 means another writer came first (an admin's roster row
   (`3`) — design proposals for new features.
 - `profile` — `auto` (the one `.design-desk/*/profile.json` of each repo) | `<repo>:<dir>`;
   `default_style` — `auto` | `brand` | `carbon` | `wireframe` | `repo:<owner/name>`.
-- `prototype_requesters` (`designer, pm, admin`; roles read as in `## Desk people`, so `lead developer`
-  is `lead-developer`), `max_prototypes` (`2`; `0` = none),
+- `prototype_requesters` (`designer, pm, admin`; roles read as in `## Desk people`, so `UI dev owner`
+  is `ui-dev-owner`), `max_prototypes` (`2`; `0` = none),
   `prototype_expiry_days` (`7`), `spec_review` (`enabled`) — a person reads, edits and sends the developer spec before it leaves the Desk ([handoff.md](handoff.md) → Review before it goes; `disabled`: it goes on its own, save a request from Slack), `prototype_remote` (`none` | the repo a prototype branch
   is pushed to); `handoff` — `desk` (default) | `issue` | `draft-pr`, for ideas and
   proposals; `issue_writeback` (`enabled`) — a feature's design goes back into its issue;
@@ -100,7 +100,7 @@ file is unchanged; exit 3 means another writer came first (an admin's roster row
   shown as gone without that expiry.
 - Monitor thresholds, never asked: `model_alert_threshold` (2), `classifier_alert_threshold`
   (20), `heartbeat_gap_min` (60) — `0`/`off` disables.
-- `## Desk people` table, `| email | role |`: `admin`, `designer`, `lead-developer`, `developer` or `pm`;
+- `## Desk people` table, `| email | role |`: `admin`, `designer`, `ui-dev-owner`, `developer` or `pm`;
   one person's `email` cell may list several addresses, separated by commas — the one they sign in
   to the Desk with and the one Slack or GitHub knows them by — and every one counts as them;
   an optional third column `| name |` gives the name the Desk shows instead of the address;
