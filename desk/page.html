@@ -2160,7 +2160,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     post: (v) => v === "question" ? "Design Desk answers right here. Everyone on the Desk sees it." : "A comment for the team; Design Desk reads it when it changes the design. Everyone on the Desk sees it.",
     sendReply: (v, el) => /Answer/.test(textOf(el)) ? "Sends your answer; Design Desk goes on with it" : "Adds your reply to this conversation (Enter)",
     resolve: "Marks this note done; you can reopen it",
-    review: (v) => v === "approve" ? "Opens your review with Approve picked; your comments go with it" : v === "request-changes" ? (S.card?.kind === "change" ? "Sends your comments as one review: the developer makes the next version, and it goes to the pull request" : "Sends your comments as one review: Design Desk draws the next version from them") : "Sends your comments as one review, with what you decide",
+    review: (v) => v === "approve" ? "Opens your review with Approve picked; your comments go with it" : v === "request-changes" ? (S.card?.kind === "change" ? `Sends your comments as one review: the developer makes the next version${S.me?.review_post ? ", and it goes to the pull request" : ""}` : "Sends your comments as one review: Design Desk draws the next version from them") : "Sends your comments as one review, with what you decide",
     draftAdd: "Keeps this comment for your review: nobody sees it until you send the review",
     draftNow: "Posts this comment now, here on the Desk; it is not part of your review",
     draftDel: "Removes this comment from your review",
@@ -3434,7 +3434,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       if (can("change") && (c.variants || []).length && !locked(c) && !closed(c)) out.push({ id: "request-changes", name: "Request changes", hint: "Design Desk draws the next version from your comments." });
       if (open && !specWaits(c) && canApprove(c) && (c.triage || (c.variants || []).length) && !closed(c)) out.push({ id: "approve", name: "Approve", hint: "You approve the request; your comments go with it." });
     } else if (mayHandle(c) && !c.source?.merged_at && c.status !== "archived") {
-      out.push({ id: "request-changes", name: "Request changes", hint: "The developer makes the next version; the review goes to the pull request." });
+      out.push({ id: "request-changes", name: "Request changes", hint: S.me?.review_post ? "The developer makes the next version; the review goes to the pull request." : "The developer makes the next version." });
       if (!c.handled) out.push({ id: "approve", name: "Approve", hint: "Design is done with this change." });
     }
     if (can("comment")) out.push({ id: "comment", name: "Comment only", hint: "Your comments, with nothing else changed." });
@@ -3446,7 +3446,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (!S.drafts[c.id]) { toast("Your draft comments could not be read. Try again in a moment; nothing was sent."); return; }
     const ds = draftsOf(c), choices = verdictsFor(c);
     if (!choices.length) return;
-    const pr = c.kind === "change" && c.source?.pr && !c.source?.merged_at;
+    const pr = S.me?.review_post && c.kind === "change" && c.source?.pr && !c.source?.merged_at;
     const a = await ask({ title: "Send your review", html: `${ds.length ? ds.map((d) => draftBubble(c, d, false)).join("") : `<p class="hint">No comments yet: write a note for the whole review.</p>`}${pr ? `<p class="hint">It goes to the pull request on GitHub too, as a comment.</p>` : ""}`,
       ok: "Send review", choices, pick: choices.some((x) => x.id === pick) ? pick : choices[0].id, note: "A note for the whole review (optional)", max: 4000,
       send: async (x) => {

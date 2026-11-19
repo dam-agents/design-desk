@@ -4025,7 +4025,7 @@ test("simple mode: Add to review keeps a comment for the review, Comment now pos
   await desk.waitForFunction(() => !document.querySelector("#detail .yreview"));
 }));
 
-test("simple mode: a change's review offers Request changes and Approve to who may mark it handled, Comment only to everyone; it goes to the pull request", (t) => open(t, REVIEW_DESK(HEAD_ME, [prChange]), async (desk) => {
+test("simple mode: a change's review offers Request changes and Approve to who may mark it handled, Comment only to everyone; with review_post it goes to the pull request", (t) => open(t, REVIEW_DESK({ ...HEAD_ME, review_post: true }, [prChange]), async (desk) => {
   await desk.waitForSelector('#list [data-card="P-3"]');
   await desk.click('#list [data-card="P-3"]');
   await desk.waitForSelector("#detail .rbox");
@@ -4097,6 +4097,14 @@ test("a review is never sent from drafts the page could not read", (t) => open(t
   await desk.waitForSelector(".toast");
   assert.match(await desk.textContent(".toast"), /could not be read/);
   assert.equal(await desk.locator("#confirm-dialog[open]").count(), 0, "no dialog");
+}));
+
+test("without review_post, a change's review says nothing of GitHub", (t) => open(t, REVIEW_DESK(HEAD_ME, [prChange]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="P-3"]');
+  await desk.click('#list [data-card="P-3"]');
+  await desk.waitForSelector("#detail .shead");
+  await desk.click('#detail .sh-acts [data-review="request-changes"]');
+  assert.doesNotMatch(await desk.textContent("#confirm-dialog"), /GitHub|pull request/);
 }));
 
 test("simple mode: a guest's review is Comment only", (t) => open(t, REVIEW_DESK({ ...HEAD_ME, role: "guest", can: { comment: true } }, [prChange]), async (desk) => {

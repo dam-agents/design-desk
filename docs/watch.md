@@ -230,8 +230,9 @@ Merged and closed pull requests are never touched: their checks no longer matter
 
 ## Reviews on GitHub
 
-A `reviews_due` item (inbox run) is a person's review of a pull request's change on the Desk
-([desk.md](desk.md) → Reviews), to post on that pull request. Claim it; `design desk item Q-<n>`
+With `review_post` enabled, a `reviews_due` item (inbox run) is a person's review of a pull
+request's change on the Desk ([desk.md](desk.md) → Reviews), to post on that pull request; one left
+from before it was turned off is done with "review_post is off" and posts nothing. Claim it; `design desk item Q-<n>`
 returns the review (`review`: who, verdict, note, its conversations) with the card. The pull
 request merged or closed → `design desk done` with "PR no longer open". Posted already (an earlier
 run died before `done`): a review of the agent's own account on the pull request (`gh api

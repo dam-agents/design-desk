@@ -114,6 +114,8 @@ function settings() {
     slack: cfg("slack_polls", "disabled") === "enabled",
     // Pictures of the options posted to the Slack channel; a request from Slack goes to its thread anyway.
     slackSend: cfg("slack_send", "disabled") === "enabled",
+    // A person's Desk review of a pull request's change is posted there too (docs/watch.md → Reviews on GitHub).
+    reviewPost: cfg("review_post", "disabled") === "enabled",
     // Whether the owner's other agents reach the Desk over MCP, for How it works (docs/mcp.md).
     mcp: ((v) => (["when-awake", "always"].includes(v) ? v : "disabled"))(cfg("mcp_satellite", "disabled")),
     // The Desk's share link: the page builds an item's link from it (docs/desk.md → Links to an item).
@@ -221,7 +223,7 @@ async function viewerRoute(req, res, url, who) {
     // The page asks who it is once, when it loads: that is the sign-in People reads (docs/desk.md → People).
     // A read never fails for it: a full store keeps no record, and a failed write is dropped.
     try { if (!store.full()) store.markOpened(actor); } catch {}
-    return send(res, 200, { email: who.email, emails: who.emails, my_name: rowOf(who.email)?.name || null, names: namesOf(roster()), key: who.email || who.sub, role: who.deskRole, theme: store.prefsOf(actor).theme, simple: store.prefsOf(actor).simple, figma_pref: store.prefsOf(actor).figma, platformRole: who.role, can: canAll(who.deskRole, s), pings: s.ping && who.deskRole !== "guest", name: s.name, repo: s.repo, contact: s.contact, figma: s.figma, slack: s.slack, slack_send: s.slackSend, screens: s.screens, handoff: s.handoff, spec_review: s.specReview, due_days: s.dueDays, auto_days: s.autoDays, env_days: s.envDays, link: s.link, skills: offerSkills(s.figma), mcp: s.mcp });
+    return send(res, 200, { email: who.email, emails: who.emails, my_name: rowOf(who.email)?.name || null, names: namesOf(roster()), key: who.email || who.sub, role: who.deskRole, theme: store.prefsOf(actor).theme, simple: store.prefsOf(actor).simple, figma_pref: store.prefsOf(actor).figma, platformRole: who.role, can: canAll(who.deskRole, s), pings: s.ping && who.deskRole !== "guest", name: s.name, repo: s.repo, contact: s.contact, figma: s.figma, slack: s.slack, slack_send: s.slackSend, review_post: s.reviewPost, screens: s.screens, handoff: s.handoff, spec_review: s.specReview, due_days: s.dueDays, auto_days: s.autoDays, env_days: s.envDays, link: s.link, skills: offerSkills(s.figma), mcp: s.mcp });
   }
   // Who is on the Desk and what each role may do; only people the owner shared the Desk with get here.
   if (m === "GET" && p[1] === "people") { const ppl = roster(); return send(res, 200, { people: ppl, activity: store.peopleActivity(ppl), roles: Object.fromEntries(ROLES.map((r) => [r, canAll(r, s)])), asks: store.peopleAsks(), addable: ADDABLE_ROLES }); }
@@ -301,7 +303,7 @@ async function viewerRoute(req, res, url, who) {
     if (verdict === "comment" || (c.kind === "request" && verdict === "approve")) need("comment");
     else if (c.kind === "request") need("change");
     else if (!can(who.deskRole, "handle-small", s.prototypeRoles)) need("handle");
-    return send(res, 201, withPing(store.sendReview(p[2], actor, { verdict, note: b.note, variant: typeof b.variant === "string" ? b.variant : null }), s, who));
+    return send(res, 201, withPing(store.sendReview(p[2], actor, { verdict, note: b.note, variant: typeof b.variant === "string" ? b.variant : null, post: s.reviewPost }), s, who));
   }
   if (m === "POST" && p[1] === "private") { need("ask"); return send(res, 201, withPing(store.openPrivate(actor, { text: b.text, starter: typeof b.starter === "string" ? b.starter : null, context: b.context }), s, who)); }
   if (m === "POST" && p[1] === "threads" && p[3] === "messages") { need(store.threadNeed(p[2], actor)); return send(res, 201, withPing(store.reply(p[2], actor, b.text), s, who)); }

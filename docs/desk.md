@@ -487,9 +487,9 @@ merged change. A draft about an option no longer drawn goes on the option shown 
 about the whole request otherwise. What exists stays as it is: a vote
 is not a verdict and counts on its own; **Work it in** turns a review's comment into a change note
 like any other; the design workspace's notes go to Design Desk at once, never into a review; a question
-for Design Desk (**Ask Design Desk**) is asked at once in the conversation and is never drafted. A review of a change
-with an open pull request is also posted there by the agent, as a comment: [watch.md](watch.md)
-→ Reviews on GitHub.
+for Design Desk (**Ask Design Desk**) is asked at once in the conversation and is never drafted. With `review_post`
+enabled, a review of a change with an open pull request is also posted there by the agent, as a
+comment ([watch.md](watch.md) → Reviews on GitHub); off (the default), it stays on the Desk.
 
 ## GitHub on the Desk
 

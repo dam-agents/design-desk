@@ -159,6 +159,8 @@ Read [docs/config.md](docs/config.md) first. If Step 2a restored a `CONFIG.md`,
    lead developer, on a small difference) marks its change handled, and say why in one comment on it?" (`ci_gate`, default `disabled`; it writes
    commit statuses and that comment as the agent's account; [docs/watch.md](docs/watch.md) → CI gate.) Yes →
    "Should it also hold a UI change it has nothing approved to compare with?" (`ci_gate_unsourced`, default `disabled`.)
+   "When someone reviews a pull request's UI change on the Desk, should I post their review on the
+   pull request too, as a comment, with their name?" (`review_post`, default `disabled`; it posts as the agent's account.)
    "Should the Desk list the planned issues that change the screens — the current and the
    next sprint, assigned ones and a label's — with what the UI will need and a sketch?"
    (`issue_news`, default `disabled`; [docs/issues.md](docs/issues.md)). Yes → "Is the sprint
@@ -236,6 +238,7 @@ Write the file in exactly this shape with `design config write` (a restored file
 - qa_bot:
 - ci_gate: disabled
 - ci_gate_unsourced: disabled
+- review_post: disabled
 - issue_label: design
 - implementer: pr-comment
 - implementer_mention:

@@ -829,7 +829,7 @@ export class Store {
   // A person's drafts sent together with a verdict: each draft becomes its own conversation,
   // tagged with the review, so it keeps its own replies; the verdict does what the Desk already
   // does for it. Who may send which verdict is the server's check, and `handle`'s own.
-  sendReview(cardId, who, { verdict, note = "", variant = null } = {}) {
+  sendReview(cardId, who, { verdict, note = "", variant = null, post = false } = {}) {
     const c = this.card(cardId), key = this.draftsFor(who);
     if (!REVIEW_VERDICTS.includes(verdict)) throw bad(`verdict must be one of ${REVIEW_VERDICTS.join(", ")}`);
     if (!["request", "change"].includes(c.kind)) throw bad("A review is sent on a request or a pull request's change.");
@@ -869,8 +869,8 @@ export class Store {
       const head = !request ? this.headOf(c) : null;
       this.db.reviews[id] = { id, card: c.id, by: person(who), at: this.clock(), verdict, note: words, threads, ...(head ? { sha: head } : {}) };
       c.reviews = [...(c.reviews || []), id];
-      // A pull request's review goes to the pull request too: the agent posts it (docs/watch.md → Reviews on GitHub).
-      if (!request && c.source?.pr && !c.source?.merged_at && c.status !== "archived") { const it = this.enqueue("review", c.id, null, who); it.review = id; item = it; }
+      // With `review_post` on, a pull request's review goes to the pull request too: the agent posts it (docs/watch.md → Reviews on GitHub).
+      if (post && !request && c.source?.pr && !c.source?.merged_at && c.status !== "archived") { const it = this.enqueue("review", c.id, null, who); it.review = id; item = it; }
       c.updated = this.clock();
       this.setDrafts(key, c.id, []);
     } catch (e) { this.save = save; this.load(); throw e; }

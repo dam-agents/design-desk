@@ -679,3 +679,14 @@ test("reviews: a guest sends Comment only; asking changes of a request takes the
   const read = (await d.viewer("alice@example.com", `/api/cards/${chg}`)).body;
   assert.deepEqual([(read.card || read).status, (read.card || read).reviews.length], ["handled", 1]);
 });
+
+test("reviews: a pull request's review is queued for GitHub only with review_post enabled", async (t) => {
+  for (const [config, kind] of [["", null], ["- review_post: enabled\n", "review"]]) {
+    const d = await desk(t, config);
+    const chg = (await d.agent("/agent/cards", { kind: "change", title: "Spend", source: { repo: "acme/widgets", pr: 7 } })).body.card.id;
+    const r = await d.viewer("alice@example.com", `/api/cards/${chg}/reviews`, { verdict: "comment", note: "Fine." });
+    assert.equal(r.status, 201);
+    assert.equal(r.body.inbox?.kind ?? null, kind, config || "the default");
+    assert.equal((await d.viewer("alice@example.com", "/api/me")).body.review_post, kind === "review");
+  }
+});

@@ -25,7 +25,10 @@ file is unchanged; exit 3 means another writer came first (an admin's roster row
   turned on; a merged or closed PR is never touched ([watch.md](watch.md) → CI gate);
   `ci_gate_unsourced` (`disabled`) — `enabled`, with `ci_gate` on: a change with no approved
   design, Figma frame or catalog element to compare with fails the check too, until a designer
-  marks it handled; it covers cards written after it is turned on; `issue_label` (`design`; `none` off) —
+  marks it handled; it covers cards written after it is turned on; `review_post` (`disabled`) —
+  `enabled`: a person's review of a pull request's change on the Desk is also posted on that pull
+  request, as a comment, by the agent's account; off, reviews stay on the Desk
+  ([watch.md](watch.md) → Reviews on GitHub); `issue_label` (`design`; `none` off) —
   issues with it become `feature` requests; `proposals` (`enabled`), `max_proposals_per_week`
   (`3`) — design proposals for new features.
 - `profile` — `auto` (the one `.design-desk/*/profile.json` of each repo) | `<repo>:<dir>`;
