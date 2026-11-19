@@ -120,7 +120,8 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   ago and nobody marked it handled; it leaves Open and Needs a designer, and is never overdue), Needs a designer; Requests: **Your turn** (the default for anyone who may vote, **Open** for the rest: the next move is the viewer's own, by what they may do —
   answer Design Desk, start the options, ask the team, vote (until they voted, the list's
   `voted_mine`), approve (not while a vote runs in Slack), read and send the spec, build the
-  prototype again; never while Design Desk works), **Unread** (not opened by you), **Open**, **Closed**; Issues:
+  prototype again; a draft of yours or, for the UI dev owner, a proposal; never while Design Desk works), **Unread** (not opened by you), **Open**, **Closed**;
+  a draft or a proposal is on the viewer's own tab, whatever its side, and counts as Open; Issues:
   **All** (the default, designed issues too), then the buckets, then **Handled** (what a
   designer or a UI dev owner marked handled; it leaves the other lists); Decisions: In force, Not approved, Revoked, All),
   counts in a quiet pill. Both stay on top while the list scrolls; a filter wider than the list
@@ -209,7 +210,7 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   screens, a box offers **Add to review** — a draft, the viewer's alone — and **Comment now**, a
   comment on the Desk at once (never on GitHub); the box at the end of the page posts at once. While
   drafts wait, **Your review · n** under the head lists them, each with what it is about and ✕, and
-  **Send review…**; **Request changes** counts them (`Request changes · 2`) and is the primary
+  **Send feedback…**; **Request changes** counts them (`Request changes · 2`) and is the primary
   button, and **Approve** opens the review too. Both open one dialog: the drafts, the verdicts the
   viewer may send (**Request changes**, **Approve**, **Comment only**, the one they pressed
   picked) and a note for the whole review. Approving a request there is the usual approval first,
@@ -217,7 +218,10 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   one block: who, the verdict (**Changes requested** amber, **Approved** green, **Comments**), when,
   **On GitHub ↗** once posted, the note, then each of its comments with its replies. Full mode has
   the same **Changes requested** line under the title, the same boxes, under the option shown and a change's Screens, and **Your review** at the top
-  of Questions and comments, whose **Send review…** opens the same dialog. ⋯ holds **Close…** or **Reopen** on a request, **Turn into a design request** on a
+  of Questions and comments, whose **Send feedback…** opens the same dialog, **Send your
+  feedback**; before design it offers no Approve. A request that went to design folds the
+  conversations and reviews begun before it opened (`opened_at`) into **Before design · n**, after
+  the rest, in both modes. ⋯ holds **Close…** or **Reopen** on a request, **Turn into a design request** on a
   change (and **Undo approval** on one approved), and **Open on GitHub** where there is a link. No vote buttons, rename or For Developers
   move. Under the head the page reads one way for both kinds: a short lead (a request's first
   paragraph, a change's summary), **The request in full** folded, the designs (a request's
@@ -391,7 +395,9 @@ first pair with both, else its first picture as the after). The texts stay on th
 
 ## A request's state in the list
 
-In both modes, each request in the list shows its state as a dot in the row's top-right corner,
+In both modes, each request in the list shows its state as a dot in the row's top-right corner
+(before design its stage: **Draft** grey, **Proposal** amber, with its moves in the state's row;
+[desk.md](desk.md) → Draft and Proposal),
 as large as the dot on the request's page and level with the title's first line, in the colour of
 whom the request waits on — the same colour as the state on its page: **blue** Design Desk,
 **amber** the team's votes or tries (Team feedback, Live — try it), **magenta** a person's move

@@ -1077,6 +1077,7 @@
   .tag::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: none; }
   .t-approved { --t: var(--approved); --ts: var(--approved-soft); } .t-waiting { --t: var(--waiting); --ts: var(--waiting-soft); }
   .t-decided { --t: var(--decided); --ts: var(--decided-soft); } .t-closed { --t: var(--closed); --ts: var(--closed-soft); }
+  .t-draft { --t: var(--muted); --ts: var(--soft); } .t-proposal { --t: var(--warn); --ts: var(--warn-soft); }
   .t-checking { --t: var(--accent); --ts: var(--info-soft); } .t-turn { --t: var(--turn); --ts: var(--turn-soft); } .t-live { --t: var(--live); --ts: var(--live-soft); }
   .t-checking::before { background: none; box-shadow: inset 0 0 0 1.5px currentColor; }
   /* A request's state in the list: a dot as large as the one on the request's page, in the top-right corner of
@@ -1095,6 +1096,7 @@
   .row .sdot:hover .tag.busy::before, .row .open:focus-visible .sdot .tag.busy::before { animation: pulse 1.2s ease-in-out infinite; }
   .row .sdot:hover .tag .w, .row .open:focus-visible .sdot .tag .w { max-width: 24ch; opacity: 1; }
   .sdot[data-s="checking"] .tag { --t: var(--accent); } .sdot[data-s="waiting"] .tag { --t: var(--waiting); }
+  .sdot[data-s="draft"] .tag { --t: var(--muted); } .sdot[data-s="proposal"] .tag { --t: var(--warn); }
   .sdot[data-s="turn"] .tag { --t: var(--turn); } .sdot[data-s="approved"] .tag { --t: var(--approved); }
   /* A PR's and an issue's state, in GitHub's colours: draft grey, open green, merged and done purple. */
   .sdot[data-s="pr-draft"] .tag { --t: var(--gh-draft); } .sdot[data-s="pr-open"] .tag, .sdot[data-s="issue-open"] .tag { --t: var(--gh-open); }
@@ -1891,12 +1893,12 @@
   // on its page: Design Desk (blue; it blinks only while Design Desk is at work), the team's votes
   // or tries (amber), or a person's move — answer, ask the team, start, build again, send (magenta).
   const turn = (c) => held(c) || checked(c) || emptied(c) || protoDown(c) || asking(c) || (c.status === "spec" && c.spec?.review === "draft" && !atWork(c));
-  const tone = (c) => c.status === "declined" ? (c.decided ? "decided" : "closed") : c.status === "handed-off" ? "approved"
-    : turn(c) ? "turn" : !atWork(c) && ["feedback", "testing"].includes(c.status) ? "waiting" : "checking";
+  const tone = (c) => c.status === "declined" ? (c.decided ? "decided" : "closed") : preDesign(c) || (c.status === "handed-off" ? "approved"
+    : turn(c) ? "turn" : !atWork(c) && ["feedback", "testing"].includes(c.status) ? "waiting" : "checking");
   // The state's word, the same in the list and on the page.
   // Writing the spec and sending it are two steps: the word says which (docs/handoff.md → Review before it goes).
   const specWord = (c) => c.status !== "spec" ? "" : c.spec?.review === "draft" ? "Spec draft — read it, then send" : c.spec?.review === "sent" ? "Sending to developers" : "";
-  const stateWord = (c) => tone(c) === "decided" ? "Decided without a design" : held(c) ? "Options drawn" : checked(c) ? "Checked" : emptied(c) ? "No options" : protoDown(c) ? ((typeof c.prototype === "string" ? c.prototype : c.prototype?.state) === "failed" ? "Prototype didn't work" : "Prototype switched off") : voteEnded(c) ? "Team feedback (finished)" : specWord(c) || STATUS[c.status] || c.status;
+  const stateWord = (c) => tone(c) === "decided" ? "Decided without a design" : preDesign(c) && c.status !== "declined" ? { draft: "Draft", proposal: "Proposal" }[c.stage] : held(c) ? "Options drawn" : checked(c) ? "Checked" : emptied(c) ? "No options" : protoDown(c) ? ((typeof c.prototype === "string" ? c.prototype : c.prototype?.state) === "failed" ? "Prototype didn't work" : "Prototype switched off") : voteEnded(c) ? "Team feedback (finished)" : specWord(c) || STATUS[c.status] || c.status;
   // On a request's page the state is one of five stages, the same for every request, and a few words on
   // where in the stage it stands (docs/desk-page.md → A request's state). Each stage ends with a person's
   // move: a checked request stays in Checking until someone starts its options.
@@ -3261,7 +3263,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // Who may mark a change or an issue handled: a designer, or a UI dev owner on one For Developers that goes against no decision.
   const mayHandle = (c) => can("handle") || (["change", "issue"].includes(c.kind) && can("handle-small") && forOf(c) === "developers"
     && !(Array.isArray(c.conflicts) ? c.conflicts.some((x) => x.status === "active") : (c.against || []).length));
-  const requestCards = (filter, aud = reqFor()) => newestFirst(S.cards.filter((c) => c.kind === "request" && forOf(c) === aud
+  const requestCards = (filter, aud = reqFor()) => newestFirst(S.cards.filter((c) => c.kind === "request" && (preDesign(c) ? aud === mySide() : forOf(c) === aud)
     && (filter === "all" ? true : filter === "unread" ? c.read === false || S.justRead.has(c.id) : filter === "turn" ? myTurn(c) : filter === "open" ? !closed(c) : closed(c))));
   // Simple mode (docs/desk-page.md → A request's state in the list): requests and changes in one
   // list, each on the viewer's side in one of three states, by who works on it — Open (it needs a
@@ -3431,9 +3433,15 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const reviews = c.send ? [] : (c.reviews || []).filter((r) => r && r.id), mine = new Map(reviews.map((r) => [r.id, []]));
     const loose = threads.filter((th) => !(th.review && mine.has(th.review) && mine.get(th.review).push(th)));
     const items = [...loose.map((th) => ({ th, at: last(th), html: () => one(th) })),
-      ...reviews.map((r) => { const ts = [...mine.get(r.id)].sort(order); return { review: true, at: Math.max(Date.parse(r.at) || 0, ...ts.map(last)), html: () => reviewBlock(c, r, ts.map(one).join("")) }; })];
+      ...reviews.map((r) => { const ts = [...mine.get(r.id)].sort(order); return { review: true, r, at: Math.max(Date.parse(r.at) || 0, ...ts.map(last)), html: () => reviewBlock(c, r, ts.map(one).join("")) }; })];
     const rank = (x) => (resolvedLast && x.th?.state === "resolved" ? 1 : 0);
-    return items.sort((a, b) => rank(a) - rank(b) || b.at - a.at).map((x) => x.html()).join("");
+    const sorted = items.sort((a, b) => rank(a) - rank(b) || b.at - a.at);
+    // A request that went to design keeps what was said before, folded after the rest (docs/desk-page.md → Simple mode).
+    const opened = Date.parse(c.opened_at || "") || 0;
+    const began = (x) => x.review ? Date.parse(x.r.at) || 0 : Date.parse(x.th.created || x.th.messages?.[0]?.at || "") || 0;
+    const before = opened ? sorted.filter((x) => began(x) < opened) : [];
+    const rest = sorted.filter((x) => !before.includes(x)).map((x) => x.html()).join("");
+    return rest + (before.length ? `<details class="fold before-design"><summary>Before design · ${before.length}</summary>${before.map((x) => x.html()).join("")}</details>` : "");
   }
   function reviewBlock(c, r, rows) {
     const who = ((n) => (n === "you" ? "You" : n))(r.by?.agent ? "Design Desk" : shortName(r.by?.email, r.by?.name) || "someone");
@@ -3467,7 +3475,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   function yourReview(c) {
     const ds = draftsOf(c);
     if (!ds.length) return "";
-    return `<section class="yreview" aria-label="Your review"><div class="yr-h"><b>Your review · ${ds.length}</b><button class="btn small" data-review="">Send review…</button></div>
+    return `<section class="yreview" aria-label="Your review"><div class="yr-h"><b>Your review · ${ds.length}</b><button class="btn small" data-review="">Send feedback…</button></div>
       ${ds.map((d) => draftBubble(c, d)).join("")}</section>`;
   }
   // A box under an option or a change: Add to review keeps it for the review, Comment now posts it
@@ -3500,8 +3508,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const ds = draftsOf(c), choices = verdictsFor(c);
     if (!choices.length) return;
     const pr = S.me?.review_post && c.kind === "change" && c.source?.pr && !c.source?.merged_at;
-    const a = await ask({ title: "Send your review", html: `${ds.length ? ds.map((d) => draftBubble(c, d, false)).join("") : `<p class="hint">No comments yet: write a note for the whole review.</p>`}${pr ? `<p class="hint">It goes to the pull request on GitHub too, as a comment.</p>` : ""}`,
-      ok: "Send review", choices, pick: choices.some((x) => x.id === pick) ? pick : choices[0].id, note: "A note for the whole review (optional)", max: 4000,
+    const a = await ask({ title: "Send your feedback", html: `${ds.length ? ds.map((d) => draftBubble(c, d, false)).join("") : `<p class="hint">No comments yet: write a note for the whole review.</p>`}${pr ? `<p class="hint">It goes to the pull request on GitHub too, as a comment.</p>` : ""}`,
+      ok: "Send feedback", choices, pick: choices.some((x) => x.id === pick) ? pick : choices[0].id, note: "A note for the whole review (optional)", max: 4000,
       send: async (x) => {
         if (!ds.length && !x.note) throw new Said("Write a comment or a note first.");
         return x;
@@ -3515,8 +3523,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     }
     const r = await api("POST", `/api/cards/${encodeURIComponent(c.id)}/reviews`, { verdict: a.choice, note: a.note, ...(S.variant ? { variant: S.variant } : {}) });
     S.drafts[c.id] = [];
-    toast(a.choice === "request-changes" && c.kind === "request" ? "Review sent. Design Desk draws the next version; this page updates by itself."
-      : r.inbox?.kind === "review" ? "Review sent. It goes to the pull request on GitHub too." : "Review sent.");
+    toast(a.choice === "request-changes" && c.kind === "request" ? "Feedback sent. Design Desk draws the next version; this page updates by itself."
+      : r.inbox?.kind === "review" ? "Feedback sent. It goes to the pull request on GitHub too." : "Feedback sent.");
     await refreshList(); await openCard(c.id);
   }
   // Simple mode's comments: each conversation a card, its first message and the replies indented
@@ -3564,6 +3572,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // list row carries what this reads: `voted_mine`, `against`, `for`, `voting`.
   function myTurn(c) {
     if (c.kind !== "request" || closed(c) || atWork(c)) return false;
+    if (preDesign(c)) return preDesign(c) === "draft" ? filedIt(c) : can("stage-own");
     const against = Array.isArray(c.conflicts) ? c.conflicts.some((x) => x.status === "active") : (c.against || []).length > 0;
     const small = c.size ? Boolean(c.size.small) : c.for === "developers";
     const approves = can("approve") || (!against && (can("skip") || (small && DEVELOPERS.includes(S.me?.role) && !filedIt(c))));
@@ -5302,6 +5311,13 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       : c.size?.small ? `For Developers: a developer approves it${by ? `, not ${by} who filed it` : ""}.` : "A designer, a PM or a UI dev owner approves it when the team is happy.";
     const b = (act, label) => `<button class="btn" data-act="${act}">${esc(label)}</button>`;
     const way = (attrs, label, title = "") => `<button class="way" ${attrs}${title ? ` title="${esc(title)}"` : ""}>${esc(label)}</button>`;
+    // Before design the ways on are the stage's alone (docs/desk.md → Draft and Proposal).
+    if (preDesign(c) && !closed(c)) {
+      const first = stageMoves(c)[0].match(/data-stage="(\w+)">([^<]+)</);
+      return { ways: first ? [way(`data-stage="${first[1]}"`, first[2])] : [], buttons: stageMoves(c)[1], wait: preDesign(c) === "draft" ? "its author" : "the UI dev owner",
+        text: preDesign(c) === "draft" ? "A draft: only its author and admins see it. Design Desk works on it as on any request; its author sends it on when it is ready."
+          : "A proposal: the dev team talks it over. The UI dev owner sends it to design, keeps it for developers, or sends it back to its author." };
+    }
     if (c.status === "declined") return { text: "This request is closed.", sub: can("reopen") ? "" : "To bring it back, say so in a comment; a designer or a PM reopens it.", buttons: "",
       ways: can("reopen") ? [way('data-act="reopen"', "Reopen", "It goes back to where it was")] : [] };
     // Sent: the next step is the design as developers build it, for who sees Designs (docs/desk-page.md → Designs).
@@ -5421,6 +5437,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   }
   // The help as HTML (the diagram) and as one line for screen readers.
   function nextHelp(c, own, turn = "") {
+    // Before design the help is the stage's own words: its ways are its moves, in the row.
+    if (preDesign(c) && !closed(c)) return { html: `<span class="t-now">${esc(turn)}</span>`, text: turn };
     const { now, paths } = nextPaths(c);
     const head = [turn || own, now].filter(Boolean);
     const moves = paths.filter((x) => !x.info), notes = paths.filter((x) => x.info);
@@ -5491,7 +5509,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const redraw = closed(c) || locked(c) || protoDown(c) || !can("revise") || !(c.variants || []).length ? "" : `<button class="btn" data-act="revise">Redraw the options with all comments</button>`;
     // Sending to Slack happens once in a request's life: it waits here, and in the design workspace's bar.
     const slack = c.status === "feedback" && slackModes(c).length ? `<button class="btn" data-act="slack">Send to Slack…</button>` : "";
-    const items = slack + call + size + reopenSent + del + redraw + (locked(c) && can("request") ? `<button class="btn" data-adjust>New request from this…</button>` : "");
+    const items = (preDesign(c) ? "" : slack + call + size) + reopenSent + del + redraw + (locked(c) && can("request") ? `<button class="btn" data-adjust>New request from this…</button>` : "");
     return items ? `<details class="more"><summary class="btn" aria-label="More">⋯</summary><div class="menu">${items}</div></details>` : "";
   }
   // Whose turn it is, said the same way in every state: Design Desk while it works or is about to,
@@ -5502,6 +5520,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   function turnOf(c, nx, busy, asks) {
     const you = { k: "you", who: "you" }, other = (who) => ({ k: "other", who });
     if (c.status === "declined") return null;
+    if (preDesign(c)) return (nx.ways || []).some(Boolean) ? you : other(nx.wait);
     if (c.status === "handed-off") return { k: "devs", who: "developers" };
     if (asks.length) return asks.some((th) => mayIn(th, "reply")) ? you : other("its author");
     if (busy.length || (c.status === "triage" && !c.triage) || (c.status === "spec" && c.spec?.review !== "draft")) return { k: "dd", who: "Design Desk" };
@@ -5522,10 +5541,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       : !item.created ? "" : S.me?.pings && Date.now() - Date.parse(item.created) < 12e4 ? "starting" : "in the queue, starts within 10 minutes";
     const nx = nextFor(c);
     // Close stays at hand while the request is open, whatever step it is at.
-    if (!closed(c) && (can("close") || can("skip")) && !nx.buttons.includes('data-act="close"')) nx.buttons += `<button class="btn" data-act="close">Close</button>`;
+    if (!closed(c) && (preDesign(c) ? closesStaged(c) : can("close") || can("skip")) && !nx.buttons.includes('data-act="close"')) nx.buttons += `<button class="btn" data-act="close">Close</button>`;
     // What is about the request, not its step, is under ⋯ at the far right.
     nx.buttons += requestMore(c);
-    const i = stageOf(c), sub = busy.length ? "" : stageSub(c);
+    const i = preDesign(c) ? -1 : stageOf(c), sub = busy.length || preDesign(c) ? "" : stageSub(c);
     const t = turnOf(c, nx, busy, asks);
     const turn = t ? `<span class="turn${t.k === "you" ? " me" : ""}" title="Who the request waits on now"><span class="fc" aria-hidden="true">${TURN_ICON[t.k] || TURN_ICON.you}</span><span class="k">Turn:</span><b>${esc(t.who)}</b></span>` : "";
     // What Design Desk does now, in a few words, and since when.

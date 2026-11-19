@@ -127,7 +127,7 @@ export const abilities = (role, prototypeRoles) => Object.fromEntries(ACTIONS.ma
 // A role as written in `## Desk people` or `prototype_requesters`: lower case, inner spaces as
 // hyphens (`UI dev owner` → `ui-dev-owner`). scripts/verify-onboarding.sh reads it the same way.
 // Older names keep working: `lead` was the admin role before 1.59.0, `lead-developer` the UI dev
-// owner before 1.103.0 (docs/desk.md → Roles).
+// owner before 1.104.0 (docs/desk.md → Roles).
 const OLD_ROLES = { lead: "admin", "lead-developer": "ui-dev-owner" };
 const newRole = (x) => (Object.hasOwn(OLD_ROLES, x) ? OLD_ROLES[x] : x);
 export const readRole = (r) => newRole(String(r || "").trim().toLowerCase().replace(/\s+/g, "-"));

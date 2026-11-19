@@ -43,7 +43,7 @@ for link in 'javascript:alert(1)' 'share.example.com/a/xY12' 'https://share.exam
   fi
 done
 # A roster role reads as the server reads it: a spaced or tabbed role passes, an unknown one fails.
-# An admin passes, and so do a row still written lead (the admin before 1.59.0) and lead developer (the UI dev owner before 1.103.0).
+# An admin passes, and so do a row still written lead (the admin before 1.59.0) and lead developer (the UI dev owner before 1.104.0).
 for row in '| lou@example.com | UI dev owner |' '| lou@example.com | Lead developer |' $'| lou@example.com | lead\tdeveloper |' '| ola@example.com | Admin |' '| ola@example.com | lead |' '| ops@example.com | ops |'; do
   printf '%s\n' '- repos: acme/widgets' '- watch_since: 2026-10-01T00:00:00Z' '- run_model: default' '' '## Desk people' '' '| email | role |' '| --- | --- |' "$row" > "$WORK_DIR/CONFIG.md"
   out="$(bash "$ROOT/scripts/verify-onboarding.sh" --config 2>&1)"
