@@ -3894,17 +3894,20 @@ test("a simple mode row says when it last changed, then its number: a change its
   assert.equal(change.num, "PR#7", "a change: PR and its pull request's number");
   assert.match(change.title, /pull request/);
   assert.equal(request.num, "r-check", "a request: its number on the Desk");
+  assert.match(request.title, /number on the Desk/);
+  assert.doesNotMatch(request.title, /pull request/);
   assert.deepEqual(request.order.slice(0, 3), ["when", "ssep", "snum"], "the number after when it last changed");
   assert.ok(change.same && request.same, "in the date's font, size and grey");
 }));
 
-// A change with no pull request, and a date as long as they get, in a list as narrow as a phone's.
+// A change with no pull request, and a date as long as they get, in a list as narrow as a small
+// phone's: at 280 px the date breaks without the row's own style, at 320 px it still fits.
 const NARROW_CARDS = [
   { id: "c-nopr", kind: "change", title: "A change with a long enough title to wrap", status: "new", attention: { level: "designer", reasons: ["New"] }, source: { kind: "commit" }, updated: "2025-10-15T14:11:00Z" },
   { id: "r-long", kind: "request", title: "A request", status: "triage", updated: "2025-10-14T14:11:00Z" },
 ];
 test("on a phone-wide list a simple mode row keeps its date and number on one line; a change with no pull request shows its Desk number", (t) => open(t, DESK(SIMPLE_ME, NARROW_CARDS), async (desk) => {
-  await desk.setViewportSize({ width: 320, height: 640 });
+  await desk.setViewportSize({ width: 280, height: 640 });
   await desk.waitForSelector('#list [data-card="c-nopr"]');
   await desk.click("details.sf > summary");
   await desk.click('[data-simf="states:dev"]');
