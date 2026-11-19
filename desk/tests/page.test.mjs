@@ -4575,3 +4575,17 @@ test("a request that went to design folds what was said before it under Before d
   assert.equal(await desk.locator("#detail details.before-design #th-T-2").count(), 0, "the later one outside it");
   assert.equal(await desk.getAttribute("#detail details.before-design", "open"), null, "folded");
 }));
+
+test("Close on a draft is a plain close, for its author whatever their role, with no decision", (t) => open(t, HEAD_DESK({ ...HEAD_ME, role: "developer", can: { comment: true, request: true, "stage-propose": true } }, [{ ...drawn, ...STAGED[0], variants: drawn.variants }]), async (desk) => {
+  await desk.waitForSelector("#list");
+  await desk.evaluate(() => { location.hash = "#R-20"; });
+  await desk.waitForSelector('#detail [data-stage="proposal"]');
+  await desk.click("#detail .sh-more > summary");
+  await desk.click('#detail [data-act="close"]');
+  await desk.waitForSelector("#confirm-dialog[open]");
+  assert.equal(await desk.textContent("#cf-title"), "Close this draft");
+  assert.equal(await desk.locator("#cf-choices input").count(), 0, "no decision to record");
+  await desk.click("#cf-ok");
+  await desk.waitForFunction(() => window.posts.some((p) => p.path.endsWith("/actions")));
+  assert.deepEqual(await desk.evaluate(() => window.posts.filter((p) => p.path.endsWith("/actions")).map((p) => p.body.action)), ["close"]);
+}));
