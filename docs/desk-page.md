@@ -272,7 +272,7 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   what is written is for the developer. "n comments on this change ↓" leads to its conversations,
   and a conversation's **◎ <change>** chip back to it. A tab's chip says how far the viewer got:
   green for Looks good (theirs, or sent on the pull request's head, `looks_good`), amber for a note
-  of theirs on it, grey for not looked at; "✓ All looked at" beside **Changes** once none is grey.
+  of theirs on it or one sent while the developer owes the next version, grey for not looked at; "✓ All looked at" beside **Changes** once none is grey.
   Looks good shows the next change not looked at, and on the last opens the feedback, Approve
   picked where the viewer may. The feedback's dialog names the changes not looked at yet, and
   sends anyway. **Request changes · n** counts notes, never marks.

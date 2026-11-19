@@ -3281,11 +3281,14 @@ test("looks good: a mark with no words on one change of a pull request, kept by 
   assert.deepEqual(r.looks_good, [{ key: l1, name: "The limit dialog" }], "the review keeps it, by key and name");
   assert.deepEqual(r.threads.map((id) => s.thread(id).change), ["Agents list"], "a Looks good makes no conversation");
   assert.deepEqual(s.getCard(chg.id).looks_good, [l1]);
-  assert.deepEqual(s.listCards({ kind: "change" }).find((x) => x.id === chg.id).looks_good, [l1], "the list's row carries it too");
   // Looks good alone is feedback enough.
   s.addDraft(chg.id, alice, { ok: true, change: l2 });
   assert.deepEqual(s.sendReview(chg.id, alice, { verdict: "comment" }).review.looks_good.map((x) => x.key), [l2]);
   assert.deepEqual(s.getCard(chg.id).looks_good.sort(), [l1, l2].sort());
+  // A later Request changes with a note on a change takes its Looks good back.
+  s.addDraft(chg.id, alice, { text: "On second look, too small", change: l1 });
+  s.sendReview(chg.id, alice, { verdict: "request-changes" });
+  assert.deepEqual(s.getCard(chg.id).looks_good, [l2]);
   // The next version: another head, and no change is vouched for any more.
   s.putGithub([{ key: "acme/widgets#7", kind: "pr", title: "Spend", head: "c".repeat(40), comments: [] }]);
   assert.deepEqual(s.getCard(chg.id).looks_good, []);
@@ -3307,10 +3310,12 @@ test("add to my feedback: a comment worked in when the feedback is sent with Req
   // A look edit: its values ride on the note's anchor, as the look palette sends them.
   s.addDraft(req.id, alice, { text: "Padding 12 → 16", anchor: { variant: "v1", selector: ".row", label: "Row", style: [{ prop: "padding", from: "12px", to: "16px" }] } });
   assert.deepEqual(s.drafts(req.id, alice).drafts[1].anchor.style, [{ prop: "padding", from: "12px", to: "16px" }]);
-  // Comment only leaves the comment be, and says so.
+  // Comment only leaves the comment be, says so, and keeps it in the feedback for the next one.
   const r1 = s.sendReview(req.id, alice, { verdict: "comment" });
   assert.equal(r1.skipped, 1);
   assert.equal(s.thread(said.id).kind, "comment");
+  assert.deepEqual(s.drafts(req.id, alice).drafts.map((d) => d.work_in), [said.id], "still in the feedback");
+  assert.throws(() => s.sendReview(req.id, alice, { verdict: "comment" }), /only with Request changes/, "nothing else to send");
   // Request changes works it in: the same conversation, now a change note of the feedback, and one revise.
   s.addDraft(req.id, alice, { work_in: said.id });
   const r2 = s.sendReview(req.id, alice, { verdict: "request-changes" });

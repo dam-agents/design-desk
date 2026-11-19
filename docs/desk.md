@@ -471,7 +471,8 @@ refused while they have notes on that change, and taken back by a note on it. Se
 conversation: the review keeps `looks_good: [{key, name}]`, shown under its note as "✓ Looks
 good: <name>, …", and may hold nothing else. A card
 read carries `looks_good`, the keys of the reviews whose `sha` is the pull request's head the
-Desk has; a new version empties it.
+Desk has, a later Request changes with a note on a change taking its key back; a new version
+empties it.
 
 **Sending** them (`POST /api/cards/<id>/reviews {verdict, note, variant}`) makes a **review**
 (`U-<n>`, on the card's `reviews`: who, when, the verdict, the note, its conversations): each
@@ -497,7 +498,9 @@ about the whole request otherwise. What exists stays as it is: a vote
 is not a verdict and counts on its own; **Add to my feedback** (once Work it in) on a comment is a
 draft `{work_in: <thread>}` (whoever may write a change note; once per comment; on a request's
 option): Request changes works that same conversation in (`was`, `work_in`, tagged with the
-review), any other verdict leaves it as it is and the reply says how many (`skipped`). A look edit
+review; checked again then: still on an option, the design not locked), any other verdict leaves
+it as it is, keeps its draft for the next feedback, and the reply says how many (`skipped`);
+feedback holding nothing else is refused. A look edit
 from the workspace's palette waits in the person's feedback in their browser and goes as a note
 with its values (`anchor.style`, `anchor.controls`) when the feedback is sent; a note in the design workspace goes into the feedback like any other box's (its
 **Comment** posts for the team, and nothing there asks Design Desk for a change at once); a question

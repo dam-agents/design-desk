@@ -3438,9 +3438,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const r = await api("GET", `/api/cards/${encodeURIComponent(c.id)}/drafts`).catch(() => null);
     if (Array.isArray(r?.drafts)) S.drafts[c.id] = r.drafts; else delete S.drafts[c.id];
   }
-  async function addDraft(c, { text = null, anchor = null, change = null, ok = false, work_in = null }) {
+  async function addDraft(c, { text = null, anchor = null, change = null, ok = false, work_in = null }, { quiet = false } = {}) {
     const r = await api("POST", `/api/cards/${encodeURIComponent(c.id)}/drafts`, work_in ? { work_in } : ok ? { ok: true, change } : { text, ...(anchor ? { anchor } : {}), ...(change ? { change } : {}) });
-    S.drafts[c.id] = r.drafts; renderDetail();
+    S.drafts[c.id] = r.drafts;
+    if (quiet) return;
+    renderDetail();
     if (ok) { toast("Marked as good. It goes with your feedback."); return; }
     toast(`Added to your feedback (${plural(r.drafts.filter((d) => !d.ok).length, "comment", "comments")}). Nobody sees it until you send it.`);
   }
@@ -3523,12 +3525,16 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       const { e } = x, style = lookChanges(e), controls = pickChanges(e);
       const anchor = { variant: e.fb.variant, ...(e.fb.state ? { state: e.fb.state } : {}), selector: x.selector, text: e.text, tag: e.tag, label: e.label, view: e.view, view_name: e.view_name, ...(style.length ? { style } : {}), ...(controls.length ? { controls } : {}) };
       await api("POST", `/api/cards/${encodeURIComponent(c.id)}/drafts`, { text: lookText(e), anchor });
+      // Now a draft on the server: should the send fail, it waits there, never twice.
+      delete e.fb;
     }
     const r = await api("POST", `/api/cards/${encodeURIComponent(c.id)}/reviews`, { verdict: a.choice, note: a.note, ...(S.variant ? { variant: S.variant } : {}) });
     for (const x of looks) { if (x.key === S.ws.shown) lookSent(x.selector); else delete S.ws.looks[x.key]?.[x.selector]; }
     S.drafts[c.id] = [];
     toast(a.choice === "request-changes" && c.kind === "request" ? "Feedback sent. Design Desk draws the next version; this page updates by itself."
-      : r.inbox?.kind === "review" ? "Feedback sent. It goes to the pull request on GitHub too." : "Feedback sent.");
+      : r.inbox?.kind === "review" ? "Feedback sent. It goes to the pull request on GitHub too."
+      : r.skipped ? `Feedback sent. ${plural(r.skipped, "comment to work in stays", "comments to work in stay")} in your feedback: they go only with Request changes.` : "Feedback sent.");
+    await loadDrafts(c, true);
     await refreshList(); await openCard(c.id);
   }
   // Simple mode's comments: each conversation a card, its first message and the replies indented
@@ -4886,10 +4892,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // is what a draft or a Looks good names; a lone screen is after only (no picture says it is new).
   function changesOf(c) {
     const list = (c?.screens || []).filter((x) => x && typeof x === "object");
-    const pairs = [...new Set(list.filter((x) => x.stage && x.pair).map((x) => String(x.pair)))];
+    const pairs = [...new Set(list.filter((x) => x.stage && x.stage !== "diff" && x.pair).map((x) => String(x.pair)))];
     const of = (pair, stage) => list.find((x) => x.stage === stage && String(x.pair) === pair) || null;
     return [...pairs.map((pair) => ({ key: pair, name: pair, before: of(pair, "before"), after: of(pair, "after") })),
-      ...list.filter((x) => !x.stage && x.asset).map((x, i) => ({ key: String(x.asset), name: String(x.caption || "").trim().slice(0, 120) || `Screen ${i + 1}`, before: null, after: x }))];
+      ...list.filter((x) => (!x.stage || (!x.pair && x.stage !== "diff")) && x.asset).map((x, i) => ({ key: String(x.asset), name: String(x.caption || "").trim().slice(0, 120) || `Screen ${i + 1}`, before: null, after: x }))];
   }
   const changeShown = (c) => { const xs = changesOf(c); return xs.find((x) => S.chg?.card === c.id && x.key === S.chg.key) || xs[0] || null; };
   const changeName = (c, key) => changesOf(c).find((x) => x.key === key)?.name || key;
@@ -4940,7 +4946,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // with a note of theirs on it, "ok" marked Looks good (theirs, or sent on this version), else "".
   function markOf(c, key) {
     const ds = draftsOf(c).filter((d) => d.change === key);
-    return ds.some((d) => !d.ok) ? "changes" : ds.some((d) => d.ok) || (c.looks_good || []).includes(key) ? "ok" : "";
+    // Notes sent on it keep it amber while the developer owes the next version.
+    const owed = c.responsible?.who === "developer" && (c.threads || []).some((th) => th.change === key && th.state !== "resolved");
+    return ds.some((d) => !d.ok) || owed ? "changes" : ds.some((d) => d.ok) || (c.looks_good || []).includes(key) ? "ok" : "";
   }
   const MARK_TIP = { ok: "Looks good", changes: "You ask for changes here; not sent yet", "": "Not looked at yet" };
   const changeMark = (c, key) => { const m = markOf(c, key); return `${m ? ` data-m="${m}"` : ""} title="${esc(MARK_TIP[m])}"`; };
@@ -8424,8 +8432,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (ds.resolve) { await api("POST", `/api/threads/${ds.resolve}/resolve`); await openCard(S.card.id); return; }
     if (ds.reopen) { const r = await api("POST", `/api/threads/${ds.reopen}/reopen`); if (r.inbox) toast("Reopened. Design Desk is on it."); await openCard(S.card.id); return; }
     if (ds.workIn) {
-      for (const id of ds.workIn.split(",")) await addDraft(S.card, { work_in: id });
-      if (S.ws.open) renderWorkspace();
+      const ids = ds.workIn.split(",");
+      for (const id of ids) await addDraft(S.card, { work_in: id }, { quiet: true });
+      renderDetail(); if (S.ws.open) renderWorkspace();
+      toast(`Added to your feedback (${plural(ids.length, "comment to work in", "comments to work in")}). Sent with Request changes, Design Desk works ${ids.length > 1 ? "them" : "it"} in.`);
       return;
     }
     if ("langToggle" in ds) { S.en ||= {}; S.en[S.card.id] = !S.en[S.card.id]; renderDetail(); return; }

@@ -182,8 +182,8 @@ const REVIEW_VERDICTS = ["request-changes", "approve", "comment"];
 // what a draft or a Looks good names: the pair, or a lone screen's asset (docs/desk.md → Reviews).
 export function changesOf(c) {
   const list = (c?.screens || []).filter((x) => x && typeof x === "object");
-  const pairs = [...new Set(list.filter((x) => x.stage && x.pair).map((x) => String(x.pair)))];
-  const lone = list.filter((x) => !x.stage && x.asset);
+  const pairs = [...new Set(list.filter((x) => x.stage && x.stage !== "diff" && x.pair).map((x) => String(x.pair)))];
+  const lone = list.filter((x) => (!x.stage || (!x.pair && x.stage !== "diff")) && x.asset);
   return [...pairs.map((pair) => ({ key: pair, name: pair })),
     ...lone.map((x, i) => ({ key: String(x.asset), name: String(x.caption || "").trim().slice(0, 120) || `Screen ${i + 1}` }))];
 }
@@ -528,7 +528,6 @@ export class Store {
         in_progress: c.kind === "change" && Boolean(c.source?.pr) && !c.source?.merged_at,
         // Who makes the next version after a review asked for changes (docs/desk.md → Reviews).
         responsible: this.responsibleOf(c),
-        ...(c.kind === "change" ? { looks_good: this.looksGoodOf(c) } : {}),
         automated: Boolean(c.origin?.automated),
         // Where it came from and who: the page's source label (docs/desk.md → Where a card came from).
         origin: c.origin || null, by: c.created_by || null, from: c.request?.from || null,
@@ -840,24 +839,14 @@ export class Store {
       if (text != null && String(text).trim()) throw bad("Looks good carries no words: add them as a comment instead.");
       if (list.some((d) => d.ok && d.change === String(change))) return { draft: list.find((d) => d.ok && d.change === String(change)), drafts: structuredClone(list) };
       if (list.some((d) => !d.ok && d.change === String(change))) throw bad("You have notes on this change: remove them first, or send them.");
-      if (list.length >= LIMITS.draftsPerCard) throw bad(`At most ${LIMITS.draftsPerCard} draft comments wait on one item. Send your feedback first.`);
-      const d = { id: randomUUID().slice(0, 8), ok: true, change: String(change), at: this.clock() };
-      Object.defineProperty(mine, c.id, { value: [...list, d], enumerable: true, writable: true, configurable: true });
-      Object.defineProperty(this.db.drafts, key, { value: mine, enumerable: true, writable: true, configurable: true });
-      this.save();
-      return { draft: d, drafts: structuredClone(mine[c.id]) };
+      return put({ id: randomUUID().slice(0, 8), ok: true, change: String(change), at: this.clock() });
     }
     // A note on a change takes back the person's Looks good on it.
     if (change && keys) list = list.filter((d) => !(d.ok && d.change === String(change)));
-    if (list.length >= LIMITS.draftsPerCard) throw bad(`At most ${LIMITS.draftsPerCard} draft comments wait on one item. Send your feedback first.`);
     const a = anchor ? cleanAnchor(anchor) : null;
     if (a?.variant && !(c.variants || []).some((v) => v.id === a.variant)) throw bad("That design option is not on this request.");
     if (a?.state && !(c.variants || []).find((v) => v.id === a.variant)?.states?.some((x) => x.id === a.state)) throw bad("That state is not drawn for this option.");
-    const d = { id: randomUUID().slice(0, 8), text: clean(text, LIMITS.text, "text"), anchor: a, ...(change ? { change: clean(String(change), 120, "change") } : {}), at: this.clock() };
-    Object.defineProperty(mine, c.id, { value: [...list, d], enumerable: true, writable: true, configurable: true });
-    Object.defineProperty(this.db.drafts, key, { value: mine, enumerable: true, writable: true, configurable: true });
-    this.save();
-    return { draft: d, drafts: structuredClone(mine[c.id]) };
+    return put({ id: randomUUID().slice(0, 8), text: clean(text, LIMITS.text, "text"), anchor: a, ...(change ? { change: clean(String(change), 120, "change") } : {}), at: this.clock() });
   }
   removeDraft(cardId, who, id) {
     const c = this.card(cardId), key = this.draftsFor(who);
@@ -895,7 +884,12 @@ export class Store {
     const notes = drafts.filter((d) => !d.ok && !d.work_in);
     // Comments to work in: only Request changes on a request works them in; another verdict leaves them be.
     const worked = drafts.filter((d) => d.work_in).map((d) => own(this.db.threads, d.work_in)).filter((t) => t && t.card === c.id && !["private", "asks"].includes(t.kind));
-    const workIn = c.kind === "request" && verdict === "request-changes" ? worked : [], skipped = worked.length - workIn.length;
+    // Checked again as it is sent: still on one of the options, not a change note already, the design not locked.
+    const workIn = c.kind === "request" && verdict === "request-changes"
+      ? worked.filter((t) => (c.variants || []).some((v) => v.id === t.anchor?.variant) && !(t.kind === "change" && t.state !== "resolved")) : [];
+    const skipped = worked.length - workIn.length;
+    if (workIn.length && designLocked(c)) throw bad(LOCKED);
+    if (!notes.length && !looks.length && !workIn.length && !words) throw bad(worked.length ? "Comments to work in go only with Request changes: write a note too, or pick Request changes." : "Write a comment or a note first.");
     const request = c.kind === "request", changes = verdict === "request-changes";
     if (verdict !== "comment" && (request ? ["declined", "handed-off"].includes(c.status) : Boolean(c.source?.merged_at) || c.status === "archived"))
       throw bad(request ? "This request is closed or sent to developers: send your comments with Comment only." : "This pull request is merged: send your comments with Comment only.");
@@ -940,7 +934,9 @@ export class Store {
       // With `review_post` on, a pull request's review goes to the pull request too: the agent posts it (docs/watch.md → Reviews on GitHub).
       if (post && !request && c.source?.pr && !c.source?.merged_at && c.status !== "archived") { const it = this.enqueue("review", c.id, null, who); it.review = id; item = it; }
       c.updated = this.clock();
-      this.setDrafts(key, c.id, []);
+      // A comment to work in that this verdict left as it is stays in the feedback for the next one.
+      const used = new Set(workIn.map((t) => t.id));
+      this.setDrafts(key, c.id, drafts.filter((d) => d.work_in && !used.has(d.work_in) && worked.some((t) => t.id === d.work_in)));
     } catch (e) { this.save = save; this.load(); throw e; }
     this.save = save;
     this.save();
@@ -1004,9 +1000,13 @@ export class Store {
   looksGoodOf(c) {
     const head = this.headOf(c);
     if (!head) return [];
-    const keys = new Set(changesOf(c).map((x) => x.key));
-    return [...new Set((c.reviews || []).map((id) => own(this.db.reviews, id)).filter((r) => r?.sha === head)
-      .flatMap((r) => (r.looks_good || []).map((x) => x.key)))].filter((k) => keys.has(k));
+    // In order: a Looks good vouches for its change, a later Request changes with a note on it takes that back.
+    const keys = new Set(changesOf(c).map((x) => x.key)), ok = new Set();
+    for (const r of (c.reviews || []).map((id) => own(this.db.reviews, id)).filter((x) => x?.sha === head)) {
+      for (const x of r.looks_good || []) ok.add(x.key);
+      if (r.verdict === "request-changes") for (const id of r.threads || []) { const t = own(this.db.threads, id); if (t?.change) ok.delete(t.change); }
+    }
+    return [...ok].filter((k) => keys.has(k));
   }
 
   reviewsOf(c) { return (c.reviews || []).map((id) => own(this.db.reviews, id)).filter(Boolean).map((r) => structuredClone(r)); }
