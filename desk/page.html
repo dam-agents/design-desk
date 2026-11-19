@@ -3442,7 +3442,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const r = await api("POST", `/api/cards/${encodeURIComponent(c.id)}/drafts`, work_in ? { work_in } : ok ? { ok: true, change } : { text, ...(anchor ? { anchor } : {}), ...(change ? { change } : {}) });
     S.drafts[c.id] = r.drafts; renderDetail();
     if (ok) { toast("Marked as good. It goes with your feedback."); return; }
-    toast(`Added to your feedback (${plural(r.drafts.length, "comment", "comments")}). Nobody sees it until you send it.`);
+    toast(`Added to your feedback (${plural(r.drafts.filter((d) => !d.ok).length, "comment", "comments")}). Nobody sees it until you send it.`);
   }
   async function removeDraft(c, id) { S.drafts[c.id] = (await api("DELETE", `/api/cards/${encodeURIComponent(c.id)}/drafts/${encodeURIComponent(id)}`)).drafts; renderDetail(); if (S.ws.open) renderWorkspace(); }
   // A comment to work in: what it is about, and its first words.
