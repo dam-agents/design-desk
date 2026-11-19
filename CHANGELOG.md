@@ -7,6 +7,17 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.103.0 — 2026-11-19
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): a request's design options
+   are underline tabs with a number chip, in both modes and in the design workspace: green for the
+   approved one, amber while changes asked for on it are owed. The look panel's sections are
+   underline tabs, and the bell's For you / All is the Desk's segmented control. Corners are two,
+   `--r-sm` 6px and `--radius` 12px. No data migration. The interface guidelines
+   (`desk/guidelines.html`, [desk-page.md](docs/desk-page.md) → The guidelines) are read in the
+   repository; nothing to publish.
+
 ## 1.102.0 — 2026-11-19
 
 **Upgrade:**
