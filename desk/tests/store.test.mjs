@@ -3055,7 +3055,7 @@ test("reviews: drafts go out as one review; each verdict does what the Desk alre
   s.addDraft(req.id, alice, { text: "Overall calmer" });
   assert.throws(() => s.sendReview(req.id, alice, { verdict: "nope" }), /verdict/);
   const r = s.sendReview(req.id, alice, { verdict: "request-changes", note: "Close, two things.", variant: "v1" });
-  assert.match(r.review.id, /^N-\d+$/);
+  assert.match(r.review.id, /^U-\d+$/);
   const threads = r.review.threads.map((id) => s.thread(id));
   assert.deepEqual(threads.map((x) => [x.kind, x.anchor?.variant, x.review]), [["change", "v2", r.review.id], ["change", "v1", r.review.id]], "change notes, the unanchored one on the option shown");
   assert.equal(Object.values(s.db.inbox).filter((i) => i.card === req.id && i.kind === "revise" && i.state === "open").length, 1, "one revise for the whole review");

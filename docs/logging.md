@@ -23,7 +23,7 @@ Two layers, both under `work/`, both append-only.
 | `issue_claim`, `issue_done`, `issue_skip`, `issue_fail` | info / warn | `ledger.sh --issues` | an issue's row for the Issues page |
 | `ledger_lock` | warn | `ledger.sh` | a dead writer's lock was removed |
 | `github_sync` | warn | the agent (watch run) | an issue or pull request `design desk github-sync` could not read |
-| `review` | warn | the agent (inbox run) | a person's review could not be posted on its pull request (`N-<n>` and the cause) |
+| `review` | warn | the agent (inbox run) | a person's review could not be posted on its pull request (`U-<n>` and the cause) |
 | `card_written` | info | the agent | after `design desk upsert`: `<card> <kind> <status>` |
 | `item_done` | info | the agent | after `design desk done`: `Q-<n> <outcome>` |
 | `guard` | info / warn | the agent | `R-<n> ok=<bool> files=<n> refused=<n>` |

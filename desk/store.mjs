@@ -285,7 +285,7 @@ function cleanCount(v, fallback = 3) {
 // item). Items made before 1.78.0 keep their numbers: a card's `C-12`, an inbox item's `I-4`, a
 // Slack vote's `P-2`, a council's `S-1`. A letter an older series used (P, I, S) goes on past its
 // highest number there, so no number is ever given twice.
-export const LETTERS = { change: "P", request: "R", issue: "I", screen: "S", element: "E", digest: "W", figma: "F", design: "G", item: "Q", poll: "V", council: "K", review: "N" };
+export const LETTERS = { change: "P", request: "R", issue: "I", screen: "S", element: "E", digest: "W", figma: "F", design: "G", item: "Q", poll: "V", council: "K", review: "U" };
 
 export function emptyDb() {
   return { version: 1, seq: { card: 0, thread: 0, asset: 0, item: 0, decision: 0, poll: 0, council: 0 }, cards: {}, threads: {}, assets: {}, inbox: {}, decisions: {}, github: {}, gh_failed: {}, prefs: {}, reads: {}, seen: {}, noted: {}, opened: {}, drafts: {}, reviews: {} };

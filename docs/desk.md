@@ -465,7 +465,7 @@ notification carries one. A draft is checked as the comment it becomes (its opti
 exist), at most 50 wait per person and item, and a deleted request takes its drafts and reviews with it.
 
 **Sending** them (`POST /api/cards/<id>/reviews {verdict, note, variant}`) makes a **review**
-(`N-<n>`, on the card's `reviews`: who, when, the verdict, the note, its conversations): each
+(`U-<n>`, on the card's `reviews`: who, when, the verdict, the note, its conversations): each
 draft becomes its own conversation tagged `review`, all or none. The verdicts:
 
 - **Request changes** — on a request, by whoever may write a change note: the drafts are

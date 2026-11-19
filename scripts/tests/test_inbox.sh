@@ -19,7 +19,7 @@ cat > "$WORK_DIR/desk/inbox.json" <<JSON
  {"id":"I-9","kind":"decision","card":"C-1","thread":"T-1","created":"$new"},
  {"id":"I-10","kind":"decision-check","card":"C-2","thread":null,"created":"$new"},
  {"id":"I-11","kind":"ci","card":"C-6","thread":null,"created":"$new"},
- {"id":"I-12","kind":"review","card":"C-7","thread":null,"created":"$new","review":"N-1"}],
+ {"id":"I-12","kind":"review","card":"C-7","thread":null,"created":"$new","review":"U-1"}],
  "claimed":[
  {"id":"I-4","kind":"explore","card":"C-3","thread":null,"created":"$old","claimed_by":"s1","claimed_at":"$old"},
  {"id":"I-5","kind":"handoff","card":"C-4","thread":null,"created":"$new","claimed_by":"s2","claimed_at":"$new"}]}
@@ -39,7 +39,7 @@ assert "a person an admin asked for sorted, with no card; one without its payloa
 assert "a comment to record as a decision sorted" '[.decisions_due[].id] == ["I-9"]' "$out"
 assert "a check against the decisions sorted" '[.checks_due[].id] == ["I-10"]' "$out"
 assert "a handled mark on a held pull request sorted" '[.ci_due[].id] == ["I-11"]' "$out"
-assert "a person's review to post on its pull request sorted, with its review" '[.reviews_due[] | [.id, .review]] == [["I-12", "N-1"]] and (.read_set | index("docs/watch.md"))' "$out"
+assert "a person's review to post on its pull request sorted, with its review" '[.reviews_due[] | [.id, .review]] == [["I-12", "U-1"]] and (.read_set | index("docs/watch.md"))' "$out"
 assert "stale claim taken over" '[.variants_due[] | select(.takeover) | .id] == ["I-4"]' "$out"
 assert "fresh claim left alone" '[.handoffs_due[].id] == []' "$out"
 assert "expiring prototype" '[.expiring_due[].card] == ["C-2"]' "$out"

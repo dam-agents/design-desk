@@ -98,7 +98,7 @@ const USAGE = `usage: design desk <command>   (<card> is any card's number, <R-n
   find-council <thread ts>                 which card and council a Slack thread belongs to; with no
                                            council, the request the thread filed ({council: null})
   find-finding <ref>                       the request an automated test finding was already filed as
-  review-posted <N-n> --url <url> [--sha <head>]
+  review-posted <U-n> --url <url> [--sha <head>]
                                            record that a person's review is posted on its pull request
                                            (docs/watch.md → Reviews on GitHub)
   enqueue <kind> <card> [--note <text>]     put work on the inbox (e.g. teardown)

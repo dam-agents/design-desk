@@ -3982,7 +3982,7 @@ window.platform = { async request({ method, path, body }) {
   if (/\\/drafts$/.test(path) && method === "GET") return window.failDrafts ? json({ error: "down" }, 503) : json({ drafts: drafts[id] || [] });
   if (/\\/drafts$/.test(path)) { drafts[id] = [...(drafts[id] || []), { id: "d" + posts.length, text: b.text, anchor: b.anchor || null, ...(b.change ? { change: b.change } : {}), at: "2026-11-18T10:00:00Z" }]; return json({ drafts: drafts[id] }, 201); }
   if (/\\/drafts\\//.test(path)) { drafts[id] = (drafts[id] || []).filter((d) => d.id !== path.split("/")[5]); return json({ drafts: drafts[id] }); }
-  if (/\\/reviews$/.test(path)) { if (!(drafts[id] || []).length && !b.note) return json({ error: "Write a comment or a note first." }, 400); drafts[id] = []; return json({ review: { id: "N-1" }, inbox: cards.find((c) => c.id === id)?.kind === "change" ? { kind: "review" } : { kind: "revise" } }, 201); }
+  if (/\\/reviews$/.test(path)) { if (!(drafts[id] || []).length && !b.note) return json({ error: "Write a comment or a note first." }, 400); drafts[id] = []; return json({ review: { id: "U-1" }, inbox: cards.find((c) => c.id === id)?.kind === "change" ? { kind: "review" } : { kind: "revise" } }, 201); }
   if (method !== "GET") return json({ thread: { id: "T-9" } });
   const answer = path === "/api/me" ? ${JSON.stringify(me)}
     : path === "/api/cards" ? { cards } : path.startsWith("/api/cards/") ? { card: cards.find((c) => c.id === id) }
@@ -4043,11 +4043,11 @@ test("simple mode: a change's review offers Request changes and Approve to who m
 }));
 
 // A sent review (docs/desk.md → Reviews): one block, its comments under it, in both modes.
-const reviewed = { ...prChange, id: "P-8", title: "Reviewed", responsible: { who: "developer", review: "N-1", since: "2026-11-18T10:00:00Z" },
-  reviews: [{ id: "N-1", by: { email: "d.k@example.com", name: "Dana Kim", role: "designer" }, at: "2026-11-18T10:00:00Z", verdict: "request-changes", note: "Two things.", threads: ["T-21", "T-22"], posted: { url: "https://github.com/o/r/pull/812#pullrequestreview-1" } }],
+const reviewed = { ...prChange, id: "P-8", title: "Reviewed", responsible: { who: "developer", review: "U-1", since: "2026-11-18T10:00:00Z" },
+  reviews: [{ id: "U-1", by: { email: "d.k@example.com", name: "Dana Kim", role: "designer" }, at: "2026-11-18T10:00:00Z", verdict: "request-changes", note: "Two things.", threads: ["T-21", "T-22"], posted: { url: "https://github.com/o/r/pull/812#pullrequestreview-1" } }],
   threads: [
-    { id: "T-21", kind: "comment", review: "N-1", state: "open", may: { reply: true, resolve: true }, messages: [{ by: { email: "d.k@example.com", role: "designer" }, at: "2026-11-18T10:00:00Z", text: "Toggle too loud." }] },
-    { id: "T-22", kind: "comment", review: "N-1", state: "open", may: { reply: true, resolve: true }, messages: [{ by: { email: "d.k@example.com", role: "designer" }, at: "2026-11-18T10:00:00Z", text: "Label shorter." }] },
+    { id: "T-21", kind: "comment", review: "U-1", state: "open", may: { reply: true, resolve: true }, messages: [{ by: { email: "d.k@example.com", role: "designer" }, at: "2026-11-18T10:00:00Z", text: "Toggle too loud." }] },
+    { id: "T-22", kind: "comment", review: "U-1", state: "open", may: { reply: true, resolve: true }, messages: [{ by: { email: "d.k@example.com", role: "designer" }, at: "2026-11-18T10:00:00Z", text: "Label shorter." }] },
     { id: "T-23", kind: "comment", state: "open", may: { reply: true, resolve: true }, messages: [{ by: { email: "pat@example.com", role: "pm" }, at: "2026-11-18T09:00:00Z", text: "Unrelated." }] }] };
 
 test("simple mode: a sent review is one block with its comments; a change that waits for its developer is In dev and says so", (t) => open(t, REVIEW_DESK({ ...HEAD_ME, simFilter: null }, [reviewed]), async (desk) => {

@@ -65,7 +65,7 @@ function shim() {
     }
     if ((x = m(/^\/api\/cards\/([^/]+)\/drafts\/([^/]+)$/))) { const c = card(decodeURIComponent(x[1])); c.drafts = (c.drafts || []).filter((d) => d.id !== x[2]); return { drafts: c.drafts }; }
     if ((x = m(/^\/api\/cards\/([^/]+)\/reviews$/))) {
-      const c = card(decodeURIComponent(x[1])), ds = c.drafts || [], id = `N-${++n}`;
+      const c = card(decodeURIComponent(x[1])), ds = c.drafts || [], id = `U-${++n}`;
       if (!ds.length && !body.note) return { error: "Write a comment or a note first." };
       const request = c.kind === "request", changes = body.verdict === "request-changes", first = body.variant || c.variants[0]?.id;
       const notes = ds.length ? ds : request && changes ? [{ text: body.note, anchor: null }] : [];

@@ -262,11 +262,11 @@ const r6 = req("R-6", "A second primary button on Billing", "declined", 60 * 50)
 const r7 = req("R-7", "Rounded corners on every table", "declined", 60 * 24 * 400, { decided: { by: ALICE, at: ago(60 * 24 * 400), text: "Tables keep square corners." } });
 const p1 = pr("P-1", 812, "Settings: a new toggle row", 25, { merged: false, source: { kind: "pr", pr: 812, url: "https://github.com/example/product/pull/812", repo: "example/product", draft: true } });
 // Changes asked of it in a review (docs/desk.md → Reviews): In dev, its developer's, until new commits arrive.
-const p2 = pr("P-2", 806, "Reports: denser table rows", 60 * 5, { merged: false, responsible: { who: "developer", review: "N-1", since: ago(60 * 4) },
-  reviews: [{ id: "N-1", by: { ...ALICE, role: "designer" }, at: ago(60 * 4), verdict: "request-changes", note: "Close; two things before it ships.", threads: ["T-81", "T-82"], posted: { url: "https://github.com/example/product/pull/806#pullrequestreview-1" } }],
+const p2 = pr("P-2", 806, "Reports: denser table rows", 60 * 5, { merged: false, responsible: { who: "developer", review: "U-1", since: ago(60 * 4) },
+  reviews: [{ id: "U-1", by: { ...ALICE, role: "designer" }, at: ago(60 * 4), verdict: "request-changes", note: "Close; two things before it ships.", threads: ["T-81", "T-82"], posted: { url: "https://github.com/example/product/pull/806#pullrequestreview-1" } }],
   threads: [
-    { id: "T-81", kind: "comment", review: "N-1", state: "open", may: { reply: true, resolve: true }, messages: [{ by: { ...ALICE, role: "designer" }, at: ago(60 * 4), text: "Rows are too tight to scan; keep 8px between them." }] },
-    { id: "T-82", kind: "comment", review: "N-1", state: "open", may: { reply: true, resolve: true }, messages: [{ by: { ...ALICE, role: "designer" }, at: ago(60 * 4), text: "The header should stay sticky." }] }] });
+    { id: "T-81", kind: "comment", review: "U-1", state: "open", may: { reply: true, resolve: true }, messages: [{ by: { ...ALICE, role: "designer" }, at: ago(60 * 4), text: "Rows are too tight to scan; keep 8px between them." }] },
+    { id: "T-82", kind: "comment", review: "U-1", state: "open", may: { reply: true, resolve: true }, messages: [{ by: { ...ALICE, role: "designer" }, at: ago(60 * 4), text: "The header should stay sticky." }] }] });
 const p3 = pr("P-3", 799, "Empty state for the provider list", 60 * 30, { status: "handled", handled: { by: ALICE, at: ago(60 * 29) } });
 const p4 = pr("P-4", 790, "Billing: copy fix in the footer", 60 * 48, { attention: { level: "fyi", reasons: ["Nothing differs from the catalog."] } });
 const p5 = pr("P-5", 785, "Table: one more column", 60 * 3, { attention: { level: "developer", reasons: ["A column in an existing table."] } });
