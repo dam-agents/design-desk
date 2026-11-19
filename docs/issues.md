@@ -112,7 +112,7 @@ person's **Draw it** tries again.
 - The **Issues** tab has the two tabs **For Designers** and **For Developers**, as PR Changes
   ([desk.md](desk.md) → For Developers or For Designers); each lists the open cards: **This sprint** first, then **Next sprint**,
   **Assigned**, **For design** (`label`) and **All**; each row names its issue and author; hovering or focusing the row (or any link to the issue) shows its summary and needs.
-- **Draw it** (designer, admin, lead developer, developer, PM) puts a `draw` item on the inbox. **Design this** files a
+- **Draw it** (designer, admin, UI dev owner, developer, PM) puts a `draw` item on the inbox. **Design this** files a
   `feature` request from the card (`request.from`); its research starts from the card and
   its issue and writes its `issue_brief` ([requests.md](requests.md) → Research). The card
   lists the requests made from it.
@@ -129,7 +129,7 @@ person's **Draw it** tries again.
   spec's issue (`linked`), carries `builds` (the request, its title and date): its page links
   the request, and the request's Sent to developers box links that change card next to the
   pull request's row.
-- **Handled.** A designer, or a lead developer on one For Developers, marks an issue **Handled** on its page when design has nothing to do
+- **Handled.** A designer, or a UI dev owner on one For Developers, marks an issue **Handled** on its page when design has nothing to do
   with it (`POST /api/cards/<id>/handled`, the card's `handled: {by, at}`; its `status` stays the
   run's): it leaves every list but **Handled**, and the pre-flight never offers it to draw. **Not
   handled yet** brings it back.

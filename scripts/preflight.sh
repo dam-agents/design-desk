@@ -424,10 +424,10 @@ JQ
 # to its role (roster_roles). A decision counts when it is in force and is a design-side
 # person's own, or a designer approved it; one that waits for approval counts for nothing.
 DEC_SIDE_JQ="$(cat <<'JQ'
-def role: (((.origin.kind // "") as $k | if (["desk", "approval", "chat", "call"] | index($k)) != null then .author.role else null end) // $roster[(.author.email // "") | ascii_downcase] // "" | ascii_downcase | gsub("\\s+"; "-") | if . == "lead" then "admin" else . end);
+def role: (((.origin.kind // "") as $k | if (["desk", "approval", "chat", "call"] | index($k)) != null then .author.role else null end) // $roster[(.author.email // "") | ascii_downcase] // "" | ascii_downcase | gsub("\\s+"; "-") | if . == "lead" then "admin" elif . == "lead-developer" then "ui-dev-owner" else . end);
 def side: role as $r | (.origin.kind // "") as $k
   | if (["admin", "designer", "pm"] | index($r)) != null then "design"
-    elif (["lead-developer", "developer"] | index($r)) != null or (["pr", "commit", "doc"] | index($k)) != null then "developer" else null end;
+    elif (["ui-dev-owner", "developer"] | index($r)) != null or (["pr", "commit", "doc"] | index($k)) != null then "developer" else null end;
 def unapproved: (.origin.kind // "") as $k | side != "design" or (["pr", "issue", "commit", "doc"] | index($k)) != null;
 def decision_counts: type == "object" and (.status // "active") == "active" and (.approved != null or (unapproved | not));
 JQ
@@ -466,7 +466,7 @@ decisions_page() {
     def line: tostring | gsub("\\s*\\n\\s*"; " ") | gsub("^\\s+|\\s+$"; "") | scrub($nre[0]);
     def num: .id | ltrimstr("D-") | tonumber? // 0;
     def day: tostring | .[0:10];
-    def who: {admin: "an admin", designer: "a designer", pm: "a product manager", "lead-developer": "the lead developer", developer: "a developer"}[role];
+    def who: {admin: "an admin", designer: "a designer", pm: "a product manager", "ui-dev-owner": "the UI dev owner", developer: "a developer"}[role];
     def from: {pr: "a pull request", issue: "an issue", commit: "a commit", doc: "a document", slack: "Slack", desk: "the Desk",
       call: "the design meeting", approval: "an approved design", chat: "a talk with Design Desk"}[.origin.kind // ""];
     [ (.decisions // {})[] | select(type == "object" and (.id | type) == "string") ] as $all

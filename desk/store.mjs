@@ -52,11 +52,11 @@ export const LIMITS = {
   dbBytes: 50 * 1024 * 1024,
 };
 
-export const ROLES = ["admin", "designer", "pm", "lead-developer", "developer", "guest"];
+export const ROLES = ["admin", "designer", "pm", "ui-dev-owner", "developer", "guest"];
 // The roles that approve a request For Developers, when they did not file it (docs/desk.md → For Developers or For Designers).
-export const DEVELOPERS = ["lead-developer", "developer"];
+export const DEVELOPERS = ["ui-dev-owner", "developer"];
 // Who sees Product → Kit and gets the look palette (docs/desk-page.md → The look palette).
-export const LOOK_ROLES = ["admin", "designer", "lead-developer"];
+export const LOOK_ROLES = ["admin", "designer", "ui-dev-owner"];
 // The two tabs of Requests: whose call a request is (docs/desk.md → For Developers or For Designers).
 export const AUDIENCES = ["developers", "designers"];
 const BUSY = "Design Desk is already working on this. The result appears here.";
@@ -81,12 +81,12 @@ export function can(role, action, prototypeRoles = ["designer", "pm", "admin"]) 
     // A developer or a PM starts and changes everything a designer does; deciding stays a designer's.
     case "explore": case "revise": case "refresh": case "history": case "change": case "figma": case "share": case "add": return shaper || dev || pm;
     // Whether a request or a change is For Developers, which a developer approves, or For Designers.
-    case "size": return role === "lead-developer" || role === "admin";
-    // Mark a change For Developers handled: a lead developer, the dev UI owner, as well as a designer.
-    case "handle-small": return shaper || role === "lead-developer";
+    case "size": return role === "ui-dev-owner" || role === "admin";
+    // Mark a change For Developers handled: the UI dev owner as well as a designer.
+    case "handle-small": return shaper || role === "ui-dev-owner";
     // Skip the vote and the live prototype: approve straight away, or decide and close
     // (docs/desk.md → Deciding straight away).
-    case "skip": return shaper || pm || role === "lead-developer";
+    case "skip": return shaper || pm || role === "ui-dev-owner";
     // Close a request, reopen it, delete a closed one, rename any (docs/desk.md → Roles).
     case "close": case "reopen": return shaper || pm;
     // Deciding: approve, the presentation, handled, removing an option.
@@ -120,9 +120,12 @@ export const ACTIONS = ["ack", "ask", "comment", "vote", "request", "follow-up",
 export const abilities = (role, prototypeRoles) => Object.fromEntries(ACTIONS.map((a) => [a, can(role, a, prototypeRoles)]));
 
 // A role as written in `## Desk people` or `prototype_requesters`: lower case, inner spaces as
-// hyphens (`Lead developer` → `lead-developer`). scripts/verify-onboarding.sh reads it the same way.
-// `lead` is what the admin role was called before 1.59.0; a roster that still says so keeps working.
-export const readRole = (r) => { const x = String(r || "").trim().toLowerCase().replace(/\s+/g, "-"); return x === "lead" ? "admin" : x; };
+// hyphens (`UI dev owner` → `ui-dev-owner`). scripts/verify-onboarding.sh reads it the same way.
+// Older names keep working: `lead` was the admin role before 1.59.0, `lead-developer` the UI dev
+// owner before 1.103.0 (docs/desk.md → Roles).
+const OLD_ROLES = { lead: "admin", "lead-developer": "ui-dev-owner" };
+const newRole = (x) => (Object.hasOwn(OLD_ROLES, x) ? OLD_ROLES[x] : x);
+export const readRole = (r) => newRole(String(r || "").trim().toLowerCase().replace(/\s+/g, "-"));
 
 // A row's emails: one person may sign in to the Desk with one address and meet Design Desk in
 // Slack with another, so the email cell holds every address of theirs, separated by commas.
@@ -145,7 +148,7 @@ const addressesOf = (who) => [who?.email, ...(who?.emails || [])].map((e) => Str
 
 // The roles an admin may ask Design Desk to give a new person (docs/desk.md → People);
 // making an admin stays the operator's.
-export const ADDABLE_ROLES = ["designer", "pm", "lead-developer", "developer"];
+export const ADDABLE_ROLES = ["designer", "pm", "ui-dev-owner", "developer"];
 const EMAIL = /^[^\s@|`<>]+@[^\s@|`<>]+\.[^\s@|`<>]+$/;
 
 export const REQUEST_TYPES = ["idea", "bug", "feature", "adjustment", "proposal"];
@@ -311,7 +314,7 @@ export class Store {
 
   load() {
     // A role stored before 1.59.0 as `lead` (a vote, a decision's author, who approved) reads as `admin`.
-    this.db = existsSync(this.dbPath) ? JSON.parse(readFileSync(this.dbPath, "utf8"), (k, v) => (k === "role" && v === "lead" ? "admin" : v)) : emptyDb();
+    this.db = existsSync(this.dbPath) ? JSON.parse(readFileSync(this.dbPath, "utf8"), (k, v) => (k === "role" && typeof v === "string" ? newRole(v) : v)) : emptyDb();
     // A store from before `opened` (who loaded the Desk, docs/desk.md → People) starts it from
     // what it already knows: an address that set a preference, read the bell or opened an item
     // did load the Desk. Without this, everyone already on it would read as never having come.
@@ -614,7 +617,7 @@ export class Store {
   attentionOf(c) {
     if (!["change", "request", "issue"].includes(c.kind)) return null;
     if (c.kind === "request" && (c.status === "handed-off" || c.status === "declined")) return null;
-    // A change or an issue For Developers waits for a lead developer, not a designer: its reasons
+    // A change or an issue For Developers waits for a UI dev owner, not a designer: its reasons
     // stay its own level unless a decision it goes against needs a designer.
     const judged = c.kind !== "request" && c.attention;
     const dev = c.kind !== "request" && this.forOf(c) === "developers";
@@ -708,11 +711,11 @@ export class Store {
     return { card: c };
   }
 
-  // A lead developer marks a change For Developers handled; one that goes against a decision
+  // A UI dev owner marks a change For Developers handled; one that goes against a decision
   // in force stays a designer's (docs/desk.md → For Developers or For Designers).
   mayHandle(c, who) {
     if (who?.agent || can(who?.role, "handle")) return;
-    if (!can(who?.role, "handle-small") || this.forOf(c) !== "developers") throw forbidden("Only designers can mark this handled. A lead developer marks a change or an issue For Developers handled.");
+    if (!can(who?.role, "handle-small") || this.forOf(c) !== "developers") throw forbidden("Only designers can mark this handled. A UI dev owner marks a change or an issue For Developers handled.");
     if (this.activeConflicts(c).length) throw forbidden(`This ${c.kind} goes against a decision in force: a designer marks it handled.`);
   }
 
@@ -1907,7 +1910,7 @@ export class Store {
     // An option that goes against a decision in force goes live only knowingly (docs/desk.md → Decisions → The check).
     const liveAgainst = action === "build" && !who?.agent ? [...new Set(this.activeConflicts(c).filter((x) => !x.variant || x.variant === live?.id).map((x) => x.decision))] : [];
     if (liveAgainst.length && !overrule) throw new DeskError(409, `${live?.name || "This design"} goes against ${liveAgainst.join(", ")}. Read why on the request, and build it only if the team means to try it anyway.`);
-    // A designer, a PM or a lead developer approves once it is checked, without a vote or a live
+    // A designer, a PM or a UI dev owner approves once it is checked, without a vote or a live
     // prototype; a developer on a request For Developers, once there are options (docs/desk.md → Deciding straight away).
     const direct = who?.agent || can(who?.role, "skip");
     if (action === "approve") mustBeChecked(c, "Approve");
@@ -1917,7 +1920,7 @@ export class Store {
     if (action === "approve" && !["testing", "feedback", "prototype", ...(direct ? ["triage", "variants"] : [])].includes(c.status))
       throw bad("There's nothing to approve yet. Wait for the design options.");
     if (action === "approve" && !direct && !can(who?.role, "approve")) {
-      if (!c.size?.small || !DEVELOPERS.includes(who?.role)) throw forbidden("Only designers, PMs and lead developers can approve designs. A request For Developers is approved by a developer.");
+      if (!c.size?.small || !DEVELOPERS.includes(who?.role)) throw forbidden("Only designers, PMs and UI dev owners can approve designs. A request For Developers is approved by a developer.");
       if (isAuthor(c, who)) throw forbidden("You filed this request, so another developer approves it.");
     }
     // Once a live prototype is built, approving approves what it shows: `live_pick`'s option at
@@ -2074,9 +2077,9 @@ export class Store {
     return { card: c };
   }
 
-  // A lead developer moves a request to For Developers, which any developer but its author
+  // A UI dev owner moves a request to For Developers, which any developer but its author
   // approves, or back to For Designers; the card keeps who and when. A change moves the same
-  // way, between a lead developer's look and a designer's
+  // way, between a UI dev owner's look and a designer's
   // (docs/desk.md → For Developers or For Designers).
   setSize(cardId, who, small) {
     const c = this.card(cardId);
@@ -2094,7 +2097,7 @@ export class Store {
     return { card: c };
   }
 
-  // A designer, a PM or a lead developer decides a request without a vote or a live prototype and
+  // A designer, a PM or a UI dev owner decides a request without a vote or a live prototype and
   // closes it; Design Desk records the decision in their name (docs/desk.md → Deciding straight away).
   decideAndClose(cardId, who, { text, why = "" } = {}) {
     const c = this.card(cardId);

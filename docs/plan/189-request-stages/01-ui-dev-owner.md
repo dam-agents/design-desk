@@ -16,9 +16,9 @@ slices build on the new name. A roster, `prototype_requesters` or `mcp_role` tha
      in `can()` → `"ui-dev-owner"`. Comments that say "lead developer" say "UI dev owner".
    - `readRole`: map `lead-developer` to `ui-dev-owner`, beside the existing `lead` → `admin`,
      with a comment naming the version that renamed it.
-   - Data already stored with `role: "lead-developer"` (votes' `role`, `by.role`, `author.role`
-     on a people ask, decisions): read through one helper (`roleOf` or `readRole`) wherever a stored
-     role is compared or shown; never rewrite stored records. `askForPerson` writes the new name.
+   - Data already stored with `role: "lead-developer"` (votes' `role`, decisions' `author.role`, …)
+     is read under the new name when the store loads, as `lead` → `admin` already is (the JSON
+     reviver in `load()`). `askForPerson` writes the new name.
    - Refusal texts ("A lead developer marks …") say "the UI dev owner".
 2. `desk/server.mjs`: the role words in `need()`'s refusals and the kit's 403
    ("lead developers" → "UI dev owners").

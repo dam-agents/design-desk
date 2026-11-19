@@ -336,16 +336,16 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     assert.equal(await desk.locator("tr.pact .pact-stat").count(), 0, "no counts without a record");
     await desk.click('[data-person-open="pat@example.com"]');
     assert.equal(await desk.locator("tr.pact").count(), 0, "a second click folds it");
-    assert.deepEqual((await desk.locator(".roles h4").allInnerTexts()).map((t) => t.replace(/\s+/g, " ")), ["Admin your role", "Designer", "PM", "Lead developer", "Developer", "Viewer"]);
+    assert.deepEqual((await desk.locator(".roles h4").allInnerTexts()).map((t) => t.replace(/\s+/g, " ")), ["Admin your role", "Designer", "PM", "UI dev owner", "Developer", "Viewer"]);
     const panel = (i) => desk.locator(".roles .panel").nth(i).innerText();
-    assert.match(await panel(0), /Everything a designer and a lead developer can, and:\s+See Designs[^\n]*\s+Ask Design Desk to add people to the list/, "only an admin adds people; Designs is a developer's, an admin's too");
+    assert.match(await panel(0), /Everything a designer and a UI dev owner can, and:\s+See Designs[^\n]*\s+Ask Design Desk to add people to the list/, "only an admin adds people; Designs is a developer's, an admin's too");
     assert.doesNotMatch(await panel(1), /See Designs/, "a designer has no Designs in the menu");
-    assert.doesNotMatch(await panel(0), /Move a request/, "moving a request between the tabs is named once, under a lead developer");
+    assert.doesNotMatch(await panel(0), /Move a request/, "moving a request between the tabs is named once, under a UI dev owner");
     assert.match(await panel(1), /Everything a PM can, and:\s+Approve designs[\s\S]*Add a decision/, "a role names the largest one below it");
     assert.doesNotMatch(await panel(1), /Move a request|Build live prototypes/, "a designer's card does not repeat a PM's");
     assert.match(await panel(2), /Everything a developer can, except Designs, and:\s+Close, reopen and delete requests\s+Approve or decide a request straight away[^\n]*\s+Build live prototypes/, "a PM moves a request along, under a designer; Designs stays a developer's");
     assert.doesNotMatch(await panel(2), /Approve designs|Choose what|Record a decision/, "approving against a decision stays a designer's");
-    assert.match(await panel(3), /Everything a developer can, and:\s+Mark changes and issues For Developers handled\s+Move a request, a change or an issue to For Developers/, "a lead developer says what is For Developers");
+    assert.match(await panel(3), /Everything a developer can, and:\s+Mark changes and issues For Developers handled\s+Move a request, a change or an issue to For Developers/, "a UI dev owner says what is For Developers");
     assert.match(await panel(4), /Everything a viewer can, and:\s+Vote on options[\s\S]*Start design options[\s\S]*Add a missing screen/, "a developer starts and changes, a designer decides");
     assert.doesNotMatch(await panel(4), /Approve designs|Choose what|Record a decision/);
     assert.match(await panel(4), /See Designs: ask a design's designer, mark it done/, "a developer sees Designs");
@@ -355,7 +355,7 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     const pe = dialog("person-dialog");
     await desk.click("[data-add-person]");
     assert.equal(await pe.open(), true);
-    assert.deepEqual(await desk.locator("#pe-roles input").evaluateAll((xs) => xs.map((x) => x.value)), ["designer", "pm", "lead-developer", "developer"]);
+    assert.deepEqual(await desk.locator("#pe-roles input").evaluateAll((xs) => xs.map((x) => x.value)), ["designer", "pm", "ui-dev-owner", "developer"]);
     await pe.button("Ask Design Desk").click();
     assert.equal(await pe.open(), true, "an Ask without an email stays open");
     await desk.fill("#person-form [name=email]", "alex@example.com");
@@ -1370,7 +1370,7 @@ for (const [label, triage, me, sel, inRow] of PILLS) {
     // greyed with why and who can.
     const help = await desk.textContent("#detail .s-word .help .tip");
     if (me.can.approve) assert.doesNotMatch(help, /✕ Approve/, "an approver's help offers Approve");
-    else assert.match(help, /✕ ApproveNot now: A designer, a PM or a lead developer approves it/, "anyone else's says who approves it");
+    else assert.match(help, /✕ ApproveNot now: A designer, a PM or a UI dev owner approves it/, "anyone else's says who approves it");
   }));
 }
 
@@ -1529,8 +1529,8 @@ for (const [name, patch, me, word, ink, , , busy] of HEADERS) {
 }
 
 // Requests open on the viewer's own tab every visit, whatever tab the browser saw last: For
-// Developers for a developer or a lead developer, For Designers for everyone else.
-for (const [role, tab] of [["designer", "designers"], ["admin", "designers"], ["developer", "developers"], ["lead-developer", "developers"]]) {
+// Developers for a developer or a UI dev owner, For Designers for everyone else.
+for (const [role, tab] of [["designer", "designers"], ["admin", "designers"], ["developer", "developers"], ["ui-dev-owner", "developers"]]) {
   for (const last of ["designers", "developers"]) {
     test(`a ${role} opens Requests on For ${tab === "designers" ? "Designers" : "Developers"}, though ${last} was picked last`, (t) => open(t, BRIDGE_STORIES
       .replace('{ role: "designer", email: "alice@example.com", can: { vote: true, comment: true } }', JSON.stringify({ role, email: "alice@example.com", can: { vote: true, comment: true } }))
@@ -2517,7 +2517,7 @@ test("the look palette: in the side panel under the part picked, a preview only,
   }
 });
 
-test("the look palette is for admins, designers and lead developers: a PM selects a part and gets none", async (t) => {
+test("the look palette is for admins, designers and UI dev owners: a PM selects a part and gets none", async (t) => {
   const run = await launch(t, `<script>window.ROLE = "pm";</script>` + BRIDGE_LOOK);
   if (!run) return;
   const { desk } = run;
@@ -2617,8 +2617,8 @@ test("the screen shown stays when the person switches options, where the other o
 const SMALL = `<script>
 window.calls = [];
 const as = new URLSearchParams(location.search).get("as") || "lou";
-const ME = { lou: { role: "lead-developer", can: { size: true, explore: true } }, dana: { role: "developer", can: { explore: true } }, bob: { role: "developer", can: { explore: true } } }[as];
-const bob = { email: "bob@example.com", role: "developer" }, lou = { email: "lou@example.com", role: "lead-developer" }, dana = { email: "dana@example.com", role: "developer" };
+const ME = { lou: { role: "ui-dev-owner", can: { size: true, explore: true } }, dana: { role: "developer", can: { explore: true } }, bob: { role: "developer", can: { explore: true } } }[as];
+const bob = { email: "bob@example.com", role: "developer" }, lou = { email: "lou@example.com", role: "ui-dev-owner" }, dana = { email: "dana@example.com", role: "developer" };
 const at = "2026-11-03T10:00:00Z", live = { state: "live", url: "https://example.com/p" }, triage = { verdict: "design", reasons: [] };
 const cards = [
   { id: "C-1", kind: "request", title: "Not sized", status: "testing", prototype: live, triage, created_by: bob },
@@ -2645,7 +2645,7 @@ window.platform = { async request({ method, path, body }) {
 try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
 </script>`;
 
-test("For Developers: the lead developer moves it there, a developer but its author approves, the card says who", (t) => open(t, SMALL, async (desk) => {
+test("For Developers: the UI dev owner moves it there, a developer but its author approves, the card says who", (t) => open(t, SMALL, async (desk) => {
   const base = desk.url().replace(/[?#].*$/, "");
   const card = async (who, id) => {
     await desk.goto(`${base}?as=${who}#${id}`);
@@ -2655,7 +2655,7 @@ test("For Developers: the lead developer moves it there, a developer but its aut
   const count = (sel) => desk.locator(`#detail ${sel}`).count();
 
   await card("lou", "C-1");
-  assert.equal(await count('details.more [data-size="small"]'), 1, "the lead developer marks an open request, under More");
+  assert.equal(await count('details.more [data-size="small"]'), 1, "the UI dev owner marks an open request, under More");
   assert.equal(await count('[data-act="approve"]'), 0, "and approves no request that is not For Developers");
   await desk.click("#detail details.more > summary");
   await desk.click('#detail [data-size="small"]');
@@ -2740,11 +2740,11 @@ test("Sent to developers: one row per issue and pull request; a pull request's c
   assert.equal(await desk.locator('#detail .sent [data-card="C-2"]').count(), 1);
 }));
 
-// Deciding straight away (docs/desk.md → Deciding straight away): the lead developer's buttons,
+// Deciding straight away (docs/desk.md → Deciding straight away): the UI dev owner's buttons,
 // the options folded under a live prototype, and Approve taking the prototype's option.
 const SKIP = `<script>
 window.calls = [];
-const lou = { email: "lou@example.com", role: "lead-developer" }, bob = { email: "bob@example.com", role: "developer" };
+const lou = { email: "lou@example.com", role: "ui-dev-owner" }, bob = { email: "bob@example.com", role: "developer" };
 const triage = { verdict: "design", reasons: [] }, variants = [{ id: "v1", name: "Quiet" }, { id: "v2", name: "Bold" }];
 const cards = [
   { id: "C-1", kind: "request", title: "Checked", status: "triage", triage, created_by: bob },
@@ -2764,7 +2764,7 @@ window.platform = { async request({ method, path, body }) {
 try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
 </script>`;
 
-test("deciding straight away: a lead developer approves or decides; a live prototype folds the options and approves its own", (t) => open(t, SKIP, async (desk) => {
+test("deciding straight away: a UI dev owner approves or decides; a live prototype folds the options and approves its own", (t) => open(t, SKIP, async (desk) => {
   const base = desk.url().replace(/[?#].*$/, "");
   const card = async (id) => {
     await desk.goto(`${base}#${id}`);
@@ -2774,7 +2774,7 @@ test("deciding straight away: a lead developer approves or decides; a live proto
   assert.equal(await desk.locator('#detail .btn[data-act="approve"]').count(), 1, "send to developers before any option");
   assert.equal(await desk.locator('#detail [data-act="close"]').count(), 1, "or close it with a decision");
   await desk.click('#detail [data-act="close"]');
-  assert.equal(await desk.locator("#cf-choices input").count(), 0, "a lead developer only closes with a decision");
+  assert.equal(await desk.locator("#cf-choices input").count(), 0, "a UI dev owner only closes with a decision");
   await desk.fill("#confirm-form [name=note]", "Headers stay as they are.");
   await desk.click("#cf-ok");
   await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/C-1/decide"));
@@ -2797,7 +2797,7 @@ test("deciding straight away: a lead developer approves or decides; a live proto
     assert.equal(await desk.locator('#detail .next [data-act="close"]').count(), 1, `${id}: close with a decision on a switched-off prototype`);
   }
   await card("C-5");
-  assert.equal(await desk.locator('#detail [data-act="approve"]').count(), 0, "against a decision in force a lead developer does not send it");
+  assert.equal(await desk.locator('#detail [data-act="approve"]').count(), 0, "against a decision in force a UI dev owner does not send it");
   assert.equal(await desk.locator('#detail [data-act="close"]').count(), 1);
   await card("C-6");
   await desk.click('#detail [data-act="approve"]');
@@ -3708,7 +3708,7 @@ test("a dialog with work in it asks before Escape or a click outside closes it; 
   assert.deepEqual([await isOpen("confirm-dialog"), await isOpen("request-dialog")], [false, false], "the dialog's own Cancel closes it at once");
 }));
 
-test("a lead developer picks For Designers or For Developers when filing", (t) => open(t, DESK({ ...DESIGNER, role: "lead-developer", can: { request: true, size: true } }, [BUSY]), async (desk) => {
+test("a UI dev owner picks For Designers or For Developers when filing", (t) => open(t, DESK({ ...DESIGNER, role: "ui-dev-owner", can: { request: true, size: true } }, [BUSY]), async (desk) => {
   await desk.waitForSelector("#new-request");
   await desk.click("#new-request");
   assert.equal(await desk.isVisible("#rq-for"), true);
@@ -3834,7 +3834,7 @@ test("Product → Kit that could not be read says so, not that there is no kit",
   assert.doesNotMatch(await desk.textContent("#list"), /No kit yet/);
 }));
 
-for (const role of ["designer", "lead-developer"]) test(`Product → Kit is on the page for a ${role}`, (t) => open(t, withKit({ ...DESIGNER, role }), async (desk) => {
+for (const role of ["designer", "ui-dev-owner"]) test(`Product → Kit is on the page for a ${role}`, (t) => open(t, withKit({ ...DESIGNER, role }), async (desk) => {
   await desk.click('[data-tab="product"]');
   await desk.waitForSelector('[data-filter="productFilter:decisions"]');
   assert.equal(await desk.locator('[data-filter="productFilter:kit"]').count(), 1);
@@ -3865,7 +3865,7 @@ const SIMPLE_CARDS = [
   { id: "c-shipped", kind: "change", title: "Reviewed, merged", status: "handled", handled: at(9), source: merged, updated: at(9) },
   { id: "c-auto", kind: "change", title: "Nothing to review", status: "new", attention: { level: "fyi", reasons: [] }, source: merged, updated: at(8) },
   { id: "c-gone", kind: "change", title: "Archived", status: "archived", source: merged, updated: at(7) },
-  { id: "c-small", kind: "change", title: "For a lead developer", status: "new", attention: { level: "developer", reasons: ["Copy"] }, source: merged, updated: at(6) },
+  { id: "c-small", kind: "change", title: "For a UI dev owner", status: "new", attention: { level: "developer", reasons: ["Copy"] }, source: merged, updated: at(6) },
 ];
 const SIMPLE_ME = { role: "designer", email: "d@example.com", simple: true, spec_review: true, can: { request: true } };
 const rows = (desk) => desk.$$eval("#list [data-card]", (xs) => xs.map((x) => [x.dataset.card, x.querySelector(".spill")?.textContent || ""]));
