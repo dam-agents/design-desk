@@ -1143,7 +1143,10 @@ export class Store {
     const isMine = (by) => Boolean(by?.email) && mine.has(String(by.email).toLowerCase());
     const from = new Date(Date.parse(this.clock()) - days * 864e5).toISOString();
     const out = [];
-    const push = (at, event, item, by, extra = {}, forYou = false) => { if (at && at >= from && !isMine(by)) out.push({ at, event, ...item, by: by || null, ...extra, for_you: forYou }); };
+    // Before a request opened, only its author, admins and the dev team could see it: what happened
+    // then is not news to anyone else (docs/desk.md → Draft and Proposal).
+    let cut = null;
+    const push = (at, event, item, by, extra = {}, forYou = false) => { if (at && at >= from && (!cut || at >= cut) && !isMine(by)) out.push({ at, event, ...item, by: by || null, ...extra, for_you: forYou }); };
     const itemOf = (c) => ({ item: c.id, kind: c.kind, title: c.title || "", screen: c.request?.screen || c.path || null, status: c.status });
     for (const c of Object.values(this.db.cards)) {
       if (c.status === "archived" || c.kind === "digest" || !this.visibleTo(c, who)) continue;
@@ -1152,6 +1155,7 @@ export class Store {
       // For you, its messages included. The bell's For you shows these alone.
       const talked = (c.threads || []).some((tid) => (own(this.db.threads, tid)?.messages || []).some((m) => isMine(m.by)));
       const filed = [c.created_by, c.origin].some(isMine);
+      cut = c.opened_at && !filed && who && !who.agent && who.role !== "admin" && !DEVELOPERS.includes(who.role) ? c.opened_at : null;
       const yours = filed || isMine(c.approved?.by) || talked || Object.values(c.votes || {}).some((x) => Object.keys(x || {}).some((e) => mine.has(e.toLowerCase())));
       const author = c.origin?.reporter && c.origin.channel !== "agent" ? { name: c.origin.reporter, email: c.origin.email || null, via: c.origin.channel } : c.created_by;
       // A request that went to design is new to everyone then (docs/desk-page.md → Notifications).
@@ -1196,6 +1200,7 @@ export class Store {
         });
       }
     }
+    cut = null;
     // Your private asks live outside the cards: Design Desk's answers to them are yours alone.
     for (const t of Object.values(this.db.threads)) {
       if (t.kind !== "private" || !key || t.owner !== key) continue;

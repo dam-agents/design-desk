@@ -298,7 +298,7 @@ with spaces as hyphens (`UI dev owner` → `ui-dev-owner`); `lead-developer`, it
 | a request's author, whatever their role; `designer`, `admin` on any | remove a design option (the ✕ on its tab; [requests.md](requests.md) → Variants) |
 | a request's author; `pm`, `designer`, `admin` on any | rename a request (a small ✎ right after its title, on hover): the name stays theirs, and `design desk upsert` no longer changes it |
 | `developer`, `ui-dev-owner` | approve a request For Developers they did not file ([For Developers or For Designers](#for-developers-or-for-designers)) |
-| `ui-dev-owner`, `admin` | move a request, a change or an issue between For Developers and For Designers, and pick one when filing a request |
+| `ui-dev-owner`, `admin` | move a request, a change or an issue between For Developers and For Designers |
 | `ui-dev-owner`, `pm`, `designer`, `admin` | approve or decide a request straight away ([Deciding straight away](#deciding-straight-away)) |
 | `pm`, `designer`, `admin` | close and reopen a request, delete a closed one |
 | a draft's author, `ui-dev-owner` and `admin` | move a request on before it goes to design, and close it ([Draft and Proposal](#draft-and-proposal)) |
@@ -384,7 +384,7 @@ Design Desk's work go on.
 `developer` and `ui-dev-owner`; you see every one. For anyone else the server has none: not in a
 list, the bell, a decision's items or an MCP peer's reads; its page, its conversations, its
 pictures and every write on it answer as for a card that does not exist. The bell tells of it as
-new when it opens. Never name, quote or link one where anyone else reads (Slack, another card, the
+new when it opens, and nothing from before that to anyone who could not see it then. Never name, quote or link one where anyone else reads (Slack, another card, the
 digest), and never add a report to one: file a new request.
 
 ### Deciding straight away

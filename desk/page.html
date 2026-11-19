@@ -635,7 +635,6 @@
   label.switch input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   label.switch.ws-switch { gap: 8px; font-size: var(--fs-meta); margin-left: 4px; } label.switch.ws-switch input { width: 28px; height: 16px; } label.switch.ws-switch input::after { width: 12px; height: 12px; } label.switch.ws-switch input:checked::after { transform: translateX(12px); }
   /* New request: how many options (none to five), and questions first. */
-  .for-pick { display: grid; gap: 8px; margin-bottom: 4px; } .for-pick .tabs { margin: 0; }
   .count-pick { display: grid; gap: 4px; } .count-pick .row2 { display: flex; gap: 12px; align-items: center; }
   .count-pick input[type=range] { flex: 1; accent-color: var(--accent); padding: 0; border: 0; background: none; }
   .count-pick output { min-width: 15ch; font-weight: 600; font-size: var(--fs-ui); }
@@ -1700,13 +1699,6 @@
       <button type="button" data-type="bug" aria-pressed="false">Report something broken</button>
     </div>
     <input type="hidden" name="type" value="idea" />
-    <div class="for-pick" id="rq-for"><span class="hint" style="margin:0">Who is it for?</span>
-      <div class="tabs" role="radiogroup" id="for-choice">
-        <button type="button" data-for="designers" aria-pressed="true">For Designers</button>
-        <button type="button" data-for="developers" aria-pressed="false">For Developers</button>
-      </div>
-      <span class="hint" style="margin:0" id="rq-for-hint"></span></div>
-    <input type="hidden" name="audience" value="designers" />
     <label><span id="rq-problem-label">What would you change, and for whom?</span><textarea name="problem" maxlength="4000" required></textarea></label>
     <label id="rq-vision"><span>How do you picture it? (optional)</span><textarea name="vision" maxlength="4000" placeholder="e.g. calmer, like the cards in Settings; the main button on the right; less text"></textarea></label>
     <label><span>Which screen? (optional)</span><input name="screen" maxlength="500" placeholder="e.g. the agents list" /></label>
@@ -7926,7 +7918,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // Close: just close it (a designer), or close it with a decision recorded in the person's
     // name (a designer, a PM or a UI dev owner), without a vote or a live prototype.
     let decided = false;
-    if (name === "close") {
+    if (name === "close" && preDesign(c)) {
+      res = await ask({ title: `Close this ${preDesign(c)}`, body: "Design Desk stops working on it. It stays as it is, seen only by whom it was, and can be reopened.", ok: "Close it", send: () => post("") });
+      if (!res) return;
+    } else if (name === "close") {
       const how = [can("close") && { id: "close", name: "Just close it", hint: "Nothing is recorded as a decision" },
         can("skip") && { id: "decide", name: "Close it and record a decision", hint: `In your name${full(", under Product → Decisions")}` }].filter(Boolean);
       res = await ask({ title: "Close this request", body: `Design Desk stops working on it${live(c) || !simple() ? " and switches off its live prototype" : ""}. You can reopen it later.`, ok: "Close it",
@@ -8758,15 +8753,6 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
 
   // ---------- the request dialog ----------
   const pictures = [];
-  // For Designers (the Desk's default) or For Developers: whose tab it lands on, and who approves it
-  // (docs/desk.md → For Developers or For Designers).
-  function setFor(to) {
-    const f = $("#request-form");
-    f.audience.value = to;
-    for (const b of document.querySelectorAll("#for-choice button")) b.setAttribute("aria-pressed", String(b.dataset.for === to));
-    $("#rq-for-hint").textContent = to === "developers" ? "A developer approves it, without a designer; it waits in the For Developers tab." : "";
-  }
-  $("#for-choice").addEventListener("click", (e) => { const b = e.target.closest("[data-for]"); if (b) setFor(b.dataset.for); });
   function setType(type) {
     const f = $("#request-form");
     f.type.value = type;
@@ -8830,10 +8816,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     f.reset(); pictures.length = 0; $("#rq-thumbs").innerHTML = "";
     $("#rq-skills").open = false;
     $("#rq-skill-list").innerHTML = (S.me?.skills || []).map((k) => `<label class="switch"><input type="checkbox" role="switch" data-skill="${esc(k.name)}"${k.on ? " checked" : ""} /><span>${esc(k.does || k.name)}<small>${esc(k.name)}</small></span></label>`).join("");
-    setType("idea"); sayCount(); setFor("designers");
-    // Who may move a request between the two tabs picks it here too, for one that opens at once; a
-    // draft takes its tab when it opens (docs/desk.md → Draft and Proposal).
-    $("#rq-for").hidden = !can("size") || startsDraft();
+    setType("idea"); sayCount();
+    // A draft takes its tab when it opens (docs/desk.md → Draft and Proposal); a designer's request is For Designers.
     $("#request-form [data-close=send]").textContent = startsDraft() ? "Create draft" : "Send";
     $("#type-choice").hidden = Boolean(from);
     $("#rq-figma").hidden = !figmaOn(); // only with Figma on for this person (their menu switch)
@@ -9058,13 +9042,13 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const f = $("#request-form");
     const design = f.type.value !== "bug";
     const skills = design ? Object.fromEntries([...document.querySelectorAll("#rq-skill-list input[data-skill]")].map((i) => [i.dataset.skill, i.checked])) : {};
-    const body = { type: f.type.value, audience: f.audience.value, problem: f.problem.value, screen: f.screen.value, ...(f.figma.value.trim() ? { figma: f.figma.value.trim() } : {}),
+    const body = { type: f.type.value, problem: f.problem.value, screen: f.screen.value, ...(f.figma.value.trim() ? { figma: f.figma.value.trim() } : {}),
       ...(design && f.vision.value.trim() ? { vision: f.vision.value } : {}), ...(Object.keys(skills).length ? { skills } : {}),
       ...(design ? { options: Number(f.options.value), grill: f.grill.checked } : {}),
       ...(f.from.value ? { from: f.from.value } : {}), ...(!$("#rq-carry").hidden ? { carry: [...f.querySelectorAll("input[name=carry]:checked")].map((i) => i.value) } : {}), ...(pictures.length ? { images: pictures.map(({ contentType, data }) => ({ contentType, data })) } : {}) };
     const r = await sendOrReopen(e.target, () => api("POST", "/api/requests", body));
     toast(r.card.stage ? "Your draft is made. Design Desk checks what can be done; only you see it until you send it on." : "Sent. Design Desk first checks what can be done; this page updates by itself.");
-    S.tab = "requests"; S.reqFilter = "open"; S.reqFor = body.audience; renderBanners(); await refreshList(); await openCard(r.card.id);
+    S.tab = "requests"; S.reqFilter = "open"; S.reqFor = null; renderBanners(); await refreshList(); await openCard(r.card.id);
   }));
 
   function applyMe() {

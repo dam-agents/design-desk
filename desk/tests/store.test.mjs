@@ -3392,3 +3392,16 @@ test("before design a request is there only for its author, an admin, and on a p
   assert.equal(note?.at, "2030-01-01T10:00:00Z", "new when it opened, not when it was filed");
   assert.equal(s.getCard(id, { who: alice }).id, id);
 });
+
+test("what happened before a request opened is no news to whom could not see it then", () => {
+  const s = fresh();
+  const lou = { email: "lou@example.com", role: "ui-dev-owner" };
+  s.clock = () => "2030-01-01T09:00:00Z";
+  const id = s.createRequest(lou, { problem: "Rows are too airy.", stage: "draft" }).card.id;
+  s.upsertCard({ id, status: "feedback", triage: { verdict: "design", reasons: ["Spacing only."] }, variants: [{ id: "v1", name: "Calm", asset: s.addAsset({ kind: "variant", name: "v", contentType: "text/html", data: "<p>v</p>", encoding: "utf8" }).asset.id, drawn: "2030-01-01T09:30:00Z" }] });
+  s.clock = () => "2030-01-02T09:00:00Z";
+  s.moveStage(id, lou, "design");
+  const events = (who) => s.notifications(who, { days: 100000 }).items.filter((n) => n.item === id).map((n) => n.event);
+  assert.deepEqual(events(alice), ["new-request"], "a designer hears only that it opened");
+  assert.ok(events({ email: "lee@example.com", role: "admin" }).includes("options-drawn"), "an admin, who could see the draft, keeps what happened in it");
+});
