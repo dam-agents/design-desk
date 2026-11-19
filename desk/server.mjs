@@ -351,9 +351,9 @@ async function viewerRoute(req, res, url, who) {
     // A person files an idea, a bug, or an adjustment of a change card; features and
     // proposals are the agent's (from an issue, from a shipped change).
     const { title, problem, goal, screen, steps, from, figma } = b;
-    // For Developers or For Designers, the dialog's switch, for the roles that may move a
-    // request between the two; the Desk's default is the designers'.
-    const audience = b.audience === "developers" && can(who.deskRole, "size", s.prototypeRoles) ? "developers" : "designers";
+    // A person's request is For Designers; one that starts as a draft takes its side when it opens
+    // (docs/desk.md → Draft and Proposal). Only the agent's own requests name an audience.
+    const audience = "designers";
     // How many options, and questions first: a bug is fixed, not designed, so it has neither.
     // From an issue on the Issues page it designs that feature; from a change it adjusts it.
     // From an approved request, a new one of the same kind, its options carried over as ticked.

@@ -384,7 +384,7 @@ Design Desk's work go on.
 `developer` and `ui-dev-owner`; you see every one. For anyone else the server has none: not in a
 list, the bell, a decision's items or an MCP peer's reads; its page, its conversations, its
 pictures and every write on it answer as for a card that does not exist. The bell tells of it as
-new when it opens, and nothing from before that to anyone who could not see it then. Never name, quote or link one where anyone else reads (Slack, another card, the
+new when it opens, and nothing from before the first stage each viewer could see it in. Never name, quote or link one where anyone else reads (Slack, another card, the
 digest), and never add a report to one: file a new request.
 
 ### Deciding straight away
