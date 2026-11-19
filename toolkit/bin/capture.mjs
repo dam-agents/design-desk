@@ -10,7 +10,11 @@
 //                {"wait": "<selector>" | ms}, {"scroll": "<selector>"}. Selectors are Playwright's:
 //                CSS, `text=…`, `role=button[name="…"]`. A step that fails shoots where it stopped
 //                (`<shot>-stuck.jpg`) and reports the step, and the next shot starts from `setup`.
-import { readFileSync } from "node:fs";
+//                A shot with `"element": "<selector>"` is cut to that part, 8 px round it
+//                (`<shot>[-dark]-element.jpg`): a part as it is in the product, for its dialog on
+//                the Desk (docs/requests.md → The part before, from the product). A recipe of parts
+//                alone shoots at two screen pixels per CSS pixel, so a small part stays sharp.
+import { readFileSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { ensureDir, fail, launch } from "../lib/core.mjs";
 
@@ -35,7 +39,8 @@ export async function main(_cmd, argv) {
   const recipe = recipePath ? JSON.parse(readFileSync(recipePath, "utf8")) : null;
   ensureDir(out);
   const browser = await launch();
-  const ctx = await browser.newContext({ viewport: { width, height: 900 }, colorScheme: dark ? "dark" : "light", ignoreHTTPSErrors: true });
+  const partsOnly = Boolean(recipe?.shots?.length) && recipe.shots.every((x) => x?.element);
+  const ctx = await browser.newContext({ viewport: { width, height: 900 }, colorScheme: dark ? "dark" : "light", ignoreHTTPSErrors: true, deviceScaleFactor: partsOnly ? 2 : 1 });
   const pg = await ctx.newPage();
   const url = (p) => new URL(p, base.endsWith("/") ? base : `${base}/`).href;
 
@@ -89,6 +94,33 @@ async function step(pg, st, { url, base }) {
   else throw new Error(`unknown step ${kind}`);
 }
 
+// One part of the page alone, 8 px round it and never past the page's edge; a part that is
+// missing or not shown fails the shot like a step that failed. A part that fits the window is cut
+// from what the window shows, so a sticky or fixed part is cut where it is seen; a larger one is
+// shot as the element itself, without the padding. Past 700 KiB (the Desk takes at most 720 KiB) it is shot again at one
+// screen pixel per CSS pixel, then at a lower quality.
+const PAD = 8, MAX_BYTES = 700 * 1024;
+async function cutTo(pg, selector, file) {
+  const el = pg.locator(selector).first();
+  await el.waitFor({ state: "visible", timeout: 20000 }).catch(() => { throw new Error(`element ${selector} is not on the page or not shown`); });
+  await el.scrollIntoViewIfNeeded().catch(() => {});
+  const b = await el.evaluate((e) => { const r = e.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height, sx: scrollX, sy: scrollY, vw: innerWidth, vh: innerHeight, pw: document.documentElement.scrollWidth, ph: document.documentElement.scrollHeight }; });
+  if (!b.w || !b.h) throw new Error(`element ${selector} has no size`);
+  // Whole in the window, either way: cut from what it shows. Taller or wider: Playwright shoots
+  // the element itself, which handles a part larger than the window (no padding round it then).
+  const inView = b.h + 2 * PAD <= b.vh && b.y >= 0 && b.w + 2 * PAD <= b.vw && b.x >= 0;
+  const x = Math.max(0, b.x - PAD), y = Math.max(0, b.y - PAD);
+  const clip = { x, y, width: Math.min(b.vw - x, b.x + b.w + PAD - x), height: Math.min(b.vh - y, b.y + b.h + PAD - y) };
+  for (const opts of [{ quality: 80 }, { quality: 80, scale: "css" }, { quality: 60, scale: "css" }]) {
+    if (inView) await pg.screenshot({ path: file, type: "jpeg", clip, ...opts });
+    else await el.screenshot({ path: file, type: "jpeg", ...opts });
+    if (statSync(file).size <= MAX_BYTES) break;
+  }
+  // A picture too large is never left under the name of one taken: the next run would upload it.
+  if (statSync(file).size > MAX_BYTES) { rmSync(file, { force: true }); throw new Error(`element ${selector} is more than 700 KiB even at one screen pixel per CSS pixel: shoot a smaller part`); }
+  return { x: Math.round(b.x + b.sx), y: Math.round(b.y + b.sy), w: Math.round(b.w), h: Math.round(b.h) };
+}
+
 async function followRecipe(pg, recipe, ctx) {
   const run = async (steps, label) => { for (const [i, st] of (steps || []).entries()) { try { await step(pg, st, ctx); } catch (e) { e.at = `${label} step ${i + 1} (${JSON.stringify(st).slice(0, 120)})`; throw e; } } };
   const setup = async () => run(recipe.setup, "setup");
@@ -102,6 +134,12 @@ async function followRecipe(pg, recipe, ctx) {
       for (const theme of shot.themes || ["light"]) {
         await pg.emulateMedia({ colorScheme: theme === "dark" ? "dark" : "light" });
         await pg.waitForTimeout(300);
+        if (shot.element) {
+          const file = join(ctx.out, `${slug(name)}${theme === "dark" ? "-dark" : ""}-element.jpg`);
+          const box = await cutTo(pg, String(shot.element), file);
+          console.log(JSON.stringify({ name, theme, file, url: pg.url(), element: true, box }));
+          continue;
+        }
         const file = join(ctx.out, `${slug(name)}${theme === "dark" ? "-dark" : ""}.jpg`);
         await pg.screenshot({ path: file, type: "jpeg", quality: 80, fullPage: Boolean(shot.full) });
         console.log(JSON.stringify({ name, theme, file, url: pg.url() }));

@@ -16,7 +16,7 @@ its `SKILL.md` is; read it before doing the action.
 | --- | --- | --- | --- |
 | `explain-change` | a card for a shipped or open UI change | the watch schedule; chat "explain #123" | `explain`, [watch.md](watch.md) |
 | `answer` | answer a question | a Desk question; Slack; chat | `explain`, [desk.md](desk.md) → Questions |
-| `show` | "show me how it looks": a picture of the product in that state | a Desk question; Slack; chat | `show-me` |
+| `show` | "show me how it looks": a picture of the product in that state | a Desk question; Slack; chat; **Take it from the product** in a part's dialog ([requests.md](requests.md) → The part before, from the product) | `show-me` |
 | `map` | the product map: screens, how to get there, why each is like it is | the first screens instance; after each merged change; + Add on the Desk | [map.md](map.md) |
 | `digest` | the weekly digest and the themes in people's feedback | the weekly digest schedule | [digest.md](digest.md) |
 | `issue-news` | the Issues page: what each planned issue will need on the screens | the daily issues schedule | [issues.md](issues.md) |

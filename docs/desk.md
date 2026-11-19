@@ -289,7 +289,7 @@ with spaces as hyphens (`Lead developer` → `lead-developer`).
 | Role | May |
 | --- | --- |
 | everyone | read, mark reviewed, ask, comment; reply in a conversation, and mark their own done |
-| members (every role but `guest`) | also mark someone else's conversation done |
+| members (every role but `guest`) | also mark someone else's conversation done, and have a part of a request taken from the product ([requests.md](requests.md) → The part before, from the product) |
 | `pm`, `developer`, `lead-developer` | also vote, file a request, start a follow-up from a change, add screenshots |
 | `pm`, `developer`, `lead-developer`, `designer`, `admin` | draw an issue: how it looks now and a sketch ([issues.md](issues.md)) |
 | `pm`, `developer`, `lead-developer`, `designer`, `admin` | also start, revise and redraw variants, add one more option, try three ways of a part and pick one, draw every state of a part, draw how a request's screen looks today, draw how a screen or part looked before, note changes on an element, add a screen or part to Product, use Figma, share in Slack |

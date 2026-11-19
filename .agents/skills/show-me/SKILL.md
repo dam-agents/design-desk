@@ -33,7 +33,10 @@ line of [docs/requests.md](../../../docs/requests.md) → Who Slack serves, no p
    - in Slack: `reply` with the picture attached; when the question is on a request's
      thread, also name its card and link it ([docs/desk.md](../../../docs/desk.md) → Links to
      an item);
-   - in chat: the picture inline, or an artifact when there are several.
+   - in chat: the picture inline, or an artifact when there are several;
+   - a part of a request taken from the product (`explore` with `scope: "before"`): a shot with
+     `element` set to the part cuts the picture to it, and it goes on the request as
+     [docs/requests.md](../../../docs/requests.md) → The part before, from the product says.
 
    Always say where it comes from: "Design Desk's copy of the product at <ref> (<commit>),
    with made-up data."

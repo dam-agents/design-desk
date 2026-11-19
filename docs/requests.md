@@ -231,7 +231,11 @@ Compare with the product); a note from **Work into the design** is a `revise` li
   request changes **as it is in the product now**, without the change: one self-contained HTML
   file built the same way as an option (the product's own styles, sample data, its views wired),
   stored with `design desk asset <file> --kind variant --card R-<n>`, then `design desk upsert`
-  with `now: {asset, name}` (`name`: the screen in a few plain words; `null` clears it). It is
+  with `now: {asset, name, elements}` (`name`: the screen in a few plain words; `null` clears it;
+  `elements`: where each of the request's `shared_elements` that the product has today sits in
+  it, `[{id, selector, view, view_name}]`, so a part's dialog shows it as it was before — kept
+  while the asset stays the same; `design shot <now.html> <dir> --element <selector>` checks each
+  cuts its part; a part the product does not have yet gets none). It is
   not an option: no vote, no notes, no version; the Desk sets it beside an option for people
   to compare. A `scope: "now"` item draws only this, changes nothing else on the card and
   leaves the status as it is; it blocks no person's work on the options (asking the team, adding
@@ -239,6 +243,32 @@ Compare with the product); a note from **Work into the design** is a `revise` li
   sources & trust boundary), drawn without the decisions check: it is the product as it is, not
   a design ([desk.md](desk.md) → Decisions → The check). Redraw it when an explore or a revise
   finds the product's screen changed since it was drawn.
+- **The part before, from the product** (`explore` with `scope: "before"` and `element`, a
+  `shared_elements` id): a member pressed **Take it from the product** in a part's dialog. It
+  needs the screens instance (the button shows only with `screens: enabled`):
+  1. Bring `main` up to date ([screens.md](screens.md) → Bring an instance up to date).
+  2. A capture recipe to the screen and state the part shows in (the request's screen,
+     `profile.capture.routes`), with made-up data as screens.md → Take the screens says, and one
+     shot whose `element` is the part's selector **in the product's page** (not the option's):
+     `design capture` cuts the picture to it (`<shot>-element.jpg`). Keep the recipe under
+     `work/output/screens/R-<n>/` for the next press.
+  3. Look at it (Read it): a sign-in page, an error or another part is not it; fix the recipe
+     and try once more. Still wrong, or no instance running: `design desk done` with an outcome
+     in plain words, and no picture.
+  4. `design desk asset <file> --kind screen --card R-<n>`, then `design desk upsert` with
+     `before_shots: [{id, asset, source: "instance", ref: "main", commit}]`, the commit
+     `screens.sh` installed. They merge by part (`asset: null` takes one off; a new `now` leaves
+     them): one picture serves every option, and the dialog shows it before the cut from `now`.
+  5. Set it beside the part cut from `now` (`design shot <now.html> <dir> --element <its
+     selector>`): when they plainly differ, `now` is out of date or wrong — say so in the done
+     outcome and redraw `now` with its places.
+  6. Close the item: `design desk done Q-<n> --session <id> --outcome "<part> taken from the
+     product at <commit>"` (and that `now` was redrawn, when it was). Until it is done the dialog
+     shows Design Desk at work on the part, and the button does not come back.
+
+  It is whitelisted Desk work (CLAUDE.md → Instruction sources & trust boundary). Like `scope:
+  "now"`, it is drawn without the decisions check, changes nothing else on the card and blocks no
+  one's work; one waits per part.
 - **A person's own option** (`fidelity: picture`): **+ New option** → *Use my own pictures*
   puts their pictures on the card as an option as they are, with `by`; no item is queued and
   nothing is drawn. Keep it as it is (send it back with its `version`); change it only when a
@@ -348,7 +378,9 @@ Compare with the product); a note from **Work into the design** is a `revise` li
   (`design shot --element`, `--kind image`); `element` the product's element card it changes
   (`E-<n>`, [catalog.md](catalog.md)), when the catalog has one; `controls` its smart controls
   ([Smart controls](#smart-controls)); `only_here` why only this option has it (next item). The page shows them above the
-  option's design as **All elements**; one opens in a dialog with its states. A part picked in the design workspace
+  option's design as **All elements**; one opens in a dialog: the part **Before** and **After**
+  (one picture, **New**, for a part it adds), **Open in design workspace** at the part, and its
+  states ([desk-page.md](desk-page.md) → The element dialog). A part picked in the design workspace
   that is (or sits inside) an element with states drawn offers **See every state**: the same
   dialog, only to look through them, with no button that draws or adds. A state belongs to the
   element its `element` names, else to the one named as its `part`. An entry without `elements`
