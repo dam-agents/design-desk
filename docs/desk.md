@@ -284,7 +284,7 @@ and `D-12` in text link to it as to a card (Links to an item).
 
 The server reads the role from `## Desk people` by the email the platform verified; the
 owner is `admin`, anyone else on the share list is `guest`. A roster role is read in lower case
-with spaces as hyphens (`UI dev owner` → `ui-dev-owner`); `lead-developer`, its name before 1.103.0, reads as
+with spaces as hyphens (`UI dev owner` → `ui-dev-owner`); `lead-developer`, its name before 1.105.0, reads as
 `ui-dev-owner` (in `prototype_requesters` and `mcp_role` too).
 
 | Role | May |

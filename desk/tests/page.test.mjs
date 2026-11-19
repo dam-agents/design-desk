@@ -4535,3 +4535,43 @@ test("New request makes a draft for anyone but a designer, and says who sees it"
     assert.equal(/only you see it/.test(await desk.textContent("#rq-hint")), word === "Create draft");
   });
 });
+
+// Draft and Proposal in full mode (docs/desk-page.md → A request's state in the list): the stage as
+// the row's dot and the page's word, the stage's moves in the state's row, on the viewer's own tab.
+test("full mode: a draft and a proposal show their stage, count as Open on the viewer's tab, and offer the stage's moves", (t) => open(t, DESK({ ...DESIGNER, role: "ui-dev-owner", can: { request: true, "stage-propose": true, "stage-design": true, "stage-own": true, vote: true } },
+  [{ ...STAGED[0], for: "developers" }, { ...STAGED[1], for: "designers", variants: [{ id: "v1", name: "Calm", asset: "A-1" }], votes: {} }]), async (desk) => {
+  await desk.click('[data-filter="reqFilter:open"]');
+  await desk.waitForSelector('#list [data-card="R-21"]');
+  assert.deepEqual(await desk.$$eval("#list [data-card] .sdot", (xs) => xs.map((x) => [x.dataset.s, x.textContent.trim()])), [["draft", "Draft"], ["proposal", "Proposal"]], "both on the viewer's own tab, whatever their side");
+  await desk.click('#list [data-card="R-21"]');
+  await desk.waitForSelector("#detail .status");
+  assert.match(await desk.textContent("#detail .status .s-word"), /^Proposal/);
+  assert.equal(await desk.textContent('#detail .status .moves [data-stage="design"]'), "Send to design", "the first way on");
+  assert.deepEqual(await desk.$$eval('#detail .status .next [data-stage]', (xs) => xs.map((x) => x.textContent)), ["Keep for developers", "Back to draft"]);
+  assert.equal(await desk.locator('#detail [data-vote], #detail [data-act="approve"], #detail [data-act="queue"], #detail [data-size]').count(), 0, "no votes, Approve, presentation or side");
+}));
+
+test("Send feedback: one button and one dialog, in both modes; no Approve before design", (t) => open(t, HEAD_DESK({ ...HEAD_ME, role: "developer", can: { ...HEAD_ME.can, approve: false, request: true, "stage-propose": true } },
+  [{ ...drawn, ...STAGED[0], status: "feedback", variants: drawn.variants }]).replace("path.endsWith(\"/drafts\") ? { drafts: [] }", "path.endsWith(\"/drafts\") ? { drafts: [{ id: \"d1\", text: \"Fewer columns.\" }] }"), async (desk) => {
+  await desk.waitForSelector("#list");
+  await desk.evaluate(() => { location.hash = "#R-20"; });
+  await desk.waitForSelector("#detail .yreview");
+  assert.equal((await desk.textContent("#detail .yreview [data-review]")).trim(), "Send feedback…");
+  await desk.click("#detail .yreview [data-review]");
+  await desk.waitForSelector("#confirm-dialog[open]");
+  assert.equal(await desk.textContent("#cf-title"), "Send your feedback");
+  assert.equal((await desk.textContent("#cf-ok")).trim(), "Send feedback");
+  assert.deepEqual(await desk.$$eval("#cf-choices input", (xs) => xs.map((x) => x.value)), ["request-changes", "comment"], "no Approve before design");
+}));
+
+test("a request that went to design folds what was said before it under Before design", (t) => open(t, HEAD_DESK(HEAD_ME, [{ ...drawn, opened_at: "2026-11-18T12:00:00Z", threads: [
+  { id: "T-1", kind: "comment", state: "open", created: "2026-11-18T09:00:00Z", messages: [{ by: { email: "bob@example.com", role: "developer" }, at: "2026-11-18T09:00:00Z", text: "Said in the proposal." }] },
+  { id: "T-2", kind: "comment", state: "open", created: "2026-11-18T13:00:00Z", messages: [{ by: { email: "jana.novak@example.com", role: "designer" }, at: "2026-11-18T13:00:00Z", text: "Said after." }] }] }]), async (desk) => {
+  await desk.waitForSelector("#list");
+  await desk.evaluate(() => { location.hash = "#R-5"; });
+  await desk.waitForSelector("#detail .sthreads");
+  assert.equal((await desk.textContent("#detail details.before-design > summary")).trim(), "Before design · 1");
+  assert.equal(await desk.locator("#detail details.before-design #th-T-1").count(), 1, "the earlier one inside the fold");
+  assert.equal(await desk.locator("#detail details.before-design #th-T-2").count(), 0, "the later one outside it");
+  assert.equal(await desk.getAttribute("#detail details.before-design", "open"), null, "folded");
+}));

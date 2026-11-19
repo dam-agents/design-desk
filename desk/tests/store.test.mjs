@@ -46,7 +46,7 @@ test("a roster role written as lead, the admin's name before 1.59.0, reads as ad
   assert.equal(s.db.decisions["D-1"].author.role, "admin");
 });
 
-test("a role written as lead developer, the UI dev owner's name before 1.103.0, reads as ui-dev-owner", () => {
+test("a role written as lead developer, the UI dev owner's name before 1.105.0, reads as ui-dev-owner", () => {
   for (const r of ["Lead developer", "lead-developer", " lead\tdeveloper "]) assert.equal(readRole(r), "ui-dev-owner", r);
   assert.equal(readRole("constructor"), "constructor", "only the old names are mapped");
   assert.deepEqual(rosterOf([{ email: "lou@example.com", role: "Lead developer" }]), [{ email: "lou@example.com", also: [], role: "ui-dev-owner" }]);

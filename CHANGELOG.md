@@ -7,6 +7,20 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.105.0 — 2026-11-23
+
+**Upgrade:**
+1. Restart the Desk server ([desk.md](docs/desk.md) → Server) and republish the page
+   ([desk.md](docs/desk.md) → Publishing the page): a request a person files on the Desk starts as a
+   draft, then a proposal, before it goes to design, hidden from who may not see it
+   ([desk.md](docs/desk.md) → Draft and Proposal). No data migration: a request with no `stage` is
+   open, and a stored `lead-developer` role reads as `ui-dev-owner` when the store loads.
+2. Re-run `bash scripts/verify-onboarding.sh`: the roster role `lead-developer` is the UI dev owner
+   now and passes under either name.
+3. Offer the operator to rename `Lead developer` in `## Desk people`, `prototype_requesters` and
+   `mcp_role` to `UI dev owner` (`design config write`); the old name keeps working. The step is
+   the offer, never the rename.
+
 ## 1.104.0 — 2026-11-23
 
 **Upgrade:**

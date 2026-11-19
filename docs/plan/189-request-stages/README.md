@@ -104,7 +104,7 @@ their role; "before design" is a conversation started before `opened_at`.
 | 02 | Stages in the store | `stage` on a request, how it starts, the moves and their API, what a staged request refuses | 01 | [x] |
 | 03 | Hidden from who may not see it | `visibleTo` on every person's read; the bell on opening; the agent's own runs skip staged requests | 02 | [x] |
 | 04 | Simple mode | Draft and Proposal pills, the filter and its boxes by role, the stage moves in the head, New request | 02, 03 | [x] |
-| 05 | Full mode, Send feedback, release | Full mode's dot and filters, Send feedback in both modes, Before design; VERSION, CHANGELOG | 04 | [ ] |
+| 05 | Full mode, Send feedback, release | Full mode's dot and filters, Send feedback in both modes, Before design; VERSION, CHANGELOG | 04 | [x] |
 
 ## Conventions & glossary
 
@@ -113,7 +113,7 @@ their role; "before design" is a conversation started before `opened_at`.
 - Every slice ships its docs and tests (`docs/self-modification.md` §9, §11): one home per rule,
   links elsewhere. Tests: `desk/tests/store.test.mjs`, `server.test.mjs`, `page.test.mjs`,
   `mcp.test.mjs`, `scripts/tests/*.sh` as each slice names.
-- `VERSION` (minor, one above main's at merge: 1.102.0 → 1.103.0) and its `CHANGELOG.md`
+- `VERSION` (minor, one above main's at merge: 1.103.0 → 1.104.0) and its `CHANGELOG.md`
   **Upgrade** entry belong to slice 05 alone.
 - Writing for people: plain English, the Desk's words ([desk.md](../../desk.md) → Writing on the Desk).
   Refusals say who may and what to do.
