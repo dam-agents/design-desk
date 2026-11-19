@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Store, can, DeskError, ACTIONS, LIMITS, abilities, forgetIdle, rosterOf, readRole, personOf, namesOf, elementsOf, replaceText } from "../store.mjs";
+import { Store, can, DeskError, ACTIONS, LIMITS, abilities, forgetIdle, rosterOf, readRole, personOf, namesOf, elementsOf, replaceText, changesOf } from "../store.mjs";
 
 // Every decision in force counts in these tests, unless one says which wait (the server passes the roster's rule).
 const everyCounts = () => false;
@@ -3253,6 +3253,42 @@ test("a post keeps a New version the Desk read after the review was sent", () =>
   assert.equal(s.notifications(alice).items.filter((x) => x.event === "new-version").length, 1);
   // A pull request on another GitHub host is recorded too.
   assert.match(s.reviewPosted(r.id, { url: "https://github.example.com/acme/widgets/pull/7#pullrequestreview-9", sha: h2 }).review.posted.url, /example\.com/);
+});
+
+test("looks good: a mark with no words on one change of a pull request, kept by the review until the next version", () => {
+  const s = fresh();
+  const img = (n) => s.addAsset({ kind: "screen", name: n, contentType: "image/svg+xml", data: "<svg xmlns='http://www.w3.org/2000/svg'/>", encoding: "utf8" }).asset.id;
+  const [b, a, l1, l2] = [img("b"), img("a"), img("l1"), img("l2")];
+  const chg = s.upsertCard({ kind: "change", title: "Spend", source: { repo: "acme/widgets", pr: 7 },
+    screens: [{ asset: b, stage: "before", pair: "Agents list" }, { asset: a, stage: "after", pair: "Agents list" }, { asset: l1, caption: "The limit dialog" }, { asset: l2 }] }).card;
+  assert.deepEqual(changesOf(s.card(chg.id)), [{ key: "Agents list", name: "Agents list" }, { key: l1, name: "The limit dialog" }, { key: l2, name: "Screen 2" }], "a pair, then each lone screen");
+  s.putGithub([{ key: "acme/widgets#7", kind: "pr", title: "Spend", head: "a".repeat(40), comments: [] }]);
+  const req = s.upsertCard({ kind: "request", title: "Calmer" }).card;
+  assert.throws(() => s.addDraft(req.id, alice, { ok: true, change: "x" }), /marks a change/);
+  assert.throws(() => s.addDraft(chg.id, alice, { ok: true }), /names the change/);
+  assert.throws(() => s.addDraft(chg.id, alice, { ok: true, change: "Nope" }), /not on this pull request/);
+  assert.throws(() => s.addDraft(chg.id, alice, { text: "Hm", change: "Nope" }), /not on this pull request/);
+  assert.throws(() => s.addDraft(chg.id, alice, { ok: true, change: l1, text: "Fine" }), /no words/);
+  s.addDraft(chg.id, alice, { ok: true, change: "Agents list" });
+  assert.equal(s.addDraft(chg.id, alice, { ok: true, change: "Agents list" }).drafts.length, 1, "once per change");
+  // A note on a change takes back the Looks good on it; a Looks good waits until the notes go.
+  assert.deepEqual(s.addDraft(chg.id, alice, { text: "Too loud", change: "Agents list" }).drafts.map((d) => [d.ok || false, d.change]), [[false, "Agents list"]]);
+  assert.throws(() => s.addDraft(chg.id, alice, { ok: true, change: "Agents list" }), /remove them first/);
+  s.addDraft(chg.id, alice, { ok: true, change: l1 });
+  assert.deepEqual(s.drafts(chg.id, bob).drafts, [], "only its author sees it");
+  assert.deepEqual(s.getCard(chg.id).looks_good, [], "nothing sent yet");
+  const r = s.sendReview(chg.id, alice, { verdict: "comment" }).review;
+  assert.deepEqual(r.looks_good, [{ key: l1, name: "The limit dialog" }], "the review keeps it, by key and name");
+  assert.deepEqual(r.threads.map((id) => s.thread(id).change), ["Agents list"], "a Looks good makes no conversation");
+  assert.deepEqual(s.getCard(chg.id).looks_good, [l1]);
+  assert.deepEqual(s.listCards({ kind: "change" }).find((x) => x.id === chg.id).looks_good, [l1], "the list's row carries it too");
+  // Looks good alone is feedback enough.
+  s.addDraft(chg.id, alice, { ok: true, change: l2 });
+  assert.deepEqual(s.sendReview(chg.id, alice, { verdict: "comment" }).review.looks_good.map((x) => x.key), [l2]);
+  assert.deepEqual(s.getCard(chg.id).looks_good.sort(), [l1, l2].sort());
+  // The next version: another head, and no change is vouched for any more.
+  s.putGithub([{ key: "acme/widgets#7", kind: "pr", title: "Spend", head: "c".repeat(40), comments: [] }]);
+  assert.deepEqual(s.getCard(chg.id).looks_good, []);
 });
 
 test("a Comment-only review never waits for a next version, posted or not", () => {
