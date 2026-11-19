@@ -78,7 +78,7 @@ Taken with the operator before planning:
 | 03 | The change view | Tabs per change, before / after, the box under a change, both modes | 02 | [x] |
 | 04 | Marks and sending | Chips, Looks good moves on, "not looked at yet" warning, links from Comments | 03 | [x] |
 | 05 | Feedback in the element dialog | Add to feedback + Comment, your drafts on the part | 01 | [x] |
-| 06 | The workspace: notes and Your feedback | No Send to Design Desk on its boxes; a Your feedback tab in the side panel | 01, 05 | [ ] |
+| 06 | The workspace: notes and Your feedback | No Send to Design Desk on its boxes; a Your feedback tab in the side panel | 01, 05 | [x] |
 | 07 | Look edits and Add to my feedback | The look panel adds to feedback; Work it in becomes a draft | 06 | [ ] |
 | 08 | Release | VERSION, CHANGELOG, doc read-through, whole-feature smoke | all | [ ] |
 

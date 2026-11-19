@@ -1572,6 +1572,14 @@
   .ws-ptabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); }
   .ws-ptabs .n { min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px; background: var(--soft); color: var(--ink); font-size: var(--fs-micro); line-height: 17px; text-align: center; box-sizing: border-box; }
   .ws-ptabs .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+  /* Your feedback in the workspace's side panel: the viewer's notes not sent yet, across options. */
+  .ws-drafts { list-style: none; margin: 0; padding: 8px 12px; display: grid; gap: 8px; }
+  .ws-drafts li { display: flex; gap: 8px; align-items: flex-start; padding: 8px 12px; border-radius: var(--r-sm); background: var(--warn-soft); }
+  .ws-fb-go { all: unset; flex: 1; min-width: 0; cursor: pointer; display: grid; gap: 4px; } .ws-fb-go .about { font-size: var(--fs-micro); color: var(--muted); } .ws-fb-go .tx { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .ws-fb-go:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .ws-drafts .x { border: 0; background: none; color: var(--muted); cursor: pointer; font: inherit; padding: 0 4px; } .ws-drafts .x:hover { color: var(--ink); }
+  .ws-fb-bar { display: flex; gap: 8px; align-items: center; justify-content: space-between; padding: 8px 12px 16px; } .ws-fb-bar .hint { margin: 0; }
+  .ws-fb-empty { padding: 16px 12px; margin: 0; }
   .ws-pbody { padding: 12px 16px 80px; display: grid; gap: 12px; align-content: start; }
   .sel .ws-wholebox { margin-top: 8px; background: var(--bg); }
 

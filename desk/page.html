@@ -1584,6 +1584,14 @@
   .ws-ptabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); }
   .ws-ptabs .n { min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px; background: var(--soft); color: var(--ink); font-size: var(--fs-micro); line-height: 17px; text-align: center; box-sizing: border-box; }
   .ws-ptabs .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+  /* Your feedback in the workspace's side panel: the viewer's notes not sent yet, across options. */
+  .ws-drafts { list-style: none; margin: 0; padding: 8px 12px; display: grid; gap: 8px; }
+  .ws-drafts li { display: flex; gap: 8px; align-items: flex-start; padding: 8px 12px; border-radius: var(--r-sm); background: var(--warn-soft); }
+  .ws-fb-go { all: unset; flex: 1; min-width: 0; cursor: pointer; display: grid; gap: 4px; } .ws-fb-go .about { font-size: var(--fs-micro); color: var(--muted); } .ws-fb-go .tx { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .ws-fb-go:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .ws-drafts .x { border: 0; background: none; color: var(--muted); cursor: pointer; font: inherit; padding: 0 4px; } .ws-drafts .x:hover { color: var(--ink); }
+  .ws-fb-bar { display: flex; gap: 8px; align-items: center; justify-content: space-between; padding: 8px 12px 16px; } .ws-fb-bar .hint { margin: 0; }
+  .ws-fb-empty { padding: 16px 12px; margin: 0; }
   .ws-pbody { padding: 12px 16px 80px; display: grid; gap: 12px; align-content: start; }
   .sel .ws-wholebox { margin-top: 8px; background: var(--bg); }
 
@@ -2214,7 +2222,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     wsStep: (v) => v === "1" ? "Next state" : "Previous state",
     wsBuild: "Builds exactly this version, with the states shown, as a live prototype",
     wsEdit: "Goes back to change the design before building",
-    wsSend: (v) => v === "comment" ? "A comment for the team; Design Desk works it in only when someone asks" : "Sends your note; Design Desk changes the design and the new version appears here (⌘/Ctrl+Enter)",
+    wsSend: (v) => v === "comment" ? "A comment for the team, posted now; Design Desk works it in only when someone asks" : "Keeps this note in your feedback, on this spot; nobody sees it until you send it (⌘/Ctrl+Enter)",
     wsFilter: (v) => ({ open: "Notes still open", done: "Notes marked done", all: "Every note" }[v]),
     wsClear: "Unselects the part; your note is then about the whole option",
     type: (v) => v === "bug" ? "Something on a screen is wrong or broken" : "An idea or a problem: Design Desk draws design options for it",
@@ -3436,7 +3444,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (ok) { toast("Marked as good. It goes with your feedback."); return; }
     toast(`Added to your feedback (${plural(r.drafts.length, "comment", "comments")}). Nobody sees it until you send it.`);
   }
-  async function removeDraft(c, id) { S.drafts[c.id] = (await api("DELETE", `/api/cards/${encodeURIComponent(c.id)}/drafts/${encodeURIComponent(id)}`)).drafts; renderDetail(); }
+  async function removeDraft(c, id) { S.drafts[c.id] = (await api("DELETE", `/api/cards/${encodeURIComponent(c.id)}/drafts/${encodeURIComponent(id)}`)).drafts; renderDetail(); if (S.ws.open) renderWorkspace(); }
   // What a draft or a review's comment is about, in words: its option, state and part, or the change it names.
   function aboutOf(c, a, change) {
     const v = a?.variant && (c.variants || []).find((x) => x.id === a.variant);
@@ -7053,10 +7061,19 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const panel = S.ws.panel || "comments";
     const kept = ["#ws-whole", "#ws-part"].map((q) => { const b = $(q); return { q, focus: document.activeElement === b, value: b?.value || "", caret: b ? [b.selectionStart, b.selectionEnd] : null }; });
     const open = notesOf(c).filter((n) => n.anchor.variant === v.id && n.state !== "resolved").length;
-    side.innerHTML = `<div class="ws-ptabs" role="tablist"><button role="tab" data-ws-panel="comments" aria-selected="${panel === "comments"}">Comments${open ? `<span class="n">${open}</span>` : ""}</button><button role="tab" data-ws-panel="props" aria-selected="${panel === "props"}">Properties${S.ws.selected ? `<span class="dot" title="A part is selected"></span>` : ""}</button></div>
-      <div class="ws-pbody">${panel === "comments" ? renderWsNotes(c, v, old) : wsProps(c, v, old)}</div>`;
+    side.innerHTML = `<div class="ws-ptabs" role="tablist"><button role="tab" data-ws-panel="comments" aria-selected="${panel === "comments"}">Comments${open ? `<span class="n">${open}</span>` : ""}</button><button role="tab" data-ws-panel="props" aria-selected="${panel === "props"}">Properties${S.ws.selected ? `<span class="dot" title="A part is selected"></span>` : ""}</button>${can("comment") && !c.send ? `<button role="tab" data-ws-panel="feedback" aria-selected="${panel === "feedback"}">Your feedback${draftsOf(c).length ? `<span class="n">${draftsOf(c).length}</span>` : ""}</button>` : ""}</div>
+      <div class="ws-pbody">${panel === "comments" ? renderWsNotes(c, v, old) : panel === "feedback" ? renderWsFeedback(c) : wsProps(c, v, old)}</div>`;
     for (const k of kept) { const b = $(k.q); if (!b) continue; b.value = k.value; if (k.focus) { b.focus(); b.setSelectionRange(k.caret[0], k.caret[1]); } }
     loadPictures(side);
+  }
+
+  // Your feedback in the workspace: every note of the viewer's on this request waiting to be sent,
+  // across its options; a click shows its option and part; Send feedback… opens the page's dialog.
+  function renderWsFeedback(c) {
+    const ds = draftsOf(c);
+    if (!ds.length) return `<p class="hint ws-fb-empty">Nothing in your feedback yet. Add to feedback keeps a note here until you send it.</p>`;
+    return `<ul class="ws-drafts">${ds.map((d) => `<li><button class="ws-fb-go" data-ws-draft-go="${esc(d.id)}" title="Shows where it is">${aboutOf(c, d.anchor, d.change) ? `<span class="about">${esc(aboutOf(c, d.anchor, d.change))}</span>` : ""}<span class="tx">${esc(d.text || "")}</span></button><button class="x" data-draft-del="${esc(d.id)}" aria-label="Remove this comment from your feedback" title="Remove from your feedback">✕</button></li>`).join("")}</ul>
+      <div class="ws-fb-bar"><span class="hint">${esc(plural(ds.length, "note", "notes"))}, seen by you alone</span><button class="btn primary" data-review="">Send feedback…</button></div>`;
   }
 
   function wsProps(c, v, old) {
@@ -7146,7 +7163,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       pop.innerHTML = `<div class="ph"><span class="pa">${esc(initials(S.me))}</span><b>New comment</b><span class="hint">on ${esc(on)}</span><button class="ws-ibtn" data-ws-pop-close aria-label="Close" title="Close (Esc)">${wsIcon("close")}</button></div>
         ${S.ws.edit ? `<div class="edit">Text: “${esc(S.ws.edit.from)}” → “<b>${esc(S.ws.edit.to)}</b>”</div>` : ""}
         <textarea id="ws-text" maxlength="4000" rows="3" placeholder="${shaper ? (sel ? "What should change here? e.g. make it a secondary button" : "What should change?") : "Your comment…"}"></textarea>
-        <div class="bar">${shaper ? `<button class="btn" data-ws-send="comment" title="A comment for the team; Design Desk works it in only when someone asks">Just comment</button><button class="btn primary" data-ws-send title="Design Desk changes the design (⌘↵)">Send to Design Desk</button>` : `<button class="btn primary" data-ws-send title="⌘↵">Comment</button>`}</div>`;
+        <div class="bar"><button class="btn" data-ws-send="comment">Comment</button><button class="btn primary" data-ws-send="draft">Add to feedback</button></div>`;
     } else {
       const [st, label] = noteState(c, th);
       const where = (th.anchor.label || th.anchor.text || "the whole option") + (th.anchor.view_name ? ` · ${th.anchor.view_name}` : "");
@@ -7164,9 +7181,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const nr = pop.querySelector("[data-reply]"); if (nr) { nr.value = rKeep; if (rFocus) nr.focus(); }
     placePop();
   }
-  // A box to write a comment in the side panel, and its buttons: Send to Design Desk (a change) and Just comment.
+  // A box to write a comment in the side panel, and its buttons: Comment (posted now) and Add to feedback.
   const wsBox = (where, placeholder, shaper, hint) => `<div class="ws-wholebox"><textarea id="ws-${where}" rows="2" maxlength="4000" placeholder="${esc(placeholder)}" aria-label="${esc(placeholder)}"></textarea>
-      <div class="bar">${hint ? `<span class="hint">${hint}</span>` : ""}${shaper ? `<button class="btn" data-ws-send-${where}="comment" title="A comment for the team; Design Desk works it in only when someone asks">Just comment</button><button class="btn primary" data-ws-send-${where} title="Design Desk changes the design (⌘↵)">Send to Design Desk</button>` : `<button class="btn primary" data-ws-send-${where} title="⌘↵">Comment</button>`}</div></div>`;
+      <div class="bar">${hint ? `<span class="hint">${hint}</span>` : ""}<button class="btn" data-ws-send-${where}="comment">Comment</button><button class="btn primary" data-ws-send-${where}="draft">Add to feedback</button></div></div>`;
   const initials = (me) => String(me?.my_name || me?.name || me?.email || "?").split(/[\s@._-]+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join("");
   // Beside the part, right of it when there is room, else left; a comment on the whole option at the top.
   function placePop() {
@@ -8108,21 +8125,27 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   async function wsSend(only, from = "pop") {
     const whole = from === "whole", c = S.card, v = wsVariant(c), box = $({ pop: "#ws-text", whole: "#ws-whole", part: "#ws-part" }[from]);
     const sel = from === "pop" ? S.ws.target : from === "part" ? S.ws.selected : null;
-    const kind = can("change") && only !== "comment" ? "change" : "comment";
-    // A change to the part selected takes its look changes not sent yet with it.
-    const look = kind === "change" && sel?.selector ? looksNow()[sel.selector] : null, lc = look ? lookChanges(look) : [], pc = look ? pickChanges(look) : [];
-    const typed = box?.value.trim() || "";
-    const text = [typed, lc.length || pc.length ? lookText(look) : ""].filter(Boolean).join("\n\n"); if (!text || !v) return;
-    const anchor = { variant: v.id, ...(S.ws.state ? { state: S.ws.state } : {}), ...(sel ? { selector: sel.selector, ...(sel.name ? { name: sel.name } : {}), text: sel.text, tag: sel.tag, label: sel.label, view: sel.view || null, view_name: sel.view_name || null } : { label: S.ws.state ? `the whole state “${wsDrawing(v).name}”` : "the whole option" }), ...(S.ws.edit && !whole ? { edit: S.ws.edit } : {}), ...(lc.length ? { style: lc } : {}), ...(pc.length ? { controls: pc } : {}) };
+    // Add to feedback keeps the note as a draft on its spot; Comment posts it for the team. Nothing
+    // here asks Design Desk for a change at once: that goes through the feedback (docs/desk.md → Reviews).
+    const draft = only === "draft", kind = "comment";
+    const text = box?.value.trim() || ""; if (!text || !v) return;
+    const anchor = { variant: v.id, ...(S.ws.state ? { state: S.ws.state } : {}), ...(sel ? { selector: sel.selector, ...(sel.name ? { name: sel.name } : {}), text: sel.text, tag: sel.tag, label: sel.label, view: sel.view || null, view_name: sel.view_name || null } : { label: S.ws.state ? `the whole state “${wsDrawing(v).name}”` : "the whole option" }), ...(S.ws.edit && !whole ? { edit: S.ws.edit } : {}) };
+    if (draft) {
+      await addDraft(c, { text, anchor });
+      box.value = "";
+      if (from === "pop") { S.ws.edit = null; S.ws.pop = null; S.ws.target = null; frameSay({ type: "desk-track", selector: "" }); }
+      S.ws.panel = "feedback";
+      renderWorkspace();
+      return;
+    }
     const { thread } = await api("POST", `/api/cards/${c.id}/threads`, { kind, text, anchor });
-    if (lc.length || pc.length) lookSent(sel.selector);
     box.value = "";
     if (from === "pop") { S.ws.edit = null; S.ws.pop = null; S.ws.target = null; frameSay({ type: "desk-track", selector: "" }); }
     // What was sent shows at once: the part is let go, and the new comment comes into view
     // under Comments, on a filter that lists it, lit a moment.
     if (sel || S.ws.selected) { S.ws.selected = null; S.ws.edit = null; frameSay({ type: "desk-select", selector: null }); }
     S.ws.panel = "comments"; if (S.ws.filter === "done") S.ws.filter = "open";
-    toast(kind === "change" ? "Sent. Design Desk is changing it; the design updates here by itself." : "Comment added.");
+    toast("Comment added.");
     await openCard(c.id);
     renderWorkspace();
     if (thread?.id) spot(document.querySelector(`#ws-side [data-ws-note="${CSS.escape(thread.id)}"]`), "nearest");
@@ -8582,6 +8605,17 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     }
     if (ds.wsFilter) { S.ws.filter = ds.wsFilter; renderWorkspace(); return; }
     if ("wsClear" in ds) { S.ws.selected = null; S.ws.edit = null; renderWorkspace(); frameSay({ type: "desk-select", selector: null }); return; }
+    if (ds.wsDraftGo) {
+      // A note in Your feedback: its option and state, the part selected where it has one.
+      const d = draftsOf(S.card).find((x) => x.id === ds.wsDraftGo), a = d?.anchor;
+      if (!a?.variant) return;
+      if (a.variant !== S.variant) { S.variant = a.variant; S.ws.version = null; }
+      if ((a.state || null) !== (S.ws.state || null)) { S.ws.state = a.state || null; S.ws.version = null; }
+      S.ws.selected = a.selector ? { selector: a.selector, ...(a.name ? { name: a.name } : {}), text: a.text || "", tag: a.tag || "", label: a.label || "", view: a.view || null, view_name: a.view_name || null } : null;
+      renderWorkspace();
+      frameSay({ type: "desk-select", selector: a.selector || null });
+      return;
+    }
     if (ds.wsNote) {
       if (e.target.closest("input")) return;
       const th = (S.card.threads || []).find((x) => x.id === ds.wsNote);

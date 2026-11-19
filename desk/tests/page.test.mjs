@@ -2181,6 +2181,16 @@ window.platform = { async request({ method, path, body }) {
     request.threads.push(thread);
     if (b.kind === "change") request.waiting = [{ kind: "revise", variant: b.anchor.variant, state: "queued", created: at }];
     answer = { thread };
+  } else if (path === "/api/cards/r8/drafts") {
+    // Feedback (docs/desk.md → Reviews): notes kept, then sent; Request changes makes change notes and queues the revise.
+    if (method === "POST") { const b = JSON.parse(body); (window.drafts ||= []).push({ id: "d" + calls.length, text: b.text, anchor: b.anchor || null, at }); }
+    answer = { drafts: window.drafts || [] };
+  } else if (method === "POST" && path === "/api/cards/r8/reviews") {
+    const b = JSON.parse(body), changes = b.verdict === "request-changes";
+    for (const d of window.drafts || []) request.threads.push({ id: "t" + (request.threads.length + 1), kind: changes ? "change" : "comment", state: "open", anchor: d.anchor, messages: [{ by: { email: "alice@example.com", role: "designer" }, at, text: d.text }] });
+    if (changes) request.waiting = [{ kind: "revise", variant: "v1", state: "queued", created: at }];
+    window.drafts = [];
+    answer = { review: { id: "U-" + calls.length }, inbox: changes ? { kind: "revise" } : null };
   } else answer = path === "/api/me" ? { role: "designer", email: "alice@example.com", can: { comment: true, change: true, choose: true } }
     : path === "/api/cards" ? { cards: [{ ...request, variants: 1, threads: undefined }] } : path === "/api/agenda" ? { agenda: [] }
     : path === "/api/cards/r8" ? { card: request }
@@ -2190,7 +2200,7 @@ window.platform = { async request({ method, path, body }) {
 try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
 </script>`;
 
-test("a change sent from the part selected lets the part go and shows its comment; the pill names the work and breathes while queued", async (t) => {
+test("a comment from the part selected lets the part go and shows; feedback sent from the workspace queues the work, the pill names it and breathes", async (t) => {
   // Design Desk already at work on the option, for no comment: the pill names the work and stays still.
   const run = await launch(t, BRIDGE_SEND.replace("threads: [], waiting: []", 'threads: [], waiting: [{ kind: "revise", variant: "v1", state: "claimed", created: at, started: at }]'));
   if (!run) return;
@@ -2207,16 +2217,16 @@ test("a change sent from the part selected lets the part go and shows its commen
     assert.equal(await desk.$eval(".ws-agent", (p) => p.classList.contains("on")), true);
     assert.equal(await desk.$eval(".ws-agent", (p) => getComputedStyle(p).animationName), "none", "a pill at work stays still");
 
-    // The comments on Done; a part selected in Properties; a long change sent from it.
+    // The comments on Done; a part selected in Properties; a comment posted from it.
     await desk.click('[data-ws-filter="done"]');
     await desk.click('[data-ws-mode="select"]');
     await frame.waitForFunction(() => [...document.querySelectorAll("style")].some((x) => /cursor:[^}]*!important/.test(x.textContent)));
     await desk.click('[data-ws-panel="props"]');
     await frame.click('[data-view="1"] button');
     await desk.waitForSelector("#ws-part");
-    const long = `Make it a   secondary button ${"and quieter ".repeat(8)}`;
-    await desk.fill("#ws-part", long);
-    await desk.click("#ws-side [data-ws-send-part]:not([data-ws-send-part=comment])");
+    assert.deepEqual(await desk.locator("#ws-side .ws-wholebox .bar button").allTextContents(), ["Comment", "Add to feedback"], "no Send to Design Desk: a change goes through the feedback");
+    await desk.fill("#ws-part", "Is this the main action?");
+    await desk.click("#ws-side [data-ws-send-part=comment]");
     await desk.waitForSelector('#ws-side [data-ws-note="t1"]');
     assert.equal(await desk.getAttribute('[data-ws-panel="comments"]', "aria-selected"), "true", "the side panel turns to Comments");
     assert.equal(await desk.getAttribute('[data-ws-filter="open"]', "aria-pressed"), "true", "Done turns to Open, which lists the new comment");
@@ -2224,6 +2234,19 @@ test("a change sent from the part selected lets the part go and shows its commen
     await frame.waitForFunction(() => ![...document.querySelectorAll("div")].some((d) => d.style.borderStyle === "solid" && d.textContent === "Button"));
     assert.match(await desk.getAttribute('#ws-side [data-ws-note="t1"]', "class"), /\bspot\b/, "the new comment is lit");
 
+    // Feedback from the workspace: the note waits under Your feedback, then goes with Request changes.
+    const long = `Make it a   secondary button ${"and quieter ".repeat(8)}`;
+    await desk.click('[data-ws-panel="comments"]');
+    await desk.fill("#ws-whole", long);
+    await desk.click("#ws-side [data-ws-send-whole=draft]");
+    await desk.waitForSelector("#ws-side .ws-drafts li");
+    assert.equal(await desk.getAttribute('[data-ws-panel="feedback"]', "aria-selected"), "true", "the side panel shows Your feedback");
+    assert.match(await desk.textContent('[data-ws-panel="feedback"]'), /Your feedback\s*1/);
+    assert.match(await desk.textContent("#ws-side .ws-drafts"), /the whole option[\s\S]*Make it a/);
+    await desk.click('#ws-side [data-review=""]');
+    await desk.click('#cf-choices input[value="request-changes"]');
+    await desk.click("#cf-ok");
+    await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/r8/reviews"));
     // Queued: the pill names the comment by its first words, on one line, and breathes.
     const words = long.replace(/\s+/g, " ").trim().slice(0, 79).trimEnd();
     await desk.waitForFunction(() => !document.querySelector(".ws-agent")?.classList.contains("on"));
@@ -2233,9 +2256,13 @@ test("a change sent from the part selected lets the part go and shows its commen
     assert.equal(await desk.$eval(".ws-agent .dd-spin", (p) => getComputedStyle(p).animationName), "ws-wait-dd");
 
     // A second change, on the whole option: the pill counts them.
+    await desk.click('[data-ws-panel="comments"]');
     await desk.fill("#ws-whole", "A bigger title");
-    await desk.click("#ws-side [data-ws-send-whole]:not([data-ws-send-whole=comment])");
-    await desk.waitForSelector('#ws-side [data-ws-note="t2"]');
+    await desk.click("#ws-side [data-ws-send-whole=draft]");
+    await desk.waitForSelector("#ws-side .ws-drafts li");
+    await desk.click('#ws-side [data-review=""]');
+    await desk.click('#cf-choices input[value="request-changes"]');
+    await desk.click("#cf-ok");
     await desk.waitForFunction(() => /^Working on 2 comments · Tabs$/.test(document.querySelector(".ws-agent")?.textContent.trim() || ""));
   } finally {
     await run.close();

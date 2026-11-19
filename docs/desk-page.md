@@ -42,10 +42,12 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   and sets the pointer. Esc steps back: a menu, the comment open, the selection, the workspace.
   It opens in Click through; an older version and the final check offer only Click through
   (**Make more changes** after a final check opens in Select).
-  Each tool does one thing. **Comment:** a click on a part opens a comment beside it (Send to
-  Design Desk, Just comment), and opening it leaves the side panel as it is. Once any comment is
-  sent (in place, or from the side panel), the part is let go and the panel turns to Comments with
-  the new one in view, lit a moment. **Edit text:** the text typed in
+  Each tool does one thing. **Comment:** a click on a part opens a comment beside it (**Comment**,
+  posted for the team at once, and **Add to feedback**, kept on that spot until the feedback is
+  sent, [desk.md](desk.md) → Reviews; nothing in the workspace asks Design Desk for a change at
+  once), and opening it leaves the side panel as it is. Once a comment is posted (in place, or
+  from the side panel), the part is let go and the panel turns to Comments with the new one in
+  view, lit a moment; one added to the feedback turns it to **Your feedback**. **Edit text:** the text typed in
   place shows ✓ (Save, Enter) and ✕ (Cancel, Esc; a click elsewhere in the design cancels too).
   Save changes the words in the page at once, as the drawing's next version (`POST
   /api/cards/<id>/text`, `text_edit` on the drawing), with nothing for Design Desk to do but the
@@ -54,7 +56,10 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   **Properties**: why it is like this, **What should change?**, Every state, Try 3 ways, and Change
   the look. A comment's number on the design opens it in place (Reply, Work it in, Mark done), as a
   click on it in **Comments**, the panel's other tab: every comment on the option by state, a box
-  for one on the whole option or state, Open / Done / All and Work in all. Pins are in the Desk's brown,
+  for one on the whole option or state, Open / Done / All and Work in all; and **Your feedback**,
+  the third tab for who may comment (with its count): every note of theirs on the request waiting
+  to be sent, across options, each with what it is about and ✕, a click showing its option, state
+  and part, and **Send feedback…**, the page's dialog. A note in the feedback is no pin. Pins are in the Desk's brown,
   small and green once done, with a spinner while Design Desk works on them. The design fills the
   canvas a little in from its edges and the tool bar stands under it, so the canvas never scrolls. A part selected is let go
   by Click through, by another option, state or version, and once it no longer shows in the design
