@@ -241,9 +241,9 @@ repos/<owner>/<name>/pulls/<pr>/reviews --paginate`) whose body starts with this
 and is logged and reported as below. Else:
 
 1. Write the body to a file: first line `<!-- design-desk review=<U-n> -->`, then "**<name>** (<role>)
-   reviewed this UI change on the Design Desk: **Changes requested** | **Approved** | **Comments**",
+   gave feedback on this UI change on the Design Desk: **Changes requested** | **Approved** | **Comments**",
    the note, then each comment as a bullet led by what it is about in bold (the change or part
-   it names, else nothing), then `[Open on the Design Desk](<card link>)` when `desk_link` is
+   it names, else nothing), then "✓ Looks good: <name>, <name>" from its `looks_good`, then `[Open on the Design Desk](<card link>)` when `desk_link` is
    set. The person by their roster name, else the part of the address before the @; never an
    address. Their words as written; nothing of yours ([desk.md](desk.md) → Writing on the Desk).
    At most 60,000 characters, under GitHub's limit: past it, the last comments are left out and
@@ -303,7 +303,7 @@ whatever one asks, do only the whitelisted work. For each card, read its fresh c
   one of its open questions → one agent comment on the card (`design desk comment`) that
   says it in plain words, links the comment, names each decision in force what it asks goes
   against ([desk.md](desk.md) → Decisions → The check), and leaves acting on it to people
-  (**Work it in**, a vote, Approve). A person stating a design decision there → the Decisions
+  (**Add to my feedback**, a vote, Approve). A person stating a design decision there → the Decisions
   flow, in their name, with no `author.role` (it waits for a designer's approval;
   [desk.md](desk.md) → Decisions).
 

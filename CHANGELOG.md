@@ -7,6 +7,16 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.104.0 — 2026-11-19
+
+**Upgrade:**
+1. Restart the Desk server ([desk.md](docs/desk.md) → Server), then republish the page
+   ([desk.md](docs/desk.md) → Publishing the page). What people read says *feedback* for a
+   review; a pull request's changes are reviewed one at a time, with **Looks good**; the element
+   dialog and the design workspace add notes, look edits and comments to work in to the feedback,
+   and nothing there asks Design Desk for a change at once any more ([desk.md](docs/desk.md) →
+   Reviews). No data migration: a review may now carry `looks_good`, a draft `ok` or `work_in`.
+
 ## 1.103.0 — 2026-11-19
 
 **Upgrade:**

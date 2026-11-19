@@ -856,14 +856,11 @@ test("a change shows its age and gets handled, pictures step through, the form a
     await desk.click('[data-handle="1"]');
     assert.deepEqual(await sent("/api/cards/ch2/handled", 1), { handled: true });
 
-    // The gallery steps through the change's pictures.
+    // The change shown opens in the gallery; each change is a tab of its own (docs/desk-page.md → Changes).
+    assert.deepEqual(await desk.locator("#detail .chg-tabs button").allTextContents(), ["1The list", "2The card"]);
     await desk.click('[data-zoom="A-1"]');
     await desk.waitForSelector(".zoom figcaption");
-    assert.equal(await desk.textContent(".zoom figcaption"), "1 / 2 · The list");
-    await desk.press("body", "ArrowRight");
-    await desk.waitForFunction(() => document.querySelector(".zoom figcaption").textContent.startsWith("2 / 2"));
-    await desk.click(".zoom .gal.next");
-    await desk.waitForFunction(() => document.querySelector(".zoom figcaption").textContent === "1 / 2 · The list");
+    assert.match(await desk.textContent(".zoom figcaption"), /The list/);
     await desk.press("body", "Escape");
     assert.equal(await desk.locator(".zoom").count(), 0, "Escape closes the gallery");
 
@@ -887,10 +884,15 @@ test("a change shows its age and gets handled, pictures step through, the form a
     // ch4 is handled: it is listed under Handled.
     await desk.click('[data-filter="newFilter:handled"]');
     await desk.click('[data-card="ch4"]');
+    await desk.waitForFunction(() => document.querySelectorAll("figure[data-frame]").length === 0 && document.querySelector('[data-zoom="A-5"] img')?.naturalHeight);
+    assert.deepEqual(await desk.$$eval(".shot", (fs) => fs.map((f) => [f.dataset.zoom, f.querySelectorAll(".mark").length])), [["A-4", 1], ["A-5", 1]], "the same size: both keep them");
+    await desk.click('#detail .chg-tabs [data-chg="Taller"]');
     await desk.waitForFunction(() => document.querySelectorAll("figure[data-frame]").length === 0 && document.querySelector('[data-zoom="A-7"] img')?.naturalHeight);
     assert.deepEqual(await desk.$$eval(".shot", (fs) => fs.map((f) => [f.dataset.zoom, f.querySelectorAll(".mark").length])),
-      [["A-4", 1], ["A-5", 1], ["A-6", 0], ["A-7", 1]], "the shorter before picture loses its frames");
+      [["A-6", 0], ["A-7", 1]], "the shorter before picture loses its frames");
     assert.equal(await desk.getAttribute('[data-zoom="A-6"]', "data-marks"), null, "and the gallery draws none on it");
+    await desk.click('#detail .chg-tabs [data-chg="Same"]');
+    await desk.waitForSelector('[data-zoom="A-4"]');
     // Until the sizes are compared, the frames stay hidden, on the card and in the gallery.
     await desk.$eval('[data-zoom="A-4"]', (f) => { f.dataset.frame = "A-5"; });
     assert.equal(await desk.isVisible('[data-zoom="A-4"] .mark'), false);
@@ -1820,6 +1822,7 @@ window.platform = { async request({ method, path, body }) {
     : path === "/api/cards" ? { cards: [{ ...request, variants: 2, threads: undefined }] } : path === "/api/agenda" ? { agenda: [] }
     : path === "/api/cards/r5" ? { card: request }
     : path === "/api/cards/r5/work-in" ? { threads: JSON.parse(body).threads.map((id) => ({ id })), inbox: { id: "I-1" } }
+    : path === "/api/cards/r5/drafts" ? { drafts: (window.drafts = method === "POST" ? [...(window.drafts || []), { id: "d" + calls.length, ...JSON.parse(body) }] : window.drafts || []) }
     : path === "/api/assets/A-1" ? { contentType: "text/html", encoding: "utf8", data: '<body><div data-view="1"><button>Next</button></div><div data-view="2"><button>Save</button></div></body>' }
     : path === "/api/assets/A-8" ? pic("red") : path === "/api/assets/A-9" ? pic("blue") : {};
   return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
@@ -1874,7 +1877,7 @@ test("a worked-in note shows the place before and after, outlined, in the thread
   }
 });
 
-test("notes in the workspace: open and done, a whole conversation, worked in together; no winner to pick; designs go to the Slack thread", async (t) => {
+test("notes in the workspace: open and done, a whole conversation, added to the feedback together; no winner to pick; designs go to the Slack thread", async (t) => {
   const run = await launch(t, BRIDGE_NOTES);
   if (!run) return;
   const { desk, posts } = run;
@@ -1914,9 +1917,13 @@ test("notes in the workspace: open and done, a whole conversation, worked in tog
     await desk.fill('#ws-pop [data-reply="t1"]', "Make it primary");
     await desk.click('#ws-pop [data-send-reply="t1"]');
     assert.deepEqual(await sent("/api/threads/t1/messages", 1), { text: "Make it primary" });
+    // Add all to my feedback: each comment waits there, worked in when the feedback goes with Request changes.
     await desk.waitForSelector('#ws-side [data-work-in="t1,t2"]');
+    assert.match(await desk.textContent('#ws-side [data-work-in="t1,t2"]'), /Add all 2 to my feedback/);
     await desk.click('#ws-side [data-work-in="t1,t2"]');
-    assert.deepEqual(await sent("/api/cards/r5/work-in", 1), { threads: ["t1", "t2"] });
+    await sent("/api/cards/r5/drafts", 2);
+    assert.deepEqual((await posts("/api/cards/r5/drafts")).map((x) => JSON.parse(x.body)), [{ work_in: "t1" }, { work_in: "t2" }]);
+    assert.equal((await posts("/api/cards/r5/work-in")).length, 0, "nothing worked in at once");
   } finally {
     await run.close();
   }
@@ -2062,6 +2069,7 @@ window.platform = { async request({ method, path, body }) {
     : path === "/api/cards" ? { cards: [{ ...request, variants: 1, threads: undefined }] } : path === "/api/agenda" ? { agenda: [] }
     : path === "/api/cards/r7" ? { card: request }
     : path === "/api/cards/r7/actions" ? { inbox: { kind: "explore", scope: "before" } }
+    : path === "/api/cards/r7/drafts" ? { drafts: (window.drafts = method === "POST" ? [...(window.drafts || []), { id: "d" + calls.length, ...JSON.parse(body), at: "2026-11-18T10:00:00Z" }] : window.drafts || []) }
     : path === "/api/assets/A-1" ? { contentType: "text/html", encoding: "utf8", data: ${JSON.stringify(BEFORE_PAGE).replace(/</g, "\\u003c")} }
     : path === "/api/assets/A-now" ? { contentType: "text/html", encoding: "utf8", data: ${JSON.stringify(NOW_PAGE).replace(/</g, "\\u003c")} }
     : path === "/api/assets/A-shot" ? { contentType: "image/svg+xml", encoding: "utf8", data: ${JSON.stringify(SHOT).replace(/</g, "\\u003c")} } : {};
@@ -2129,6 +2137,14 @@ test("an element's dialog lists the part's open comments and comments on the par
     await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/r7/threads"));
     const body = JSON.parse((await posts("/api/cards/r7/threads"))[0].body);
     assert.deepEqual([body.kind, body.text, body.anchor.variant, body.anchor.selector, body.anchor.label, body.anchor.view, body.anchor.view_name], ["comment", "Make the label shorter", "v1", "#label", "Limit label", "1", "Agents"]);
+    // Add to feedback keeps a note on the part, with the same anchor, until the feedback is sent.
+    await desk.fill("#el-text", "Bigger, too");
+    await desk.click("#element-dialog [data-el-draft]");
+    await desk.waitForSelector("#element-dialog .el-drafts .dbub");
+    const draft = JSON.parse((await posts("/api/cards/r7/drafts"))[0].body);
+    assert.deepEqual([draft.text, draft.anchor.variant, draft.anchor.selector, draft.anchor.label], ["Bigger, too", "v1", "#label", "Limit label"]);
+    assert.match(await desk.textContent("#element-dialog .el-drafts"), /Not sent yet[\s\S]*Bigger, too/);
+    assert.equal(await desk.inputValue("#el-text"), "", "the box is empty again");
     // A note in the list opens the design workspace at it.
     await desk.click('#element-dialog [data-goto="T-1"]');
     await desk.waitForSelector("#ws-frame");
@@ -2170,6 +2186,16 @@ window.platform = { async request({ method, path, body }) {
     request.threads.push(thread);
     if (b.kind === "change") request.waiting = [{ kind: "revise", variant: b.anchor.variant, state: "queued", created: at }];
     answer = { thread };
+  } else if (path === "/api/cards/r8/drafts") {
+    // Feedback (docs/desk.md → Reviews): notes kept, then sent; Request changes makes change notes and queues the revise.
+    if (method === "POST") { const b = JSON.parse(body); (window.drafts ||= []).push({ id: "d" + calls.length, text: b.text, anchor: b.anchor || null, at }); }
+    answer = { drafts: window.drafts || [] };
+  } else if (method === "POST" && path === "/api/cards/r8/reviews") {
+    const b = JSON.parse(body), changes = b.verdict === "request-changes";
+    for (const d of window.drafts || []) request.threads.push({ id: "t" + (request.threads.length + 1), kind: changes ? "change" : "comment", state: "open", anchor: d.anchor, messages: [{ by: { email: "alice@example.com", role: "designer" }, at, text: d.text }] });
+    if (changes) request.waiting = [{ kind: "revise", variant: "v1", state: "queued", created: at }];
+    window.drafts = [];
+    answer = { review: { id: "U-" + calls.length }, inbox: changes ? { kind: "revise" } : null };
   } else answer = path === "/api/me" ? { role: "designer", email: "alice@example.com", can: { comment: true, change: true, choose: true } }
     : path === "/api/cards" ? { cards: [{ ...request, variants: 1, threads: undefined }] } : path === "/api/agenda" ? { agenda: [] }
     : path === "/api/cards/r8" ? { card: request }
@@ -2179,7 +2205,7 @@ window.platform = { async request({ method, path, body }) {
 try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
 </script>`;
 
-test("a change sent from the part selected lets the part go and shows its comment; the pill names the work and breathes while queued", async (t) => {
+test("a comment from the part selected lets the part go and shows; feedback sent from the workspace queues the work, the pill names it and breathes", async (t) => {
   // Design Desk already at work on the option, for no comment: the pill names the work and stays still.
   const run = await launch(t, BRIDGE_SEND.replace("threads: [], waiting: []", 'threads: [], waiting: [{ kind: "revise", variant: "v1", state: "claimed", created: at, started: at }]'));
   if (!run) return;
@@ -2196,16 +2222,16 @@ test("a change sent from the part selected lets the part go and shows its commen
     assert.equal(await desk.$eval(".ws-agent", (p) => p.classList.contains("on")), true);
     assert.equal(await desk.$eval(".ws-agent", (p) => getComputedStyle(p).animationName), "none", "a pill at work stays still");
 
-    // The comments on Done; a part selected in Properties; a long change sent from it.
+    // The comments on Done; a part selected in Properties; a comment posted from it.
     await desk.click('[data-ws-filter="done"]');
     await desk.click('[data-ws-mode="select"]');
     await frame.waitForFunction(() => [...document.querySelectorAll("style")].some((x) => /cursor:[^}]*!important/.test(x.textContent)));
     await desk.click('[data-ws-panel="props"]');
     await frame.click('[data-view="1"] button');
     await desk.waitForSelector("#ws-part");
-    const long = `Make it a   secondary button ${"and quieter ".repeat(8)}`;
-    await desk.fill("#ws-part", long);
-    await desk.click("#ws-side [data-ws-send-part]:not([data-ws-send-part=comment])");
+    assert.deepEqual(await desk.locator("#ws-side .ws-wholebox .bar button").allTextContents(), ["Comment", "Add to feedback"], "no Send to Design Desk: a change goes through the feedback");
+    await desk.fill("#ws-part", "Is this the main action?");
+    await desk.click("#ws-side [data-ws-send-part=comment]");
     await desk.waitForSelector('#ws-side [data-ws-note="t1"]');
     assert.equal(await desk.getAttribute('[data-ws-panel="comments"]', "aria-selected"), "true", "the side panel turns to Comments");
     assert.equal(await desk.getAttribute('[data-ws-filter="open"]', "aria-pressed"), "true", "Done turns to Open, which lists the new comment");
@@ -2213,6 +2239,19 @@ test("a change sent from the part selected lets the part go and shows its commen
     await frame.waitForFunction(() => ![...document.querySelectorAll("div")].some((d) => d.style.borderStyle === "solid" && d.textContent === "Button"));
     assert.match(await desk.getAttribute('#ws-side [data-ws-note="t1"]', "class"), /\bspot\b/, "the new comment is lit");
 
+    // Feedback from the workspace: the note waits under Your feedback, then goes with Request changes.
+    const long = `Make it a   secondary button ${"and quieter ".repeat(8)}`;
+    await desk.click('[data-ws-panel="comments"]');
+    await desk.fill("#ws-whole", long);
+    await desk.click("#ws-side [data-ws-send-whole=draft]");
+    await desk.waitForSelector("#ws-side .ws-drafts li");
+    assert.equal(await desk.getAttribute('[data-ws-panel="feedback"]', "aria-selected"), "true", "the side panel shows Your feedback");
+    assert.match(await desk.textContent('[data-ws-panel="feedback"]'), /Your feedback\s*1/);
+    assert.match(await desk.textContent("#ws-side .ws-drafts"), /the whole option[\s\S]*Make it a/);
+    await desk.click('#ws-side [data-review=""]');
+    await desk.click('#cf-choices input[value="request-changes"]');
+    await desk.click("#cf-ok");
+    await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/r8/reviews"));
     // Queued: the pill names the comment by its first words, on one line, and breathes.
     const words = long.replace(/\s+/g, " ").trim().slice(0, 79).trimEnd();
     await desk.waitForFunction(() => !document.querySelector(".ws-agent")?.classList.contains("on"));
@@ -2222,9 +2261,13 @@ test("a change sent from the part selected lets the part go and shows its commen
     assert.equal(await desk.$eval(".ws-agent .dd-spin", (p) => getComputedStyle(p).animationName), "ws-wait-dd");
 
     // A second change, on the whole option: the pill counts them.
+    await desk.click('[data-ws-panel="comments"]');
     await desk.fill("#ws-whole", "A bigger title");
-    await desk.click("#ws-side [data-ws-send-whole]:not([data-ws-send-whole=comment])");
-    await desk.waitForSelector('#ws-side [data-ws-note="t2"]');
+    await desk.click("#ws-side [data-ws-send-whole=draft]");
+    await desk.waitForSelector("#ws-side .ws-drafts li");
+    await desk.click('#ws-side [data-review=""]');
+    await desk.click('#cf-choices input[value="request-changes"]');
+    await desk.click("#cf-ok");
     await desk.waitForFunction(() => /^Working on 2 comments · Tabs$/.test(document.querySelector(".ws-agent")?.textContent.trim() || ""));
   } finally {
     await run.close();
@@ -2436,13 +2479,15 @@ window.platform = { async request({ method, path, body }) {
   const answer = path === "/api/me" ? { role: window.ROLE || "admin", email: "alice@example.com", can: { comment: true, change: true, revise: true } }
     : path === "/api/cards" ? { cards: [{ ...request, variants: 1, threads: undefined }] } : path === "/api/agenda" ? { agenda: [] }
     : path === "/api/cards/r7" ? { card: request }
+    : path === "/api/cards/r7/drafts" ? { drafts: (window.drafts = method === "POST" ? [...(window.drafts || []), { id: "d" + calls.length, ...JSON.parse(body) }] : window.drafts || []) }
+    : path === "/api/cards/r7/reviews" ? (window.drafts = [], { review: { id: "U-1" }, inbox: { kind: "revise" } })
     : path === "/api/assets/A-7" ? { contentType: "text/html", encoding: "utf8", data: ${JSON.stringify(LOOK_DESIGN).replace(/</g, "\\u003c")} } : {};
   return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
 } };
 try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
 </script>`;
 
-test("the look palette: in the side panel under the part picked, a preview only, the product's colors first, sent as one change note", async (t) => {
+test("the look palette: in the side panel under the part picked, a preview only, the product's colors first, added to the feedback and sent with it", async (t) => {
   const run = await launch(t, BRIDGE_LOOK);
   if (!run) return;
   const { desk, posts } = run;
@@ -2481,14 +2526,13 @@ test("the look palette: in the side panel under the part picked, a preview only,
     assert.match(await desk.textContent("#ws-palette .pl-sum"), /background --brand \(#3b5bdb\) → --danger \(#d6336c\)/, "the palette says what changed");
     assert.equal(await desk.locator(".ws-looks").count(), 0, "the part selected is not listed again under the palette");
 
+    // Add to feedback: the edit waits in the feedback, in this browser; nothing is sent yet.
     await desk.click("#ws-palette [data-pl-send]");
-    await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/r7/threads"));
-    const body = JSON.parse((await posts("/api/cards/r7/threads"))[0].body);
-    assert.equal(body.kind, "change");
-    assert.deepEqual(body.anchor.style, [{ prop: "background-color", from: "rgb(59, 91, 219)", to: "var(--danger)" }]);
-    assert.match(body.text, /^Change the look of Button “Save”: background --brand \(#3b5bdb\) → --danger \(#d6336c\)\.$/);
-    assert.equal(await style("backgroundColor"), "rgb(214, 51, 108)", "the design keeps showing it until the new version");
-    assert.equal(await desk.locator(".ws-looks").count(), 0, "nothing left to send");
+    await desk.waitForSelector("#ws-palette .chip");
+    assert.match(await desk.textContent("#ws-palette .pl-foot"), /In your feedback/);
+    assert.equal((await posts("/api/cards/r7/threads")).length + (await posts("/api/cards/r7/drafts")).length, 0, "nothing sent before the feedback is");
+    assert.match(await desk.textContent('[data-ws-panel="feedback"]'), /Your feedback\s*1/);
+    assert.equal(await style("backgroundColor"), "rgb(214, 51, 108)", "the design keeps showing it");
 
     // A flex box has Layout.
     await frame.click(".row", { position: { x: 300, y: 10 } });
@@ -2507,8 +2551,20 @@ test("the look palette: in the side panel under the part picked, a preview only,
     assert.equal(await desk.locator('#ws-palette .pl-reset[data-pl-pick="kind|link"]').count(), 0, "back to the option drawn: nothing to undo there");
     await desk.click('#ws-palette [data-pl-pick="kind|button"]');
     await desk.click("#ws-palette [data-pl-send]");
-    await desk.waitForFunction(() => calls.filter((c) => c.method === "POST" && c.path === "/api/cards/r7/threads").length === 2);
-    const smart = JSON.parse((await posts("/api/cards/r7/threads"))[1].body);
+    await desk.waitForFunction(() => /Your feedback\s*2/.test(document.querySelector('[data-ws-panel="feedback"]')?.textContent || ""));
+    // Sent with Request changes, each edit becomes a note with its values, then the feedback goes.
+    await desk.click('[data-ws-panel="feedback"]');
+    assert.match(await desk.textContent("#ws-side .ws-drafts"), /Look of Button “Save” · this browser[\s\S]*Look of More link · this browser/);
+    await desk.click('#ws-side [data-review=""]');
+    assert.match(await desk.textContent("#cf-body"), /drawn only with Request changes/);
+    await desk.click('#cf-choices input[value="request-changes"]');
+    await desk.click("#cf-ok");
+    await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/r7/reviews"));
+    const [body, smart] = (await posts("/api/cards/r7/drafts")).map((x) => JSON.parse(x.body));
+    assert.deepEqual(body.anchor.style, [{ prop: "background-color", from: "rgb(59, 91, 219)", to: "var(--danger)" }]);
+    assert.equal(body.anchor.variant, "v1");
+    assert.match(body.text, /^Change the look of Button “Save”: background --brand \(#3b5bdb\) → --danger \(#d6336c\)\.$/);
+    assert.equal(JSON.parse((await posts("/api/cards/r7/reviews"))[0].body).verdict, "request-changes");
     assert.deepEqual(smart.anchor.controls, [{ control: "shape", label: "Corners", from: "None", to: "Round", source: "web/src/app.css" }, { control: "kind", label: "Type", from: "Link", to: "Button", source: "web/src/ui/button.tsx" }]);
     assert.equal(smart.anchor.selector, "#more");
     assert.match(smart.text, /^Change the look of More link: Corners None → Round \(from web\/src\/app\.css\); Type Link → Button \(from web\/src\/ui\/button\.tsx\)\.$/);
@@ -3640,9 +3696,9 @@ test("a caption that only repeats its stage is not said twice", (t) => open(t, D
   await desk.click('[data-tab="new"]');
   await desk.click('#list [data-card="ch1"]');
   await desk.waitForSelector("#detail figcaption");
-  const caps = await desk.$$eval("#detail figcaption", (els) => els.map((e) => e.textContent.replace(/\s+/g, " ").trim()));
+  const caps = await desk.$$eval("#detail .cv-col", (els) => els.map((e) => e.textContent.replace(/\s+/g, " ").trim()));
   assert.doesNotMatch(caps[0], /Before Before/, "Before under Before is said once");
-  assert.match(caps[1], /^After After the redesign/, "a caption that says more stays");
+  assert.match(caps[1], /^After ?After the redesign/, "a caption that says more stays");
 }));
 
 test("How it works and Designs show the developer's process; simple mode leaves out its steps", (t) => open(t, DESK({ role: "developer", email: "dev@example.com", simple: false, can: { request: true, designs: true, built: true } }, []), async (desk) => {
@@ -3960,7 +4016,7 @@ test("simple mode's Request changes opens the review: a note alone is sent with 
   assert.deepEqual(await desk.$$eval("#detail .sh-more .menu > *", (xs) => xs.map((x) => x.textContent.trim())), ["Close…"]);
   await desk.keyboard.press("Escape");
   await desk.click('#detail .sh-acts [data-review="request-changes"]');
-  assert.equal(await desk.textContent("#cf-title"), "Send your review");
+  assert.equal(await desk.textContent("#cf-title"), "Send your feedback");
   assert.equal(await desk.$eval("#cf-choices input:checked", (x) => x.value), "request-changes");
   assert.deepEqual(await desk.$$eval("#cf-choices input", (xs) => xs.map((x) => x.value)), ["request-changes", "approve", "comment"]);
   await desk.click("#cf-ok");
@@ -3980,7 +4036,7 @@ window.platform = { async request({ method, path, body }) {
   const b = JSON.parse(body || "{}"), id = decodeURIComponent(path.split("/")[3] || ""), json = (x, status = 200) => ({ status, contentType: "application/json", body: JSON.stringify(x) });
   if (method !== "GET") posts.push({ method, path, body: b });
   if (/\\/drafts$/.test(path) && method === "GET") return window.failDrafts ? json({ error: "down" }, 503) : json({ drafts: drafts[id] || [] });
-  if (/\\/drafts$/.test(path)) { drafts[id] = [...(drafts[id] || []), { id: "d" + posts.length, text: b.text, anchor: b.anchor || null, ...(b.change ? { change: b.change } : {}), at: "2026-11-18T10:00:00Z" }]; return json({ drafts: drafts[id] }, 201); }
+  if (/\\/drafts$/.test(path)) { drafts[id] = [...(drafts[id] || []), b.ok ? { id: "d" + posts.length, ok: true, change: b.change, at: "2026-11-18T10:00:00Z" } : { id: "d" + posts.length, text: b.text, anchor: b.anchor || null, ...(b.change ? { change: b.change } : {}), at: "2026-11-18T10:00:00Z" }]; return json({ drafts: drafts[id] }, 201); }
   if (/\\/drafts\\//.test(path)) { drafts[id] = (drafts[id] || []).filter((d) => d.id !== path.split("/")[5]); return json({ drafts: drafts[id] }); }
   if (/\\/reviews$/.test(path)) { if (!(drafts[id] || []).length && !b.note) return json({ error: "Write a comment or a note first." }, 400); drafts[id] = []; return json({ review: { id: "U-1" }, inbox: cards.find((c) => c.id === id)?.kind === "change" ? { kind: "review" } : { kind: "revise" } }, 201); }
   if (method !== "GET") return json({ thread: { id: "T-9" } });
@@ -3992,16 +4048,17 @@ window.platform = { async request({ method, path, body }) {
 try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
 </script>`;
 
-test("simple mode: Add to review keeps a comment for the review, Comment now posts it; Your review lists and removes them; the head counts them", (t) => open(t, REVIEW_DESK(HEAD_ME, [drawn, prChange]), async (desk) => {
+test("simple mode: Add to feedback keeps a comment for the feedback, Comment posts it; Your feedback lists and removes them; the head counts them", (t) => open(t, REVIEW_DESK(HEAD_ME, [drawn, prChange]), async (desk) => {
   await desk.waitForSelector('#list [data-card="R-5"]');
   await desk.click('#list [data-card="R-5"]');
   await desk.waitForSelector("#detail .rbox");
   assert.match(await desk.getAttribute("#detail .rbox textarea", "placeholder"), /Option 1 · Calm/, "the box is about the option shown");
+  assert.deepEqual(await desk.locator("#detail .rbox .bar button").allTextContents(), ["Add to feedback", "Comment"], "the box's two buttons, in the words people read");
   await desk.fill("#detail .rbox textarea", "Tighter rows.");
   await desk.click("#detail .rbox [data-draft-add]");
   await desk.waitForSelector("#detail .yreview .dbub");
   assert.deepEqual(await desk.evaluate(() => posts.find((p) => /drafts$/.test(p.path)).body), { text: "Tighter rows.", anchor: { variant: "v1" } });
-  assert.match(await desk.textContent("#detail .yreview"), /Your review · 1[\s\S]*Option 1 · Calm[\s\S]*Tighter rows\./);
+  assert.match(await desk.textContent("#detail .yreview"), /Your feedback · 1[\s\S]*Option 1 · Calm[\s\S]*Tighter rows\./);
   assert.match(await desk.textContent('#detail .sh-acts [data-review="request-changes"]'), /Request changes · 1/);
   assert.equal(await desk.locator("#detail .sh-acts .btn.primary").count(), 1, "one next step");
   assert.equal(await desk.getAttribute('#detail .sh-acts [data-review="request-changes"]', "class"), "btn primary", "and it is Request changes");
@@ -4011,7 +4068,7 @@ test("simple mode: Add to review keeps a comment for the review, Comment now pos
   await desk.click("#detail .yreview .dbub:last-child [data-draft-del]");
   await desk.waitForFunction(() => document.querySelectorAll("#detail .yreview .dbub").length === 1);
   assert.ok(await desk.evaluate(() => posts.some((p) => p.method === "DELETE" && /\/drafts\/d/.test(p.path))));
-  // Comment now: a comment on the Desk at once, not in the review.
+  // Comment: a comment on the Desk at once, not in the feedback.
   await desk.fill("#detail .rbox textarea", "Looks calm.");
   await desk.click("#detail .rbox [data-draft-now]");
   await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/R-5/threads"));
@@ -4073,13 +4130,13 @@ test("full mode shows a sent review as one block in the conversation", (t) => op
   assert.match(await desk.textContent("#detail .sh-resp"), /Changes requested · developer/, "full mode says who makes the next version too");
 }));
 
-test("full mode collects drafts under an option and sends them from Your review with the same dialog", (t) => open(t, REVIEW_DESK({ ...HEAD_ME, simple: false }, [drawn]), async (desk) => {
+test("full mode collects drafts under an option and sends them from Your feedback with the same dialog", (t) => open(t, REVIEW_DESK({ ...HEAD_ME, simple: false }, [drawn]), async (desk) => {
   await desk.evaluate(() => { location.hash = "#R-5"; });
   await desk.waitForSelector("#detail .rbox");
   await desk.fill("#detail .rbox textarea", "Calmer bar.");
   await desk.click("#detail .rbox [data-draft-add]");
   await desk.waitForSelector("#detail .talk .yreview .dbub");
-  assert.match(await desk.textContent("#detail .talk .yreview"), /Your review · 1[\s\S]*Calmer bar\./);
+  assert.match(await desk.textContent("#detail .talk .yreview"), /Your feedback · 1[\s\S]*Calmer bar\./);
   await desk.click('#detail .yreview [data-review=""]');
   assert.deepEqual(await desk.$$eval("#cf-choices input", (xs) => xs.map((x) => x.value)), ["request-changes", "approve", "comment"]);
   await desk.click('#cf-choices input[value="comment"]');
@@ -4181,6 +4238,92 @@ test("simple mode's change page: lead, the changes, what to look at, comments; N
   await desk.evaluate(() => { location.hash = "#P-4"; });
   await desk.waitForFunction(() => /Quiet/.test(document.querySelector("#detail .shead h2")?.textContent || ""));
   assert.match(await desk.textContent("#detail .sfound"), /Nothing to flag/);
+}));
+
+// A pull request's changes, one at a time (docs/desk-page.md → Changes): a pair, then lone screens.
+const svgShot = (c) => ({ contentType: "image/svg+xml", encoding: "utf8", data: `<svg xmlns="http://www.w3.org/2000/svg" width="8" height="4"><rect width="8" height="4" fill="${c}"/></svg>` });
+const threeChanges = { ...prChange, id: "P-7", title: "Spend in the list", source: { ...prChange.source, draft: false },
+  screens: [{ asset: "S-b", stage: "before", pair: "Agents list", source: "instance" }, { asset: "S-a", stage: "after", pair: "Agents list", source: "instance", marks: [{ x: 0.5, y: 0, w: 0.5, h: 0.5 }] },
+    { asset: "S-d", stage: "diff", pair: "Agents list" }, { asset: "S-1", caption: "The limit dialog", source: "instance" }, { asset: "S-2", caption: "The usage page", source: "pr" }] };
+const CHANGES_DESK = (me) => REVIEW_DESK(me, [threeChanges, { ...prChange, id: "P-8", title: "Nothing yet" }]).replace("const answer = path ===",
+  `if (path.startsWith("/api/assets/S-")) return json(${JSON.stringify(svgShot("#36c"))});
+  const answer = path ===`);
+for (const simple of [true, false]) {
+  test(`${simple ? "simple" : "full"} mode: a pull request's changes are tabs, one shown with its pictures; Add to feedback and Looks good name the change`, (t) => open(t, CHANGES_DESK({ ...HEAD_ME, simple }), async (desk) => {
+    await desk.waitForSelector("#list");
+    await desk.evaluate(() => { location.hash = "#P-7"; });
+    await desk.waitForSelector("#detail .chg-tabs");
+    assert.deepEqual(await desk.locator("#detail .chg-tabs button").allTextContents(), ["1Agents list", "2The limit dialog", "3The usage page"], "a pair, then each lone screen");
+    assert.equal(await desk.getAttribute("#detail .chg-tabs button:first-child", "aria-pressed"), "true", "the first shown");
+    assert.deepEqual(await desk.locator("#detail .cv-lab").allTextContents(), ["Before", "After"]);
+    assert.equal(await desk.locator('#detail .cv [data-zoom="S-d"]').count(), 0, "no separate What changed picture");
+    assert.equal(await desk.locator("#detail .outline-toggle").count(), 1, "its outline still toggles");
+    assert.deepEqual(await desk.locator("#detail .chg-foot .bar button").allTextContents(), ["Add to feedback", "Looks good"], "no comment for the team under a change");
+    await desk.fill("#detail .chg-foot textarea", "Show the limit only when set.");
+    await desk.click("#detail .chg-foot [data-draft-add]");
+    await desk.waitForSelector("#detail .chg-foot .dbub");
+    assert.deepEqual(await desk.evaluate(() => posts.find((p) => /drafts$/.test(p.path)).body), { text: "Show the limit only when set.", change: "Agents list" });
+    assert.deepEqual(await desk.locator("#detail .chg-foot .bar button").allTextContents(), ["Add to feedback"], "no Looks good while a note on it waits");
+    await desk.click('#detail .chg-tabs [data-chg="S-1"]');
+    await desk.waitForFunction(() => document.querySelector('#detail .chg-tabs [data-chg="S-1"]')?.getAttribute("aria-pressed") === "true");
+    assert.deepEqual(await desk.locator("#detail .cv-lab").allTextContents(), ["After"], "a lone screen: after only");
+    await desk.click("#detail .chg-foot [data-draft-ok]");
+    await desk.waitForFunction(() => document.querySelector('#detail .chg-tabs [data-chg="S-2"]')?.getAttribute("aria-pressed") === "true");
+    assert.deepEqual(await desk.evaluate(() => posts.filter((p) => /drafts$/.test(p.path)).at(-1).body), { ok: true, change: "S-1" });
+    await desk.click('#detail .chg-tabs [data-chg="S-1"]');
+    await desk.waitForSelector("#detail .chg-ok");
+    assert.match(await desk.textContent("#detail .yreview"), /The limit dialog[\s\S]*Looks good/, "the mark lists by the change's name");
+    await desk.click("#detail .chg-ok [data-draft-del]");
+    await desk.waitForSelector("#detail .chg-foot [data-draft-ok]");
+    // With no screens: how they come.
+    await desk.evaluate(() => { location.hash = "#P-8"; });
+    await desk.waitForFunction(() => /No screenshots yet/.test(document.querySelector("#detail")?.textContent || ""));
+    assert.equal(await desk.locator("#detail .chg-tabs").count(), 0);
+  }));
+}
+
+test("a change's tab marks how far the viewer got; Looks good moves on, the last opens the feedback; sending warns of the changes not looked at", (t) => open(t, CHANGES_DESK(HEAD_ME), async (desk) => {
+  const marks = () => desk.$$eval("#detail .chg-tabs button", (bs) => bs.map((b) => b.dataset.m || ""));
+  const shown = () => desk.$eval('#detail .chg-tabs button[aria-pressed="true"]', (b) => b.dataset.chg);
+  await desk.waitForSelector("#list");
+  await desk.evaluate(() => { location.hash = "#P-7"; });
+  await desk.waitForSelector("#detail .chg-tabs");
+  assert.deepEqual(await marks(), ["", "", ""]);
+  await desk.click("#detail .chg-foot [data-draft-ok]");
+  await desk.waitForFunction(() => document.querySelector('#detail .chg-tabs [data-chg="S-1"]')?.getAttribute("aria-pressed") === "true");
+  assert.deepEqual(await marks(), ["ok", "", ""], "green, and the next change shown");
+  await desk.fill("#detail .chg-foot textarea", "Say the limit in words.");
+  await desk.click("#detail .chg-foot [data-draft-add]");
+  await desk.waitForFunction(() => document.querySelectorAll('#detail .chg-tabs [data-m="changes"]').length === 1);
+  assert.deepEqual(await marks(), ["ok", "changes", ""], "amber with a note");
+  assert.match(await desk.textContent('#detail .sh-acts [data-review="request-changes"]'), /Request changes · 1/, "the head counts the notes, not the marks");
+  assert.match(await desk.textContent("#detail .yreview"), /Agents list[\s\S]*✓ Looks good[\s\S]*The limit dialog[\s\S]*Say the limit in words\./);
+  // Sending with a change nobody looked at: said, never in the way.
+  await desk.click('#detail .yreview [data-review=""]');
+  await desk.waitForSelector("#cf-body .rv-warn");
+  assert.match(await desk.textContent("#cf-body .rv-warn"), /1 change not looked at yet: The usage page/);
+  await desk.click('#confirm-dialog [data-close="cancel"]');
+  await desk.click('#detail .chg-tabs [data-chg="S-2"]');
+  await desk.waitForFunction(() => document.querySelector('#detail .chg-tabs [data-chg="S-2"]')?.getAttribute("aria-pressed") === "true");
+  await desk.click("#detail .chg-foot [data-draft-ok]");
+  await desk.waitForSelector("#confirm-dialog[open]");
+  assert.equal(await desk.locator("#cf-body .rv-warn").count(), 0, "every change looked at: no warning");
+  assert.equal(await desk.$eval("#cf-choices input:checked", (x) => x.value), "approve", "the last Looks good opens the feedback, Approve picked");
+  assert.match(await desk.textContent("#detail .chg-h"), /All looked at/);
+  assert.equal(await shown(), "S-2");
+}));
+
+test("sent feedback shows its Looks good; the mark holds on this version; a conversation about a change shows it", (t) => open(t, CHANGES_DESK(HEAD_ME).replace(JSON.stringify(threeChanges), JSON.stringify({ ...threeChanges, looks_good: ["S-1"],
+  reviews: [{ id: "U-3", by: { email: "d.k@example.com", name: "Dana Kim", role: "designer" }, at: "2026-11-18T10:00:00Z", verdict: "comment", note: "", threads: ["T-31"], looks_good: [{ key: "S-1", name: "The limit dialog" }] }],
+  threads: [{ id: "T-31", kind: "comment", review: "U-3", change: "S-2", state: "open", may: { reply: true, resolve: true }, messages: [{ by: { email: "d.k@example.com", role: "designer" }, at: "2026-11-18T10:00:00Z", text: "Bigger numbers." }] }] })), async (desk) => {
+  await desk.waitForSelector("#list");
+  await desk.evaluate(() => { location.hash = "#P-7"; });
+  await desk.waitForSelector("#detail .chg-tabs");
+  assert.deepEqual(await desk.$$eval("#detail .chg-tabs button", (bs) => bs.map((b) => b.dataset.m || "")), ["", "ok", ""], "a sent Looks good on this version");
+  assert.match(await desk.textContent("#detail .rvw .rv-ok"), /✓ Looks good: The limit dialog/);
+  await desk.click('#detail .rvw [data-chg-show="S-2"]');
+  await desk.waitForFunction(() => document.querySelector('#detail .chg-tabs [data-chg="S-2"]')?.getAttribute("aria-pressed") === "true");
+  assert.match(await desk.textContent("#detail .chg-foot .chg-talk"), /1 comment on this change/);
 }));
 
 // Simple mode with nothing open: how many items are in each state, each box filtering the list.

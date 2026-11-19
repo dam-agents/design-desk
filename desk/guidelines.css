@@ -265,6 +265,25 @@
   .dbub { display: flex; gap: 8px; align-items: flex-start; padding: 8px 12px; border-radius: var(--r-sm); background: var(--panel); } .dbub + .dbub { margin-top: 8px; }
   .dbub .db-b { min-width: 0; flex: 1; white-space: pre-wrap; overflow-wrap: anywhere; } .dbub .about { display: block; font-size: var(--fs-micro); color: var(--muted); white-space: normal; }
   .dbub .x { border: 0; background: none; color: var(--muted); cursor: pointer; font: inherit; padding: 0 4px; } .dbub .x:hover { color: var(--ink); }
+  /* A pull request's changes, one at a time: one framed panel — tabs, the pictures of the change
+     shown under their labels, and a tinted foot that takes the reviewer's feedback on it. */
+  .chg-h .hint { font-weight: 400; margin-left: 4px; }
+  .cv { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); overflow: hidden; margin-bottom: 12px; }
+  .cv .cv-tabs { margin: 0; padding: 0 16px; } .cv-one { padding: 12px 16px 0; }
+  .cv-body { padding: 16px; } .cv-body > .hint { margin: 0; } .cv-body .outline-toggle { margin: 0 0 12px; }
+  .cv-pair { display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); gap: 12px; } .cv-pair[style*="--cols:1"] { max-width: 760px; }
+  .cv-lab { font-size: var(--fs-micro); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  .cv-col .shot { margin: 0; }
+  .chg-foot { display: grid; gap: 8px; padding: 16px; background: var(--soft); border-top: 1px solid var(--line); } .chg-foot .dbub { background: var(--warn-soft); }
+  .chg-foot textarea { background: var(--panel); }
+  .chg-foot .bar { display: flex; gap: 8px; align-items: center; } .chg-foot .bar .grow { flex: 1; }
+  .btn.cv-ok { background: var(--approved); border-color: var(--approved); color: var(--bg); font-weight: 600; } .btn.cv-ok:hover { opacity: .88; }
+  svg.ck { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .chg-ok { display: inline-flex; gap: 8px; align-items: center; color: var(--approved); font-weight: 600; font-size: var(--fs-ui); } .chg-ok .link { font-weight: 400; color: var(--muted); }
+  .chg-talk { justify-self: start; font-size: var(--fs-meta); }
+  .chg-done { margin-left: 12px; font-size: var(--fs-meta); font-weight: 600; color: var(--approved); }
+  .rv-warn { margin: 0 0 12px; padding: 8px 12px; border-radius: var(--r-sm); background: var(--warn-soft); border: 1px solid var(--warn); }
+  .rv-ok { margin: 8px 0 0; color: var(--approved); font-size: var(--fs-ui); }
   #cf-body .dbub { background: var(--soft); }
   .rvw { --v: var(--muted); max-width: var(--measure); margin-bottom: 12px; padding: 12px 16px; border: 1px solid var(--line); border-left: 2px solid var(--v); border-radius: var(--r-sm); }
   .rvw[data-v="request-changes"] { --v: var(--warn); } .rvw[data-v="approve"] { --v: var(--ok); }
@@ -506,6 +525,7 @@
   .el-said .anchor { display: block; width: 100%; max-width: none; white-space: normal; overflow: visible; text-overflow: clip; text-align: left; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--panel); color: inherit; font: inherit; font-size: var(--fs-ui); cursor: pointer; }
   .el-said .anchor:hover { border-color: var(--accent); }
   .el-said .tx { color: var(--ink); }
+  .el-drafts { display: grid; gap: 8px; margin: 8px 0; } .el-drafts .dbub { background: var(--warn-soft); }
   .el-box textarea { width: 100%; box-sizing: border-box; }
   .el-box .bar { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
   .elbar h2 { margin: 0 0 4px; font-size: var(--fs-head); }
@@ -1552,6 +1572,14 @@
   .ws-ptabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); }
   .ws-ptabs .n { min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px; background: var(--soft); color: var(--ink); font-size: var(--fs-micro); line-height: 17px; text-align: center; box-sizing: border-box; }
   .ws-ptabs .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+  /* Your feedback in the workspace's side panel: the viewer's notes not sent yet, across options. */
+  .ws-drafts { list-style: none; margin: 0; padding: 8px 12px; display: grid; gap: 8px; }
+  .ws-drafts li { display: flex; gap: 8px; align-items: flex-start; padding: 8px 12px; border-radius: var(--r-sm); background: var(--warn-soft); }
+  .ws-fb-go { all: unset; flex: 1; min-width: 0; cursor: pointer; display: grid; gap: 4px; } .ws-fb-go .about { font-size: var(--fs-micro); color: var(--muted); } .ws-fb-go .tx { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .ws-fb-go:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .ws-drafts .x { border: 0; background: none; color: var(--muted); cursor: pointer; font: inherit; padding: 0 4px; } .ws-drafts .x:hover { color: var(--ink); }
+  .ws-fb-bar { display: flex; gap: 8px; align-items: center; justify-content: space-between; padding: 8px 12px 16px; } .ws-fb-bar .hint { margin: 0; }
+  .ws-fb-empty { padding: 16px 12px; margin: 0; }
   .ws-pbody { padding: 12px 16px 80px; display: grid; gap: 12px; align-content: start; }
   .sel .ws-wholebox { margin-top: 8px; background: var(--bg); }
 

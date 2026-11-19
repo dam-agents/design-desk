@@ -271,5 +271,18 @@ const p3 = pr("P-3", 799, "Empty state for the provider list", 60 * 30, { status
 const p4 = pr("P-4", 790, "Billing: copy fix in the footer", 60 * 48, { attention: { level: "fyi", reasons: ["Nothing differs from the catalog."] } });
 const p5 = pr("P-5", 785, "Table: one more column", 60 * 3, { attention: { level: "developer", reasons: ["A column in an existing table."] } });
 
-export const CARDS = [r1, r2, r3, r4, r5, r6, r7, p1, p2, p3, p4, p5];
+// An open pull request with three changes (docs/desk-page.md → Simple mode → Changes): a screen
+// pair with the after picture's marks, then two lone screens, after only.
+const screen = (id, title, rows, accent = "#2f5bd3") => { A[id] = { id, contentType: "image/svg+xml", encoding: "utf8", data: `<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540"><rect width="960" height="540" fill="#f7f7f5"/><rect x="0" y="0" width="960" height="56" fill="#fff"/><text x="32" y="36" font-family="sans-serif" font-size="20" fill="#222">${title}</text>${rows.map((r, i) => `<rect x="32" y="${88 + i * 64}" width="896" height="52" rx="6" fill="#fff" stroke="#e3e3e0"/><text x="52" y="${120 + i * 64}" font-family="sans-serif" font-size="16" fill="#333">${r[0]}</text>${r[1] ? `<rect x="760" y="${100 + i * 64}" width="148" height="28" rx="14" fill="${accent}" opacity=".14"/><text x="776" y="${119 + i * 64}" font-family="sans-serif" font-size="14" fill="${accent}">${r[1]}</text>` : ""}`).join("")}</svg>` }; return id; };
+screen("A-agents-before", "Agents", [["Research helper"], ["Release notes"], ["Support triage"]]);
+screen("A-agents-after", "Agents", [["Research helper", "$4.60 of $5"], ["Release notes", "$0.80"], ["Support triage", "$2.10"]]);
+screen("A-limit-dialog", "Weekly limit", [["Limit: $5.00 a week", "Save"], ["Stop the agent when it is reached"]]);
+screen("A-usage", "Usage", [["This week: $7.50", "3 agents"], ["Research helper: $4.60"], ["Support triage: $2.10"]]);
+const p6 = pr("P-6", 815, "Agents: spend shown in the list", 12, { merged: false, summary: "Each agent's row shows what it spent this week, against its limit when it has one.",
+  screens: [{ asset: "A-agents-before", stage: "before", pair: "Agents list", caption: "The list before", source: "instance" },
+    { asset: "A-agents-after", stage: "after", pair: "Agents list", caption: "Each row shows its spend", source: "instance", marks: [{ x: 0.78, y: 0.17, w: 0.18, h: 0.38 }] },
+    { asset: "A-limit-dialog", caption: "The weekly limit dialog", source: "instance" },
+    { asset: "A-usage", caption: "The usage page", source: "pr" }] });
+
+export const CARDS = [r1, r2, r3, r4, r5, r6, r7, p1, p2, p3, p4, p5, p6];
 export const ASSETS = A;

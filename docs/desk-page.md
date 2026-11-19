@@ -42,19 +42,24 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   and sets the pointer. Esc steps back: a menu, the comment open, the selection, the workspace.
   It opens in Click through; an older version and the final check offer only Click through
   (**Make more changes** after a final check opens in Select).
-  Each tool does one thing. **Comment:** a click on a part opens a comment beside it (Send to
-  Design Desk, Just comment), and opening it leaves the side panel as it is. Once any comment is
-  sent (in place, or from the side panel), the part is let go and the panel turns to Comments with
-  the new one in view, lit a moment. **Edit text:** the text typed in
+  Each tool does one thing. **Comment:** a click on a part opens a comment beside it (**Comment**,
+  posted for the team at once, and **Add to feedback**, kept on that spot until the feedback is
+  sent, [desk.md](desk.md) → Reviews; nothing in the workspace asks Design Desk for a change at
+  once), and opening it leaves the side panel as it is. Once a comment is posted (in place, or
+  from the side panel), the part is let go and the panel turns to Comments with the new one in
+  view, lit a moment; one added to the feedback turns it to **Your feedback**. **Edit text:** the text typed in
   place shows ✓ (Save, Enter) and ✕ (Cancel, Esc; a click elsewhere in the design cancels too).
   Save changes the words in the page at once, as the drawing's next version (`POST
   /api/cards/<id>/text`, `text_edit` on the drawing), with nothing for Design Desk to do but the
   decision check and, for an option with states, drawing them again. Text not whole between two
   tags, or on an alternative, opens that comment with the change written in instead. **Select:** the part shows in the side panel's
   **Properties**: why it is like this, **What should change?**, Every state, Try 3 ways, and Change
-  the look. A comment's number on the design opens it in place (Reply, Work it in, Mark done), as a
+  the look. A comment's number on the design opens it in place (Reply, Add to my feedback, Mark done), as a
   click on it in **Comments**, the panel's other tab: every comment on the option by state, a box
-  for one on the whole option or state, Open / Done / All and Work in all. Pins are in the Desk's brown,
+  for one on the whole option or state, Open / Done / All and Add all to my feedback; and **Your feedback**,
+  the third tab for who may comment (with its count): every note of theirs on the request waiting
+  to be sent, across options, each with what it is about and ✕, a click showing its option, state
+  and part, and **Send feedback…**, the page's dialog. A note in the feedback is no pin. Pins are in the Desk's brown,
   small and green once done, with a spinner while Design Desk works on them. The design fills the
   canvas a little in from its edges and the tool bar stands under it, so the canvas never scrolls. A part selected is let go
   by Click through, by another option, state or version, and once it no longer shows in the design
@@ -77,7 +82,10 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   follow the design's own text sizes, a spacing and a corner scale; colors offer the design's named
   colors (`--*` on `:root`) first, then those it uses, then any color, marked as not the design's.
   Other parts changed and not sent are listed under it, kept per drawing until the Desk is left;
-  **Send** makes one `change` note per part with `anchor.style` ([requests.md](requests.md) → revise).
+  **Add to feedback** puts a part's edits in the person's feedback (**In your feedback**; listed
+  under Your feedback as "Look of <part> · this browser", ✕ taking it out, the edit staying), and
+  sending the feedback makes one note per part with `anchor.style` / `anchor.controls`, a `change`
+  note with Request changes ([requests.md](requests.md) → revise). A reload drops them.
   The options' tabs are underline tabs with a number chip, in both modes and in the design
   workspace; what the chip's colour means is on the guidelines page ([The guidelines](#the-guidelines)). They stay one row: when they do not fit, the row scrolls sideways and keeps the
   picked tab in view, and **Design workspace** stays fixed at its right end. A redraw of the same
@@ -197,23 +205,23 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   as soon as it is written, with no box to tick, or, for one the Desk may not send by itself (a
   Slack origin, an open pull request; [handoff.md](handoff.md) → Review before it goes), leaves it
   Open with **Send to developers** — and a change **Request changes** and **Approve** (marks it handled); each only for
-  who may. **Reviews** ([desk.md](desk.md) → Reviews): under the shown option, and under a change's
-  screens, a box offers **Add to review** — a draft, the viewer's alone — and **Comment now**, a
+  who may. **Feedback** ([desk.md](desk.md) → Reviews): under the shown option, and under a change's
+  screens, a box offers **Add to feedback** — a draft, the viewer's alone — and **Comment**, a
   comment on the Desk at once (never on GitHub); the box at the end of the page posts at once. While
-  drafts wait, **Your review · n** under the head lists them, each with what it is about and ✕, and
-  **Send review…**; **Request changes** counts them (`Request changes · 2`) and is the primary
-  button, and **Approve** opens the review too. Both open one dialog: the drafts, the verdicts the
+  drafts wait, **Your feedback · n** under the head lists them, each with what it is about and ✕, and
+  **Send feedback…**; **Request changes** counts them (`Request changes · 2`) and is the primary
+  button, and **Approve** opens the feedback too. Both open one dialog: the drafts, the verdicts the
   viewer may send (**Request changes**, **Approve**, **Comment only**, the one they pressed
-  picked) and a note for the whole review. Approving a request there is the usual approval first,
-  its own questions included, then the review. A sent review shows in Comments, in both modes, as
+  picked) and a note for the whole feedback. Approving a request there is the usual approval first,
+  its own questions included, then the feedback. Sent feedback shows in Comments, in both modes, as
   one block: who, the verdict (**Changes requested** amber, **Approved** green, **Comments**), when,
   **On GitHub ↗** once posted, the note, then each of its comments with its replies. Full mode has
-  the same **Changes requested** line under the title, the same boxes, under the option shown and a change's Screens, and **Your review** at the top
-  of Questions and comments, whose **Send review…** opens the same dialog. ⋯ holds **Close…** or **Reopen** on a request, **Turn into a design request** on a
+  the same **Changes requested** line under the title, the same boxes, the same **Changes** of a change, and **Your feedback** at the top
+  of Questions and comments, whose **Send feedback…** opens the same dialog. ⋯ holds **Close…** or **Reopen** on a request, **Turn into a design request** on a
   change (and **Undo approval** on one approved), and **Open on GitHub** where there is a link. No vote buttons, rename or For Developers
   move. Under the head the page reads one way for both kinds: a short lead (a request's first
   paragraph, a change's summary), **The request in full** folded, the designs (a request's
-  options, votes as counts only) or **The changes** (a change's screens), **What Design Desk
+  options, votes as counts only) or **Changes** (below), **What Design Desk
   found** (the decisions in force it goes against, a change's reasons to look at it, how it
   differs from the approved design, Figma when on, its check holding the pull request; else
   "Nothing to flag"), the long reads folded alike (**What's already known**, **Details**, a
@@ -222,7 +230,7 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   replies indented under it, each by an avatar, the name, the role and a short date, a note on a
   design led by its option (and part) as a chip that opens the design workspace there; one marked
   done folds to one line (who wrote it and how it starts, who resolved it and when) that opens on
-  a click. Reply, Mark done, Work it in and Reopen work as in full mode. With nothing open, the pane shows
+  a click. Reply, Mark done, Add to my feedback and Reopen work as in full mode. With nothing open, the pane shows
   instead of the Requests intro three boxes, **Open**, **In dev** and **Closed**: how many items of
   the viewer's side are in each (Open and In dev with their kinds, Closed with how many of them
   shipped in the last 7 days); a click on one filters the list to that state. Otherwise it hides: **Designs**, **Issues**, **Product** and **People** leave the menu (a sent
@@ -250,6 +258,27 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   anywhere. Kept on the Desk like simple mode (`POST /api/prefs {figma}`, `figma_pref` in
   `GET /api/me`); with no choice (null) it is off.
   The Desk opens on Requests.
+- **Changes**, on a pull request change's page in both modes: the change's screens one change at
+  a time, in one framed panel — the tabs, the pictures under **BEFORE** / **AFTER**, and a tinted foot
+  with the feedback, **Looks good** a filled green button. A change is a screen pair (`pair`, its pictures by `stage`) or a screen with no `stage`,
+  in that order (`changesOf`, [desk.md](desk.md) → Reviews). With two or more, one tab each, the
+  underline tabs with a number chip ([the guidelines](../desk/guidelines.html) → Tabs and
+  switchers), scrolling sideways in one row. The change shown: **Before** beside **After**, or
+  **After** alone (nothing says a screen is new), each with its caption and where it came from;
+  **Outline what changed** over them; the separate "What changed" picture is not shown. Under
+  them, for who may comment on an open item: the viewer's notes on it waiting in their feedback,
+  a box, **Add to feedback** and **Looks good** (a mark with no words; then "You marked it as
+  good" with **Undo**, and no Looks good while notes on it wait). No comment for the team there:
+  what is written is for the developer. "n comments on this change ↓" leads to its conversations,
+  and a conversation's **◎ <change>** chip back to it. A tab's chip says how far the viewer got:
+  green for Looks good (theirs, or sent on the pull request's head, `looks_good`), amber for a note
+  of theirs on it or one sent while the developer owes the next version, grey for not looked at; "✓ All looked at" beside **Changes** once none is grey.
+  Looks good shows the next change not looked at, and on the last opens the feedback, Approve
+  picked where the viewer may. The feedback's dialog names the changes not looked at yet, and
+  sends anyway. **Request changes · n** counts notes, never marks.
+  With no screens, a line says how they come: Design Desk's own copy of the product while one is
+  free (`screens` on), else when the pull request merges; **Add screenshots** stays, and a box
+  with **Add to feedback** alone takes notes on the whole pull request.
 - **Motion.** Short, soft animations, in the `@media (prefers-reduced-motion: no-preference)`
   block of `desk/page.html`'s style, so a person whose system asks for less motion gets none:
   dialogs rise in and fade out with their backdrop, More and the menu under a name pop open,
@@ -322,9 +351,10 @@ A part under **All elements** opens in one dialog, the same in simple and full m
   border or shadow of its own is fitted by what it holds. The tiles under All elements are drawn
   the same way.
 - **Open in design workspace** opens the option with the part selected, on its Properties.
-- **Comments**: the part's open comments (a click opens one in the design workspace) and a box;
-  **Comment** adds one on the part at once, as **Just comment** does in the workspace. Not on a
-  closed request.
+- **Comments**: the part's open comments (a click opens one in the design workspace), the
+  viewer's notes on it waiting in their feedback ("Not sent yet", ✕), and a box: **Add to
+  feedback** keeps a note on the part ([desk.md](desk.md) → Reviews), **Comment** posts one for the
+  team at once. Not on a closed request.
 - Its states follow, with the button that draws them.
 
 ## Product → Kit
@@ -469,7 +499,7 @@ private ask only its owner: Design Desk's answers to it are theirs alone, and fo
 | Feedback asked | a person hands the drawn options to the team (**Ask for feedback**); For you for every `developer` and `lead-developer` |
 | New decision, Decision revoked | a decision is added or revoked |
 | Developer asks, Marked done | a developer asks a design's designer, or marks it done ([Designs](#designs)) |
-| Review sent, New version | a person sends a review (on a pull request's change, For you for every `developer` and `lead-developer`); new commits arrive on a pull request a review asked changes of ([desk.md](desk.md) → Reviews) |
+| Feedback sent, New version | a person sends feedback (on a pull request's change, For you for every `developer` and `lead-developer`); new commits arrive on a pull request a review asked changes of ([desk.md](desk.md) → Reviews) |
 
 Every row is at most three lines, each cut short with … when long, and says the same things in the same places: an icon and what happened, who (when known),
 how long ago, the item's kind in grey (Request:, PR change:, Decision: …), its title and number, and for a message or a vote one
