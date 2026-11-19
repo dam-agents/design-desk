@@ -3676,7 +3676,6 @@ test("a dialog with work in it asks before Escape or a click outside closes it; 
   const isOpen = (id) => desk.evaluate((i) => document.getElementById(i).open, id);
   await desk.waitForSelector("#new-request");
   await desk.click("#new-request");
-  assert.equal(await desk.isVisible("#rq-for"), false, "a designer does not pick the tab");
   await desk.keyboard.press("Escape");
   assert.equal(await isOpen("request-dialog"), false, "an empty dialog closes on Escape");
 
@@ -3712,7 +3711,7 @@ test("a dialog with work in it asks before Escape or a click outside closes it; 
 test("a UI dev owner files a draft, with no For Designers or For Developers switch", (t) => open(t, DESK({ ...DESIGNER, role: "ui-dev-owner", can: { request: true, size: true } }, [BUSY]), async (desk) => {
   await desk.waitForSelector("#new-request");
   await desk.click("#new-request");
-  assert.equal(await desk.isVisible("#rq-for"), false);
+  assert.equal(await desk.locator("#rq-for, #for-choice").count(), 0, "no side to pick");
   assert.equal((await desk.textContent("#request-form [data-close=send]")).trim(), "Create draft");
 }));
 
@@ -4412,4 +4411,11 @@ test("full mode: a draft's author reopens it once closed, whatever their role", 
   await desk.click('#list [data-card="R-20"]');
   await desk.waitForSelector("#detail .status");
   assert.equal(await desk.locator('#detail .status [data-act="reopen"]').count(), 1);
+}));
+
+test("simple mode: a PM sees their own request once it is a proposal, with Proposal in the filter", (t) => open(t, DESK({ ...SIMPLE_ME, role: "pm", can: { request: true, "stage-design": true } }, [{ ...STAGED[1], by: { email: "d@example.com" } }, STAGED[2]]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="R-21"]');
+  assert.deepEqual((await rows(desk)).map(([id, pill]) => [id, pill]).find(([id]) => id === "R-21"), ["R-21", "Proposal"]);
+  await desk.click("details.sf > summary");
+  assert.ok((await desk.$$eval('[data-simf^="states:"]', (xs) => xs.map((x) => x.dataset.simf.slice(7)))).includes("proposal"));
 }));

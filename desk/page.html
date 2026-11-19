@@ -3285,7 +3285,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // Draft and Proposal come first, for whom they can hold anything (docs/desk-page.md → Simple mode):
   // Draft for whoever files a request that starts as one, Proposal for the dev team.
   const SIM_ALL = [["draft", "Draft"], ["proposal", "Proposal"], ["open", "Open"], ["dev", "In dev"], ["closed", "Closed"]];
-  const seesStage = (k) => k === "draft" ? startsDraft() && can("request") : k === "proposal" ? ["developer", "ui-dev-owner", "admin"].includes(S.me?.role) : true;
+  const seesStage = (k) => (k === "draft" ? startsDraft() && can("request") : k === "proposal" ? ["developer", "ui-dev-owner", "admin"].includes(S.me?.role) : true)
+    || S.cards.some((c) => !closed(c) && preDesign(c) === k);
   const simStates = () => SIM_ALL.filter(([k]) => seesStage(k));
   const SIM_KINDS = [["request", "Requests"], ["change", "PR changes"]];
   const SIM_PILL = { draft: "Draft", proposal: "Proposal", open: "Open", dev: "In dev", shipped: "Shipped", none: "No review needed", closed: "Closed" };
