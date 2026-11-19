@@ -236,7 +236,7 @@ returns the review (`review`: who, verdict, note, its conversations) with the ca
 request merged or closed → `design desk done` with "PR no longer open". Posted already (an earlier
 run died before `done`): a review of the agent's own account on the pull request (`gh api
 repos/<owner>/<name>/pulls/<pr>/reviews --paginate`) whose body starts with this review's marker
-→ step 3 with its `html_url` and `commit_id`, never a second post; a failed search posts nothing
+→ step 3 with its `html_url`, never a second post; a failed search posts nothing
 and is logged and reported as below. Else:
 
 1. Write the body to a file: first line `<!-- design-desk review=<N-n> -->`, then "**<name>** (<role>)
@@ -248,8 +248,10 @@ and is logged and reported as below. Else:
 2. `gh api [--hostname <host>] -X POST repos/<owner>/<name>/pulls/<pr>/reviews -f event=COMMENT
    -F body=@<file>` — always `COMMENT`, never `REQUEST_CHANGES` or `APPROVE`: the account is
    Design Desk's, not the reviewer's. Posting it never sets the `design-desk` check.
-3. `design desk review-posted <N-n> --url <its html_url> --sha <its commit_id>` (the head the
-   developer's next push moves on from), then `design desk done`.
+3. `design desk review-posted <N-n> --url <its html_url> --sha <commit>`, then `design desk done`.
+   `<commit>` is the pull request's last commit from before the review's `at` (`gh api
+   repos/<owner>/<name>/pulls/<pr>/commits --paginate`, by committer date): the version the
+   reviewer saw, which the developer's next push moves on from.
 
 A failed post (a 403, a deleted repository) is logged (`logev warn review …`), done with
 `--outcome "not posted: <cause>"` and reported in the chat UI; the review stays on the Desk.

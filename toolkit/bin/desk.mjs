@@ -295,9 +295,9 @@ export function ghRecord(key, gh = (args) => run("gh", args)) {
   const [it] = api(`repos/${repo}/issues/${n}`);
   const pr = Boolean(it.pull_request);
   const said = api(`repos/${repo}/issues/${n}/comments`).map((c) => ({ author: c.user?.login || "", at: c.created_at, url: c.html_url, body: c.body || "" }));
-  // A pull request's head commit: a review that asked for changes waits for it to move (docs/desk.md → Reviews).
+  // An open pull request's head commit: a review that asked for changes waits for it to move (docs/desk.md → Reviews).
   // One it cannot read leaves the Desk's earlier one in place.
-  const head = pr ? (() => { try { return api(`repos/${repo}/pulls/${n}`)[0]?.head?.sha || null; } catch { return null; } })() : null;
+  const head = pr && it.state === "open" ? (() => { try { return api(`repos/${repo}/pulls/${n}`)[0]?.head?.sha || null; } catch { return null; } })() : null;
   const reviews = pr ? api(`repos/${repo}/pulls/${n}/reviews`).filter((v) => v.body).map((v) => ({ author: v.user?.login || "", at: v.submitted_at, url: v.html_url, body: `[review: ${v.state}] ${v.body}` })) : [];
   // An issue's pull requests: the ones that mention it, newest last; the Desk follows the work on it.
   // A timeline it cannot read gives no list at all (`null`): the Desk keeps the one it had.

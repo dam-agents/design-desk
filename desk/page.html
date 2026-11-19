@@ -2073,7 +2073,6 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const TIP = {
     act: {
       // Approve before any option: the spec comes from the request itself.
-      "request-changes": "Tell Design Desk what should change; it draws a new version",
       approve: () => simple() && S.card?.kind === "request" && S.me?.spec_review && S.card.origin?.channel !== "slack" && !S.card.from_pr ? "Approves the design: Design Desk writes the developer spec and sends it to developers as soon as it is written"
         : S.me?.spec_review ? (S.card?.kind === "request" && !(S.card.variants || []).length ? "Design Desk writes the developer spec now, without a vote or a live prototype. It waits here for you to read; nothing goes to developers until you press Send to developers."
           : "Approves the design: Design Desk writes the developer spec for you to read. Nothing goes to developers until you press Send to developers.")
@@ -2212,7 +2211,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   };
   const BTN_ICON = {
     act: { workspace: "pen", explore: "spark", build: (el) => /another option/.test(textOf(el)) ? "undo" : "screen", approve: () => S.card?.kind === "request" && !(S.card.variants || []).length ? "send" : "check",
-      reopen: "undo", revise: "redo", "request-changes": "redo", close: "cross", states: "layers", slack: "send", unqueue: "minus",
+      reopen: "undo", revise: "redo", close: "cross", states: "layers", slack: "send", unqueue: "minus",
       draw: "pen", refresh: "redo", history: "clock", "figma-import": "down", "figma-export": "up" },
     size: { small: "bolt", designer: "person" },
     adjust: "pen", addShots: "image", wsEdit: "pen", wsBuild: "screen",
@@ -7507,7 +7506,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       const was = (before.variants || []).find((x) => x.id === S.variant), now = (card.variants || []).find((x) => x.id === S.variant);
       if (was && now && (now.version || 1) > (was.version || 1)) { toast(`${now.name} was updated to version ${now.version}.`); S.ws.version = null; }
     }
-    await loadDrafts(card);
+    // Drafts are read again each time an item is opened: another device may have changed them.
+    await loadDrafts(card, before?.id !== card.id);
     S.card = card;
     // The first open marks it read for this person: its title stops being bold in their list.
     const listed = S.cards.find((x) => x.id === card.id);

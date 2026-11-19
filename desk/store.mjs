@@ -825,7 +825,7 @@ export class Store {
     if (!REVIEW_VERDICTS.includes(verdict)) throw bad(`verdict must be one of ${REVIEW_VERDICTS.join(", ")}`);
     if (!["request", "change"].includes(c.kind)) throw bad("A review is sent on a request or a pull request's change.");
     if (c.kind === "change" && verdict !== "comment") this.mayHandle(c, who);
-    const drafts = own(own(this.db.drafts, key) || {}, c.id) || [];
+    const drafts = structuredClone(own(own(this.db.drafts, key) || {}, c.id) || []);
     const words = optText(note, LIMITS.text, "note");
     if (!drafts.length && !words) throw bad("Write a comment or a note first.");
     const request = c.kind === "request", changes = verdict === "request-changes";
@@ -842,7 +842,7 @@ export class Store {
     const kindOf = (d) => (request && changes && (d.anchor?.variant || first) ? "change" : "comment");
     const plan = drafts.map((d) => ({ d, kind: kindOf(d), anchor: kindOf(d) === "change" && !d.anchor?.variant ? { ...(d.anchor || {}), variant: first } : d.anchor }));
     for (const x of plan) if (x.anchor?.state && !(c.variants || []).find((v) => v.id === x.anchor.variant)?.states?.some((st) => st.id === x.anchor.state)) throw bad("A draft is about a state that is no longer drawn. Remove it and write it again.");
-    if ((c.threads || []).length + plan.length + (request && changes && !plan.length ? 1 : 0) > LIMITS.threadsPerCard) throw bad("This page holds at most 300 conversations. Mark some as done first.");
+    if ((c.threads || []).length + plan.length + (request && changes && !plan.length ? 1 : 0) > LIMITS.threadsPerCard) throw bad(`This page holds at most ${LIMITS.threadsPerCard} conversations. Mark some as done first.`);
     const save = this.save; this.save = () => {};
     const id = this.nextOf("review"), threads = [];
     let item = null;
@@ -856,7 +856,7 @@ export class Store {
       }
       // Changes asked with a note alone: the note is the change note Design Desk draws from.
       if (request && changes && !plan.length) { const r = this.openThread(c.id, who, { kind: "change", text: words, anchor: { variant: first } }); r.thread.review = id; threads.push(r.thread.id); item = r.inbox; }
-      if (!request && verdict === "approve") this.handle(c.id, who, true);
+      if (!request && verdict === "approve" && !c.handled) this.handle(c.id, who, true);
       const head = !request ? this.headOf(c) : null;
       this.db.reviews[id] = { id, card: c.id, by: person(who), at: this.clock(), verdict, note: words, threads, ...(head ? { sha: head } : {}) };
       c.reviews = [...(c.reviews || []), id];
@@ -877,10 +877,19 @@ export class Store {
     if (!r) throw missing(`no review ${id}`);
     if (!/^https:\/\/github\.com\/[^\s]{1,480}$/.test(String(url || ""))) throw bad("url: the review's address on GitHub");
     r.posted = { url: String(url), at: this.clock() };
-    // GitHub's own head at posting is the one the review is about: the Desk's copy may have been behind.
-    if (/^[0-9a-f]{40}$/.test(String(sha || ""))) r.sha = String(sha);
+    // The pull request's last commit before the review was sent, as GitHub has it: the one the
+    // reviewer saw, whatever the Desk's copy held then. A new version is a head other than it.
+    if (/^[0-9a-f]{40}$/.test(String(sha || ""))) { r.sha = String(sha); this.judgeNext(r, this.headOf(this.card(r.card))); }
     this.save();
     return { review: structuredClone(r) };
+  }
+
+  // A review that asked for changes has a new version once the head is another than its `sha`;
+  // a corrected `sha` takes back a new version that was only the Desk's copy catching up.
+  judgeNext(r, head) {
+    if (!head || r.verdict !== "request-changes") return;
+    if (head === r.sha) delete r.next_at;
+    else if (!r.next_at) r.next_at = this.clock();
   }
 
   // The head commit of a change's pull request, as the GitHub copy last read it.
@@ -902,8 +911,7 @@ export class Store {
       return { who: "design-desk", review: last.id, since: last.at };
     }
     if (c.status === "archived" || c.source?.merged_at || c.handled?.at >= last.at) return null;
-    const head = this.headOf(c);
-    if (last.sha && head && head !== last.sha) return null;
+    if (last.next_at) return null;
     return { who: "developer", review: last.id, since: last.at };
   }
 
@@ -955,14 +963,12 @@ export class Store {
       };
       // New commits on a pull request a review asked changes of: the developer's next version arrived.
       const head = this.db.github[key].head;
-      if (head) {
-        const cards = this.cardsOf(key);
-        for (const r of Object.values(this.db.reviews)) {
-          if (r.verdict !== "request-changes" || r.next_at || !cards.includes(r.card)) continue;
-          // One sent before the Desk knew the head is about the first one it reads.
-          if (!r.sha) r.sha = head;
-          else if (head !== r.sha) r.next_at = this.clock();
-        }
+      if (head) for (const id of this.cardsOf(key)) for (const rid of this.db.cards[id].reviews || []) {
+        const r = own(this.db.reviews, rid);
+        if (r?.verdict !== "request-changes") continue;
+        // One sent before the Desk knew the head is about the first one it reads.
+        if (!r.sha) r.sha = head;
+        else this.judgeNext(r, head);
       }
       if (own(this.db.gh_failed, key)) delete this.db.gh_failed[key];
       if (added.length) fresh.push({ key, cards: this.cardsOf(key), comments: added });
@@ -2763,6 +2769,7 @@ export class Store {
     for (const [id, a] of Object.entries(this.db.assets)) if (a.card === cardId) { try { unlinkSync(join(this.assetDir, a.file)); } catch {} delete this.db.assets[id]; }
     for (const mine of Object.values(this.db.reads)) if (mine && typeof mine === "object") delete mine[cardId];
     for (const key of Object.keys(this.db.drafts)) this.setDrafts(key, cardId, []);
+    for (const id of c.reviews || []) delete this.db.reviews[id];
     delete this.db.cards[cardId];
     this.save();
     return { deleted: cardId };

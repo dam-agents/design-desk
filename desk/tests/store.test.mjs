@@ -3003,13 +3003,13 @@ test("reviews: drafts go out as one review; each verdict does what the Desk alre
 
   // A pull request's change: the developer makes the next version, until its head moves on.
   const chg = s.upsertCard({ kind: "change", title: "Spend", source: { repo: "acme/widgets", pr: 7 } }).card;
-  s.db.github["acme/widgets#7"] = { key: "acme/widgets#7", kind: "pr", head: "a".repeat(40), comments: [] };
+  s.putGithub([{ key: "acme/widgets#7", kind: "pr", title: "Spend", head: "a".repeat(40), comments: [] }]);
   s.addDraft(chg.id, alice, { text: "The chip is too loud", change: "Spend list" });
   assert.throws(() => s.sendReview(chg.id, bob, { verdict: "request-changes" }), /Only designers/);
   const rc = s.sendReview(chg.id, alice, { verdict: "request-changes" });
   assert.deepEqual([rc.review.sha, s.thread(rc.review.threads[0]).change, s.card(chg.id).status], ["a".repeat(40), "Spend list", "new"]);
   assert.equal(s.getCard(chg.id).responsible.who, "developer");
-  s.db.github["acme/widgets#7"].head = "b".repeat(40);
+  s.putGithub([{ key: "acme/widgets#7", kind: "pr", title: "Spend", head: "b".repeat(40), comments: [] }]);
   assert.equal(s.getCard(chg.id).responsible, null, "new commits: Open again");
   // Approve marks it handled.
   s.addDraft(chg.id, alice, { text: "Fine" });
@@ -3092,4 +3092,59 @@ test("reviews hold up: a stale option, a closed item, two reviews in one second,
   s.addDraft(chg.id, alice, { text: "late" });
   assert.throws(() => s.sendReview(chg.id, alice, { verdict: "request-changes" }), /Comment only/);
   assert.equal(s.sendReview(chg.id, alice, { verdict: "comment" }).review.verdict, "comment");
+});
+
+test("a new version is judged against what the reviewer saw: a copy that was behind, or a push before the post, never fools it", () => {
+  const s = fresh();
+  const chg = s.upsertCard({ kind: "change", title: "Spend", source: { repo: "acme/widgets", pr: 7 } }).card;
+  const read = (head) => s.putGithub([{ key: "acme/widgets#7", kind: "pr", title: "Spend", head, comments: [] }]);
+  const [h1, h2, h3] = ["1", "2", "3"].map((x) => x.repeat(40));
+  // The copy holds h1 while h2 is already pushed: the review is about h2.
+  read(h1);
+  s.addDraft(chg.id, alice, { text: "Loud" });
+  const r = s.sendReview(chg.id, alice, { verdict: "request-changes" }).review;
+  read(h2);
+  assert.equal(s.getCard(chg.id).responsible, null, "for now it looks new");
+  s.reviewPosted(r.id, { url: "https://github.com/acme/widgets/pull/7#r", sha: h2 });
+  assert.equal(s.getCard(chg.id).responsible?.who, "developer", "the post says h2 was what the reviewer saw");
+  assert.equal(s.notifications(alice).items.some((x) => x.event === "new-version"), false, "and no New version");
+  read(h3);
+  assert.equal(s.getCard(chg.id).responsible, null, "the real next version");
+  assert.equal(s.notifications(alice).items.filter((x) => x.event === "new-version").length, 1);
+  // A push between sending and posting is the next version: the post names the commit from before.
+  const other = s.upsertCard({ kind: "change", title: "Rows", source: { repo: "acme/widgets", pr: 8 } }).card;
+  s.putGithub([{ key: "acme/widgets#8", kind: "pr", title: "Rows", head: h1, comments: [] }]);
+  s.addDraft(other.id, alice, { text: "Tight" });
+  const r8 = s.sendReview(other.id, alice, { verdict: "request-changes" }).review;
+  s.putGithub([{ key: "acme/widgets#8", kind: "pr", title: "Rows", head: h2, comments: [] }]);
+  s.reviewPosted(r8.id, { url: "https://github.com/acme/widgets/pull/8#r", sha: h1 });
+  assert.equal(s.getCard(other.id).responsible, null);
+});
+
+test("reviews: a refused send leaves the drafts as they were; Approve on a handled change marks nothing again; a deleted request takes its reviews", () => {
+  const s = fresh();
+  const a = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: "<p>v</p>", encoding: "utf8" }).asset;
+  const req = s.upsertCard({ kind: "request", title: "Calmer" }).card;
+  s.upsertCard({ id: req.id, status: "feedback", triage: { verdict: "design", reasons: ["Look."] }, variants: [{ id: "v1", name: "Quiet", asset: a.id }, { id: "v2", name: "Bold", asset: a.id }] });
+  s.card(req.id).variants[0].states = [{ id: "hover", name: "Hover", asset: a.id }];
+  s.addDraft(req.id, alice, { text: "On Bold", anchor: { variant: "v2" } });
+  s.addDraft(req.id, alice, { text: "On hover", anchor: { variant: "v1", state: "hover" } });
+  const c = s.card(req.id);
+  c.variants = [{ ...c.variants[0], states: [] }];
+  assert.throws(() => s.sendReview(req.id, alice, { verdict: "comment" }), /no longer drawn/);
+  assert.equal(s.drafts(req.id, alice).drafts[0].anchor.variant, "v2", "untouched");
+  // Approve on a change already handled keeps who handled it.
+  const chg = s.upsertCard({ kind: "change", title: "Spend", source: { repo: "acme/widgets", pr: 7 } }).card;
+  s.handle(chg.id, alice, true);
+  const lee = { email: "lee@example.com", role: "admin" };
+  s.addDraft(chg.id, lee, { text: "Fine" });
+  s.sendReview(chg.id, lee, { verdict: "approve" });
+  assert.equal(s.card(chg.id).handled.by.email, "alice@example.com");
+  // A deleted request takes its reviews with it.
+  s.removeDraft(req.id, alice, s.drafts(req.id, alice).drafts[1].id);
+  const r = s.sendReview(req.id, alice, { verdict: "comment" }).review;
+  s.act(req.id, alice, "close", "Not now");
+  for (const i of Object.values(s.db.inbox)) i.state = "done";
+  s.deleteRequest(req.id, alice);
+  assert.equal(Object.hasOwn(s.db.reviews, r.id), false);
 });
