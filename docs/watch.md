@@ -245,6 +245,8 @@ and is logged and reported as below. Else:
    it names, else nothing), then `[Open on the Design Desk](<card link>)` when `desk_link` is
    set. The person by their roster name, else the part of the address before the @; never an
    address. Their words as written; nothing of yours ([desk.md](desk.md) → Writing on the Desk).
+   At most 60,000 characters, under GitHub's limit: past it, the last comments are left out and
+   one line says how many, pointing to the Desk.
 2. `gh api [--hostname <host>] -X POST repos/<owner>/<name>/pulls/<pr>/reviews -f event=COMMENT
    -F body=@<file>` — always `COMMENT`, never `REQUEST_CHANGES` or `APPROVE`: the account is
    Design Desk's, not the reviewer's. Posting it never sets the `design-desk` check.

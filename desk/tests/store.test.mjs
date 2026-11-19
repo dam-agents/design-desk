@@ -3159,3 +3159,21 @@ test("reviews: a refused send leaves the drafts as they were; Approve on a handl
   s.deleteRequest(req.id, alice);
   assert.equal(Object.hasOwn(s.db.reviews, r.id), false);
 });
+
+test("a post keeps a New version the Desk read after the review was sent", () => {
+  let t = 0;
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { needsApproval: everyCounts, clock: () => new Date(Date.UTC(2026, 10, 19, 9, 0, t++)).toISOString().replace(/\.\d{3}Z$/, "Z") });
+  const chg = s.upsertCard({ kind: "change", title: "Spend", source: { repo: "acme/widgets", pr: 7 } }).card;
+  const read = (head) => s.putGithub([{ key: "acme/widgets#7", kind: "pr", title: "Spend", head, comments: [] }]);
+  const [h1, h2, h3] = ["1", "2", "3"].map((x) => x.repeat(40));
+  read(h1);
+  s.addDraft(chg.id, alice, { text: "Loud" });
+  const r = s.sendReview(chg.id, alice, { verdict: "request-changes" }).review;
+  read(h3);
+  assert.equal(s.getCard(chg.id).responsible, null, "h3 came after the review");
+  s.reviewPosted(r.id, { url: "https://github.com/acme/widgets/pull/7#r", sha: h2 });
+  assert.equal(s.getCard(chg.id).responsible, null, "the post names h2, the Desk read h3 after the review: still the next version");
+  assert.equal(s.notifications(alice).items.filter((x) => x.event === "new-version").length, 1);
+  // A pull request on another GitHub host is recorded too.
+  assert.match(s.reviewPosted(r.id, { url: "https://github.example.com/acme/widgets/pull/7#pullrequestreview-9", sha: h2 }).review.posted.url, /example\.com/);
+});

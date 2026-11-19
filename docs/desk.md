@@ -483,7 +483,9 @@ change until its pull request's head is no longer `sha` (`next_at`; a later appr
 handled mark ends it too). A review never holds Design Desk's check on GitHub: Request changes
 leaves the handled mark and the check as they are; Approve marks the change handled, which passes
 a held check as the mark always does. Only Comment only is sent on a closed or sent request or a
-merged change. A draft about an option no longer drawn goes as one about the whole request. A review of a change
+merged change. A draft about an option no longer drawn goes as one about the whole request. What exists stays as it is: a vote
+is not a verdict and counts on its own; **Work it in** turns a review's comment into a change note
+like any other; the design workspace's notes go to Design Desk at once, never into a review. A review of a change
 with an open pull request is also posted there by the agent, as a comment: [watch.md](watch.md)
 → Reviews on GitHub.
 

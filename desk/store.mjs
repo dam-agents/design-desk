@@ -875,12 +875,17 @@ export class Store {
   reviewPosted(id, { url, sha = null } = {}) {
     const r = own(this.db.reviews, id);
     if (!r) throw missing(`no review ${id}`);
-    if (!/^https:\/\/github\.com\/[^\s]{1,480}$/.test(String(url || ""))) throw bad("url: the review's address on GitHub");
+    if (!/^https:\/\/[\w.-]+\/[^\s]*\/pull\/\d+[^\s]{0,200}$/.test(String(url || "")) || String(url).length > 500) throw bad("url: the review's address on its pull request");
     r.posted = { url: String(url), at: this.clock() };
     // The pull request's last commit before the review was sent, as GitHub has it: the one the
     // reviewer saw, whatever the Desk's copy held then. A new version is a head other than it.
-    // The Desk's copy may be older than that commit: the next read judges, never this one.
-    if (/^[0-9a-f]{40}$/.test(String(sha || ""))) { r.sha = String(sha); delete r.next_at; }
+    // A head the Desk first read after the review was sent, other than that commit, is the next
+    // version; one it held from before is only a copy that was behind (docs/desk.md → Reviews).
+    if (/^[0-9a-f]{40}$/.test(String(sha || ""))) {
+      r.sha = String(sha);
+      const c = this.card(r.card), copy = c.source?.repo && c.source?.pr ? own(this.db.github, `${String(c.source.repo).toLowerCase()}#${c.source.pr}`) : null;
+      if (copy?.head && copy.head !== r.sha && String(copy.head_at || "") > r.at) { if (!r.next_at) r.next_at = this.clock(); } else delete r.next_at;
+    }
     this.save();
     return { review: structuredClone(r) };
   }
@@ -960,7 +965,8 @@ export class Store {
         linked: !Array.isArray(x.linked) ? (was?.linked || []) : x.linked.slice(0, 10).filter((p) => /^https:\/\/github\.com\//.test(String(p?.url || ""))).map((p) => ({ title: String(p.title || "").slice(0, LIMITS.title), url: String(p.url).slice(0, 500), state: optText(p.state, 30, "state"), author: optText(p.author, 100, "author") })),
         body: String(x.body ?? "").slice(0, GH.body), updated: optText(x.updated, 40, "updated"), comments, fetched: this.clock(),
         // A pull request's head commit: a review that asked for changes waits for it to move (docs/desk.md → Reviews).
-        ...(x.kind === "pr" && /^[0-9a-f]{40}$/.test(String(x.head || "")) ? { head: String(x.head) } : x.kind === "pr" && was?.head ? { head: was.head } : {}),
+        ...(x.kind === "pr" && /^[0-9a-f]{40}$/.test(String(x.head || "")) ? { head: String(x.head), head_at: x.head === was?.head ? was.head_at || this.clock() : this.clock() }
+          : x.kind === "pr" && was?.head ? { head: was.head, head_at: was.head_at || this.clock() } : {}),
       };
       // New commits on a pull request a review asked changes of: the developer's next version arrived.
       const head = this.db.github[key].head;
