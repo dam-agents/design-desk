@@ -3911,12 +3911,14 @@ test("on a phone-wide list a simple mode row keeps its date and number on one li
   await desk.keyboard.press("Escape");
   const box = (id) => desk.$eval(`#list [data-card="${id}"] .sline`, (l) => {
     const r = (x) => x.getBoundingClientRect(), w = l.querySelector(".when"), n = l.querySelector(".snum");
-    return { num: n.textContent, oneLine: r(w).height <= parseFloat(getComputedStyle(w).lineHeight) + 1 && Math.abs(r(n).top - r(w).top) < 2, pill: Boolean(l.querySelector(".spill")) };
+    const p = l.querySelector(".spill");
+    return { num: n.textContent, oneLine: r(w).height <= parseFloat(getComputedStyle(w).lineHeight) + 1 && Math.abs(r(n).top - r(w).top) < 2,
+      pill: Boolean(p) && Math.abs(r(p).right - r(l).right) < 2 && r(p).bottom <= r(l).bottom + 1 && (r(p).top >= r(w).bottom - 1 || r(p).left >= r(n).right) };
   });
   const change = await box("c-nopr"), request = await box("r-long");
   assert.equal(change.num, "c-nopr", "no pull request: its number on the Desk");
   assert.ok(change.oneLine && request.oneLine, "the date and the number stay on one line");
-  assert.ok(change.pill && request.pill, "the pill shows, on its own line when it must");
+  assert.ok(change.pill && request.pill, "the pill shows at the line's right end, beside the number or on a line of its own, never over them");
 }));
 
 test("simple mode's filter shows only what narrows the list, keeps one of each group and is kept in the browser", (t) => open(t, DESK(SIMPLE_ME, SIMPLE_CARDS), async (desk) => {
