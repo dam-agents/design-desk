@@ -75,7 +75,7 @@ Taken with the operator before planning:
 |----|-------|-------|------------|------|
 | 01 | Feedback words | Every word a person reads; Comment now → Comment; GitHub post's first line | — | [x] |
 | 02 | Looks good on the server | `{ok, change}` drafts, `looks_good` on a review and on a card read, the GitHub post | 01 | [x] |
-| 03 | The change view | Tabs per change, before / after, the box under a change, both modes | 02 | [ ] |
+| 03 | The change view | Tabs per change, before / after, the box under a change, both modes | 02 | [x] |
 | 04 | Marks and sending | Chips, Looks good moves on, "not looked at yet" warning, links from Comments | 03 | [ ] |
 | 05 | Feedback in the element dialog | Add to feedback + Comment, your drafts on the part | 01 | [ ] |
 | 06 | The workspace: notes and Your feedback | No Send to Design Desk on its boxes; a Your feedback tab in the side panel | 01, 05 | [ ] |

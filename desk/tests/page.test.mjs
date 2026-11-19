@@ -856,14 +856,11 @@ test("a change shows its age and gets handled, pictures step through, the form a
     await desk.click('[data-handle="1"]');
     assert.deepEqual(await sent("/api/cards/ch2/handled", 1), { handled: true });
 
-    // The gallery steps through the change's pictures.
+    // The change shown opens in the gallery; each change is a tab of its own (docs/desk-page.md → Changes).
+    assert.deepEqual(await desk.locator("#detail .chg-tabs button").allTextContents(), ["1The list", "2The card"]);
     await desk.click('[data-zoom="A-1"]');
     await desk.waitForSelector(".zoom figcaption");
-    assert.equal(await desk.textContent(".zoom figcaption"), "1 / 2 · The list");
-    await desk.press("body", "ArrowRight");
-    await desk.waitForFunction(() => document.querySelector(".zoom figcaption").textContent.startsWith("2 / 2"));
-    await desk.click(".zoom .gal.next");
-    await desk.waitForFunction(() => document.querySelector(".zoom figcaption").textContent === "1 / 2 · The list");
+    assert.match(await desk.textContent(".zoom figcaption"), /The list/);
     await desk.press("body", "Escape");
     assert.equal(await desk.locator(".zoom").count(), 0, "Escape closes the gallery");
 
@@ -887,10 +884,15 @@ test("a change shows its age and gets handled, pictures step through, the form a
     // ch4 is handled: it is listed under Handled.
     await desk.click('[data-filter="newFilter:handled"]');
     await desk.click('[data-card="ch4"]');
+    await desk.waitForFunction(() => document.querySelectorAll("figure[data-frame]").length === 0 && document.querySelector('[data-zoom="A-5"] img')?.naturalHeight);
+    assert.deepEqual(await desk.$$eval(".shot", (fs) => fs.map((f) => [f.dataset.zoom, f.querySelectorAll(".mark").length])), [["A-4", 1], ["A-5", 1]], "the same size: both keep them");
+    await desk.click('#detail .chg-tabs [data-chg="Taller"]');
     await desk.waitForFunction(() => document.querySelectorAll("figure[data-frame]").length === 0 && document.querySelector('[data-zoom="A-7"] img')?.naturalHeight);
     assert.deepEqual(await desk.$$eval(".shot", (fs) => fs.map((f) => [f.dataset.zoom, f.querySelectorAll(".mark").length])),
-      [["A-4", 1], ["A-5", 1], ["A-6", 0], ["A-7", 1]], "the shorter before picture loses its frames");
+      [["A-6", 0], ["A-7", 1]], "the shorter before picture loses its frames");
     assert.equal(await desk.getAttribute('[data-zoom="A-6"]', "data-marks"), null, "and the gallery draws none on it");
+    await desk.click('#detail .chg-tabs [data-chg="Same"]');
+    await desk.waitForSelector('[data-zoom="A-4"]');
     // Until the sizes are compared, the frames stay hidden, on the card and in the gallery.
     await desk.$eval('[data-zoom="A-4"]', (f) => { f.dataset.frame = "A-5"; });
     assert.equal(await desk.isVisible('[data-zoom="A-4"] .mark'), false);
@@ -3980,7 +3982,7 @@ window.platform = { async request({ method, path, body }) {
   const b = JSON.parse(body || "{}"), id = decodeURIComponent(path.split("/")[3] || ""), json = (x, status = 200) => ({ status, contentType: "application/json", body: JSON.stringify(x) });
   if (method !== "GET") posts.push({ method, path, body: b });
   if (/\\/drafts$/.test(path) && method === "GET") return window.failDrafts ? json({ error: "down" }, 503) : json({ drafts: drafts[id] || [] });
-  if (/\\/drafts$/.test(path)) { drafts[id] = [...(drafts[id] || []), { id: "d" + posts.length, text: b.text, anchor: b.anchor || null, ...(b.change ? { change: b.change } : {}), at: "2026-11-18T10:00:00Z" }]; return json({ drafts: drafts[id] }, 201); }
+  if (/\\/drafts$/.test(path)) { drafts[id] = [...(drafts[id] || []), b.ok ? { id: "d" + posts.length, ok: true, change: b.change, at: "2026-11-18T10:00:00Z" } : { id: "d" + posts.length, text: b.text, anchor: b.anchor || null, ...(b.change ? { change: b.change } : {}), at: "2026-11-18T10:00:00Z" }]; return json({ drafts: drafts[id] }, 201); }
   if (/\\/drafts\\//.test(path)) { drafts[id] = (drafts[id] || []).filter((d) => d.id !== path.split("/")[5]); return json({ drafts: drafts[id] }); }
   if (/\\/reviews$/.test(path)) { if (!(drafts[id] || []).length && !b.note) return json({ error: "Write a comment or a note first." }, 400); drafts[id] = []; return json({ review: { id: "U-1" }, inbox: cards.find((c) => c.id === id)?.kind === "change" ? { kind: "review" } : { kind: "revise" } }, 201); }
   if (method !== "GET") return json({ thread: { id: "T-9" } });
@@ -4183,6 +4185,46 @@ test("simple mode's change page: lead, the changes, what to look at, comments; N
   await desk.waitForFunction(() => /Quiet/.test(document.querySelector("#detail .shead h2")?.textContent || ""));
   assert.match(await desk.textContent("#detail .sfound"), /Nothing to flag/);
 }));
+
+// A pull request's changes, one at a time (docs/desk-page.md → Changes): a pair, then lone screens.
+const svgShot = (c) => ({ contentType: "image/svg+xml", encoding: "utf8", data: `<svg xmlns="http://www.w3.org/2000/svg" width="8" height="4"><rect width="8" height="4" fill="${c}"/></svg>` });
+const threeChanges = { ...prChange, id: "P-7", title: "Spend in the list", source: { ...prChange.source, draft: false },
+  screens: [{ asset: "S-b", stage: "before", pair: "Agents list", source: "instance" }, { asset: "S-a", stage: "after", pair: "Agents list", source: "instance", marks: [{ x: 0.5, y: 0, w: 0.5, h: 0.5 }] },
+    { asset: "S-d", stage: "diff", pair: "Agents list" }, { asset: "S-1", caption: "The limit dialog", source: "instance" }, { asset: "S-2", caption: "The usage page", source: "pr" }] };
+const CHANGES_DESK = (me) => REVIEW_DESK(me, [threeChanges, { ...prChange, id: "P-8", title: "Nothing yet" }]).replace("const answer = path ===",
+  `if (path.startsWith("/api/assets/S-")) return json(${JSON.stringify(svgShot("#36c"))});
+  const answer = path ===`);
+for (const simple of [true, false]) {
+  test(`${simple ? "simple" : "full"} mode: a pull request's changes are tabs, one shown with its pictures; Add to feedback and Looks good name the change`, (t) => open(t, CHANGES_DESK({ ...HEAD_ME, simple }), async (desk) => {
+    await desk.waitForSelector("#list");
+    await desk.evaluate(() => { location.hash = "#P-7"; });
+    await desk.waitForSelector("#detail .chg-tabs");
+    assert.deepEqual(await desk.locator("#detail .chg-tabs button").allTextContents(), ["1Agents list", "2The limit dialog", "3The usage page"], "a pair, then each lone screen");
+    assert.equal(await desk.getAttribute("#detail .chg-tabs button:first-child", "aria-pressed"), "true", "the first shown");
+    assert.deepEqual(await desk.locator("#detail .chg-pair figcaption b").allTextContents(), ["Before", "After"]);
+    assert.equal(await desk.locator('#detail .chg-pair [data-zoom="S-d"]').count(), 0, "no separate What changed picture");
+    assert.equal(await desk.locator("#detail .outline-toggle").count(), 1, "its outline still toggles");
+    assert.deepEqual(await desk.locator("#detail .chg-foot .bar button").allTextContents(), ["Add to feedback", "Looks good"], "no comment for the team under a change");
+    await desk.fill("#detail .chg-foot textarea", "Show the limit only when set.");
+    await desk.click("#detail .chg-foot [data-draft-add]");
+    await desk.waitForSelector("#detail .chg-foot .dbub");
+    assert.deepEqual(await desk.evaluate(() => posts.find((p) => /drafts$/.test(p.path)).body), { text: "Show the limit only when set.", change: "Agents list" });
+    assert.deepEqual(await desk.locator("#detail .chg-foot .bar button").allTextContents(), ["Add to feedback"], "no Looks good while a note on it waits");
+    await desk.click('#detail .chg-tabs [data-chg="S-1"]');
+    await desk.waitForFunction(() => document.querySelector('#detail .chg-tabs [data-chg="S-1"]')?.getAttribute("aria-pressed") === "true");
+    assert.deepEqual(await desk.locator("#detail .chg-pair figcaption b").allTextContents(), ["After"], "a lone screen: after only");
+    await desk.click("#detail .chg-foot [data-draft-ok]");
+    await desk.waitForSelector("#detail .chg-ok");
+    assert.deepEqual(await desk.evaluate(() => posts.filter((p) => /drafts$/.test(p.path)).at(-1).body), { ok: true, change: "S-1" });
+    assert.match(await desk.textContent("#detail .yreview"), /The limit dialog[\s\S]*Looks good/, "the mark lists by the change's name");
+    await desk.click("#detail .chg-ok [data-draft-del]");
+    await desk.waitForSelector("#detail .chg-foot [data-draft-ok]");
+    // With no screens: how they come.
+    await desk.evaluate(() => { location.hash = "#P-8"; });
+    await desk.waitForFunction(() => /No screenshots yet/.test(document.querySelector("#detail")?.textContent || ""));
+    assert.equal(await desk.locator("#detail .chg-tabs").count(), 0);
+  }));
+}
 
 // Simple mode with nothing open: how many items are in each state, each box filtering the list.
 test("simple mode's overview counts the items in each state, and a box filters the list to its state", (t) => open(t, DESK(SIMPLE_ME, SIMPLE_CARDS), async (desk) => {

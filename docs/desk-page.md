@@ -208,12 +208,12 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   its own questions included, then the feedback. Sent feedback shows in Comments, in both modes, as
   one block: who, the verdict (**Changes requested** amber, **Approved** green, **Comments**), when,
   **On GitHub ↗** once posted, the note, then each of its comments with its replies. Full mode has
-  the same **Changes requested** line under the title, the same boxes, under the option shown and a change's Screens, and **Your feedback** at the top
+  the same **Changes requested** line under the title, the same boxes, the same **Changes** of a change, and **Your feedback** at the top
   of Questions and comments, whose **Send feedback…** opens the same dialog. ⋯ holds **Close…** or **Reopen** on a request, **Turn into a design request** on a
   change (and **Undo approval** on one approved), and **Open on GitHub** where there is a link. No vote buttons, rename or For Developers
   move. Under the head the page reads one way for both kinds: a short lead (a request's first
   paragraph, a change's summary), **The request in full** folded, the designs (a request's
-  options, votes as counts only) or **The changes** (a change's screens), **What Design Desk
+  options, votes as counts only) or **Changes** (below), **What Design Desk
   found** (the decisions in force it goes against, a change's reasons to look at it, how it
   differs from the approved design, Figma when on, its check holding the pull request; else
   "Nothing to flag"), the long reads folded alike (**What's already known**, **Details**, a
@@ -250,6 +250,20 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   anywhere. Kept on the Desk like simple mode (`POST /api/prefs {figma}`, `figma_pref` in
   `GET /api/me`); with no choice (null) it is off.
   The Desk opens on Requests.
+- **Changes**, on a pull request change's page in both modes: the change's screens one change at
+  a time. A change is a screen pair (`pair`, its pictures by `stage`) or a screen with no `stage`,
+  in that order (`changesOf`, [desk.md](desk.md) → Reviews). With two or more, one tab each, the
+  underline tabs with a number chip ([the guidelines](../desk/guidelines.html) → Tabs and
+  switchers), scrolling sideways in one row. The change shown: **Before** beside **After**, or
+  **After** alone (nothing says a screen is new), each with its caption and where it came from;
+  **Outline what changed** over them; the separate "What changed" picture is not shown. Under
+  them, for who may comment on an open item: the viewer's notes on it waiting in their feedback,
+  a box, **Add to feedback** and **Looks good** (a mark with no words; then "You marked it as
+  good" with **Undo**, and no Looks good while notes on it wait). No comment for the team there:
+  what is written is for the developer. "n comments on this change ↓" leads to its conversations.
+  With no screens, a line says how they come: Design Desk's own copy of the product while one is
+  free (`screens` on), else when the pull request merges; **Add screenshots** stays, and a box
+  with **Add to feedback** alone takes notes on the whole pull request.
 - **Motion.** Short, soft animations, in the `@media (prefers-reduced-motion: no-preference)`
   block of `desk/page.html`'s style, so a person whose system asks for less motion gets none:
   dialogs rise in and fade out with their backdrop, More and the menu under a name pop open,

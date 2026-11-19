@@ -277,6 +277,14 @@
   .dbub { display: flex; gap: 8px; align-items: flex-start; padding: 8px 12px; border-radius: var(--r-sm); background: var(--panel); } .dbub + .dbub { margin-top: 8px; }
   .dbub .db-b { min-width: 0; flex: 1; white-space: pre-wrap; overflow-wrap: anywhere; } .dbub .about { display: block; font-size: var(--fs-micro); color: var(--muted); white-space: normal; }
   .dbub .x { border: 0; background: none; color: var(--muted); cursor: pointer; font: inherit; padding: 0 4px; } .dbub .x:hover { color: var(--ink); }
+  /* A pull request's changes, one at a time: tabs, the pictures of the one shown, its feedback box. */
+  .chg-h .hint { font-weight: 400; margin-left: 4px; } .chg-one { margin: 0 0 12px; }
+  .chg-pair { max-width: 1200px; } .chg-pair[style*="--cols:1"] { max-width: 760px; }
+  .chg-foot { display: grid; gap: 8px; margin-top: 12px; max-width: var(--measure); } .chg-foot .dbub { background: var(--warn-soft); }
+  .chg-foot .bar { display: flex; gap: 8px; align-items: center; } .chg-foot .bar .grow { flex: 1; }
+  .chg-ok { display: inline-flex; gap: 8px; align-items: center; color: var(--approved); font-weight: 600; font-size: var(--fs-ui); }
+  .chg-ok svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; } .chg-ok .link { font-weight: 400; color: var(--muted); }
+  .chg-talk { justify-self: start; font-size: var(--fs-meta); }
   #cf-body .dbub { background: var(--soft); }
   .rvw { --v: var(--muted); max-width: var(--measure); margin-bottom: 12px; padding: 12px 16px; border: 1px solid var(--line); border-left: 2px solid var(--v); border-radius: var(--r-sm); }
   .rvw[data-v="request-changes"] { --v: var(--warn); } .rvw[data-v="approve"] { --v: var(--ok); }
@@ -2174,6 +2182,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     draftAdd: "Keeps this comment in your feedback: nobody sees it until you send it",
     draftNow: "Posts this comment now, here on the Desk; it is not part of your feedback",
     draftDel: "Removes this comment from your feedback",
+    draftOk: "This change is fine as it is; your Looks good goes with your feedback",
     reopen: "Opens this note again; Design Desk looks at it again",
     workIn: (v) => v.includes(",") ? "Design Desk changes the design as every open comment asks" : "Design Desk changes the design as this comment asks",
     sendForm: "Sends your answers; Design Desk goes on with them",
@@ -3407,9 +3416,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const r = await api("GET", `/api/cards/${encodeURIComponent(c.id)}/drafts`).catch(() => null);
     if (Array.isArray(r?.drafts)) S.drafts[c.id] = r.drafts; else delete S.drafts[c.id];
   }
-  async function addDraft(c, { text, anchor = null, change = null }) {
-    const r = await api("POST", `/api/cards/${encodeURIComponent(c.id)}/drafts`, { text, ...(anchor ? { anchor } : {}), ...(change ? { change } : {}) });
+  async function addDraft(c, { text = null, anchor = null, change = null, ok = false }) {
+    const r = await api("POST", `/api/cards/${encodeURIComponent(c.id)}/drafts`, ok ? { ok: true, change } : { text, ...(anchor ? { anchor } : {}), ...(change ? { change } : {}) });
     S.drafts[c.id] = r.drafts; renderDetail();
+    if (ok) { toast("Marked as good. It goes with your feedback."); return; }
     toast(`Added to your feedback (${plural(r.drafts.length, "comment", "comments")}). Nobody sees it until you send it.`);
   }
   async function removeDraft(c, id) { S.drafts[c.id] = (await api("DELETE", `/api/cards/${encodeURIComponent(c.id)}/drafts/${encodeURIComponent(id)}`)).drafts; renderDetail(); }
@@ -3417,9 +3427,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   function aboutOf(c, a, change) {
     const v = a?.variant && (c.variants || []).find((x) => x.id === a.variant);
     const st = v && a.state && (v.states || []).find((x) => x.id === a.state);
-    return [v ? `Option ${(c.variants || []).indexOf(v) + 1} · ${v.name}` : "", st ? st.name || st.id : "", a?.label || "", change || ""].filter(Boolean).join(" · ");
+    return [v ? `Option ${(c.variants || []).indexOf(v) + 1} · ${v.name}` : "", st ? st.name || st.id : "", a?.label || "", change ? (c.kind === "change" ? changeName(c, change) : change) : ""].filter(Boolean).join(" · ");
   }
-  const draftBubble = (c, d, remove = true) => `<div class="dbub"><div class="db-b">${aboutOf(c, d.anchor, d.change) ? `<span class="about">${esc(aboutOf(c, d.anchor, d.change))}</span>` : ""}${esc(d.text)}</div>${remove ? `<button class="x" data-draft-del="${esc(d.id)}" aria-label="Remove this comment from your feedback" title="Remove from your feedback">✕</button>` : ""}</div>`;
+  const draftBubble = (c, d, remove = true) => `<div class="dbub"><div class="db-b">${aboutOf(c, d.anchor, d.change) ? `<span class="about">${esc(aboutOf(c, d.anchor, d.change))}</span>` : ""}${d.ok ? "✓ Looks good" : esc(d.text)}</div>${remove ? `<button class="x" data-draft-del="${esc(d.id)}" aria-label="Remove this comment from your feedback" title="Remove from your feedback">✕</button>` : ""}</div>`;
   // Under the head while drafts wait: each one, and the way to send them.
   function yourReview(c) {
     const ds = draftsOf(c);
@@ -4825,6 +4835,58 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     return `Design Desk, I asked "${q.slice(0, 200)}" and understood: ${gist}\n\nWhat I would like now: `;
   }
 
+  // ---------- a pull request's changes, one at a time (docs/desk-page.md → Simple mode) ----------
+  // The same as desk/store.mjs's changesOf: one per screen pair, then one per lone screen. `key`
+  // is what a draft or a Looks good names; a lone screen is after only (no picture says it is new).
+  function changesOf(c) {
+    const list = (c?.screens || []).filter((x) => x && typeof x === "object");
+    const pairs = [...new Set(list.filter((x) => x.stage && x.pair).map((x) => String(x.pair)))];
+    const of = (pair, stage) => list.find((x) => x.stage === stage && String(x.pair) === pair) || null;
+    return [...pairs.map((pair) => ({ key: pair, name: pair, before: of(pair, "before"), after: of(pair, "after") })),
+      ...list.filter((x) => !x.stage && x.asset).map((x, i) => ({ key: String(x.asset), name: String(x.caption || "").trim().slice(0, 120) || `Screen ${i + 1}`, before: null, after: x }))];
+  }
+  const changeShown = (c) => { const xs = changesOf(c); return xs.find((x) => S.chg?.card === c.id && x.key === S.chg.key) || xs[0] || null; };
+  const changeName = (c, key) => changesOf(c).find((x) => x.key === key)?.name || key;
+  // Where the pictures come from while there are none (docs/screens.md, docs/watch.md → Screens).
+  const noShotsYet = (c) => c.source?.merged_at ? "No screenshots of this change."
+    : S.me?.screens ? "No screenshots yet. Design Desk takes them on its own copy of the product while one is free, else once the pull request merges."
+    : "No screenshots yet: the pull request carries none. Design Desk adds them once it merges.";
+  // Changes: a tab per change (desk/guidelines.html → Tabs and switchers), its pictures, and under
+  // them the box whose feedback is about that change: Add to feedback and Looks good.
+  function changeView(c) {
+    const xs = changesOf(c);
+    const add = !c.instance && can("screens") ? `<div class="actions"><button class="btn" data-add-shots>Add screenshots</button></div>` : "";
+    if (!xs.length) return `<h3>Changes</h3><p class="hint" style="max-width:var(--measure)">${esc(noShotsYet(c))}</p>${changeBox(c, null)}${add}`;
+    const x = changeShown(c);
+    const tabs = xs.length > 1 ? `<div class="tabs vtabs vrow utabs chg-tabs" role="group" aria-label="Changes"><div class="vscroll">${xs.map((y, k) => `<button data-chg="${esc(y.key)}" aria-pressed="${y.key === x.key}"${changeMark(c, y.key)}><span class="ono">${k + 1}</span>${esc(y.name)}</button>`).join("")}</div></div>` : "";
+    // Marks are measured on the "after" picture: a "before" one with no "after" gets none.
+    const before = x.before && !x.after ? { ...x.before, marks: [] } : x.before;
+    const pics = [before && figure(before, "Before", x.after?.asset), x.after && figure(x.after, "After")].filter(Boolean);
+    return `<h3 class="chg-h">Changes <span class="hint">${xs.length}</span>${changeProgress(c)}</h3>${tabs}
+      ${xs.length > 1 ? "" : `<p class="chg-one"><b>${esc(x.name)}</b></p>`}
+      ${outlineToggle([x.before, x.after].filter(Boolean))}<div class="shots stages chg-pair" style="--cols:${pics.length}">${pics.join("")}</div>
+      ${changeBox(c, x)}${add}`;
+  }
+  // Under the change shown: the viewer's notes on it waiting in their feedback, a box, Add to
+  // feedback and Looks good. No comment for the team here: what is written is for the developer.
+  // With no screens, the box is about the whole pull request: Add to feedback alone.
+  function changeBox(c, x) {
+    if (!x) return can("comment") && !c.send && !closed(c) ? `<div class="composer rbox chg-foot" data-rbox data-change="">${draftsOf(c).filter((d) => !d.change && !d.ok).map((d) => draftBubble(c, d)).join("")}
+      <textarea maxlength="4000" placeholder="What should change?" aria-label="A comment on the pull request"></textarea>
+      <div class="bar"><span class="grow"></span><button class="btn small" data-draft-add>Add to feedback</button></div></div>` : "";
+    const sent = (c.threads || []).filter((th) => th.change === x.key && th.state !== "resolved");
+    const talk = sent.length ? `<button class="link chg-talk" data-chg-talk="${esc(sent[0].id)}" title="Shows the conversations about this change">${plural(sent.length, "comment", "comments")} on this change ↓</button>` : "";
+    if (!can("comment") || c.send || closed(c)) return talk ? `<div class="chg-foot">${talk}</div>` : "";
+    const ds = draftsOf(c).filter((d) => d.change === x.key), ok = ds.find((d) => d.ok), notes = ds.filter((d) => !d.ok);
+    const said = ok ? `<span class="chg-ok"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>You marked it as good<button class="link" data-draft-del="${esc(ok.id)}" title="Takes your Looks good back">Undo</button></span>` : "";
+    return `<div class="composer rbox chg-foot" data-rbox data-change="${esc(x.key)}">${talk}${notes.map((d) => draftBubble(c, d)).join("")}
+      <textarea maxlength="4000" placeholder="What should change here?" aria-label="${esc(`A comment on ${x.name}`)}"></textarea>
+      <div class="bar">${said}<span class="grow"></span><button class="btn small" data-draft-add>Add to feedback</button>${ok || notes.length ? "" : `<button class="btn small" data-draft-ok>Looks good</button>`}</div></div>`;
+  }
+  // A change's mark on its tab (slice 04 fills it); nothing yet.
+  const changeMark = () => "";
+  const changeProgress = () => "";
+
   // ---------- a shipped change ----------
   // The box under a change's or an issue's title, as on a request: its state's word and dot on the
   // left, a line of facts under it, its buttons on the right and the rest under ⋯ (docs/desk.md →
@@ -4862,9 +4924,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ${c.summary ? `<div class="slead">${md(c.summary)}</div>` : ""}
       ${c.builds ? `<p class="hint">It builds the design of <button class="anchor" data-card="${esc(c.builds.card)}">${esc(c.builds.title)}</button>${num({ id: c.builds.card })}.</p>` : ""}${requestsFrom(c)}
       ${yourReview(c)}
-      <h3>The changes</h3>${(c.screens || []).length ? shots(c.screens) : `<p class="hint">No screens yet.</p>`}
-      ${reviewBox(c, { what: "the changes" })}
-      ${!c.instance && can("screens") ? `<div class="actions"><button class="btn" data-add-shots>Add screenshots</button></div>` : ""}
+      ${changeView(c)}
       ${renderEnvironment(c)}${renderInstance(c)}
       ${simpleFound(c)}
       ${(c.elements || []).length ? `<details class="fold big sfold"><summary><h3>Parts it changed</h3></summary><div class="actions">${c.elements.map((id) => S.cards.find((x) => x.id === id)).filter(Boolean).map((e) => `<button class="anchor" data-card="${esc(e.id)}" data-made-by="${esc(c.id)}" title="How it looked before and after">${esc(e.title)} — before and after</button>`).join("")}</div></details>` : ""}
@@ -4895,9 +4955,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ${attentionLine(c)}
       ${againstBox(c)}${designCheckBox(c)}${followsLine(c)}
       ${working(c).map((k) => `<div class="working" style="max-width:var(--measure)"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")}</div></div>`).join("")}
-      <h3>Screens</h3>${(c.screens || []).length ? shots(c.screens) : ""}
-      ${reviewBox(c, { what: "the changes" })}
-      ${!c.instance && can("screens") ? `<div class="actions"><button class="btn" data-add-shots>Add screenshots</button></div>` : ""}
+      ${changeView(c)}
       ${renderEnvironment(c)}
       ${renderInstance(c)}
       ${figmaBox(c)}
@@ -7530,7 +7588,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   var tabsCard = null; // var: a render may come before this line runs
   const tabsNow = () => {
     const sc = $("#detail .vtabs .vscroll");
-    return sc && { card: tabsCard, at: sc.scrollLeft, picked: sc.querySelector('button[aria-pressed="true"]')?.dataset.variant ?? "split" };
+    const t = sc?.querySelector('button[aria-pressed="true"]');
+    return sc && { card: tabsCard, at: sc.scrollLeft, picked: t?.dataset.variant ?? t?.dataset.chg ?? "split" };
   };
   function keepTabs(was) {
     const sc = $("#detail .vtabs .vscroll");
@@ -7538,7 +7597,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (!sc || !was || was.card !== tabsCard) return;
     sc.scrollLeft = was.at;
     const t = sc.querySelector('button[aria-pressed="true"]');
-    if (!t || (t.dataset.variant ?? "split") === was.picked) return;
+    if (!t || (t.dataset.variant ?? t.dataset.chg ?? "split") === was.picked) return;
     const l = t.offsetLeft - sc.offsetLeft, r = l + t.offsetWidth;
     if (l < sc.scrollLeft) sc.scrollLeft = l; else if (r > sc.scrollLeft + sc.clientWidth) sc.scrollLeft = r - sc.clientWidth;
   }
@@ -8307,6 +8366,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       await refreshList(); await openCard(S.card.id); return;
     }
     if (ds.variant) { S.variant = ds.variant; showSplit(false, false); renderDetail(); return; }
+    if (ds.chg !== undefined) { S.chg = { card: S.card.id, key: ds.chg }; renderDetail(); return; }
+    if (ds.chgTalk) { const n = document.getElementById(`th-${ds.chgTalk}`); if (n) { n.scrollIntoView({ block: "center", behavior: "smooth" }); n.classList.add("flash"); setTimeout(() => n.classList.remove("flash"), 1600); } return; }
+    if ("draftOk" in ds) { const box = el.closest("[data-rbox]"); await addDraft(S.card, { ok: true, change: box.dataset.change }); return; }
     if ("splitTab" in ds) { showSplit(true); return; }
     if (ds.splitNow !== undefined) { startSplit(S.card, Number(ds.splitNow), "now"); return; }
     if (ds.splitClear !== undefined) { const sp = splitOf(S.card); if (!sp) return; sp.panes[Number(ds.splitClear)] = null; if (!sp.panes.some(Boolean)) endSplit(); else renderDetail(); return; }
