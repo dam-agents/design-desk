@@ -225,6 +225,7 @@
   .srow .kic { grid-row: span 2; color: var(--muted); padding-top: 2px; } .kic svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; display: block; }
   .srow .sline { display: flex; align-items: center; gap: 8px; font-size: var(--fs-meta); color: var(--muted); min-height: 20px; }
   .srow .sline .spill { margin-left: auto; }
+  .srow .sline .snum { color: var(--muted); } .srow .sline .ssep { margin: 0 -4px; }
   .spill { --p: var(--muted); display: inline-flex; align-items: center; gap: 4px; padding: 0 8px; border-radius: 999px; font-size: var(--fs-micro); font-weight: 500; line-height: 20px; white-space: nowrap;
     color: var(--p); background: color-mix(in srgb, var(--p) 14%, transparent); }
   .spill[data-s="open"] { --p: var(--ok); } .spill[data-s="dev"] { --p: var(--accent); } .spill[data-s="shipped"] { --p: var(--live); }
