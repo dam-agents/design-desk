@@ -131,6 +131,9 @@ const put = (id, html) => { A[id] = { id, contentType: "text/html", encoding: "u
 put("A-calm-3", design({ title: "Calm" }));
 put("A-calm-2", design({ title: "Calm", radius: 4, change: "btn-primary" }));
 put("A-calm-1", design({ title: "Calm", radius: 0, change: "btn-primary", limit: "numbers" }));
+// How R-1's screen looks today, and its Change button as Design Desk took it from the product.
+put("A-now", design({ title: "Providers", radius: 6, change: "btn-primary", limit: "numbers" }));
+A["A-before-change"] = { id: "A-before-change", contentType: "image/svg+xml", encoding: "utf8", data: `<svg xmlns="http://www.w3.org/2000/svg" width="232" height="88" viewBox="0 0 232 88"><rect width="232" height="88" fill="#fff"/><rect x="16" y="20" width="200" height="48" rx="6" fill="#16181d"/><text x="116" y="50" font-family="system-ui, sans-serif" font-size="18" fill="#fff" text-anchor="middle">Change limit</text></svg>` };
 put("A-calm-hover", design({ title: "Calm", state: "hover" }));
 put("A-calm-loading", design({ title: "Calm", state: "loading" }));
 put("A-calm-failed", design({ title: "Calm", state: "failed" }));
@@ -177,7 +180,9 @@ const r1 = {
         { id: "failed", name: "Failed", part: "Change button", how: "The new limit was not saved.", asset: "A-calm-failed", selector: "#limit-change", version: 2, of: 3, element: "change" },
         { id: "empty", name: "No providers", part: "Provider list", how: "A new agent with no provider turned on.", asset: "A-calm-empty", selector: "#provider-list", version: 1, of: 2 }],
       elements: [{ id: "change", name: "Change button", change: "changed", selector: "#limit-change", how: "Secondary, so the card has no loud button.", controls: changeControls },
-        { id: "bar", name: "Limit bar", change: "same", selector: "#limit-bar", how: "" }],
+        { id: "bar", name: "Limit bar", change: "same", selector: "#limit-bar", how: "" },
+        { id: "text", name: "Limit amount", change: "changed", selector: "#limit-text", how: "The amount in dollars, and which counter stops first, in one line." },
+        { id: "providers", name: "Provider list", change: "new", selector: "#provider-list", how: "Each provider with its own switch." }],
       reasons: [{ decision: "D-12", how: "Save is the only primary button; Change stays secondary.", parts: [{ selector: "#limit-change", label: "Change button" }, { selector: "#general-save", label: "Save button", view: "3", view_name: "General" }] },
         { decision: "D-7", how: "The limit is in dollars.", parts: [{ selector: "#limit-text", label: "Limit amount" }] }] },
     { id: "v2", name: "Bold", asset: "A-bold-1", version: 1, drawn: ago(60 * 20), fidelity: "mockup",
@@ -206,6 +211,10 @@ const r1 = {
   ],
   waiting: [{ kind: "revise", state: "claimed", created: ago(4), started: ago(3), usual_min: 12, variant: "v2" }],
   prototype: { state: "none" },
+  // The parts every option shows, and each as it was before the design (docs/requests.md).
+  shared_elements: [{ id: "change", name: "Change button" }, { id: "bar", name: "Limit bar" }, { id: "text", name: "Limit amount" }, { id: "providers", name: "Provider list" }],
+  now: { asset: "A-now", name: "Providers", at: ago(60 * 20), elements: [{ id: "change", selector: "#limit-change", view: null, view_name: null }, { id: "bar", selector: "#limit-bar", view: null, view_name: null }, { id: "text", selector: "#limit-text", view: null, view_name: null }] },
+  before_shots: [{ id: "change", asset: "A-before-change", source: "instance", ref: "main", commit: "4286de5", at: ago(60 * 3) }],
 };
 
 const r2 = {

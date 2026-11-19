@@ -23,8 +23,9 @@ const USAGE = `usage: design <command> [args]
                                        compile a variant, mockup or walkthrough source
   shot <page.html|url> <outdir> [--width 1440] [--views] [--dark] [--click <selector>]... [--element <selector>]
                                        full-length screenshots (light, dark, each view)
-  capture <base-url> <outdir> --routes <routes.json> [--login <profile.json>]
-                                       screens of a running app, signed in as the profile's demo account
+  capture <base-url> <outdir> (--routes <routes.json> | --recipe <recipe.json>) [--login <profile.json>]
+                                       screens of a running app, signed in as the profile's demo account;
+                                       a recipe shot with "element" is cut to that part
   pr-shots <owner/name> <pr> <outdir>  the images a pull request's body and comments carry
   kit --root <clone> [--repo <owner/name>] [--ui-dir <dir>]
                                        the product's kit: its named values and its components' variants,

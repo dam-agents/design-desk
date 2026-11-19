@@ -7,7 +7,7 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
-## 1.101.0 — 2026-11-18
+## 1.102.0 — 2026-11-19
 
 **Upgrade:**
 1. Restart the Desk server ([desk.md](docs/desk.md) → Server) and republish the page
@@ -16,6 +16,18 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
    `reviews` empty; no data migration.
 2. Nothing else to do: the inbox pre-flight lists a pull request's review as `reviews_due`, and
    the next watch run's GitHub read records each pull request's head commit.
+
+## 1.101.0 — 2026-11-18
+
+**Upgrade:**
+1. Restart the Desk server ([desk.md](docs/desk.md) → Server): the store takes `now.elements` and
+   `before_shots` on a request and the `take-before` action, and a member's new `before` ability
+   ([requests.md](docs/requests.md) → The part before, from the product). Then republish the page
+   ([desk.md](docs/desk.md) → Publishing the page): an element's dialog shows the part before and
+   after, takes it from the product, opens the design workspace at it, and comments on it.
+2. Nothing to migrate: a request drawn before has no places in its *how it looks today* and no
+   pictures from the product, so its parts say there is no picture from before until it is drawn
+   again or a member presses **Take it from the product**.
 
 ## 1.100.0 — 2026-11-18
 

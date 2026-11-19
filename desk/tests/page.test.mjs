@@ -2022,7 +2022,7 @@ test("in Select mode the review bar acts: a hover or a click on it picks nothing
     await desk.click("[data-ws-close]");
     await desk.click('#detail [data-el="save"]');
     await desk.waitForSelector("#element-dialog[open] [data-el-states]");
-    assert.match(await desk.textContent("#element-dialog"), /Save button[\s\S]*New[\s\S]*Tabs · version 2[\s\S]*In the design[\s\S]*Draw every state/);
+    assert.match(await desk.textContent("#element-dialog"), /Save button[\s\S]*New[\s\S]*Tabs · version 2[\s\S]*Open in design workspace[\s\S]*New[\s\S]*As Tabs draws it, version 2[\s\S]*Draw every state/);
     await desk.click("#element-dialog [data-el-states]");
     await desk.fill("#confirm-form [name=note]", "The error first.");
     await desk.locator("#confirm-dialog .actions button", { hasText: "Draw the states" }).click();
@@ -2031,6 +2031,127 @@ test("in Select mode the review bar acts: a hover or a click on it picks nothing
     assert.deepEqual([body.action, body.note, body.variant, body.element, body.part.text, body.part.label, body.part.view, body.part.view_name, body.part.selector], ["states", "The error first.", "v1", "save", "Save button", "Save button", "2", "Billing", '[data-view="2"] button']);
   } finally {
     await run.close();
+  }
+});
+
+// An element's dialog: the part before (from the product, else cut from how it looks today) beside
+// after, one picture for a new part, the button that takes it from the product, and the way into
+// the design workspace at the part (docs/desk-page.md → The element dialog).
+const BEFORE_PAGE = `<!doctype html><html><body><div data-view="1" data-view-name="Agents"><div id="card" style="width:300px;height:80px;background:#36c">Agent</div><p id="label">Limit</p><p id="added">New</p></div></body></html>`;
+const NOW_PAGE = `<!doctype html><html><body><div data-view="1"><div id="card" style="width:300px;height:80px;background:#999">Agent today</div><p id="label">Limit today</p></div></body></html>`;
+const SHOT = `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="20"><rect width="40" height="20" fill="#000"/></svg>`;
+const bridgeBefore = ({ me = 'role: "designer", email: "alice@example.com", screens: true, can: { comment: true, change: true, before: true }' } = {}) => `<script>
+window.calls = [];
+const at = new Date().toISOString();
+const request = { id: "r7", kind: "request", title: "Agent card", status: "feedback", created: at, triage: { verdict: "design", reasons: [] }, prototype: { state: "none" },
+  shared_elements: [{ id: "card", name: "Agent card" }, { id: "label", name: "Limit label" }, { id: "added", name: "Added note" }],
+  now: { asset: "A-now", name: "Agents", at, elements: [{ id: "card", selector: "#card", view: 1, view_name: "Agents" }, { id: "label", selector: "#label", view: 1, view_name: "Agents" }] },
+  before_shots: [{ id: "card", asset: "A-shot", source: "instance", ref: "main", commit: "4286de5", at }],
+  variants: [{ id: "v1", name: "Calm", asset: "A-1", fidelity: "mockup", version: 2, elements: [
+    { id: "card", name: "Agent card", change: "changed", how: "Calmer.", selector: "#card", view: "1", view_name: "Agents" },
+    { id: "label", name: "Limit label", change: "changed", how: "Shorter.", selector: "#label", view: "1", view_name: "Agents" },
+    { id: "added", name: "Added note", change: "new", how: "Says which limit stops first.", selector: "#added", view: "1", view_name: "Agents" }] }],
+  threads: [
+    { id: "T-1", kind: "comment", state: "open", anchor: { variant: "v1", selector: "#label", label: "Limit label" }, messages: [{ by: { name: "Pat Lee" }, at, text: "Shorter still?" }, { by: { agent: true }, at, text: "Yes." }] },
+    { id: "T-2", kind: "comment", state: "open", anchor: { variant: "v1", selector: "#card", label: "Agent card" }, messages: [{ by: { name: "Pat Lee" }, at, text: "On the card." }] },
+    { id: "T-3", kind: "comment", state: "resolved", anchor: { variant: "v1", selector: "#label", label: "Limit label" }, messages: [{ by: { name: "Pat Lee" }, at, text: "Done long ago." }] }],
+  waiting: [] };
+window.platform = { async request({ method, path, body }) {
+  calls.push({ method, path, body });
+  const answer = path === "/api/me" ? { ${me} }
+    : path === "/api/cards" ? { cards: [{ ...request, variants: 1, threads: undefined }] } : path === "/api/agenda" ? { agenda: [] }
+    : path === "/api/cards/r7" ? { card: request }
+    : path === "/api/cards/r7/actions" ? { inbox: { kind: "explore", scope: "before" } }
+    : path === "/api/assets/A-1" ? { contentType: "text/html", encoding: "utf8", data: ${JSON.stringify(BEFORE_PAGE).replace(/</g, "\\u003c")} }
+    : path === "/api/assets/A-now" ? { contentType: "text/html", encoding: "utf8", data: ${JSON.stringify(NOW_PAGE).replace(/</g, "\\u003c")} }
+    : path === "/api/assets/A-shot" ? { contentType: "image/svg+xml", encoding: "utf8", data: ${JSON.stringify(SHOT).replace(/</g, "\\u003c")} } : {};
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
+</script>`;
+
+test("an element's dialog shows the part before and after, says where before came from, and opens the workspace at the part", async (t) => {
+  const run = await launch(t, bridgeBefore());
+  if (!run) return;
+  const { desk, posts } = run;
+  try {
+    await desk.click('[data-card="r7"]');
+    // A part with a picture from the product: that picture, where it came from, and Take it again.
+    await desk.click('#detail [data-el="card"]');
+    await desk.waitForSelector("#element-dialog[open] .el-pair");
+    const card = await desk.textContent("#element-dialog");
+    assert.match(card, /Before[\s\S]*The product at main \(4286de5\), with made-up data[\s\S]*Take it again[\s\S]*After[\s\S]*As Calm draws it, version 2/);
+    assert.equal(await desk.locator("#element-dialog .el-col:first-child img[data-asset='A-shot']").count(), 1);
+    // After is drawn wide and scaled into its box, so the part is laid out as on a screen.
+    await desk.waitForFunction(() => /scale\(/.test(document.querySelector("#element-dialog .el-col:last-child iframe[data-snip-wide]")?.style.transform || ""));
+    await desk.click("[data-el-close]");
+    // A part with only how it looks today: cut from that drawing, said to be redrawn.
+    await desk.click('#detail [data-el="label"]');
+    await desk.waitForSelector("#element-dialog[open] .el-pair");
+    assert.match(await desk.textContent("#element-dialog"), /Before[\s\S]*Redrawn from the code by Design Desk[\s\S]*Take it from the product/);
+    assert.deepEqual(await desk.$eval("#element-dialog .el-col:first-child iframe", (f) => [f.dataset.snipAsset, f.dataset.snipSel, f.hasAttribute("data-snip-wide")]), ["A-now", "#label", true]);
+    await desk.click('#element-dialog [data-act="take-before"]');
+    await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/r7/actions"));
+    const body = JSON.parse((await posts("/api/cards/r7/actions"))[0].body);
+    assert.deepEqual([body.action, body.element], ["take-before", "label"]);
+    // A part the option adds: one picture, New, nothing to take.
+    if (await desk.locator("#element-dialog[open]").count()) await desk.click("[data-el-close]");
+    await desk.click('#detail [data-el="added"]');
+    await desk.waitForSelector("#element-dialog[open] .el-pair.one");
+    const added = await desk.textContent("#element-dialog .el-pair");
+    assert.match(added, /New/);
+    assert.doesNotMatch(added, /Before|Take it/);
+    // Open in design workspace: the option, the part selected.
+    await desk.click("#element-dialog [data-el-ws]");
+    await desk.waitForSelector("#ws-frame");
+    assert.equal(await desk.locator("#element-dialog[open]").count(), 0, "the dialog closes");
+    await desk.waitForFunction(() => /Selected\s*Added note/.test(document.querySelector("#ws-side")?.textContent || ""));
+  } finally {
+    await run.close();
+  }
+});
+
+test("an element's dialog lists the part's open comments and comments on the part", async (t) => {
+  const run = await launch(t, bridgeBefore());
+  if (!run) return;
+  const { desk, posts } = run;
+  try {
+    await desk.click('[data-card="r7"]');
+    await desk.click('#detail [data-el="label"]');
+    await desk.waitForSelector("#element-dialog[open] .el-talk");
+    const talk = await desk.textContent("#element-dialog .el-talk");
+    assert.match(talk, /Comments · 1[\s\S]*Pat Lee[\s\S]*Shorter still\?[\s\S]*1 reply/);
+    assert.doesNotMatch(talk, /On the card|Done long ago/, "not another part's, nor one marked done");
+    await desk.click("#element-dialog [data-el-comment]");
+    assert.equal((await posts("/api/cards/r7/threads")).length, 0, "nothing written, nothing sent");
+    await desk.fill("#el-text", "Make the label shorter");
+    await desk.click("#element-dialog [data-el-comment]");
+    await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/r7/threads"));
+    const body = JSON.parse((await posts("/api/cards/r7/threads"))[0].body);
+    assert.deepEqual([body.kind, body.text, body.anchor.variant, body.anchor.selector, body.anchor.label, body.anchor.view, body.anchor.view_name], ["comment", "Make the label shorter", "v1", "#label", "Limit label", "1", "Agents"]);
+    // A note in the list opens the design workspace at it.
+    await desk.click('#element-dialog [data-goto="T-1"]');
+    await desk.waitForSelector("#ws-frame");
+    assert.equal(await desk.locator("#element-dialog[open]").count(), 0, "the dialog closes");
+  } finally {
+    await run.close();
+  }
+});
+
+test("only a member takes a part from the product, and only with Design Desk's copy of the product", async (t) => {
+  for (const [me, why] of [['role: "designer", email: "alice@example.com", screens: true, can: { comment: true }', "without the ability (a guest's)"], ['role: "designer", email: "alice@example.com", screens: false, can: { comment: true, before: true }', "screens off"]]) {
+    const run = await launch(t, bridgeBefore({ me }));
+    if (!run) return;
+    const { desk } = run;
+    try {
+      await desk.click('[data-card="r7"]');
+      await desk.click('#detail [data-el="label"]');
+      await desk.waitForSelector("#element-dialog[open] .el-pair");
+      assert.match(await desk.textContent("#element-dialog"), /Redrawn from the code/, why);
+      assert.equal(await desk.locator('#element-dialog [data-act="take-before"]').count(), 0, why);
+    } finally {
+      await run.close();
+    }
   }
 });
 

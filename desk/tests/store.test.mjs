@@ -2907,6 +2907,79 @@ test("a request keeps how its screen looks today, and Draw how it looks today qu
   assert.equal(s.card(card.id).now, null);
 });
 
+test("a request keeps where its shared parts sit in how it looks today, and pictures of them from the product", () => {
+  const s = fresh();
+  const { card } = s.createRequest(bob, { title: "Calmer header", problem: "The header shouts." });
+  const page = s.addAsset({ kind: "variant", name: "now", contentType: "text/html", data: "<b>today</b>", encoding: "utf8" }).asset.id;
+  const page2 = s.addAsset({ kind: "variant", name: "now2", contentType: "text/html", data: "<b>today 2</b>", encoding: "utf8" }).asset.id;
+  const shot = s.addAsset({ kind: "screen", name: "card.jpg", contentType: "image/jpeg", data: Buffer.from("jpg").toString("base64") }).asset.id;
+  const shared = [{ id: "card", name: "Agent card" }, { id: "badge", name: "Limit badge" }];
+  // Without the request's list of parts, no part has a place.
+  assert.throws(() => s.upsertCard({ id: card.id, now: { asset: page, elements: [{ id: "card", selector: ".card" }] } }), /shared_elements/);
+  // The list and the places in one upsert, in either order of fields.
+  s.upsertCard({ id: card.id, now: { asset: page, name: "Agents", elements: [{ id: "card", selector: "[data-view=\"1\"] .card", view: 1, view_name: "Agents" }] }, shared_elements: shared });
+  assert.deepEqual(s.card(card.id).now.elements, [{ id: "card", selector: "[data-view=\"1\"] .card", view: "1", view_name: "Agents" }]);
+  // The same drawing sent again without them keeps them; a new drawing without them has none.
+  s.upsertCard({ id: card.id, now: { asset: page, name: "Agents" } });
+  assert.equal(s.card(card.id).now.elements.length, 1, "the same drawing keeps its parts' places");
+  s.upsertCard({ id: card.id, now: { asset: page2, name: "Agents" } });
+  assert.equal(s.card(card.id).now.elements, undefined, "a new drawing says anew where its parts are");
+  for (const [els, why] of [[[{ id: "menu", selector: ".m" }], /shared_elements/], [[{ id: "card", selector: ".a" }, { id: "card", selector: ".b" }], /twice/],
+    [[{ id: "card", selector: "x".repeat(501) }], /selector/], [[{ id: "card", selector: "" }], /selector/], [[{ id: "card", selector: ".a", view: "two" }], /view/],
+    [Array.from({ length: 25 }, (_, i) => ({ id: `p${i}`, selector: ".a" })), /at most 24/]])
+    assert.throws(() => s.upsertCard({ id: card.id, now: { asset: page2, elements: els } }), why);
+  // Pictures from the product merge by part; a later one replaces that part's; null takes it off.
+  s.upsertCard({ id: card.id, before_shots: [{ id: "card", asset: shot, source: "instance", ref: "main", commit: "4286DE5" }] });
+  const b = s.card(card.id).before_shots;
+  assert.deepEqual(b.map((x) => [x.id, x.asset, x.source, x.ref, x.commit]), [["card", shot, "instance", "main", "4286de5"]]);
+  assert.ok(b[0].at, "the store stamps when it was taken");
+  s.upsertCard({ id: card.id, before_shots: [{ id: "badge", asset: shot, ref: "main", commit: "abcdef1" }] });
+  assert.deepEqual(s.card(card.id).before_shots.map((x) => x.id), ["card", "badge"]);
+  s.upsertCard({ id: card.id, before_shots: [{ id: "card", asset: shot, ref: "main", commit: "1234567" }] });
+  assert.deepEqual(s.card(card.id).before_shots.map((x) => [x.id, x.commit]), [["card", "1234567"], ["badge", "abcdef1"]]);
+  s.upsertCard({ id: card.id, before_shots: [{ id: "badge", asset: null }] });
+  assert.deepEqual(s.card(card.id).before_shots.map((x) => x.id), ["card"]);
+  for (const [x, why] of [[{ id: "menu", asset: shot, ref: "main", commit: "abcdef1" }, /shared_elements/], [{ id: "card", asset: page, ref: "main", commit: "abcdef1" }, /picture/],
+    [{ id: "card", asset: "A-999", ref: "main", commit: "abcdef1" }, /picture/], [{ id: "card", asset: shot, ref: "main", commit: "main" }, /commit/],
+    [{ id: "card", asset: shot, ref: "", commit: "abcdef1" }, /ref/], [{ id: "card", asset: shot, ref: "main", commit: "abcdef1", source: "pr" }, /instance/]])
+    assert.throws(() => s.upsertCard({ id: card.id, before_shots: [x] }), why);
+  assert.throws(() => s.upsertCard({ id: card.id, before_shots: [{ id: "card", asset: shot, ref: "main", commit: "abcdef1" }, null] }), /shared_elements/, "an empty entry is refused, not a crash");
+  // A new drawing of today never touches what was taken from the product.
+  s.upsertCard({ id: card.id, now: { asset: page, elements: [{ id: "card", selector: ".card" }, { id: "badge", selector: ".badge" }] } });
+  s.upsertCard({ id: card.id, now: null });
+  assert.deepEqual(s.card(card.id).before_shots.map((x) => x.id), ["card"]);
+  // A part taken off the list takes its place and its picture with it.
+  s.upsertCard({ id: card.id, now: { asset: page, elements: [{ id: "card", selector: ".card" }, { id: "badge", selector: ".badge" }] } });
+  s.upsertCard({ id: card.id, shared_elements: [{ id: "badge", name: "Limit badge" }] });
+  assert.deepEqual([s.card(card.id).now.elements.map((x) => x.id), s.card(card.id).before_shots], [["badge"], []]);
+});
+
+test("Take it from the product queues one part's picture, beside the options' work", () => {
+  const s = fresh();
+  const { card } = s.createRequest(bob, { title: "Calmer header", problem: "The header shouts." });
+  const asset = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: "<b>v1</b>", encoding: "utf8" }).asset.id;
+  s.upsertCard({ id: card.id, status: "variants", triage: { verdict: "design", reasons: ["Only the look."] }, shared_elements: [{ id: "card", name: "Agent card" }, { id: "badge", name: "Badge" }],
+    variants: [{ id: "v1", name: "Grey", asset, elements: [{ id: "card", name: "Agent card", change: "changed", how: "Greyer.", selector: ".card" }, { id: "badge", name: "Badge", change: "new", how: "Added.", selector: ".badge" }] }] });
+  assert.throws(() => s.act(card.id, bob, "take-before", "", { element: "menu" }), /not one of this request's parts/);
+  assert.throws(() => s.act(card.id, bob, "take-before"), /not one of this request's parts/);
+  const res = s.act(card.id, bob, "take-before", "", { element: "card" });
+  assert.deepEqual([res.inbox.kind, res.inbox.scope, res.inbox.element], ["explore", "before", "card"]);
+  assert.equal(res.card.status, "variants", "the status stays as it is");
+  assert.deepEqual(s.getCard(card.id).waiting.filter((w) => w.kind === "explore").map((w) => [w.kind, w.scope, w.element]), [["explore", "before", "card"]], "the page sees which part is being taken");
+  assert.throws(() => s.act(card.id, bob, "take-before", "", { element: "card" }), /already|busy|working/i, "a second press on the same part waits");
+  assert.equal(s.act(card.id, bob, "take-before", "", { element: "badge" }).inbox.element, "badge", "another part goes on");
+  assert.equal(s.act(card.id, bob, "draw-now").inbox.scope, "now", "how it looks today is drawn beside it");
+  assert.equal(s.act(card.id, alice, "add-option", "A darker one").inbox.scope, "add", "the options' own work goes on");
+  // Sent to developers, a part is still taken from the product; a closed request takes none.
+  for (const i of Object.values(s.db.inbox)) i.state = "done";
+  s.db.cards[card.id].status = "handed-off";
+  assert.equal(s.act(card.id, bob, "take-before", "", { element: "card" }).inbox.element, "card");
+  s.db.cards[card.id].status = "declined";
+  assert.throws(() => s.act(card.id, bob, "take-before", "", { element: "badge" }), /closed/);
+  assert.equal(can("guest", "before"), false, "a guest takes no pictures");
+  for (const r of ["admin", "designer", "pm", "lead-developer", "developer"]) assert.equal(can(r, "before"), true, r);
+});
+
 test("a Slack request keeps its author's user id, and a reminder never moves its card", () => {
   let t = 0;
   const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { needsApproval: everyCounts, clock: () => new Date(Date.UTC(2026, 10, 1) + ++t * 3600e3).toISOString().replace(/\.\d{3}Z$/, "Z") });
