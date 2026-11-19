@@ -219,6 +219,10 @@ async function viewerRoute(req, res, url, who) {
   };
   const p = url.pathname.split("/").filter(Boolean); // ["api", ...]
   const m = req.method;
+  // A request before design is not there for whom it is not (docs/desk.md → Draft and Proposal):
+  // reading it, writing on it, its conversations — the same 404 as a card that does not exist.
+  if (p[1] === "cards" && p[2]) store.cardFor(p[2], actor);
+  if (p[1] === "threads" && p[2]) { const t = store.thread(p[2]); if (t.card && !store.visibleTo(store.card(t.card), actor)) throw new DeskError(404, `no thread ${p[2]}`); }
   if (m === "GET" && p[1] === "me") {
     // The page asks who it is once, when it loads: that is the sign-in People reads (docs/desk.md → People).
     // A read never fails for it: a full store keeps no record, and a failed write is dropped.
@@ -231,13 +235,13 @@ async function viewerRoute(req, res, url, who) {
   // A person's own draft comments on an item, for them alone (docs/desk.md → Reviews).
   if (m === "GET" && p[1] === "cards" && p[2] && p[3] === "drafts" && !p[4]) return send(res, 200, store.drafts(p[2], actor));
   if (m === "GET" && p[1] === "cards" && p[2]) {
-    const card = store.getCard(p[2], { viewer: who.email || who.sub || null });
+    const card = store.getCard(p[2], { viewer: who.email || who.sub || null, who: actor });
     // Each conversation says what this reader may do in it, so the page shows only the controls
     // the routes below accept (reply and answer, reopen; resolve: Mark done).
     const may = (t, move) => can(who.deskRole, store.threadNeed(t.id, actor, move), s.prototypeRoles);
     return send(res, 200, { card: { ...card, threads: card.threads.map((t) => ({ ...t, may: { reply: may(t), resolve: may(t, "resolve") } })) } });
   }
-  if (m === "GET" && p[1] === "assets" && p[2]) return send(res, 200, store.getAsset(p[2]));
+  if (m === "GET" && p[1] === "assets" && p[2]) return send(res, 200, store.getAsset(p[2], actor));
   // What the Desk keeps of the issues and pull requests its items point at, for previews.
   if (m === "GET" && p[1] === "github") return send(res, 200, { records: store.github(String(url.searchParams.get("keys") || "").split(",").filter(Boolean).slice(0, 50)) });
   // A person's own private asks, and no one else's (docs/desk.md → Private asks).
@@ -254,7 +258,7 @@ async function viewerRoute(req, res, url, who) {
     const all = store.listDecisions({ ...q, state: pending ? "active" : q.state }).map(withSide);
     return send(res, 200, { decisions: (pending ? all.filter((d) => d.unapproved) : all).slice(0, 200) });
   }
-  if (m === "GET" && p[1] === "decisions" && p[2]) { const r = store.getDecision(p[2]); return send(res, 200, { ...r, decision: withSide(r.decision) }); }
+  if (m === "GET" && p[1] === "decisions" && p[2]) { const r = store.getDecision(p[2], actor); return send(res, 200, { ...r, decision: withSide(r.decision) }); }
   // Opening an item marks it read for this person alone (docs/desk-page.md → Read and unread). It is
   // outside the write budget: browsing many items must not use up what comments and votes need,
   // and it writes at most once per person and item.
@@ -342,7 +346,7 @@ async function viewerRoute(req, res, url, who) {
   if (m === "POST" && p[1] === "cards" && p[3] === "votes") { need("vote"); return send(res, 200, store.vote(p[2], actor, b)); }
   if (m === "POST" && p[1] === "requests") {
     need(b.from ? "follow-up" : "request");
-    if (b.from) store.card(String(b.from));
+    if (b.from) store.cardFor(String(b.from), actor);
     // Only what a person types: an origin (where the agent answers) is the agent's to set.
     // A person files an idea, a bug, or an adjustment of a change card; features and
     // proposals are the agent's (from an issue, from a shipped change).
