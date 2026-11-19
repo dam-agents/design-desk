@@ -241,7 +241,7 @@ repos/<owner>/<name>/pulls/<pr>/reviews --paginate`) whose body starts with this
 and is logged and reported as below. Else:
 
 1. Write the body to a file: first line `<!-- design-desk review=<U-n> -->`, then "**<name>** (<role>)
-   reviewed this UI change on the Design Desk: **Changes requested** | **Approved** | **Comments**",
+   gave feedback on this UI change on the Design Desk: **Changes requested** | **Approved** | **Comments**",
    the note, then each comment as a bullet led by what it is about in bold (the change or part
    it names, else nothing), then `[Open on the Design Desk](<card link>)` when `desk_link` is
    set. The person by their roster name, else the part of the address before the @; never an

@@ -197,19 +197,19 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   as soon as it is written, with no box to tick, or, for one the Desk may not send by itself (a
   Slack origin, an open pull request; [handoff.md](handoff.md) → Review before it goes), leaves it
   Open with **Send to developers** — and a change **Request changes** and **Approve** (marks it handled); each only for
-  who may. **Reviews** ([desk.md](desk.md) → Reviews): under the shown option, and under a change's
-  screens, a box offers **Add to review** — a draft, the viewer's alone — and **Comment now**, a
+  who may. **Feedback** ([desk.md](desk.md) → Reviews): under the shown option, and under a change's
+  screens, a box offers **Add to feedback** — a draft, the viewer's alone — and **Comment**, a
   comment on the Desk at once (never on GitHub); the box at the end of the page posts at once. While
-  drafts wait, **Your review · n** under the head lists them, each with what it is about and ✕, and
-  **Send review…**; **Request changes** counts them (`Request changes · 2`) and is the primary
-  button, and **Approve** opens the review too. Both open one dialog: the drafts, the verdicts the
+  drafts wait, **Your feedback · n** under the head lists them, each with what it is about and ✕, and
+  **Send feedback…**; **Request changes** counts them (`Request changes · 2`) and is the primary
+  button, and **Approve** opens the feedback too. Both open one dialog: the drafts, the verdicts the
   viewer may send (**Request changes**, **Approve**, **Comment only**, the one they pressed
-  picked) and a note for the whole review. Approving a request there is the usual approval first,
-  its own questions included, then the review. A sent review shows in Comments, in both modes, as
+  picked) and a note for the whole feedback. Approving a request there is the usual approval first,
+  its own questions included, then the feedback. Sent feedback shows in Comments, in both modes, as
   one block: who, the verdict (**Changes requested** amber, **Approved** green, **Comments**), when,
   **On GitHub ↗** once posted, the note, then each of its comments with its replies. Full mode has
-  the same **Changes requested** line under the title, the same boxes, under the option shown and a change's Screens, and **Your review** at the top
-  of Questions and comments, whose **Send review…** opens the same dialog. ⋯ holds **Close…** or **Reopen** on a request, **Turn into a design request** on a
+  the same **Changes requested** line under the title, the same boxes, under the option shown and a change's Screens, and **Your feedback** at the top
+  of Questions and comments, whose **Send feedback…** opens the same dialog. ⋯ holds **Close…** or **Reopen** on a request, **Turn into a design request** on a
   change (and **Undo approval** on one approved), and **Open on GitHub** where there is a link. No vote buttons, rename or For Developers
   move. Under the head the page reads one way for both kinds: a short lead (a request's first
   paragraph, a change's summary), **The request in full** folded, the designs (a request's
@@ -469,7 +469,7 @@ private ask only its owner: Design Desk's answers to it are theirs alone, and fo
 | Feedback asked | a person hands the drawn options to the team (**Ask for feedback**); For you for every `developer` and `lead-developer` |
 | New decision, Decision revoked | a decision is added or revoked |
 | Developer asks, Marked done | a developer asks a design's designer, or marks it done ([Designs](#designs)) |
-| Review sent, New version | a person sends a review (on a pull request's change, For you for every `developer` and `lead-developer`); new commits arrive on a pull request a review asked changes of ([desk.md](desk.md) → Reviews) |
+| Feedback sent, New version | a person sends feedback (on a pull request's change, For you for every `developer` and `lead-developer`); new commits arrive on a pull request a review asked changes of ([desk.md](desk.md) → Reviews) |
 
 Every row is at most three lines, each cut short with … when long, and says the same things in the same places: an icon and what happened, who (when known),
 how long ago, the item's kind in grey (Request:, PR change:, Decision: …), its title and number, and for a message or a vote one

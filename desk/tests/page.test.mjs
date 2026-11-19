@@ -3960,7 +3960,7 @@ test("simple mode's Request changes opens the review: a note alone is sent with 
   assert.deepEqual(await desk.$$eval("#detail .sh-more .menu > *", (xs) => xs.map((x) => x.textContent.trim())), ["Close…"]);
   await desk.keyboard.press("Escape");
   await desk.click('#detail .sh-acts [data-review="request-changes"]');
-  assert.equal(await desk.textContent("#cf-title"), "Send your review");
+  assert.equal(await desk.textContent("#cf-title"), "Send your feedback");
   assert.equal(await desk.$eval("#cf-choices input:checked", (x) => x.value), "request-changes");
   assert.deepEqual(await desk.$$eval("#cf-choices input", (xs) => xs.map((x) => x.value)), ["request-changes", "approve", "comment"]);
   await desk.click("#cf-ok");
@@ -3992,16 +3992,17 @@ window.platform = { async request({ method, path, body }) {
 try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
 </script>`;
 
-test("simple mode: Add to review keeps a comment for the review, Comment now posts it; Your review lists and removes them; the head counts them", (t) => open(t, REVIEW_DESK(HEAD_ME, [drawn, prChange]), async (desk) => {
+test("simple mode: Add to feedback keeps a comment for the feedback, Comment posts it; Your feedback lists and removes them; the head counts them", (t) => open(t, REVIEW_DESK(HEAD_ME, [drawn, prChange]), async (desk) => {
   await desk.waitForSelector('#list [data-card="R-5"]');
   await desk.click('#list [data-card="R-5"]');
   await desk.waitForSelector("#detail .rbox");
   assert.match(await desk.getAttribute("#detail .rbox textarea", "placeholder"), /Option 1 · Calm/, "the box is about the option shown");
+  assert.deepEqual(await desk.locator("#detail .rbox .bar button").allTextContents(), ["Add to feedback", "Comment"], "the box's two buttons, in the words people read");
   await desk.fill("#detail .rbox textarea", "Tighter rows.");
   await desk.click("#detail .rbox [data-draft-add]");
   await desk.waitForSelector("#detail .yreview .dbub");
   assert.deepEqual(await desk.evaluate(() => posts.find((p) => /drafts$/.test(p.path)).body), { text: "Tighter rows.", anchor: { variant: "v1" } });
-  assert.match(await desk.textContent("#detail .yreview"), /Your review · 1[\s\S]*Option 1 · Calm[\s\S]*Tighter rows\./);
+  assert.match(await desk.textContent("#detail .yreview"), /Your feedback · 1[\s\S]*Option 1 · Calm[\s\S]*Tighter rows\./);
   assert.match(await desk.textContent('#detail .sh-acts [data-review="request-changes"]'), /Request changes · 1/);
   assert.equal(await desk.locator("#detail .sh-acts .btn.primary").count(), 1, "one next step");
   assert.equal(await desk.getAttribute('#detail .sh-acts [data-review="request-changes"]', "class"), "btn primary", "and it is Request changes");
@@ -4011,7 +4012,7 @@ test("simple mode: Add to review keeps a comment for the review, Comment now pos
   await desk.click("#detail .yreview .dbub:last-child [data-draft-del]");
   await desk.waitForFunction(() => document.querySelectorAll("#detail .yreview .dbub").length === 1);
   assert.ok(await desk.evaluate(() => posts.some((p) => p.method === "DELETE" && /\/drafts\/d/.test(p.path))));
-  // Comment now: a comment on the Desk at once, not in the review.
+  // Comment: a comment on the Desk at once, not in the feedback.
   await desk.fill("#detail .rbox textarea", "Looks calm.");
   await desk.click("#detail .rbox [data-draft-now]");
   await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/R-5/threads"));
@@ -4073,13 +4074,13 @@ test("full mode shows a sent review as one block in the conversation", (t) => op
   assert.match(await desk.textContent("#detail .sh-resp"), /Changes requested · developer/, "full mode says who makes the next version too");
 }));
 
-test("full mode collects drafts under an option and sends them from Your review with the same dialog", (t) => open(t, REVIEW_DESK({ ...HEAD_ME, simple: false }, [drawn]), async (desk) => {
+test("full mode collects drafts under an option and sends them from Your feedback with the same dialog", (t) => open(t, REVIEW_DESK({ ...HEAD_ME, simple: false }, [drawn]), async (desk) => {
   await desk.evaluate(() => { location.hash = "#R-5"; });
   await desk.waitForSelector("#detail .rbox");
   await desk.fill("#detail .rbox textarea", "Calmer bar.");
   await desk.click("#detail .rbox [data-draft-add]");
   await desk.waitForSelector("#detail .talk .yreview .dbub");
-  assert.match(await desk.textContent("#detail .talk .yreview"), /Your review · 1[\s\S]*Calmer bar\./);
+  assert.match(await desk.textContent("#detail .talk .yreview"), /Your feedback · 1[\s\S]*Calmer bar\./);
   await desk.click('#detail .yreview [data-review=""]');
   assert.deepEqual(await desk.$$eval("#cf-choices input", (xs) => xs.map((x) => x.value)), ["request-changes", "approve", "comment"]);
   await desk.click('#cf-choices input[value="comment"]');

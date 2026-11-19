@@ -1922,7 +1922,7 @@
     decision: "Recording a decision", "decision-check": "Checking the decisions", revise: "Changing the design", alternatives: "Drawing other ways",
     states: "Drawing every state", build: "Building the prototype, up to an hour", handoff: "Writing the spec", "spec-revise": "Changing the spec",
     deliver: "Sending to developers", teardown: "Switching off the prototype", figma: "Working with Figma", agenda: "Writing the brief",
-    slack: "Posting to Slack", "slack-send": "Sending to Slack", draw: "Drawing it", screens: "Checking the screenshots", ci: "Updating the check on GitHub", review: "Posting the review on GitHub" };
+    slack: "Posting to Slack", "slack-send": "Sending to Slack", draw: "Drawing it", screens: "Checking the screenshots", ci: "Updating the check on GitHub", review: "Posting the feedback on GitHub" };
   // What an open request waits for when nobody needs to press anything.
   const WORK = {
     request: "Design Desk looks at how the screen works, who else is changing it, and what a design change can do.",
@@ -1933,7 +1933,7 @@
     decision: "Recording a decision from a comment, with who said it and a link back to it.",
     "decision-check": "Checking the design against the decisions in force; what it goes against shows here.",
     ci: "Setting Design Desk's check on the pull request to follow the handled mark.",
-    review: "Design Desk posts the review on the pull request, as a comment.",
+    review: "Design Desk posts the feedback on the pull request, as a comment.",
     revise: "Changing the design as you asked.",
     alternatives: "Drawing other ways the part you picked could look, as you described it. They appear above the design; pick the one to keep.",
     states: "Drawing every state of this element. Each state appears here and in the design workspace as it is drawn, with the use case it covers.",
@@ -2170,10 +2170,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     post: (v) => v === "question" ? "Design Desk answers right here. Everyone on the Desk sees it." : "A comment for the team; Design Desk reads it when it changes the design. Everyone on the Desk sees it.",
     sendReply: (v, el) => /Answer/.test(textOf(el)) ? "Sends your answer; Design Desk goes on with it" : "Adds your reply to this conversation (Enter)",
     resolve: "Marks this note done; you can reopen it",
-    review: (v) => v === "approve" ? "Opens your review with Approve picked; your comments go with it" : v === "request-changes" ? (S.card?.kind === "change" ? `Sends your comments as one review: the developer makes the next version${S.me?.review_post ? ", and it goes to the pull request" : ""}` : "Sends your comments as one review: Design Desk draws the next version from them") : "Sends your comments as one review, with what you decide",
-    draftAdd: "Keeps this comment for your review: nobody sees it until you send the review",
-    draftNow: "Posts this comment now, here on the Desk; it is not part of your review",
-    draftDel: "Removes this comment from your review",
+    review: (v) => v === "approve" ? "Opens your feedback with Approve picked; your comments go with it" : v === "request-changes" ? (S.card?.kind === "change" ? `Sends your comments as one feedback: the developer makes the next version${S.me?.review_post ? ", and it goes to the pull request" : ""}` : "Sends your comments as one feedback: Design Desk draws the next version from them") : "Sends your comments as one feedback, with what you decide",
+    draftAdd: "Keeps this comment in your feedback: nobody sees it until you send it",
+    draftNow: "Posts this comment now, here on the Desk; it is not part of your feedback",
+    draftDel: "Removes this comment from your feedback",
     reopen: "Opens this note again; Design Desk looks at it again",
     workIn: (v) => v.includes(",") ? "Design Desk changes the design as every open comment asks" : "Design Desk changes the design as this comment asks",
     sendForm: "Sends your answers; Design Desk goes on with them",
@@ -3394,8 +3394,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   }
   function reviewBlock(c, r, rows) {
     const who = ((n) => (n === "you" ? "You" : n))(r.by?.agent ? "Design Desk" : shortName(r.by?.email, r.by?.name) || "someone");
-    const gh = r.posted?.url ? `<a class="rv-gh" href="${safeUrl(r.posted.url)}" target="_blank" rel="noopener noreferrer" title="This review on the pull request">On GitHub ↗</a>` : "";
-    return `<article class="rvw" id="rv-${esc(r.id)}" data-v="${esc(r.verdict)}"><div class="rv-h"><b>${esc(who)}</b>${r.by?.role ? `<span class="hint">${esc(roleLabel(r.by.role))}</span>` : ""}<span class="rv-v" title="What this review says">${esc(REVIEW_SAYS[r.verdict] || r.verdict)}</span><span class="hint" title="${esc(when(r.at))}">${esc(sWhen(r.at))}</span>${gh}</div>
+    const gh = r.posted?.url ? `<a class="rv-gh" href="${safeUrl(r.posted.url)}" target="_blank" rel="noopener noreferrer" title="This feedback on the pull request">On GitHub ↗</a>` : "";
+    return `<article class="rvw" id="rv-${esc(r.id)}" data-v="${esc(r.verdict)}"><div class="rv-h"><b>${esc(who)}</b>${r.by?.role ? `<span class="hint">${esc(roleLabel(r.by.role))}</span>` : ""}<span class="rv-v" title="What this feedback says">${esc(REVIEW_SAYS[r.verdict] || r.verdict)}</span><span class="hint" title="${esc(when(r.at))}">${esc(sWhen(r.at))}</span>${gh}</div>
       ${r.note ? `<div class="rv-note">${md(r.note)}</div>` : ""}${rows}</article>`;
   }
   // A review in the making (docs/desk.md → Reviews): the viewer's drafts on an item, kept by the
@@ -3410,7 +3410,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   async function addDraft(c, { text, anchor = null, change = null }) {
     const r = await api("POST", `/api/cards/${encodeURIComponent(c.id)}/drafts`, { text, ...(anchor ? { anchor } : {}), ...(change ? { change } : {}) });
     S.drafts[c.id] = r.drafts; renderDetail();
-    toast(`Added to your review (${plural(r.drafts.length, "comment", "comments")}). Nobody sees it until you send it.`);
+    toast(`Added to your feedback (${plural(r.drafts.length, "comment", "comments")}). Nobody sees it until you send it.`);
   }
   async function removeDraft(c, id) { S.drafts[c.id] = (await api("DELETE", `/api/cards/${encodeURIComponent(c.id)}/drafts/${encodeURIComponent(id)}`)).drafts; renderDetail(); }
   // What a draft or a review's comment is about, in words: its option, state and part, or the change it names.
@@ -3419,21 +3419,21 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const st = v && a.state && (v.states || []).find((x) => x.id === a.state);
     return [v ? `Option ${(c.variants || []).indexOf(v) + 1} · ${v.name}` : "", st ? st.name || st.id : "", a?.label || "", change || ""].filter(Boolean).join(" · ");
   }
-  const draftBubble = (c, d, remove = true) => `<div class="dbub"><div class="db-b">${aboutOf(c, d.anchor, d.change) ? `<span class="about">${esc(aboutOf(c, d.anchor, d.change))}</span>` : ""}${esc(d.text)}</div>${remove ? `<button class="x" data-draft-del="${esc(d.id)}" aria-label="Remove this comment from your review" title="Remove from your review">✕</button>` : ""}</div>`;
+  const draftBubble = (c, d, remove = true) => `<div class="dbub"><div class="db-b">${aboutOf(c, d.anchor, d.change) ? `<span class="about">${esc(aboutOf(c, d.anchor, d.change))}</span>` : ""}${esc(d.text)}</div>${remove ? `<button class="x" data-draft-del="${esc(d.id)}" aria-label="Remove this comment from your feedback" title="Remove from your feedback">✕</button>` : ""}</div>`;
   // Under the head while drafts wait: each one, and the way to send them.
   function yourReview(c) {
     const ds = draftsOf(c);
     if (!ds.length) return "";
-    return `<section class="yreview" aria-label="Your review"><div class="yr-h"><b>Your review · ${ds.length}</b><button class="btn small" data-review="">Send review…</button></div>
+    return `<section class="yreview" aria-label="Your feedback"><div class="yr-h"><b>Your feedback · ${ds.length}</b><button class="btn small" data-review="">Send feedback…</button></div>
       ${ds.map((d) => draftBubble(c, d)).join("")}</section>`;
   }
-  // A box under an option or a change: Add to review keeps it for the review, Comment now posts it
+  // A box under an option or a change: Add to feedback keeps it for the feedback, Comment posts it
   // at once, on the Desk only (docs/desk-page.md → Simple mode).
   function reviewBox(c, { anchor = null, change = null, what = "" } = {}) {
     if (!can("comment") || c.send || closed(c)) return "";
     return `<div class="composer rbox" data-rbox data-anchor="${esc(anchor ? JSON.stringify(anchor) : "")}" data-change="${esc(change || "")}">
       <textarea maxlength="4000" placeholder="${esc(what ? `A comment on ${what}…` : "A comment…")}" aria-label="${esc(what ? `A comment on ${what}` : "A comment")}"></textarea>
-      <div class="bar"><button class="btn small" data-draft-add>Add to review</button><button class="btn small" data-draft-now>Comment now</button></div></div>`;
+      <div class="bar"><button class="btn small" data-draft-add>Add to feedback</button><button class="btn small" data-draft-now>Comment</button></div></div>`;
   }
   const optionBox = (c) => { const v = (c.variants || []).find((x) => x.id === S.variant) || (c.variants || [])[0]; return v ? reviewBox(c, { anchor: { variant: v.id }, what: `Option ${(c.variants || []).indexOf(v) + 1} · ${v.name}` }) : ""; };
   // The verdicts a viewer may send on an item (docs/desk.md → Reviews).
@@ -3444,7 +3444,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       if (can("change") && (c.variants || []).length && !locked(c) && !closed(c)) out.push({ id: "request-changes", name: "Request changes", hint: "Design Desk draws the next version from your comments." });
       if (open && !specWaits(c) && canApprove(c) && (c.triage || (c.variants || []).length) && !closed(c)) out.push({ id: "approve", name: "Approve", hint: "You approve the request; your comments go with it." });
     } else if (mayHandle(c) && !c.source?.merged_at && c.status !== "archived") {
-      out.push({ id: "request-changes", name: "Request changes", hint: S.me?.review_post ? "The developer makes the next version; the review goes to the pull request." : "The developer makes the next version." });
+      out.push({ id: "request-changes", name: "Request changes", hint: S.me?.review_post ? "The developer makes the next version; your feedback goes to the pull request." : "The developer makes the next version." });
       if (!c.handled) out.push({ id: "approve", name: "Approve", hint: "Design is done with this change." });
     }
     if (can("comment")) out.push({ id: "comment", name: "Comment only", hint: "Your comments, with nothing else changed." });
@@ -3457,8 +3457,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const ds = draftsOf(c), choices = verdictsFor(c);
     if (!choices.length) return;
     const pr = S.me?.review_post && c.kind === "change" && c.source?.pr && !c.source?.merged_at;
-    const a = await ask({ title: "Send your review", html: `${ds.length ? ds.map((d) => draftBubble(c, d, false)).join("") : `<p class="hint">No comments yet: write a note for the whole review.</p>`}${pr ? `<p class="hint">It goes to the pull request on GitHub too, as a comment.</p>` : ""}`,
-      ok: "Send review", choices, pick: choices.some((x) => x.id === pick) ? pick : choices[0].id, note: "A note for the whole review (optional)", max: 4000,
+    const a = await ask({ title: "Send your feedback", html: `${ds.length ? ds.map((d) => draftBubble(c, d, false)).join("") : `<p class="hint">No comments yet: write a note for the whole feedback.</p>`}${pr ? `<p class="hint">It goes to the pull request on GitHub too, as a comment.</p>` : ""}`,
+      ok: "Send feedback", choices, pick: choices.some((x) => x.id === pick) ? pick : choices[0].id, note: "A note for the whole feedback (optional)", max: 4000,
       send: async (x) => {
         if (!ds.length && !x.note) throw new Said("Write a comment or a note first.");
         return x;
@@ -3472,8 +3472,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     }
     const r = await api("POST", `/api/cards/${encodeURIComponent(c.id)}/reviews`, { verdict: a.choice, note: a.note, ...(S.variant ? { variant: S.variant } : {}) });
     S.drafts[c.id] = [];
-    toast(a.choice === "request-changes" && c.kind === "request" ? "Review sent. Design Desk draws the next version; this page updates by itself."
-      : r.inbox?.kind === "review" ? "Review sent. It goes to the pull request on GitHub too." : "Review sent.");
+    toast(a.choice === "request-changes" && c.kind === "request" ? "Feedback sent. Design Desk draws the next version; this page updates by itself."
+      : r.inbox?.kind === "review" ? "Feedback sent. It goes to the pull request on GitHub too." : "Feedback sent.");
     await refreshList(); await openCard(c.id);
   }
   // Simple mode's comments: each conversation a card, its first message and the replies indented
@@ -9023,7 +9023,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     spec: ["Spec ready", "ok", '<path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4M9 12h6M9 16h6"/>'],
     built: ["Marked done", "ok", '<path d="m5 12.5 4.5 4.5L19 7.5"/>'],
     decided: ["Closed with a decision", "closed", '<path d="M5 21V4M5 4h12l-2 4 2 4H5"/>'],
-    review: ["Review sent", "talk", '<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12.5h5"/>'],
+    review: ["Feedback sent", "talk", '<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12.5h5"/>'],
     "new-version": ["New version", "design", '<path d="M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5"/>'],
     comment: ["New comment", "talk", '<path d="M4 5h16v11H9l-5 4z"/>'],
     reply: ["New reply", "talk", '<path d="M10 8 5 12l5 4"/><path d="M5 12h9a5 5 0 0 1 5 5v1"/>'],

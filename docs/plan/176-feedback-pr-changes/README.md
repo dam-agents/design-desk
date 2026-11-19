@@ -73,7 +73,7 @@ Taken with the operator before planning:
 
 | #  | Title | Scope | Depends on | Done |
 |----|-------|-------|------------|------|
-| 01 | Feedback words | Every word a person reads; Comment now → Comment; GitHub post's first line | — | [ ] |
+| 01 | Feedback words | Every word a person reads; Comment now → Comment; GitHub post's first line | — | [x] |
 | 02 | Looks good on the server | `{ok, change}` drafts, `looks_good` on a review and on a card read, the GitHub post | 01 | [ ] |
 | 03 | The change view | Tabs per change, before / after, the box under a change, both modes | 02 | [ ] |
 | 04 | Marks and sending | Chips, Looks good moves on, "not looked at yet" warning, links from Comments | 03 | [ ] |

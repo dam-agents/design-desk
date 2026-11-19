@@ -458,7 +458,7 @@ of the product in that state: the `show` action ([actions.md](actions.md)).
 ## Reviews
 
 A person can collect comments on a request or a pull request's change before sending them
-together. **Drafts** are kept by the Desk server, per person and item (`GET`, `POST
+together: their **feedback**, the word every screen uses; the API and the data say *review*. **Drafts** are kept by the Desk server, per person and item (`GET`, `POST
 /api/cards/<id>/drafts`, `DELETE …/drafts/<draft>`), so they follow the person to every
 device; nobody else sees them, no run of the agent reads them, and no card read, list, count or
 notification carries one. A draft is checked as the comment it becomes (its option and state

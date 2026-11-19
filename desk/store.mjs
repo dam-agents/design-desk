@@ -797,7 +797,7 @@ export class Store {
     const c = this.card(cardId), key = this.draftsFor(who);
     if (!["request", "change"].includes(c.kind)) throw bad("Draft comments are kept on a request or a pull request's change.");
     const mine = own(this.db.drafts, key) || {}, list = own(mine, c.id) || [];
-    if (list.length >= LIMITS.draftsPerCard) throw bad(`At most ${LIMITS.draftsPerCard} draft comments wait on one item. Send your review first.`);
+    if (list.length >= LIMITS.draftsPerCard) throw bad(`At most ${LIMITS.draftsPerCard} draft comments wait on one item. Send your feedback first.`);
     const a = anchor ? cleanAnchor(anchor) : null;
     if (a?.variant && !(c.variants || []).some((v) => v.id === a.variant)) throw bad("That design option is not on this request.");
     if (a?.state && !(c.variants || []).find((v) => v.id === a.variant)?.states?.some((x) => x.id === a.state)) throw bad("That state is not drawn for this option.");
@@ -832,7 +832,7 @@ export class Store {
   sendReview(cardId, who, { verdict, note = "", variant = null, post = false } = {}) {
     const c = this.card(cardId), key = this.draftsFor(who);
     if (!REVIEW_VERDICTS.includes(verdict)) throw bad(`verdict must be one of ${REVIEW_VERDICTS.join(", ")}`);
-    if (!["request", "change"].includes(c.kind)) throw bad("A review is sent on a request or a pull request's change.");
+    if (!["request", "change"].includes(c.kind)) throw bad("Feedback is sent on a request or a pull request's change.");
     if (c.kind === "change" && verdict !== "comment") this.mayHandle(c, who);
     const drafts = structuredClone(own(own(this.db.drafts, key) || {}, c.id) || []);
     const words = optText(note, LIMITS.text, "note");
@@ -842,7 +842,7 @@ export class Store {
       throw bad(request ? "This request is closed or sent to developers: send your comments with Comment only." : "This pull request is merged: send your comments with Comment only.");
     if (request && changes && !(c.variants || []).length) throw bad("Changes are asked of a design once its options are drawn.");
     if (request && verdict === "approve" && !(c.approved && addressesOf(who).includes(String(c.approved.by?.email || "").toLowerCase())))
-      throw bad("Approve the request first; the review then goes with your approval.");
+      throw bad("Approve the request first; the feedback then goes with your approval.");
     // Every draft is checked before anything is written, so a refused one changes nothing.
     const first = variant && (c.variants || []).some((v) => v.id === variant) ? variant : c.variants?.[0]?.id || null;
     // A draft about an option no longer on the request is about the whole request now.
