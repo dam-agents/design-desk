@@ -2036,7 +2036,7 @@
   // How it works: one picture each of how a request, an issue and a shipped pull request move.
   const flowHead = (id) => `<defs><marker id="${id}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="f-h" d="M0 0L10 5L0 10z"/></marker></defs>`;
   const flow = (w, h, says, body, caption) => `<figure class="flow"><svg viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc(says)}"><title>${esc(says)}</title>${body}</svg><figcaption>${caption}</figcaption></figure>`;
-  const FLOW_REQUEST = () => flow(930, 316, `A request moves through five stages. Checking: Design Desk checks what can change. Options: it draws options once a person presses Draw options; a designer, a PM, an admin or a lead developer may approve right away instead. Feedback: the team votes and comments, Work it in sends notes back${full(", Build it live adds an optional live prototype")}, End the vote ends the vote. Approved: a designer, a PM or a lead developer approves, and Design Desk writes the spec. With developers: the spec is sent to developers.`, `${flowHead("fl-req")}
+  const FLOW_REQUEST = () => flow(930, 316, `A request moves through five stages. Checking: Design Desk checks what can change. Options: it draws options once a person presses Draw options; a designer, a PM, an admin or a lead developer may approve right away instead. Feedback: the team votes and comments, feedback sent with Request changes sends notes back${full(", Build it live adds an optional live prototype")}, End the vote ends the vote. Approved: a designer, a PM or a lead developer approves, and Design Desk writes the spec. With developers: the spec is sent to developers.`, `${flowHead("fl-req")}
   <rect class="f-lane" x="0" y="12" width="930" height="132" rx="10"/><rect class="f-lane" x="0" y="156" width="930" height="148" rx="10"/>
   <text class="f-k" x="16" y="36">DESIGN DESK</text><text class="f-k" x="16" y="180">THE TEAM</text>
   <rect class="f-n f-checking" x="110" y="52" width="120" height="56" rx="10"/><text x="170" y="76">Checking</text><text class="f-sub" x="170" y="94">what can change</text>
@@ -2050,13 +2050,13 @@
   <path class="f-e" d="M230 80 H257" marker-end="url(#fl-req)"/><text class="f-lbl" x="244" y="46">Draw options</text>
   <path class="f-e f-dash" d="M200 108 V150 H668 V199" marker-end="url(#fl-req)"/><text class="f-lbl" x="572" y="168">or approve right away</text>
   <path class="f-e" d="M380 80 H450 V191" marker-end="url(#fl-req)"/><text class="f-lbl f-end" x="444" y="140">Ask for feedback</text>
-  <path class="f-e" d="M390 222 H320 V111" marker-end="url(#fl-req)"/><text class="f-lbl f-end" x="314" y="170">Work it in</text>
+  <path class="f-e" d="M390 222 H320 V111" marker-end="url(#fl-req)"/><text class="f-lbl f-end" x="314" y="170">Request changes</text>
   ${full(`<path class="f-e f-dash" d="M490 194 V80 H527" marker-end="url(#fl-req)"/><text class="f-lbl f-start" x="498" y="140">Build it live</text>`)}
   <path class="f-e" d="M510 222 H635" marker-end="url(#fl-req)"/><text class="f-lbl" x="572" y="214">End the vote</text>
   ${full(`<path class="f-e" d="M650 80 H690 V185" marker-end="url(#fl-req)"/><text class="f-lbl f-start" x="698" y="150">try it</text>`)}
   <path class="f-e" d="M742 222 H782 V111" marker-end="url(#fl-req)"/><text class="f-lbl f-start" x="790" y="170">approved</text>
   <path class="f-e" d="M844 80 H860 V191" marker-end="url(#fl-req)"/><text class="f-lbl f-start" x="868" y="150">${S.me?.spec_review ? "you Send it" : "sent on"}</text>`,
-    `The boxes are the five stages a request's state shows: <b>Checking</b>, <b>Options</b>, <b>Feedback</b>, <b>Approved</b> and <b>With developers</b>; a closed request reads Closed or Decided. Blue is Design Desk at work, amber waits on the team${full(", violet is live")}, green is approved. A person presses <b>Draw options</b> on a request filed here (one from Slack goes on by itself); a designer, a PM, an admin or a lead developer may instead <b>Approve</b> right away, without options or a vote. <b>Work it in</b> sends the open comments back for a new version; <b>End the vote</b> ends the team's vote, and Approve does not wait for it, save a vote that runs in Slack${full("; the live prototype is optional, part of Feedback, and only for a request that changes nothing but the look. A request with parts a design change cannot do gets no prototype: <b>Contact a developer</b> opens those parts with a question to copy; it changes nothing on the request")}. ${S.me?.spec_review ? "You read the spec, then <b>Send to developers</b>." : "Design Desk sends the spec on by itself."} A request For Developers is approved by a developer instead of a designer.`);
+    `The boxes are the five stages a request's state shows: <b>Checking</b>, <b>Options</b>, <b>Feedback</b>, <b>Approved</b> and <b>With developers</b>; a closed request reads Closed or Decided. Blue is Design Desk at work, amber waits on the team${full(", violet is live")}, green is approved. A person presses <b>Draw options</b> on a request filed here (one from Slack goes on by itself); a designer, a PM, an admin or a lead developer may instead <b>Approve</b> right away, without options or a vote. <b>Request changes</b> sends your feedback back for a new version; <b>End the vote</b> ends the team's vote, and Approve does not wait for it, save a vote that runs in Slack${full("; the live prototype is optional, part of Feedback, and only for a request that changes nothing but the look. A request with parts a design change cannot do gets no prototype: <b>Contact a developer</b> opens those parts with a question to copy; it changes nothing on the request")}. ${S.me?.spec_review ? "You read the spec, then <b>Send to developers</b>." : "Design Desk sends the spec on by itself."} A request For Developers is approved by a developer instead of a designer.`);
   const FLOW_ISSUE = () => flow(860, 272, "An issue in the team's plan: once a day Design Desk reads it; if people will see a difference, it sketches how it looks now and how it could look and puts it on Issues. Draw it sketches it again, Design this starts a request, and once that request goes to developers the issue is designed.", `${flowHead("fl-issue")}
   <rect class="f-n" x="10" y="56" width="160" height="60" rx="10"/><text x="90" y="80">A GitHub issue</text><text class="f-sub" x="90" y="98">in the team's plan</text>
   <rect class="f-n f-checking" x="230" y="56" width="160" height="60" rx="10"/><text x="310" y="80">Reads it</text><text class="f-sub" x="310" y="98">will people see it?</text>
@@ -2206,7 +2206,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     elDraft: "Keeps this note on the part in your feedback: nobody sees it until you send it",
     elComment: "A comment for the team on this part, posted now; Design Desk works it in only when someone asks",
     reopen: "Opens this note again; Design Desk looks at it again",
-    workIn: (v) => v.includes(",") ? "Design Desk changes the design as every open comment asks" : "Design Desk changes the design as this comment asks",
+    workIn: (v) => v.includes(",") ? "Adds every open comment to your feedback; sent with Request changes, Design Desk works them in" : "Adds this comment to your feedback; sent with Request changes, Design Desk works it in",
     sendForm: "Sends your answers; Design Desk goes on with them",
     skipForm: "Design Desk takes its recommended answer for every question",
     size: (v) => v === "small" ? "Any developer but the person who filed it can then approve it, without a designer" : "A designer, a PM or a lead developer approves it",
@@ -3106,7 +3106,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
           acts: [["<b>Draw design options</b>", "explore"], ["<b>+ New option</b>", "explore"]] },
         { tone: "checking", text: "The request's people fine-tune the options, then ask the team.",
           acts: [["<b>Design workspace</b>: click a part, say what to change", "revise"], ["<b>Try 3 ways</b> on one part", "revise"], ["<b>Ask for feedback</b>", "request"]] },
-        { tone: "waiting", text: "The team votes and comments.", acts: [["<b>👍</b> <b>👎</b> <b>⚠</b> on each option", "vote"], ["<b>Work it in</b>: a comment changes the design", "change"]] },
+        { tone: "waiting", text: "The team votes and comments.", acts: [["<b>👍</b> <b>👎</b> <b>⚠</b> on each option", "vote"], ["<b>Request changes</b>: your feedback changes the design", "change"]] },
         { tone: "live", text: "Optional: try it in a live prototype.", acts: [["<b>Build a live prototype</b>", "build"]] },
         { tone: "approved", text: "A designer, PM or lead developer approves one option, or closes the request.",
           acts: [["<b>Approve</b>", "approve"], ["<b>Close</b>, with a decision if you like", "skip"], ["<b>Add to presentation</b>, then <b>▶ Present</b>", "queue"]] },
@@ -3131,7 +3131,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         { tone: "", text: "They click a part of an option and say what should change, or type the new words in it.", acts: [["<b>Edit text</b>", "revise"]] },
         { tone: "checking", text: "Design Desk draws the next version in a few minutes; the earlier ones stay." },
         { tone: "", text: "Unsure how a part should look? Three ways to pick from, or every state it can be in.", acts: [["<b>Try 3 ways</b>", "revise"], ["<b>Draw every state</b>", "revise"]] },
-        { tone: "waiting", text: "The team comments on any part; a comment can change the design.", acts: [["<b>Work it in</b>", "change"]] }] },
+        { tone: "waiting", text: "The team comments on any part; a comment can change the design.", acts: [["<b>Request changes</b>", "change"]] }] },
     product: { about: "the product's screens, parts and decisions, kept up to date",
       steps: [
         { tone: "", text: `Pick a section: <b>Screens</b>, <b>Elements</b> (every part in each state), <b>Decisions</b>${figmaOn() ? ", <b>Differences</b> (against Figma)" : ""} or <b>History</b> (what happened, by day, week or release).` },
@@ -3385,7 +3385,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const open = s.state === "open";
     // With drafts waiting, Request changes counts them and is the next step; either verdict opens
     // the review dialog with it picked (docs/desk.md → Reviews).
-    const n = draftsOf(c).filter((d) => !d.ok).length, verdicts = verdictsFor(c).map((x) => x.id);
+    const n = draftsOf(c).filter((d) => !d.ok).length + lookFeedback(c).length, verdicts = verdictsFor(c).map((x) => x.id);
     const changes = verdicts.includes("request-changes") ? btn('data-review="request-changes"', n ? `Request changes · ${n}` : "Request changes", n > 0) : "";
     const approve = (attr) => (n ? btn('data-review="approve"', "Approve") : btn(attr, "Approve", true));
     const moves = change ? ((open || c.responsible?.who === "developer") && mayHandle(c) ? changes + (c.handled ? "" : approve('data-handle="1"')) : "")
@@ -3438,26 +3438,36 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const r = await api("GET", `/api/cards/${encodeURIComponent(c.id)}/drafts`).catch(() => null);
     if (Array.isArray(r?.drafts)) S.drafts[c.id] = r.drafts; else delete S.drafts[c.id];
   }
-  async function addDraft(c, { text = null, anchor = null, change = null, ok = false }) {
-    const r = await api("POST", `/api/cards/${encodeURIComponent(c.id)}/drafts`, ok ? { ok: true, change } : { text, ...(anchor ? { anchor } : {}), ...(change ? { change } : {}) });
+  async function addDraft(c, { text = null, anchor = null, change = null, ok = false, work_in = null }) {
+    const r = await api("POST", `/api/cards/${encodeURIComponent(c.id)}/drafts`, work_in ? { work_in } : ok ? { ok: true, change } : { text, ...(anchor ? { anchor } : {}), ...(change ? { change } : {}) });
     S.drafts[c.id] = r.drafts; renderDetail();
     if (ok) { toast("Marked as good. It goes with your feedback."); return; }
     toast(`Added to your feedback (${plural(r.drafts.length, "comment", "comments")}). Nobody sees it until you send it.`);
   }
   async function removeDraft(c, id) { S.drafts[c.id] = (await api("DELETE", `/api/cards/${encodeURIComponent(c.id)}/drafts/${encodeURIComponent(id)}`)).drafts; renderDetail(); if (S.ws.open) renderWorkspace(); }
+  // A comment to work in: what it is about, and its first words.
+  const workInOf = (c, d) => (c.threads || []).find((th) => th.id === d.work_in);
+  const workInWords = (c, d) => `Work in: ${String(workInOf(c, d)?.messages?.[0]?.text || "a comment").replace(/\s+/g, " ").slice(0, 120)}`;
+  const draftAbout = (c, d) => aboutOf(c, d.work_in ? workInOf(c, d)?.anchor : d.anchor, d.change);
   // What a draft or a review's comment is about, in words: its option, state and part, or the change it names.
   function aboutOf(c, a, change) {
     const v = a?.variant && (c.variants || []).find((x) => x.id === a.variant);
     const st = v && a.state && (v.states || []).find((x) => x.id === a.state);
     return [v ? `Option ${(c.variants || []).indexOf(v) + 1} · ${v.name}` : "", st ? st.name || st.id : "", a?.label || "", change ? (c.kind === "change" ? changeName(c, change) : change) : ""].filter(Boolean).join(" · ");
   }
-  const draftBubble = (c, d, remove = true) => `<div class="dbub"><div class="db-b">${aboutOf(c, d.anchor, d.change) ? `<span class="about">${esc(aboutOf(c, d.anchor, d.change))}</span>` : ""}${d.ok ? "✓ Looks good" : esc(d.text)}</div>${remove ? `<button class="x" data-draft-del="${esc(d.id)}" aria-label="Remove this comment from your feedback" title="Remove from your feedback">✕</button>` : ""}</div>`;
+  const draftBubble = (c, d, remove = true) => `<div class="dbub"><div class="db-b">${draftAbout(c, d) ? `<span class="about">${esc(draftAbout(c, d))}</span>` : ""}${d.ok ? "✓ Looks good" : d.work_in ? esc(workInWords(c, d)) : esc(d.text)}</div>${remove ? `<button class="x" data-draft-del="${esc(d.id)}" aria-label="Remove this comment from your feedback" title="Remove from your feedback">✕</button>` : ""}</div>`;
+  // Look edits added to the feedback (the workspace's look palette): kept in this browser, per
+  // drawing, until the feedback is sent; each becomes a note with its values then (docs/desk.md → Reviews).
+  const lookFeedback = (c) => c?.kind === "request" ? Object.entries(S.ws.looks || {}).filter(([k]) => k.startsWith(`${c.id}|`))
+    .flatMap(([key, all]) => Object.entries(all).filter(([, e]) => e.fb && changeCount(e)).map(([selector, e]) => ({ key, selector, e }))) : [];
+  const lookBubble = (x, remove = true) => `<div class="dbub"><div class="db-b"><span class="about">Look of ${esc(x.e.label)} · this browser</span>${esc(changeWords(x.e).join("; "))}</div>${remove ? `<button class="x" data-look-unfb="${esc(`${x.key}\n${x.selector}`)}" aria-label="Take this look edit out of your feedback" title="Take it out of your feedback; the edit stays in the design">✕</button>` : ""}</div>`;
+  const feedbackCount = (c) => draftsOf(c).length + lookFeedback(c).length;
   // Under the head while drafts wait: each one, and the way to send them.
   function yourReview(c) {
-    const ds = draftsOf(c);
-    if (!ds.length) return "";
-    return `<section class="yreview" aria-label="Your feedback"><div class="yr-h"><b>Your feedback · ${ds.length}</b><button class="btn small" data-review="">Send feedback…</button></div>
-      ${ds.map((d) => draftBubble(c, d)).join("")}</section>`;
+    const ds = draftsOf(c), looks = lookFeedback(c);
+    if (!ds.length && !looks.length) return "";
+    return `<section class="yreview" aria-label="Your feedback"><div class="yr-h"><b>Your feedback · ${ds.length + looks.length}</b><button class="btn small" data-review="">Send feedback…</button></div>
+      ${ds.map((d) => draftBubble(c, d)).join("")}${looks.map((x) => lookBubble(x)).join("")}</section>`;
   }
   // A box under an option or a change: Add to feedback keeps it for the feedback, Comment posts it
   // at once, on the Desk only (docs/desk-page.md → Simple mode).
@@ -3486,16 +3496,19 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   async function reviewDialog(c, pick = null) {
     await loadDrafts(c, true);
     if (!S.drafts[c.id]) { toast("Your draft comments could not be read. Try again in a moment; nothing was sent."); return; }
-    const ds = draftsOf(c), choices = verdictsFor(c);
+    const ds = draftsOf(c), looks = lookFeedback(c), choices = verdictsFor(c);
     if (!choices.length) return;
+    // Look edits and comments to work in are drawn only with Request changes: said where another choice is offered.
+    const onlyChanges = (looks.length || ds.some((d) => d.work_in)) && choices.some((x) => x.id !== "request-changes")
+      ? `<p class="hint">Look edits and comments to work in are drawn only with Request changes; with another choice look edits go as comments and comments stay as they are.</p>` : "";
     const pr = S.me?.review_post && c.kind === "change" && c.source?.pr && !c.source?.merged_at;
     // Changes nobody marked or commented on yet: said, never in the way (docs/desk-page.md → Changes).
     const left = c.kind === "change" && changesOf(c).length > 1 ? notLookedAt(c) : [];
     const warn = left.length ? `<div class="rv-warn" role="status"><b>${esc(plural(left.length, "change", "changes"))} not looked at yet:</b> ${esc(left.map((x) => x.name).join(", "))}. You can still send; Cancel takes you back.</div>` : "";
-    const a = await ask({ title: "Send your feedback", html: `${warn}${ds.length ? ds.map((d) => draftBubble(c, d, false)).join("") : `<p class="hint">No comments yet: write a note for the whole feedback.</p>`}${pr ? `<p class="hint">It goes to the pull request on GitHub too, as a comment.</p>` : ""}`,
+    const a = await ask({ title: "Send your feedback", html: `${warn}${ds.length || looks.length ? ds.map((d) => draftBubble(c, d, false)).join("") + looks.map((x) => lookBubble(x, false)).join("") + onlyChanges : `<p class="hint">No comments yet: write a note for the whole feedback.</p>`}${pr ? `<p class="hint">It goes to the pull request on GitHub too, as a comment.</p>` : ""}`,
       ok: "Send feedback", choices, pick: choices.some((x) => x.id === pick) ? pick : choices[0].id, note: "A note for the whole feedback (optional)", max: 4000,
       send: async (x) => {
-        if (!ds.length && !x.note) throw new Said("Write a comment or a note first.");
+        if (!ds.length && !looks.length && !x.note) throw new Said("Write a comment or a note first.");
         return x;
       } });
     if (!a) return;
@@ -3505,7 +3518,14 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       const { card } = await api("GET", `/api/cards/${encodeURIComponent(c.id)}`);
       if (!card.approved) return;
     }
+    // The look edits become notes with their values now, then go with the rest.
+    for (const x of looks) {
+      const { e } = x, style = lookChanges(e), controls = pickChanges(e);
+      const anchor = { variant: e.fb.variant, ...(e.fb.state ? { state: e.fb.state } : {}), selector: x.selector, text: e.text, tag: e.tag, label: e.label, view: e.view, view_name: e.view_name, ...(style.length ? { style } : {}), ...(controls.length ? { controls } : {}) };
+      await api("POST", `/api/cards/${encodeURIComponent(c.id)}/drafts`, { text: lookText(e), anchor });
+    }
     const r = await api("POST", `/api/cards/${encodeURIComponent(c.id)}/reviews`, { verdict: a.choice, note: a.note, ...(S.variant ? { variant: S.variant } : {}) });
+    for (const x of looks) { if (x.key === S.ws.shown) lookSent(x.selector); else delete S.ws.looks[x.key]?.[x.selector]; }
     S.drafts[c.id] = [];
     toast(a.choice === "request-changes" && c.kind === "request" ? "Feedback sent. Design Desk draws the next version; this page updates by itself."
       : r.inbox?.kind === "review" ? "Feedback sent. It goes to the pull request on GitHub too." : "Feedback sent.");
@@ -3527,7 +3547,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const one = (th) => {
       const [first, ...replies] = th.messages;
       const body = `${optionOf(th)}${msg(first, false)}${replies.map((m) => msg(m, true)).join("")}${th.needs_agent ? `<div class="smsg re"><span class="pending">Waiting for Design Desk…</span></div>` : ""}`;
-      const ctl = th.state !== "resolved" ? `<div class="reply">${mayIn(th, "reply") ? `<input placeholder="Reply…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small" data-send-reply="${esc(th.id)}">Reply</button>` : ""}${mayIn(th, "resolve") ? `<button class="btn small" data-resolve="${esc(th.id)}" title="Closes this conversation">Mark done</button>` : ""}${workable(c, th) ? `<button class="btn small" data-work-in="${esc(th.id)}" title="Design Desk changes the design as this comment asks">Work it in</button>` : ""}</div>`
+      const ctl = th.state !== "resolved" ? `<div class="reply">${mayIn(th, "reply") ? `<input placeholder="Reply…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small" data-send-reply="${esc(th.id)}">Reply</button>` : ""}${mayIn(th, "resolve") ? `<button class="btn small" data-resolve="${esc(th.id)}" title="Closes this conversation">Mark done</button>` : ""}${workable(c, th) ? `${workInBtn(c, th)}` : ""}</div>`
         : mayIn(th, "reply") ? `<div class="reply"><button class="btn small" data-reopen="${esc(th.id)}">Reopen</button></div>` : "";
       if (th.state !== "resolved") return `<article class="sthread" id="th-${esc(th.id)}">${body}${ctl}</article>`;
       const rb = th.resolved?.by, by = rb ? (rb.agent ? "Design Desk" : shortName(rb.email, rb.name)) : "";
@@ -4698,7 +4718,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         <div class="head">${kind}${anchor}${state}</div>`}
         ${th.messages.map((m, i) => `<div class="msg ${m.by?.agent ? "agent" : ""}" data-m="${i}"><div class="who">${who(m.by)} · ${esc(when(m.at))}${m.decision ? ` · <a href="#${esc(m.decision)}" data-ref="${esc(m.decision)}">Decision ${esc(m.decision)}</a>` : !m.by?.agent && can("decide") ? ` · <button class="link" data-decide="${esc(th.id)}:${i}" title="Design Desk records it as a numbered decision, with who said it and a link back here">Record as a decision</button>` : ""}</div>${md(m.text)}${warnsOf(m)}${changed(m)}</div>`).join("")}
         ${th.needs_agent ? `<div class="msg"><span class="pending">Waiting for Design Desk…</span></div>` : ""}
-        ${th.state !== "resolved" ? `<div class="reply">${mayIn(th, "reply") ? `<input placeholder="Reply…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small" data-send-reply="${esc(th.id)}">Reply</button>` : ""}${mayIn(th, "resolve") ? `<button class="btn small" data-resolve="${esc(th.id)}" title="Closes this conversation">Mark done</button>` : ""}${workable(c, th) ? `<button class="btn small" data-work-in="${esc(th.id)}" title="Design Desk changes the design as this comment asks">Work it in</button>` : ""}</div>` : mayIn(th, "reply") ? `<div class="reply"><button class="btn small" data-reopen="${esc(th.id)}">Reopen</button></div>` : ""}
+        ${th.state !== "resolved" ? `<div class="reply">${mayIn(th, "reply") ? `<input placeholder="Reply…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small" data-send-reply="${esc(th.id)}">Reply</button>` : ""}${mayIn(th, "resolve") ? `<button class="btn small" data-resolve="${esc(th.id)}" title="Closes this conversation">Mark done</button>` : ""}${workable(c, th) ? `${workInBtn(c, th)}` : ""}</div>` : mayIn(th, "reply") ? `<div class="reply"><button class="btn small" data-reopen="${esc(th.id)}">Reopen</button></div>` : ""}
       ${mini ? "</details>" : "</article>"}`;
     };
     const rows = designs ? [...threads].sort(order).map(one).join("") : withReviews(c, threads, one, order, last, false);
@@ -6826,6 +6846,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     return (c.threads || []).filter((th) => th.anchor?.variant).map((th, i) => ({ ...th, n: i + 1 }));
   }
   // A comment on an option a designer can hand to Design Desk to change the design.
+  // Add to my feedback (once Work it in): a comment waits in the viewer's feedback and is worked in
+  // when it is sent with Request changes (docs/desk.md → Reviews).
+  const inMyFeedback = (c, th) => draftsOf(c).some((d) => d.work_in === th.id);
+  const workInBtn = (c, th, cls = "btn small") => inMyFeedback(c, th) ? `<span class="chip" title="Worked in when you send your feedback with Request changes">In your feedback</span>` : `<button class="${cls}" data-work-in="${esc(th.id)}">Add to my feedback</button>`;
   const workable = (c, th) => can("change") && c.kind === "request" && th.kind !== "change" && th.kind !== "asks" && th.state !== "resolved" && (c.variants || []).some((v) => v.id === th.anchor?.variant) && !["declined", "handed-off"].includes(c.status) && !locked(c);
   function noteState(c, th) {
     if (th.state === "resolved") return ["done", "Done"];
@@ -7047,7 +7071,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ${drawing ? `<div class="working"><span class="spin"></span><div>Design Desk is still drawing states of this request; they appear here as they are drawn.</div></div>` : ""}
       ${changes.length && !changing ? `<p><span class="chip warn" title="Design Desk has not changed the design for them yet">${plural(changes.length, "note is", "notes are")} not worked in yet</span> <span class="hint" style="display:inline">Build now and ${changes.length === 1 ? "it is" : "they are"} left out, or wait for Design Desk.</span></p>` : ""}
       ${stale.length ? `<p><span class="chip warn" title="These states show the option before its latest change">${esc(stale.map((x) => x.name).join(", "))}: drawn for an earlier version</span> <span class="hint" style="display:inline">They still show the option as it was. Design Desk redraws them when it changes the option; open the element under All elements to have them drawn again now.</span></p>` : ""}
-      ${comments ? `<p class="hint">${plural(comments, "open comment", "open comments")} on this option. Comments are not built in unless someone presses Work it in.</p>` : ""}
+      ${comments ? `<p class="hint">${plural(comments, "open comment", "open comments")} on this option. Comments are not built in unless someone adds them to their feedback and sends it with Request changes.</p>` : ""}
       <label style="display:flex;gap:8px;align-items:flex-start"><input type="checkbox" id="ws-ask-first" data-ws-ask ${askFirst ? "checked" : ""} style="width:auto;margin-top:3px" /> <span>Ask me first if anything is unclear (a short form; you can leave any answer to Design Desk)</span></label>
       <div class="actions" style="margin:0"><button class="btn primary" data-ws-build ${changing || stale.length ? "disabled" : ""}>Build it live</button><button class="btn" data-ws-edit>Make more changes</button>${(c.variants || []).length > 1 ? `<button class="btn" data-act="build">Pick another option</button>` : ""}</div>
       <p class="hint">Design Desk builds exactly this version, with made-up data; the first build can take up to an hour. The request then says which option and version is live.</p>`;
@@ -7061,7 +7085,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const panel = S.ws.panel || "comments";
     const kept = ["#ws-whole", "#ws-part"].map((q) => { const b = $(q); return { q, focus: document.activeElement === b, value: b?.value || "", caret: b ? [b.selectionStart, b.selectionEnd] : null }; });
     const open = notesOf(c).filter((n) => n.anchor.variant === v.id && n.state !== "resolved").length;
-    side.innerHTML = `<div class="ws-ptabs" role="tablist"><button role="tab" data-ws-panel="comments" aria-selected="${panel === "comments"}">Comments${open ? `<span class="n">${open}</span>` : ""}</button><button role="tab" data-ws-panel="props" aria-selected="${panel === "props"}">Properties${S.ws.selected ? `<span class="dot" title="A part is selected"></span>` : ""}</button>${can("comment") && !c.send ? `<button role="tab" data-ws-panel="feedback" aria-selected="${panel === "feedback"}">Your feedback${draftsOf(c).length ? `<span class="n">${draftsOf(c).length}</span>` : ""}</button>` : ""}</div>
+    side.innerHTML = `<div class="ws-ptabs" role="tablist"><button role="tab" data-ws-panel="comments" aria-selected="${panel === "comments"}">Comments${open ? `<span class="n">${open}</span>` : ""}</button><button role="tab" data-ws-panel="props" aria-selected="${panel === "props"}">Properties${S.ws.selected ? `<span class="dot" title="A part is selected"></span>` : ""}</button>${can("comment") && !c.send ? `<button role="tab" data-ws-panel="feedback" aria-selected="${panel === "feedback"}">Your feedback${feedbackCount(c) ? `<span class="n">${feedbackCount(c)}</span>` : ""}</button>` : ""}</div>
       <div class="ws-pbody">${panel === "comments" ? renderWsNotes(c, v, old) : panel === "feedback" ? renderWsFeedback(c) : wsProps(c, v, old)}</div>`;
     for (const k of kept) { const b = $(k.q); if (!b) continue; b.value = k.value; if (k.focus) { b.focus(); b.setSelectionRange(k.caret[0], k.caret[1]); } }
     loadPictures(side);
@@ -7070,10 +7094,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // Your feedback in the workspace: every note of the viewer's on this request waiting to be sent,
   // across its options; a click shows its option and part; Send feedback… opens the page's dialog.
   function renderWsFeedback(c) {
-    const ds = draftsOf(c);
-    if (!ds.length) return `<p class="hint ws-fb-empty">Nothing in your feedback yet. Add to feedback keeps a note here until you send it.</p>`;
-    return `<ul class="ws-drafts">${ds.map((d) => `<li><button class="ws-fb-go" data-ws-draft-go="${esc(d.id)}" title="Shows where it is">${aboutOf(c, d.anchor, d.change) ? `<span class="about">${esc(aboutOf(c, d.anchor, d.change))}</span>` : ""}<span class="tx">${esc(d.text || "")}</span></button><button class="x" data-draft-del="${esc(d.id)}" aria-label="Remove this comment from your feedback" title="Remove from your feedback">✕</button></li>`).join("")}</ul>
-      <div class="ws-fb-bar"><span class="hint">${esc(plural(ds.length, "note", "notes"))}, seen by you alone</span><button class="btn primary" data-review="">Send feedback…</button></div>`;
+    const ds = draftsOf(c), looks = lookFeedback(c);
+    if (!ds.length && !looks.length) return `<p class="hint ws-fb-empty">Nothing in your feedback yet. Add to feedback keeps a note here until you send it.</p>`;
+    return `<ul class="ws-drafts">${ds.map((d) => `<li><button class="ws-fb-go" data-ws-draft-go="${esc(d.id)}" title="Shows where it is">${draftAbout(c, d) ? `<span class="about">${esc(draftAbout(c, d))}</span>` : ""}<span class="tx">${esc(d.work_in ? workInWords(c, d) : d.text || "")}</span></button><button class="x" data-draft-del="${esc(d.id)}" aria-label="Remove this comment from your feedback" title="Remove from your feedback">✕</button></li>`).join("")}${looks.map((x) => `<li><span class="ws-fb-go"><span class="about">Look of ${esc(x.e.label)} · this browser</span><span class="tx">${esc(changeWords(x.e).join("; "))}</span></span><button class="x" data-look-unfb="${esc(`${x.key}\n${x.selector}`)}" aria-label="Take this look edit out of your feedback" title="Take it out of your feedback; the edit stays in the design">✕</button></li>`).join("")}</ul>
+      <div class="ws-fb-bar"><span class="hint">${esc(plural(ds.length + looks.length, "note", "notes"))}, seen by you alone</span><button class="btn primary" data-review="">Send feedback…</button></div>`;
   }
 
   function wsProps(c, v, old) {
@@ -7120,7 +7144,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   }
 
   // Every comment on this option, the state shown first, the others under their state. A comment
-  // opens in place on the design; Work in all hands the open ones to Design Desk.
+  // opens in place on the design; Add all to my feedback puts the open ones in the viewer's feedback.
   const wsMsg = (m) => `<div class="m ${m.by?.agent ? "a" : ""}"><div class="who">${who(m.by)} · ${esc(when(m.at))}</div>${esc(m.text)}${warnsOf(m)}${changed(m)}</div>`;
   function renderWsNotes(c, v, old) {
     const all = notesOf(c).filter((n) => n.anchor.variant === v.id);
@@ -7142,7 +7166,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const shaper = can("change") && !locked(c), whole = S.ws.state ? `the whole state “${nameOf(S.ws.state)}”` : `the whole option ${v.name}`;
     const box = talk ? wsBox("whole", shaper ? `What should change in ${whole}?` : `Comment on ${whole}…`, shaper, `On ${esc(whole)}. For one part: <kbd>C</kbd>, then click it.`) : "";
     return `${box}<div class="ws-chead">${seg("wsFilter", [["open", "Open", count("open")], ["done", "Done", count("done")], ["all", "All", count("all")]], "ws-filter", f)}</div>
-      ${workIn.length > 1 ? `<button class="btn small ws-workall" data-work-in="${esc(workIn.map((n) => n.id).join(","))}" title="Design Desk changes the design for each of them">Work in all ${workIn.length} open comments</button>` : ""}
+      ${workIn.filter((n) => !inMyFeedback(c, n)).length > 1 ? `<button class="btn small ws-workall" data-work-in="${esc(workIn.filter((n) => !inMyFeedback(c, n)).map((n) => n.id).join(","))}">Add all ${workIn.filter((n) => !inMyFeedback(c, n)).length} to my feedback</button>` : ""}
       ${groups.length ? groups.map(([id, ns]) => `${sts.length ? `<h4 class="ws-ghead">${esc(nameOf(id))}${id === (S.ws.state || null) ? ` <span class="hint">shown now</span>` : ""}</h4>` : ""}<ol class="notes">${ns.map(li).join("")}</ol>`).join("")
         : `<p class="hint ws-empty">${all.length ? (f === "open" ? "Nothing open. Everything here is done." : "None here.") : talk ? "No comments yet. Press <kbd>C</kbd>, then click a part of the design." : "No comments yet."}</p>`}`;
   }
@@ -7171,7 +7195,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         ${placeGone(c, th) ? `<p class="hint ws-gone">This place no longer exists in this version.</p>` : ""}
         <div class="pmsgs">${th.messages.map(wsMsg).join("")}</div>
         ${th.state !== "resolved" ? `${mayIn(th, "reply") ? `<textarea class="ws-reply" rows="1" placeholder="Reply…" data-reply="${esc(th.id)}" maxlength="4000"></textarea>` : ""}
-          <div class="bar">${mayIn(th, "resolve") ? `<button class="ws-ibtn ws-done" data-resolve="${esc(th.id)}" title="Mark done" aria-label="Mark done">${wsIcon("done")}</button>` : ""}<span class="grow"></span>${mayIn(th, "reply") ? `<button class="btn" data-send-reply="${esc(th.id)}" title="Your reply, for the team (Enter)">Reply</button>` : ""}${workable(c, th) ? `<button class="btn primary" data-work-in="${esc(th.id)}" title="Design Desk changes the design for it">Work it in</button>` : ""}</div>`
+          <div class="bar">${mayIn(th, "resolve") ? `<button class="ws-ibtn ws-done" data-resolve="${esc(th.id)}" title="Mark done" aria-label="Mark done">${wsIcon("done")}</button>` : ""}<span class="grow"></span>${mayIn(th, "reply") ? `<button class="btn" data-send-reply="${esc(th.id)}" title="Your reply, for the team (Enter)">Reply</button>` : ""}${workable(c, th) ? `${workInBtn(c, th, "btn primary")}` : ""}</div>`
           : mayIn(th, "reply") ? `<div class="bar"><span class="grow"></span><button class="btn" data-reopen="${esc(th.id)}">Reopen</button></div>` : ""}`;
     }
     pop.className = `ws-pop ${p.kind}`;
@@ -7342,31 +7366,28 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (Object.keys(e.picks || {}).length) frameSay({ type: "desk-controls", selector, applies: [] });
     frameSay({ type: "desk-look-set", selector, look: Object.fromEntries(Object.keys(e.set).map((k) => [k, null])), quiet: selector !== S.ws.selected?.selector });
   }
-  async function sendLooks(selectors) {
+  // Add to feedback on the look palette: the parts' edits wait in the feedback, in this browser,
+  // with the option and state they were made on; sending the feedback makes them notes.
+  function markLooks(selectors) {
     const c = S.card, v = wsVariant(c), all = looksNow();
     let n = 0;
-    for (const s of selectors) {
-      const e = all[s]; if (!e || !changeCount(e)) continue;
-      const style = lookChanges(e), controls = pickChanges(e);
-      const anchor = { variant: v.id, ...(S.ws.state ? { state: S.ws.state } : {}), selector: s, text: e.text, tag: e.tag, label: e.label, view: e.view, view_name: e.view_name, ...(style.length ? { style } : {}), ...(controls.length ? { controls } : {}) };
-      await api("POST", `/api/cards/${c.id}/threads`, { kind: "change", text: lookText(e), anchor });
-      lookSent(s); n++;
-    }
+    for (const sel of selectors) { const e = all[sel]; if (!e || !changeCount(e) || e.fb) continue; e.fb = { variant: v.id, state: S.ws.state || null }; n++; }
     if (!n) return;
-    toast(`Sent. Design Desk changes the look${n > 1 ? ` of ${n} parts` : ""}; the new version appears here by itself.`);
-    await openCard(c.id);
+    toast(`Added to your feedback (${plural(n, "look edit", "look edits")}). Sent with Request changes, Design Desk draws them.`);
+    renderDetail(); renderWorkspace();
   }
+
   function lookList() {
     // The part selected (and the element it sits in) shows its changes in the palette above; this lists the others.
     const mine = lookable() ? paletteKeys() : [];
     const all = looksNow(), keys = Object.keys(all).filter((k) => changeCount(all[k]) && !mine.includes(k));
     if (!keys.length || !lookAdmin() || locked(S.card)) return "";
     return `<div class="ws-looks"><h3 style="margin:0 0 4px">${lookable() ? "Other parts, not sent yet" : "Look changes, not sent yet"}</h3>
-      <p class="hint" style="margin:0 0 8px">Only you see them, here in the design. Send them and Design Desk makes a new version with them.</p>
+      <p class="hint" style="margin:0 0 8px">Only you see them, here in the design. Add them to your feedback; sent with Request changes, Design Desk makes a new version with them.</p>
       <ul>${keys.map((k) => { const e = all[k]; return `<li><button class="link" data-pl-show="${esc(k)}" title="Selects this part in the design">${esc(e.label)}</button>
         <div class="hint">${esc(changeWords(e).join("; "))}</div>
-        <div class="bar"><button class="btn small" data-pl-undo="${esc(k)}" title="Puts this part back as it was">Undo</button><button class="btn small primary" data-pl-send="${esc(k)}" title="Design Desk changes this part as shown and the new version appears here">Send to Design Desk</button></div></li>`; }).join("")}</ul>
-      ${keys.length > 1 ? `<button class="btn small primary" data-pl-send-all title="One note per part; Design Desk makes one new version with all of them">Send all ${keys.length}</button>` : ""}</div>`;
+        <div class="bar"><button class="btn small" data-pl-undo="${esc(k)}" title="Puts this part back as it was">Undo</button>${all[k].fb ? `<span class="chip">In your feedback</span>` : `<button class="btn small primary" data-pl-send="${esc(k)}">Add to feedback</button>`}</div></li>`; }).join("")}</ul>
+      ${keys.filter((k) => !all[k].fb).length > 1 ? `<button class="btn small primary" data-pl-send-all>Add all ${keys.filter((k) => !all[k].fb).length} to feedback</button>` : ""}</div>`;
   }
   // The entries the palette shows: the part selected, and the element with smart controls it sits in.
   const paletteKeys = () => { const sel = S.ws.selected, sm = smartOf(wsVariant(S.card), sel); return [...new Set([sel?.selector, sm?.selector].filter(Boolean))]; };
@@ -7407,7 +7428,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       <div class="pl-tabs" role="tablist">${tabs.map(([k, t]) => `<button role="tab" data-pl-tab="${k}" aria-selected="${k === tab}" title="${esc({ smart: `What the product already has for ${sm?.name || "this part"}, picked by Design Desk`, text: "Its text: size, weight, alignment, color", fill: "Its background and corners", space: "The space inside it and between its items", layout: "How its items line up", size: "Its width and height" }[k])}">${t}</button>`).join("")}</div>
       <div class="pl-body">${body}</div>
       ${n ? `<p class="hint pl-sum">Not sent yet, only you see it: ${esc(mine.flatMap(changeWords).join("; "))}</p>` : ""}
-      ${n ? `<div class="pl-foot"><span class="hint">${plural(n, "change", "changes")}</span><button class="btn small" data-pl-undo="${esc(keys)}" title="Puts this part back as it was">Undo all</button><button class="btn small primary" data-pl-send="${esc(keys)}" title="Design Desk changes this part as shown and the new version appears here">Send</button></div>` : ""}`;
+      ${n ? `<div class="pl-foot"><span class="hint">${plural(n, "change", "changes")}</span><button class="btn small" data-pl-undo="${esc(keys)}" title="Puts this part back as it was">Undo all</button>${mine.every((x) => x.fb) ? `<span class="chip">In your feedback</span>` : `<button class="btn small primary" data-pl-send="${esc(keys)}">Add to feedback</button>`}</div>` : ""}`;
     p.hidden = false;
     if (fa) p.querySelector(fa)?.focus();
   }
@@ -8403,9 +8424,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (ds.resolve) { await api("POST", `/api/threads/${ds.resolve}/resolve`); await openCard(S.card.id); return; }
     if (ds.reopen) { const r = await api("POST", `/api/threads/${ds.reopen}/reopen`); if (r.inbox) toast("Reopened. Design Desk is on it."); await openCard(S.card.id); return; }
     if (ds.workIn) {
-      const r = await api("POST", `/api/cards/${S.card.id}/work-in`, { threads: ds.workIn.split(",") });
-      toast(r.threads.length > 1 ? `Sent. Design Desk works in ${r.threads.length} comments; the design updates here by itself.` : "Sent. Design Desk works it in; the design updates here by itself.");
-      await openCard(S.card.id); return;
+      for (const id of ds.workIn.split(",")) await addDraft(S.card, { work_in: id });
+      if (S.ws.open) renderWorkspace();
+      return;
     }
     if ("langToggle" in ds) { S.en ||= {}; S.en[S.card.id] = !S.en[S.card.id]; renderDetail(); return; }
     if ("rename" in ds) {
@@ -8595,8 +8616,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (ds.plReset) { lookSet(ds.plReset, null); return; }
     if (ds.plColors) { S.ws.plColor = S.ws.plColor === ds.plColors ? null : ds.plColors; renderPalette(); return; }
     if (ds.plUndo) { for (const k of ds.plUndo.split("\n")) lookUndo(k); renderWorkspace(); return; }
-    if (ds.plSend) { await sendLooks(ds.plSend.split("\n")); return; }
-    if ("plSendAll" in ds) { await sendLooks(Object.keys(looksNow())); return; }
+    if (ds.plSend) { markLooks(ds.plSend.split("\n")); return; }
+    if ("plSendAll" in ds) { markLooks(Object.keys(looksNow())); return; }
+    if (ds.lookUnfb) { const [key, sel] = ds.lookUnfb.split("\n"), e = S.ws.looks[key]?.[sel]; if (e) delete e.fb; renderDetail(); if (S.ws.open) renderWorkspace(); return; }
     if (ds.plShow) {
       const e = looksNow()[ds.plShow]; if (!e) return;
       S.ws.selected = { selector: ds.plShow, text: e.text || "", tag: e.tag || "", label: e.label, view: e.view, view_name: e.view_name };
@@ -8607,7 +8629,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if ("wsClear" in ds) { S.ws.selected = null; S.ws.edit = null; renderWorkspace(); frameSay({ type: "desk-select", selector: null }); return; }
     if (ds.wsDraftGo) {
       // A note in Your feedback: its option and state, the part selected where it has one.
-      const d = draftsOf(S.card).find((x) => x.id === ds.wsDraftGo), a = d?.anchor;
+      const d = draftsOf(S.card).find((x) => x.id === ds.wsDraftGo), a = d?.work_in ? workInOf(S.card, d)?.anchor : d?.anchor;
       if (!a?.variant) return;
       if (a.variant !== S.variant) { S.variant = a.variant; S.ws.version = null; }
       if ((a.state || null) !== (S.ws.state || null)) { S.ws.state = a.state || null; S.ws.version = null; }

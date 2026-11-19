@@ -1822,6 +1822,7 @@ window.platform = { async request({ method, path, body }) {
     : path === "/api/cards" ? { cards: [{ ...request, variants: 2, threads: undefined }] } : path === "/api/agenda" ? { agenda: [] }
     : path === "/api/cards/r5" ? { card: request }
     : path === "/api/cards/r5/work-in" ? { threads: JSON.parse(body).threads.map((id) => ({ id })), inbox: { id: "I-1" } }
+    : path === "/api/cards/r5/drafts" ? { drafts: (window.drafts = method === "POST" ? [...(window.drafts || []), { id: "d" + calls.length, ...JSON.parse(body) }] : window.drafts || []) }
     : path === "/api/assets/A-1" ? { contentType: "text/html", encoding: "utf8", data: '<body><div data-view="1"><button>Next</button></div><div data-view="2"><button>Save</button></div></body>' }
     : path === "/api/assets/A-8" ? pic("red") : path === "/api/assets/A-9" ? pic("blue") : {};
   return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
@@ -1876,7 +1877,7 @@ test("a worked-in note shows the place before and after, outlined, in the thread
   }
 });
 
-test("notes in the workspace: open and done, a whole conversation, worked in together; no winner to pick; designs go to the Slack thread", async (t) => {
+test("notes in the workspace: open and done, a whole conversation, added to the feedback together; no winner to pick; designs go to the Slack thread", async (t) => {
   const run = await launch(t, BRIDGE_NOTES);
   if (!run) return;
   const { desk, posts } = run;
@@ -1916,9 +1917,13 @@ test("notes in the workspace: open and done, a whole conversation, worked in tog
     await desk.fill('#ws-pop [data-reply="t1"]', "Make it primary");
     await desk.click('#ws-pop [data-send-reply="t1"]');
     assert.deepEqual(await sent("/api/threads/t1/messages", 1), { text: "Make it primary" });
+    // Add all to my feedback: each comment waits there, worked in when the feedback goes with Request changes.
     await desk.waitForSelector('#ws-side [data-work-in="t1,t2"]');
+    assert.match(await desk.textContent('#ws-side [data-work-in="t1,t2"]'), /Add all 2 to my feedback/);
     await desk.click('#ws-side [data-work-in="t1,t2"]');
-    assert.deepEqual(await sent("/api/cards/r5/work-in", 1), { threads: ["t1", "t2"] });
+    await sent("/api/cards/r5/drafts", 2);
+    assert.deepEqual((await posts("/api/cards/r5/drafts")).map((x) => JSON.parse(x.body)), [{ work_in: "t1" }, { work_in: "t2" }]);
+    assert.equal((await posts("/api/cards/r5/work-in")).length, 0, "nothing worked in at once");
   } finally {
     await run.close();
   }
@@ -2474,13 +2479,15 @@ window.platform = { async request({ method, path, body }) {
   const answer = path === "/api/me" ? { role: window.ROLE || "admin", email: "alice@example.com", can: { comment: true, change: true, revise: true } }
     : path === "/api/cards" ? { cards: [{ ...request, variants: 1, threads: undefined }] } : path === "/api/agenda" ? { agenda: [] }
     : path === "/api/cards/r7" ? { card: request }
+    : path === "/api/cards/r7/drafts" ? { drafts: (window.drafts = method === "POST" ? [...(window.drafts || []), { id: "d" + calls.length, ...JSON.parse(body) }] : window.drafts || []) }
+    : path === "/api/cards/r7/reviews" ? (window.drafts = [], { review: { id: "U-1" }, inbox: { kind: "revise" } })
     : path === "/api/assets/A-7" ? { contentType: "text/html", encoding: "utf8", data: ${JSON.stringify(LOOK_DESIGN).replace(/</g, "\\u003c")} } : {};
   return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
 } };
 try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
 </script>`;
 
-test("the look palette: in the side panel under the part picked, a preview only, the product's colors first, sent as one change note", async (t) => {
+test("the look palette: in the side panel under the part picked, a preview only, the product's colors first, added to the feedback and sent with it", async (t) => {
   const run = await launch(t, BRIDGE_LOOK);
   if (!run) return;
   const { desk, posts } = run;
@@ -2519,14 +2526,13 @@ test("the look palette: in the side panel under the part picked, a preview only,
     assert.match(await desk.textContent("#ws-palette .pl-sum"), /background --brand \(#3b5bdb\) → --danger \(#d6336c\)/, "the palette says what changed");
     assert.equal(await desk.locator(".ws-looks").count(), 0, "the part selected is not listed again under the palette");
 
+    // Add to feedback: the edit waits in the feedback, in this browser; nothing is sent yet.
     await desk.click("#ws-palette [data-pl-send]");
-    await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/r7/threads"));
-    const body = JSON.parse((await posts("/api/cards/r7/threads"))[0].body);
-    assert.equal(body.kind, "change");
-    assert.deepEqual(body.anchor.style, [{ prop: "background-color", from: "rgb(59, 91, 219)", to: "var(--danger)" }]);
-    assert.match(body.text, /^Change the look of Button “Save”: background --brand \(#3b5bdb\) → --danger \(#d6336c\)\.$/);
-    assert.equal(await style("backgroundColor"), "rgb(214, 51, 108)", "the design keeps showing it until the new version");
-    assert.equal(await desk.locator(".ws-looks").count(), 0, "nothing left to send");
+    await desk.waitForSelector("#ws-palette .chip");
+    assert.match(await desk.textContent("#ws-palette .pl-foot"), /In your feedback/);
+    assert.equal((await posts("/api/cards/r7/threads")).length + (await posts("/api/cards/r7/drafts")).length, 0, "nothing sent before the feedback is");
+    assert.match(await desk.textContent('[data-ws-panel="feedback"]'), /Your feedback\s*1/);
+    assert.equal(await style("backgroundColor"), "rgb(214, 51, 108)", "the design keeps showing it");
 
     // A flex box has Layout.
     await frame.click(".row", { position: { x: 300, y: 10 } });
@@ -2545,8 +2551,20 @@ test("the look palette: in the side panel under the part picked, a preview only,
     assert.equal(await desk.locator('#ws-palette .pl-reset[data-pl-pick="kind|link"]').count(), 0, "back to the option drawn: nothing to undo there");
     await desk.click('#ws-palette [data-pl-pick="kind|button"]');
     await desk.click("#ws-palette [data-pl-send]");
-    await desk.waitForFunction(() => calls.filter((c) => c.method === "POST" && c.path === "/api/cards/r7/threads").length === 2);
-    const smart = JSON.parse((await posts("/api/cards/r7/threads"))[1].body);
+    await desk.waitForFunction(() => /Your feedback\s*2/.test(document.querySelector('[data-ws-panel="feedback"]')?.textContent || ""));
+    // Sent with Request changes, each edit becomes a note with its values, then the feedback goes.
+    await desk.click('[data-ws-panel="feedback"]');
+    assert.match(await desk.textContent("#ws-side .ws-drafts"), /Look of Button “Save” · this browser[\s\S]*Look of More link · this browser/);
+    await desk.click('#ws-side [data-review=""]');
+    assert.match(await desk.textContent("#cf-body"), /drawn only with Request changes/);
+    await desk.click('#cf-choices input[value="request-changes"]');
+    await desk.click("#cf-ok");
+    await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/r7/reviews"));
+    const [body, smart] = (await posts("/api/cards/r7/drafts")).map((x) => JSON.parse(x.body));
+    assert.deepEqual(body.anchor.style, [{ prop: "background-color", from: "rgb(59, 91, 219)", to: "var(--danger)" }]);
+    assert.equal(body.anchor.variant, "v1");
+    assert.match(body.text, /^Change the look of Button “Save”: background --brand \(#3b5bdb\) → --danger \(#d6336c\)\.$/);
+    assert.equal(JSON.parse((await posts("/api/cards/r7/reviews"))[0].body).verdict, "request-changes");
     assert.deepEqual(smart.anchor.controls, [{ control: "shape", label: "Corners", from: "None", to: "Round", source: "web/src/app.css" }, { control: "kind", label: "Type", from: "Link", to: "Button", source: "web/src/ui/button.tsx" }]);
     assert.equal(smart.anchor.selector, "#more");
     assert.match(smart.text, /^Change the look of More link: Corners None → Round \(from web\/src\/app\.css\); Type Link → Button \(from web\/src\/ui\/button\.tsx\)\.$/);

@@ -494,8 +494,12 @@ leaves the handled mark and the check as they are; Approve marks the change hand
 a held check as the mark always does. Only Comment only is sent on a closed or sent request or a
 merged change. A draft about an option no longer drawn goes on the option shown under Request changes, and as one
 about the whole request otherwise. What exists stays as it is: a vote
-is not a verdict and counts on its own; **Work it in** turns a review's comment into a change note
-like any other; a note in the design workspace goes into the feedback like any other box's (its
+is not a verdict and counts on its own; **Add to my feedback** (once Work it in) on a comment is a
+draft `{work_in: <thread>}` (whoever may write a change note; once per comment; on a request's
+option): Request changes works that same conversation in (`was`, `work_in`, tagged with the
+review), any other verdict leaves it as it is and the reply says how many (`skipped`). A look edit
+from the workspace's palette waits in the person's feedback in their browser and goes as a note
+with its values (`anchor.style`, `anchor.controls`) when the feedback is sent; a note in the design workspace goes into the feedback like any other box's (its
 **Comment** posts for the team, and nothing there asks Design Desk for a change at once); a question
 for Design Desk (**Ask Design Desk**) is asked at once in the conversation and is never drafted. With `review_post`
 enabled, a review of a change with an open pull request is also posted there by the agent, as a
@@ -742,8 +746,8 @@ Requests use **Your turn** instead): only the cards that wait for a designer's d
   sign-in, steps and what it lacks. Past its end the line greys out as **No longer running** with
   the button off, and does not unfold; a merged PR shows none.
 - **Comments on options** are pinned to an element and its view; people reply, mark them
-  done or reopen them, and a designer, PM or developer presses **Work it in** (one, or every open one) to turn
-  comments into change notes for you (`revise`, [requests.md](requests.md)). The workspace's
+  done or reopen them, and a designer, PM or developer presses **Add to my feedback** (one, or every open one): sent
+  with Request changes, the comments become change notes for you (`revise`, [requests.md](requests.md); Reviews below). The workspace's
   **Comments** switch hides the pins from the design only (`desk-notes` in the browser's local
   storage); a pin's click opens its comment, switching Open / Done to the tab it is on. No option is
   **the winner**: Approve, Build a live prototype and Add to presentation each ask the person

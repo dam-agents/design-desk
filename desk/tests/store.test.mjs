@@ -3291,6 +3291,36 @@ test("looks good: a mark with no words on one change of a pull request, kept by 
   assert.deepEqual(s.getCard(chg.id).looks_good, []);
 });
 
+test("add to my feedback: a comment worked in when the feedback is sent with Request changes, as itself; look values ride on a note", () => {
+  const s = fresh();
+  const a = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: "<p>v</p>", encoding: "utf8" }).asset;
+  const req = s.upsertCard({ kind: "request", title: "Calmer list" }).card;
+  s.upsertCard({ id: req.id, status: "feedback", triage: { verdict: "design", reasons: ["Only the look."] }, variants: [{ id: "v1", name: "Quiet", asset: a.id }] });
+  for (const i of Object.values(s.db.inbox)) i.state = "done";
+  const said = s.openThread(req.id, bob, { kind: "comment", text: "The rows are too tight", anchor: { variant: "v1", label: "Row" } }).thread;
+  const loose = s.openThread(req.id, bob, { kind: "comment", text: "Nice" }).thread;
+  assert.throws(() => s.addDraft(req.id, alice, { work_in: "T-999" }), /no conversation/);
+  assert.throws(() => s.addDraft(req.id, alice, { work_in: loose.id }), /design options/);
+  s.addDraft(req.id, alice, { work_in: said.id });
+  assert.equal(s.addDraft(req.id, alice, { work_in: said.id }).drafts.length, 1, "once per comment");
+  assert.equal(s.thread(said.id).kind, "comment", "nothing changes until it is sent");
+  // A look edit: its values ride on the note's anchor, as the look palette sends them.
+  s.addDraft(req.id, alice, { text: "Padding 12 → 16", anchor: { variant: "v1", selector: ".row", label: "Row", style: [{ prop: "padding", from: "12px", to: "16px" }] } });
+  assert.deepEqual(s.drafts(req.id, alice).drafts[1].anchor.style, [{ prop: "padding", from: "12px", to: "16px" }]);
+  // Comment only leaves the comment be, and says so.
+  const r1 = s.sendReview(req.id, alice, { verdict: "comment" });
+  assert.equal(r1.skipped, 1);
+  assert.equal(s.thread(said.id).kind, "comment");
+  // Request changes works it in: the same conversation, now a change note of the feedback, and one revise.
+  s.addDraft(req.id, alice, { work_in: said.id });
+  const r2 = s.sendReview(req.id, alice, { verdict: "request-changes" });
+  const t = s.thread(said.id);
+  assert.deepEqual([t.kind, t.was, t.review, t.needs_agent, t.work_in.by.email], ["change", "comment", r2.review.id, true, "alice@example.com"]);
+  assert.deepEqual(r2.review.threads, [said.id], "no copy");
+  assert.equal(Object.values(s.db.inbox).filter((i) => i.card === req.id && i.kind === "revise" && i.state === "open").length, 1);
+  assert.throws(() => s.addDraft(req.id, alice, { work_in: said.id }), /change note already/);
+});
+
 test("a Comment-only review never waits for a next version, posted or not", () => {
   let t = 0;
   const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { needsApproval: everyCounts, clock: () => new Date(Date.UTC(2026, 10, 19, 9, 0, t++)).toISOString().replace(/\.\d{3}Z$/, "Z") });

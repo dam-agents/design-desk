@@ -805,11 +805,30 @@ export class Store {
     const c = this.card(cardId), key = this.draftsFor(who);
     return { drafts: structuredClone(own(own(this.db.drafts, key) || {}, c.id) || []) };
   }
-  addDraft(cardId, who, { text, anchor = null, change = null, ok = false } = {}) {
+  addDraft(cardId, who, { text, anchor = null, change = null, ok = false, work_in = null } = {}) {
     const c = this.card(cardId), key = this.draftsFor(who);
     if (!["request", "change"].includes(c.kind)) throw bad("Draft comments are kept on a request or a pull request's change.");
     const mine = own(this.db.drafts, key) || {};
     let list = own(mine, c.id) || [];
+    const put = (d) => {
+      if (list.length >= LIMITS.draftsPerCard) throw bad(`At most ${LIMITS.draftsPerCard} draft comments wait on one item. Send your feedback first.`);
+      Object.defineProperty(mine, c.id, { value: [...list, d], enumerable: true, writable: true, configurable: true });
+      Object.defineProperty(this.db.drafts, key, { value: mine, enumerable: true, writable: true, configurable: true });
+      this.save();
+      return { draft: d, drafts: structuredClone(mine[c.id]) };
+    };
+    // Add to my feedback: a comment already on the request, to be worked in when the feedback is
+    // sent with Request changes (docs/desk.md → Reviews). One draft per comment; no words of its own.
+    if (work_in != null) {
+      if (c.kind !== "request") throw bad("Only a design request's comments are worked in.");
+      const t = own(this.db.threads, String(work_in));
+      if (!t || t.card !== c.id || ["private", "asks"].includes(t.kind)) throw missing(`no conversation ${work_in} on this request`);
+      if (t.kind === "change" && t.state !== "resolved") throw bad("This comment is a change note already.");
+      if (!(c.variants || []).some((v) => v.id === t.anchor?.variant)) throw bad("Only a comment on one of the design options can be worked in.");
+      const was = list.find((d) => d.work_in === t.id);
+      if (was) return { draft: was, drafts: structuredClone(list) };
+      return put({ id: randomUUID().slice(0, 8), work_in: t.id, at: this.clock() });
+    }
     // A change of a pull request with screens is named by its key; elsewhere `change` stays free words.
     const all = c.kind === "change" ? changesOf(c).map((x) => x.key) : [], keys = all.length ? all : null;
     if (change && keys && !keys.includes(String(change))) throw bad("That change is not on this pull request.");
@@ -873,7 +892,10 @@ export class Store {
     // Looks good marks make no conversation: the review keeps them, by key and name.
     const chs = c.kind === "change" ? changesOf(c) : [];
     const looks = drafts.filter((d) => d.ok).map((d) => chs.find((x) => x.key === d.change)).filter(Boolean);
-    const notes = drafts.filter((d) => !d.ok);
+    const notes = drafts.filter((d) => !d.ok && !d.work_in);
+    // Comments to work in: only Request changes on a request works them in; another verdict leaves them be.
+    const worked = drafts.filter((d) => d.work_in).map((d) => own(this.db.threads, d.work_in)).filter((t) => t && t.card === c.id && !["private", "asks"].includes(t.kind));
+    const workIn = c.kind === "request" && verdict === "request-changes" ? worked : [], skipped = worked.length - workIn.length;
     const request = c.kind === "request", changes = verdict === "request-changes";
     if (verdict !== "comment" && (request ? ["declined", "handed-off"].includes(c.status) : Boolean(c.source?.merged_at) || c.status === "archived"))
       throw bad(request ? "This request is closed or sent to developers: send your comments with Comment only." : "This pull request is merged: send your comments with Comment only.");
@@ -901,7 +923,16 @@ export class Store {
         item = r.inbox || item;
       }
       // Changes asked with a note alone: the note is the change note Design Desk draws from.
-      if (request && changes && !plan.length) { const r = this.openThread(c.id, who, { kind: "change", text: words, anchor: { variant: first } }); r.thread.review = id; threads.push(r.thread.id); item = r.inbox; }
+      for (const t of workIn) {
+        if (t.kind !== "change") { t.was = t.kind; t.kind = "change"; }
+        delete t.resolved;
+        t.state = "open"; t.needs_agent = true;
+        t.work_in = { by: person(who), at: this.clock() };
+        t.review = id;
+        threads.push(t.id);
+      }
+      if (workIn.length && !item) item = this.pendingOrNew("revise", c.id, who);
+      if (request && changes && !plan.length && !workIn.length) { const r = this.openThread(c.id, who, { kind: "change", text: words, anchor: { variant: first } }); r.thread.review = id; threads.push(r.thread.id); item = r.inbox; }
       if (!request && verdict === "approve" && !c.handled) this.handle(c.id, who, true);
       const head = !request ? this.headOf(c) : null;
       this.db.reviews[id] = { id, card: c.id, by: person(who), at: this.clock(), verdict, note: words, threads, ...(looks.length ? { looks_good: looks.map(({ key, name }) => ({ key, name })) } : {}), ...(head ? { sha: head } : {}) };
@@ -913,7 +944,7 @@ export class Store {
     } catch (e) { this.save = save; this.load(); throw e; }
     this.save = save;
     this.save();
-    return { review: structuredClone(this.db.reviews[id]), inbox: item };
+    return { review: structuredClone(this.db.reviews[id]), inbox: item, ...(skipped ? { skipped } : {}) };
   }
 
   // The agent posted a review on its pull request: where, and on which head commit, the one the

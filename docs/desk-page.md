@@ -54,9 +54,9 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   decision check and, for an option with states, drawing them again. Text not whole between two
   tags, or on an alternative, opens that comment with the change written in instead. **Select:** the part shows in the side panel's
   **Properties**: why it is like this, **What should change?**, Every state, Try 3 ways, and Change
-  the look. A comment's number on the design opens it in place (Reply, Work it in, Mark done), as a
+  the look. A comment's number on the design opens it in place (Reply, Add to my feedback, Mark done), as a
   click on it in **Comments**, the panel's other tab: every comment on the option by state, a box
-  for one on the whole option or state, Open / Done / All and Work in all; and **Your feedback**,
+  for one on the whole option or state, Open / Done / All and Add all to my feedback; and **Your feedback**,
   the third tab for who may comment (with its count): every note of theirs on the request waiting
   to be sent, across options, each with what it is about and ✕, a click showing its option, state
   and part, and **Send feedback…**, the page's dialog. A note in the feedback is no pin. Pins are in the Desk's brown,
@@ -82,7 +82,10 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   follow the design's own text sizes, a spacing and a corner scale; colors offer the design's named
   colors (`--*` on `:root`) first, then those it uses, then any color, marked as not the design's.
   Other parts changed and not sent are listed under it, kept per drawing until the Desk is left;
-  **Send** makes one `change` note per part with `anchor.style` ([requests.md](requests.md) → revise).
+  **Add to feedback** puts a part's edits in the person's feedback (**In your feedback**; listed
+  under Your feedback as "Look of <part> · this browser", ✕ taking it out, the edit staying), and
+  sending the feedback makes one note per part with `anchor.style` / `anchor.controls`, a `change`
+  note with Request changes ([requests.md](requests.md) → revise). A reload drops them.
   The options' tabs are underline tabs with a number chip, in both modes and in the design
   workspace; what the chip's colour means is on the guidelines page ([The guidelines](#the-guidelines)). They stay one row: when they do not fit, the row scrolls sideways and keeps the
   picked tab in view, and **Design workspace** stays fixed at its right end. A redraw of the same
@@ -227,7 +230,7 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   replies indented under it, each by an avatar, the name, the role and a short date, a note on a
   design led by its option (and part) as a chip that opens the design workspace there; one marked
   done folds to one line (who wrote it and how it starts, who resolved it and when) that opens on
-  a click. Reply, Mark done, Work it in and Reopen work as in full mode. With nothing open, the pane shows
+  a click. Reply, Mark done, Add to my feedback and Reopen work as in full mode. With nothing open, the pane shows
   instead of the Requests intro three boxes, **Open**, **In dev** and **Closed**: how many items of
   the viewer's side are in each (Open and In dev with their kinds, Closed with how many of them
   shipped in the last 7 days); a click on one filters the list to that state. Otherwise it hides: **Designs**, **Issues**, **Product** and **People** leave the menu (a sent
