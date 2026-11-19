@@ -381,6 +381,13 @@ it (an Approve review too), deciding it, team feedback and votes, Slack, the pre
 live prototype and moving its side; comments, reviews with Comment or Request changes, and
 Design Desk's work go on.
 
+**Who sees it**: its author (by any of their addresses), an `admin`, and on a proposal every
+`developer` and `ui-dev-owner`; you see every one. For anyone else the server has none: not in a
+list, the bell, a decision's items or an MCP peer's reads; its page, its conversations, its
+pictures and every write on it answer as for a card that does not exist. The bell tells of it as
+new when it opens. Never name, quote or link one where anyone else reads (Slack, another card, the
+digest), and never add a report to one: file a new request.
+
 ### Deciding straight away
 
 A designer, a PM, an admin or a UI dev owner (`skip`) may skip the options, the vote and the live

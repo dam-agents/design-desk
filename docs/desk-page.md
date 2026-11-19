@@ -494,7 +494,7 @@ private ask only its owner: Design Desk's answers to it are theirs alone, and fo
 
 | Event | When |
 | --- | --- |
-| New request, New PR change, New issue | an item is created |
+| New request, New PR change, New issue | an item is created (a request before design: when it opens) |
 | New comment, New question, New reply | a message in a conversation |
 | Design Desk answered, Design Desk asks | the agent answers a question, or asks one |
 | New options drawn, Options redrawn | a run draws options, or new versions of them |

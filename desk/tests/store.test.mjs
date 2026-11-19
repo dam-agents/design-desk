@@ -3429,3 +3429,37 @@ test("before design a request is worked on, commented and closed by its own, but
   assert.throws(() => s.moveStage(id, lou, "design"), /closed\. Press Reopen first/);
   assert.equal(s.listCards({}).find((c) => c.id === id).stage, "proposal", "the list carries the stage");
 });
+
+test("before design a request is there only for its author, an admin, and on a proposal the developers and the UI dev owner", () => {
+  const s = fresh();
+  const lou = { email: "lou@example.com", role: "ui-dev-owner" }, pat = { email: "pat@example.com", role: "pm" }, lee = { email: "lee@example.com", role: "admin" }, dana = { email: "dana@example.com", role: "developer" };
+  const asset = s.addAsset({ kind: "variant", name: "v", contentType: "text/html", data: "<p>v</p>", encoding: "utf8" }).asset.id;
+  const id = s.createRequest(bob, { problem: "Rows are too airy.", stage: "draft" }).card.id;
+  s.upsertCard({ id, status: "feedback", triage: { verdict: "design", reasons: ["Spacing only."] }, variants: [{ id: "v1", name: "Calm", asset }] });
+  s.openThread(id, bob, { kind: "comment", text: "Mine for now." });
+  const d = s.recordDecision(alice, { text: "Rows keep their padding.", concepts: ["rows"] }).decision.id;
+  s.db.cards[id].decisions = [d];
+  const sees = (who) => [s.listCards({ who }).some((c) => c.id === id), (() => { try { return Boolean(s.getCard(id, { who })); } catch (e) { assert.equal(e.message, `no card ${id}`); return false; } })(),
+    s.getDecision(d, who).refs.some((r) => r.id === id), (() => { try { return Boolean(s.getAsset(asset, who)); } catch { return false; } })(),
+    s.notifications(who).items.some((n) => n.item === id)];
+  assert.deepEqual(sees(alice), [false, false, false, false, false], "a designer has none of it");
+  assert.deepEqual(sees(dana), [false, false, false, false, false], "another developer has none of a draft");
+  assert.deepEqual(sees(lou), [false, false, false, false, false], "nor has the UI dev owner");
+  assert.deepEqual(sees(lee).slice(0, 4), [true, true, true, true], "an admin has it");
+  assert.deepEqual(sees({ email: "BOB@example.com", role: "developer" }).slice(0, 4), [true, true, true, true], "its author has it, by any address");
+  assert.deepEqual(sees(null).slice(0, 4), [true, true, true, true], "the agent has it");
+  s.moveStage(id, bob, "proposal");
+  assert.deepEqual(sees(dana).slice(0, 4), [true, true, true, true], "a proposal is every developer's");
+  assert.deepEqual(sees(lou).slice(0, 4), [true, true, true, true]);
+  assert.deepEqual(sees(pat), [false, false, false, false, false], "not a PM's");
+  // An option carried over to a request they see stays theirs to read.
+  const other = s.createRequest(alice, { problem: "Same rows." }).card.id;
+  s.upsertCard({ id: other, variants: [{ id: "v1", name: "Calm", asset }] });
+  assert.equal(s.getAsset(asset, pat).id, asset);
+  // Once it goes to design it is everyone's, and new to the bell then.
+  s.clock = () => "2030-01-01T10:00:00Z";
+  s.moveStage(id, lou, "design");
+  const note = s.notifications(alice, { days: 100000 }).items.find((n) => n.item === id && n.event === "new-request");
+  assert.equal(note?.at, "2030-01-01T10:00:00Z", "new when it opened, not when it was filed");
+  assert.equal(s.getCard(id, { who: alice }).id, id);
+});

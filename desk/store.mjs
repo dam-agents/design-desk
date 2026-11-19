@@ -431,6 +431,16 @@ export class Store {
   // A card by its number; a comparison's number (F-n) names the card it compares.
   card(id) { const c = own(this.db.cards, id) || numberOwner(this.db.cards, id); if (!c) throw missing(`no card ${id}`); return c; }
   thread(id) { const t = own(this.db.threads, id); if (!t) throw missing(`no thread ${id}`); return t; }
+  // Who sees a request before it goes to design (docs/desk.md → Draft and Proposal): the agent
+  // (no `who`, or `who.agent`), its author, an admin, and on a proposal the developers and the UI
+  // dev owner. Every other card, and an open request, is everyone's.
+  visibleTo(c, who) {
+    if (!c?.stage || !who || who.agent || who.role === "admin") return true;
+    if (c.stage === "proposal" && DEVELOPERS.includes(who.role)) return true;
+    return [c.created_by?.email, c.origin?.email].some((x) => x && addressesOf(who).includes(String(x).toLowerCase()));
+  }
+  // A card a person reads or writes on: one they may not see is not there for them, in the same words.
+  cardFor(id, who) { const c = this.card(id); if (!this.visibleTo(c, who)) throw missing(`no card ${id}`); return c; }
   // A conversation a viewer acts on: another person's private ask is not there for them.
   threadFor(id, who) { const t = this.thread(id); if (!sees(t, who?.agent ? undefined : viewerKey(who))) throw missing(`no thread ${id}`); return t; }
   // The ability a person's reply, answer or reopen on a conversation needs: an answer to the
@@ -518,7 +528,7 @@ export class Store {
     let index = null;
     const builds = (c) => (c.kind === "change" ? this.buildsOf(c, (index ||= this.buildsIndex())) : null);
     return Object.values(this.db.cards)
-      .filter((c) => (!kind || c.kind === kind) && (!status || c.status === status))
+      .filter((c) => (!kind || c.kind === kind) && (!status || c.status === status) && this.visibleTo(c, who))
       .sort((a, b) => b.updated.localeCompare(a.updated))
       .map((c) => ({
         id: c.id, kind: c.kind, title: c.title, status: c.status, summary: c.summary || "",
@@ -672,8 +682,8 @@ export class Store {
 
   // `viewer` is the reading person's key; the agent reads without one and sees every
   // conversation, a person sees no one else's private ask.
-  getCard(id, { viewer } = {}) {
-    const c = this.card(id);
+  getCard(id, { viewer, who = null } = {}) {
+    const c = who ? this.cardFor(id, who) : this.card(id);
     // A conflict carries the decision's words and where it stands, so the page warns without another read.
     const conflicts = (c.conflicts || []).map((x) => { const d = own(this.db.decisions, x.decision); return { ...x, text: d?.text || "", status: d ? (d.status === "active" && !this.holds(d) ? "unapproved" : d.status) : "revoked", replaced_by: d?.revoked?.replaced_by || null }; });
     // Each decision the card cites, with its words and whether it is still in force.
@@ -703,12 +713,22 @@ export class Store {
     return took.length < 3 ? null : Math.max(1, Math.round(took[Math.floor(took.length / 2)]));
   }
 
-  getAsset(id) {
+  getAsset(id, who = null) {
     const a = own(this.db.assets, id);
-    if (!a) throw missing(`no asset ${id}`);
+    if (!a || !this.assetVisible(a, who)) throw missing(`no asset ${id}`);
     const buf = readFileSync(join(this.assetDir, a.file));
     const text = /^text\/|json|svg/.test(a.contentType);
     return { id: a.id, name: a.name, kind: a.kind, contentType: a.contentType, encoding: text ? "utf8" : "base64", data: text ? buf.toString("utf8") : buf.toString("base64") };
+  }
+
+  // A picture or a page of a request before design is not there for whom the request is not:
+  // one a request they see uses as well (an option carried over) stays theirs to read.
+  assetVisible(a, who) {
+    if (!who || who.agent) return true;
+    const uses = (c) => c.id === a.card || JSON.stringify(c).includes(`"${a.id}"`);
+    const hidden = Object.values(this.db.cards).filter((c) => c.stage && !this.visibleTo(c, who));
+    if (!hidden.some(uses)) return true;
+    return Object.values(this.db.cards).some((c) => this.visibleTo(c, who) && uses(c));
   }
 
   // ---------- viewer actions ----------
@@ -1204,7 +1224,7 @@ export class Store {
     const push = (at, event, item, by, extra = {}, forYou = false) => { if (at && at >= from && !isMine(by)) out.push({ at, event, ...item, by: by || null, ...extra, for_you: forYou }); };
     const itemOf = (c) => ({ item: c.id, kind: c.kind, title: c.title || "", screen: c.request?.screen || c.path || null, status: c.status });
     for (const c of Object.values(this.db.cards)) {
-      if (c.status === "archived" || c.kind === "digest") continue;
+      if (c.status === "archived" || c.kind === "digest" || !this.visibleTo(c, who)) continue;
       const it = itemOf(c);
       // Yours: you filed it, approved it, voted on it or wrote in it; everything on it is then
       // For you, its messages included. The bell's For you shows these alone.
@@ -1212,7 +1232,8 @@ export class Store {
       const filed = [c.created_by, c.origin].some(isMine);
       const yours = filed || isMine(c.approved?.by) || talked || Object.values(c.votes || {}).some((x) => Object.keys(x || {}).some((e) => mine.has(e.toLowerCase())));
       const author = c.origin?.reporter && c.origin.channel !== "agent" ? { name: c.origin.reporter, email: c.origin.email || null, via: c.origin.channel } : c.created_by;
-      if (["request", "change", "issue"].includes(c.kind)) push(c.created, `new-${c.kind}`, it, author, {}, yours);
+      // A request that went to design is new to everyone then (docs/desk-page.md → Notifications).
+      if (["request", "change", "issue"].includes(c.kind)) push(c.opened_at || c.created, `new-${c.kind}`, it, author, {}, yours);
       // Options drawn in one run come as one event: new ones, then redrawn ones.
       const runs = new Map();
       for (const v of c.variants || []) {
@@ -3162,9 +3183,10 @@ export class Store {
 
   // One decision with everything that names it: cards that follow it or go against it, and
   // decisions that replace it or go against it.
-  getDecision(id) {
+  getDecision(id, who = null) {
     const d = this.decision(id), refs = [];
     for (const c of Object.values(this.db.cards)) {
+      if (!this.visibleTo(c, who)) continue;
       const how = (c.conflicts || []).some((x) => x.decision === d.id) ? "conflicts"
         : (c.decisions || []).includes(d.id) || (c.impact?.decisions || []).some((x) => x.id === d.id) ? "cites"
         : shapedBy(c).includes(d.id) ? "shapes" : null;

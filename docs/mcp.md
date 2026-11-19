@@ -16,7 +16,7 @@ may use it; their tools are then `design_desk__list_items`, `…__read_item` and
 
 Every peer is one Desk caller, `agents@mcp.design-desk.invalid`, with the role `mcp_role`
 (`guest`, `developer` or `pm`; anything else reads as `guest`). Its calls run through the
-page's own route, so the same permission checks, the per-person limits (shared by all peers)
+page's own route, so the same permission checks (what it sees before design too; its requests open at once, [desk.md](desk.md) → Draft and Proposal), the per-person limits (shared by all peers)
 and the store's validation apply. The server admits only:
 
 | Tool | Route | Needs |

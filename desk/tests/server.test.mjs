@@ -725,10 +725,32 @@ test("a designer's request opens; anyone else's is a draft that its author moves
 
   // Its author closes a draft and reopens it, whatever their role; nobody else below the right role does.
   const mine = (await file("bob@example.com")).id;
-  assert.equal((await d.viewer("dana@example.com", `/api/cards/${mine}/actions`, { action: "close" })).status, 403);
+  assert.equal((await d.viewer("dana@example.com", `/api/cards/${mine}/actions`, { action: "close" })).status, 404, "another developer has no such draft");
   const closed = await d.viewer("bob@example.com", `/api/cards/${mine}/actions`, { action: "close" });
   assert.deepEqual([closed.status, closed.body.card.status, closed.body.card.stage], [200, "declined", "draft"]);
   assert.equal((await d.viewer("bob@example.com", `/api/cards/${mine}/actions`, { action: "reopen" })).status, 200);
-  const approve = await d.viewer("alice@example.com", `/api/cards/${mine}/actions`, { action: "approve" });
+  const approve = await d.viewer("lee@example.com", `/api/cards/${mine}/actions`, { action: "approve" });
   assert.deepEqual([approve.status, approve.body.error], [400, "This request is still a draft. That waits until it goes to design."]);
+});
+
+test("a draft or a proposal is not there, through any route, for whom it is not", async (t) => {
+  const d = await desk(t);
+  const id = (await d.viewer("bob@example.com", "/api/requests", { problem: "Rows are too airy.", options: 0 })).body.card.id;
+  const tid = (await d.viewer("bob@example.com", `/api/cards/${id}/threads`, { kind: "comment", text: "Mine for now." })).body.thread.id;
+  const reach = async (email) => [
+    (await d.viewer(email, "/api/cards")).body.cards.some((c) => c.id === id),
+    (await d.viewer(email, `/api/cards/${id}`)).status,
+    (await d.viewer(email, `/api/cards/${id}/threads`, { kind: "comment", text: "Hello?" })).status,
+    (await d.viewer(email, `/api/threads/${tid}/messages`, { text: "Hello?" })).status,
+    (await d.viewer(email, `/api/cards/${id}/drafts`, { text: "Later." })).status,
+  ];
+  assert.deepEqual(await reach("alice@example.com"), [false, 404, 404, 404, 404], "a designer");
+  assert.equal((await d.viewer("alice@example.com", `/api/cards/${id}`)).body.error, `no card ${id}`, "in the words of a card that does not exist");
+  assert.deepEqual(await reach("dana@example.com"), [false, 404, 404, 404, 404], "another developer, of a draft");
+  assert.deepEqual(await reach("lee@example.com"), [true, 200, 201, 201, 201], "an admin");
+  assert.equal((await d.viewer("lou@example.com", `/api/cards/${id}/stage`, { to: "design" })).status, 404, "the UI dev owner moves no draft they cannot see");
+  assert.equal((await d.viewer("bob@example.com", `/api/cards/${id}/stage`, { to: "proposal" })).status, 200);
+  assert.deepEqual(await reach("dana@example.com"), [true, 200, 201, 201, 201], "a proposal is every developer's");
+  assert.deepEqual(await reach("pat@example.com"), [false, 404, 404, 404, 404], "not a PM's");
+  assert.equal((await d.agent(`/agent/cards/${id}`)).body.card.stage, "proposal", "the agent sees it");
 });
