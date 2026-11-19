@@ -41,7 +41,7 @@ test("the page's styles keep to the Desk's scale", () => {
     for (const [, p, v] of body.matchAll(/(font-size|font-weight|border-radius|padding[a-z-]*|margin[a-z-]*|(?:row-|column-)?gap)\s*:\s*([^;]+)/g)) {
       const bad = p === "font-size" ? /\d(px|rem)\b/.test(v) && !own.test(sel) || /var\(--fs-(?!(title|head|ui|meta|micro)\))/.test(v)
         : p === "font-weight" ? !/^(400|500|600|inherit|normal)(\s*!important)?$/.test(v.trim())
-        : p === "border-radius" ? !own.test(sel) && v.trim().split(/\s+/).some((x) => !/^(0|50%|999px|inherit|var\(--(r-(xs|sm|md|lg)|radius)\))$/.test(x))
+        : p === "border-radius" ? !own.test(sel) && v.trim().split(/\s+/).some((x) => !/^(0|50%|999px|inherit|var\(--(r-sm|radius)\))$/.test(x))
         : !/\.kit-pic/.test(sel) && v.split(/\s+/).some((x) => /^-?\d+px$/.test(x) && Math.abs(parseInt(x)) > 2 && parseInt(x) % 4);
       if (bad) off.push(`${sel} { ${p}: ${v.trim()} }`);
     }
@@ -4242,4 +4242,36 @@ test("simple mode's Ask privately is its lock alone, named for a screen reader a
   assert.equal(await desk.getAttribute(".ask-fab", "aria-label"), "Ask privately about this request, 2 messages so far", "its name, with its count, for a screen reader");
   assert.equal(await desk.locator(".ask-fab .ask-lbl").isHidden(), true, "only the lock");
   assert.match(await desk.getAttribute(".ask-fab", "data-tip"), /Ask Design Desk privately about R-5/, "its tooltip says what it asks about");
+}));
+
+// An option tab's number chip carries its review (desk/guidelines.html → Tabs and switchers):
+// amber while changes asked for on it wait for Design Desk's next version, green once approved.
+const BRIDGE_MARK = (patch) => BRIDGE_STORIES.replace('threads: [],', `threads: [], ...${JSON.stringify(patch)},`);
+const MARKS = [
+  ["amber where changes were asked for", { threads: [{ id: "t1", kind: "change", state: "open", anchor: { variant: "v2" }, messages: [{ by: { email: "alice@example.com" }, at: "2026-11-01T00:00:00Z", text: "Make it quieter" }] }] }, { v1: null, v2: "changes" }],
+  ["none once Design Desk answered the change", { threads: [{ id: "t1", kind: "change", state: "open", anchor: { variant: "v2" }, messages: [{ by: { email: "alice@example.com" }, at: "2026-11-01T00:00:00Z", text: "Make it quieter" }, { by: { agent: true }, at: "2026-11-01T01:00:00Z", text: "Version 2 is quieter." }] }] }, { v1: null, v2: null }],
+  ["green for the approved option", { status: "spec", approved: { variant: "v1", by: { email: "alice@example.com" }, at: "2026-11-01T00:00:00Z" } }, { v1: "ok", v2: null }],
+  ["never amber on a declined request, which draws no new version", { status: "declined", threads: [{ id: "t1", kind: "change", state: "open", anchor: { variant: "v2" }, messages: [{ by: { email: "alice@example.com" }, at: "2026-11-01T00:00:00Z", text: "Make it quieter" }] }] }, { v1: null, v2: null }],
+  ["never amber on an approved request, which draws no new version", { status: "spec", approved: { variant: "v1", by: { email: "alice@example.com" }, at: "2026-11-01T00:00:00Z" }, threads: [{ id: "t1", kind: "change", state: "open", anchor: { variant: "v2" }, messages: [{ by: { email: "alice@example.com" }, at: "2026-11-01T00:00:00Z", text: "Make it quieter" }] }] }, { v1: "ok", v2: null }],
+];
+for (const [label, patch, want] of MARKS) {
+  test(`an option tab's chip is ${label}`, (t) => open(t, BRIDGE_MARK(patch), async (desk) => {
+    await desk.click('[data-tab="requests"]');
+    if (patch.status === "declined") await desk.click('[data-filter="reqFilter:closed"]');
+    await desk.click('[data-card="r7"]');
+    await desk.waitForSelector('#detail .utabs [data-variant="v2"]');
+    for (const [v, m] of Object.entries(want))
+      assert.equal(await desk.getAttribute(`#detail .utabs [data-variant="${v}"]`, "data-m"), m, `option ${v}`);
+  }));
+}
+
+// The bell's For you / All is the Desk's segmented control: inside its panel, not a menu row
+// stretched to the panel's width (desk/guidelines.html → Segmented control).
+test("the bell's For you / All stays inside its panel", (t) => open(t, BELL, async (desk) => {
+  await desk.click("#bell-btn");
+  await desk.waitForSelector("#notes .filters .btn");
+  const { panel, btns } = await desk.evaluate(() => ({ panel: document.querySelector("#notes").getBoundingClientRect().right,
+    btns: [...document.querySelectorAll("#notes .filters .btn")].map((b) => b.getBoundingClientRect().right) }));
+  assert.equal(btns.length, 2);
+  for (const r of btns) assert.ok(r <= panel, `a switch ends at ${r}, past the panel's edge at ${panel}`);
 }));

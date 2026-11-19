@@ -78,7 +78,8 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   colors (`--*` on `:root`) first, then those it uses, then any color, marked as not the design's.
   Other parts changed and not sent are listed under it, kept per drawing until the Desk is left;
   **Send** makes one `change` note per part with `anchor.style` ([requests.md](requests.md) → revise).
-  The options' tabs stay one row: when they do not fit, the row scrolls sideways and keeps the
+  The options' tabs are underline tabs with a number chip, in both modes and in the design
+  workspace; what the chip's colour means is on the guidelines page ([The guidelines](#the-guidelines)). They stay one row: when they do not fit, the row scrolls sideways and keeps the
   picked tab in view, and **Design workspace** stays fixed at its right end. A redraw of the same
   item keeps the row where the person scrolled it; only another tab picked moves it, just enough to
   show that tab; another item's row starts at its beginning.
@@ -523,27 +524,25 @@ Mark as done.
 
 Every change to the page keeps to one scale; `desk/tests/page.test.mjs` fails on a value off it.
 
-- **Text:** only the `--fs-*` tokens: `title` 26 (an item's or a page's name), `head` 17 (a
-  section, a dialog's name), `ui` 14 (text to read, controls, lists), `meta` 12.5
-  (dates, who, counts), `micro` 11 (badges, tiny labels). Weights 400, 500 (a control's label), 600
-  (names, emphasis); nothing bolder. One family: `--font`, `--mono` for code.
-- **Corners:** `--r-xs` 4 (tags), `--r-sm` 6 (pictures, items inside a control), `--r-md` 8
-  (buttons, fields, menus), `--radius` 10 (cards, panels), `--r-lg` 12 (dialogs, floats); `999px`
-  a pill, `50%` a dot or avatar.
-- **Space:** multiples of 4 (4, 8, 12, 16, 24, 32); 1 or 2px only as a hairline or a nudge.
-- **Labels:** a label before its value (*Next:*, *Turn:*, *Created:*, *By:*) is sentence case and
-  grey; capitals with spacing only head a group (*Step by step*). A role alone as a label is
+- **Text:** only the `--fs-*` tokens: `title` 26, `head` 17, `ui` 14, `meta` 12.5, `micro` 11.
+  Weights 400, 500, 600; nothing bolder. One family: `--font`, `--mono` for code. Which size and
+  weight a thing takes: the guidelines (Type).
+- **Corners:** two, `--r-sm` 6 and `--radius` 12, and two shapes, `999px` and `50%`; nothing
+  else. Which a thing takes: the guidelines (Corners).
+- **Space:** multiples of 4 (4, 8, 12, 16, 24, 32); 1 or 2px only as a hairline or a nudge. Which
+  step goes where: the guidelines (Space).
+- **Labels:** a label before its value (*Next:*, *Turn:*, *Created:*, *By:*) is grey; how a label
+  is worded, its case included, is the guidelines' (Text). A role alone as a label is
   capitalised (*Designer*), inside a sentence as written. Design Desk's mark is the spark of its
   actions, never letters.
 - **A request's box** keeps two rows above its stages: the state and Turn with Approve, Close and
   ⋯; then the ways on (sent: when and where on the left, the ways on at the right).
-- **Buttons:** `.btn` 32px high, `.btn.small` 26px; one `.primary` (ink) per view, the next step.
-  Approve keeps its green (the team's decision).
-- **Colours:** only the tokens on `:root`, each in light and dark; never a near copy of one. An
-  ink means a state (who has the move, approved, live, closed): never decoration. A step's
-  number takes its box's colour in the flow above it. Text on a coloured fill is `--bg` or
-  `--accent-ink`, never `#fff`, so it reads in both modes. A fixed hex is only for what shows the
-  product (a screenshot's white ground, a kit picture, the review bar inside a design).
+- **Buttons:** `.btn` 32px high, `.btn.small` 26px; which one is primary, and which green: the
+  guidelines (Buttons).
+- **Colours:** only the tokens on `:root`, each in light and dark; what a colour may mean, and the
+  ink on a coloured fill: the guidelines (Colour). A step's number takes its box's colour in the
+  flow above it. A fixed hex is only for what shows the product (a screenshot's white ground, a
+  kit picture, the review bar inside a design).
 - **Exempt from the scale:** glyphs (`::before`, `::after`, ✕ and ‹ › buttons), kit pictures, the
   flow's SVG labels, a stat's numeral and the presentation's slide.
 - **One line:** the header holds one row down to about 1024px: under 1280px the name folds to its
@@ -552,3 +551,23 @@ Every change to the page keeps to one scale; `desk/tests/page.test.mjs` fails on
 - **Ask privately** stays at the bottom right; every scrolling view leaves room under its end
   (`.detail`'s bottom padding) so it covers nothing at the end of a page. In simple mode it is
   its lock alone (with its count and spinner); its tooltip says what it asks about.
+
+### The guidelines
+
+`desk/guidelines.html` is the Desk's interface as a set of parts: what each is, when it is used
+and what it means — tabs and switchers by meaning, buttons, state, colour, chips, folds, text,
+comments, dialogs and forms, tiles, the toast, the tokens, in light and dark. Read it before a
+change to the page, and build a new screen from its parts. It is for the people who design the
+Desk and for this agent; it lives in the repository and is not published. Open it as a file.
+
+- **Its examples are the Desk's components**, in the Desk's own stylesheet: `node
+  desk/dev/guidelines.mjs` copies `desk/page.html`'s `<style>` into `desk/guidelines.css`, which
+  the page links, so the page itself is its rules and reads whole. Its own style only lays the
+  page out: each rule's subject is a `.gl-` class.
+- **It cannot silently differ:** `desk/tests/guidelines.test.mjs` fails when the copy is stale,
+  when the page carries the Desk's stylesheet itself, when it shows a class the Desk no longer
+  styles, when its own style restyles a component, and when the Desk's option tabs are not the
+  underline tabs it shows.
+- **One home per rule.** What a part means and when it is used is the page's; the scale's numbers
+  and how the code applies them stay under The look, which links to the page for the rest. A
+  change to a part changes its rule there, in the same pull request.

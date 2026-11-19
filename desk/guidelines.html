@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Design Desk — interface guidelines</title>
+<!-- What the Desk's interface is made of, when each piece is used and what it means. Every
+     example below is the Desk's own component in the Desk's own stylesheet: guidelines.css is
+     desk/page.html's <style>, copied by `node desk/dev/guidelines.mjs`; never edit it by hand.
+     This page adds only its layout, in the .gl- block after it: each rule's subject is a .gl-
+     class. desk/tests/guidelines.test.mjs keeps both true. -->
+<link rel="stylesheet" href="guidelines.css">
+<style data-guidelines>
+  .gl-page { max-width: 1040px; margin: 0 auto; padding: 32px 32px 96px; }
+  .gl-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+  .gl-h1 { margin: 0; font-size: var(--fs-title); line-height: 1.25; }
+  .gl-lead { max-width: 72ch; margin: 16px 0 0; }
+  .gl-toc { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 16px 0 0; padding: 0; list-style: none; font-size: var(--fs-meta); }
+  .gl-sect { padding-top: 32px; }
+  .gl-h2 { font-size: var(--fs-head); margin: 0 0 8px; }
+  .gl-item { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 24px; padding: 16px 0; border-top: 1px solid var(--line); }
+  .gl-item:first-of-type { border-top: 0; }
+  .gl-h3 { margin: 0 0 4px; font-size: var(--fs-ui); text-transform: none; letter-spacing: 0; color: var(--ink); }
+  .gl-p, .gl-ul { margin: 4px 0 0; }
+  .gl-ul { padding-left: 20px; }
+  .gl-where { color: var(--muted); font-size: var(--fs-meta); }
+  .gl-ex { min-width: 0; display: flex; flex-direction: column; gap: 12px; align-items: flex-start; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
+  .gl-ex.gl-wide { align-items: stretch; }
+  .gl-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .gl-sw { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; width: 100%; }
+  .gl-swatch { display: grid; gap: 4px; font-size: var(--fs-micro); color: var(--muted); }
+  .gl-swatch-ink { display: block; height: 32px; border-radius: var(--r-sm); box-shadow: inset 0 0 0 1px var(--line); }
+  .gl-fs-title, .gl-fs-head, .gl-fs-ui, .gl-fs-meta, .gl-fs-micro { margin: 0; }
+  .gl-fs-title { font-size: var(--fs-title); font-weight: 600; } .gl-fs-head { font-size: var(--fs-head); font-weight: 600; }
+  .gl-fs-ui { font-size: var(--fs-ui); } .gl-fs-meta { font-size: var(--fs-meta); color: var(--muted); } .gl-fs-micro { font-size: var(--fs-micro); color: var(--muted); }
+  .gl-scale { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 16px; width: 100%; }
+  .gl-tok { display: grid; gap: 4px; align-content: start; font-size: var(--fs-meta); }
+  .gl-box { display: block; height: 48px; margin-bottom: 4px; background: var(--soft); box-shadow: inset 0 0 0 1px var(--muted); }
+  .gl-circle { width: 48px; }
+  .gl-card { display: block; height: 56px; margin: 4px 4px 12px; border-radius: var(--radius); background: var(--panel); }
+  .gl-type-k { display: block; font-family: var(--mono); font-size: var(--fs-micro); font-weight: 400; color: var(--muted); }
+  .gl-name { font-family: var(--mono); font-size: var(--fs-meta); font-weight: 500; }
+  .gl-val, .gl-use { color: var(--muted); font-size: var(--fs-micro); }
+  .gl-spaces { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 24px; }
+  .gl-space { display: grid; justify-items: start; gap: 4px; }
+  .gl-bar { display: block; height: 32px; background: var(--accent); }
+  .gl-fixed { position: relative; transform: translateZ(0); width: 100%; min-height: 72px; }
+  .gl-dlg { width: 100%; }
+  .gl-palette { width: 340px; max-width: 100%; }
+  .gl-static { position: static; margin: 0; }
+  .gl-no { color: var(--bad); }
+  @media (max-width: 760px) { .gl-item { grid-template-columns: minmax(0, 1fr); } }
+</style>
+</head>
+<body>
+<div class="gl-page">
+
+<header class="gl-top">
+  <h1 class="gl-h1">Interface guidelines</h1>
+  <div class="filters" role="group" aria-label="Light or dark">
+    <button class="btn small on" data-gl-theme="light" aria-pressed="true">Light</button>
+    <button class="btn small" data-gl-theme="dark" aria-pressed="false">Dark</button>
+  </div>
+</header>
+<p class="gl-lead">What the Desk's interface is made of, when each piece is used, and what it means. Build a new screen from these pieces; do not invent another look for a job one of them already does. Every example here is the Desk's own component in its own stylesheet, so this page is what the Desk looks like.</p>
+<ul class="gl-toc">
+  <li><a href="#tabs">Tabs and switchers</a></li><li><a href="#buttons">Buttons</a></li><li><a href="#state">State</a></li>
+  <li><a href="#colour">Colour</a></li><li><a href="#chips">Chips</a></li><li><a href="#folds">Folds</a></li><li><a href="#text">Text</a></li>
+  <li><a href="#comments">Comments</a></li><li><a href="#dialogs">Dialogs and forms</a></li><li><a href="#tiles">Tiles and empty states</a></li>
+  <li><a href="#toast">The toast</a></li><li><a href="#tokens">Tokens</a></li>
+</ul>
+
+<section class="gl-sect" id="tabs">
+  <h2 class="gl-h2">Tabs and switchers</h2>
+  <p class="hint">Picked by what the switch means, never by how much room there is.</p>
+
+  <div class="gl-item">
+    <div class="gl-rule">
+      <h3 class="gl-h3">Main menu</h3>
+      <p class="gl-p">Where you are on the Desk: its places, once, in the header. The place you are on is filled; nothing else is marked. A count says how many are still open there, grey; Requests' turns amber while one waits for an answer.</p>
+      <p class="gl-where">On the Desk: the header.</p>
+    </div>
+    <div class="gl-ex">
+      <nav aria-label="Example menu">
+        <button aria-current="true">Requests<span class="count warn">3</span></button>
+        <button aria-current="false">Changes<span class="count">5</span></button>
+        <button aria-current="false">Product</button>
+      </nav>
+    </div>
+  </div>
+
+  <div class="gl-item">
+    <div class="gl-rule">
+      <h3 class="gl-h3">Segmented control</h3>
+      <p class="gl-p">Another view or filter of the same content: a list's filters, a mockup's pages, light and dark. A count sits inside its segment.</p>
+      <p class="gl-where">On the Desk: every list's filter, the review's light and dark.</p>
+    </div>
+    <div class="gl-ex">
+      <div class="filters" role="group" aria-label="Example filter">
+        <button class="btn small on" aria-pressed="true">Open <span class="n">4</span></button>
+        <button class="btn small" aria-pressed="false">In dev <span class="n">2</span></button>
+        <button class="btn small" aria-pressed="false">Closed</button>
+        <button class="btn small" aria-pressed="false">All</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="gl-item">
+    <div class="gl-rule">
+      <h3 class="gl-h3">Underline tabs with a number chip</h3>
+      <p class="gl-p">Things reviewed one at a time: a request's design options, a pull request's changes. The chip carries the review:</p>
+      <ul class="gl-ul"><li>ink for the one shown,</li><li>green for the approved one, even when shown,</li><li>amber while changes asked for on it wait for its next version; never on an approved or closed request, which draws none,</li><li>grey for the rest.</li></ul>
+      <p class="gl-where">On the Desk: a request's design options, in both modes, and the design workspace's.</p>
+    </div>
+    <div class="gl-ex gl-wide">
+      <div class="tabs vtabs vrow utabs" role="group" aria-label="Example options">
+        <div class="vscroll">
+          <button aria-pressed="true"><span class="ono">1</span>Cards in a grid</button>
+          <button aria-pressed="false" data-m="ok"><span class="ono">2</span>A dense list</button>
+          <button aria-pressed="false" data-m="changes"><span class="ono">3</span>A table</button>
+          <button aria-pressed="false"><span class="ono">4</span>Grouped by owner</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="gl-item">
+    <div class="gl-rule">
+      <h3 class="gl-h3">Plain underline tabs</h3>
+      <p class="gl-p">The sections of a panel or a page: each holds different content. A count is grey, beside the name.</p>
+      <p class="gl-where">On the Desk: the pages of Product and of the other tabs, and the sections of the design workspace's look panel.</p>
+    </div>
+    <div class="gl-ex gl-wide">
+      <nav class="subtabs" aria-label="Example pages">
+        <button class="on" data-filter="x:screens" aria-current="page">Screens</button>
+        <button data-filter="x:elements" aria-current="false">Elements</button>
+        <button data-filter="x:decisions" aria-current="false">Decisions</button>
+        <button data-filter="x:history" aria-current="false">History</button>
+      </nav>
+    </div>
+  </div>
+
+  <div class="gl-item">
+    <div class="gl-rule">
+      <h3 class="gl-h3">Stepper</h3>
+      <p class="gl-p">Variants of one thing in an order: an element's states, a size, a value one step up or down. The arrows step; the middle names where you are.</p>
+      <p class="gl-where">On the Desk: the design workspace's look panel and its states.</p>
+    </div>
+    <div class="gl-ex">
+      <span class="pl-step"><button aria-label="Less" title="Previous">−</button><span class="pl-v">Hover</span><button aria-label="More" title="Next">+</button></span>
+    </div>
+  </div>
+
+  <div class="gl-item">
+    <div class="gl-rule">
+      <h3 class="gl-h3">A property's value</h3>
+      <p class="gl-p">In the look panel, one value of a part's property: a segmented row for up to four short values, chips for more, a swatch for a colour. The picked one is filled or ringed in the accent.</p>
+      <p class="gl-where">On the Desk: the design workspace's look panel.</p>
+    </div>
+    <div class="gl-ex">
+      <div id="ws-palette" class="gl-palette"><div class="pl-body">
+        <div class="pl-row"><span class="pl-k">Align</span><span class="pl-seg"><button aria-pressed="false">Left</button><button aria-pressed="true">Center</button><button aria-pressed="false">Right</button></span><span></span></div>
+        <div class="pl-row"><span class="pl-k">Style</span><span class="pl-chips"><button aria-pressed="true">Primary</button><button aria-pressed="false">Secondary</button><button aria-pressed="false">Ghost</button><button aria-pressed="false">Link</button></span><span></span></div>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="gl-item">
+    <div class="gl-rule">
+      <h3 class="gl-h3">Version links</h3>
+      <p class="gl-p">The versions of a written thing, read one at a time: each a link in a line, the one shown bold and no longer a link.</p>
+      <p class="gl-where">On the Desk: an approved request's spec.</p>
+    </div>
+    <div class="gl-ex">
+      <p class="hint spec-versions">Versions: <button aria-pressed="false">1 · Design Desk</button>, <button aria-pressed="true">2 · Design Desk</button></p>
+    </div>
+  </div>
+
+  <div class="gl-item">
+    <div class="gl-rule">
+      <h3 class="gl-h3">Choice in a form</h3>
+      <p class="gl-p">Picking one value a form needs, when the choice changes what the form asks next. Every option is a whole button with its words; the picked one is ringed in ink.</p>
+      <p class="gl-where">On the Desk: a new request's kind and audience, an issue's kind, a live prototype's mode, Send to Slack's mode.</p>
+    </div>
+    <div class="gl-ex">
+      <div class="tabs" role="radiogroup" aria-label="Example choice">
+        <button type="button" aria-pressed="true">Suggest a change</button>
+        <button type="button" aria-pressed="false">Report something broken</button>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+<section class="gl-sect" id="buttons">
+  <h2 class="gl-h2">Buttons</h2>
+  <div class="gl-item">
+    <div class="gl-rule">
+      <h3 class="gl-h3">One primary action in a view</h3>
+      <p class="gl-p">The dark primary is the next step. Green is only Approve or Looks good. Everything else is neutral. Red only for what deletes.</p>
+      <p class="gl-p">An action keeps its name everywhere: “Request changes” in the header, in its dialog, and in the message that follows.</p>
+      <p class="gl-p">Small buttons sit inside a row, a card or a toolbar; the full size stands on its own.</p>
+    </div>
+    <div class="gl-ex">
+      <div class="gl-row">
+        <button class="btn primary">Send to developers</button>
+        <button class="btn" data-act="approve">Approve</button>
+        <button class="btn">Request changes</button>
+      </div>
+      <div class="gl-row">
+        <button class="btn small">Open in Figma</button>
+        <button class="btn small" disabled>Not now</button>
+        <button class="btn small danger">Delete</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="gl-sect" id="state">
+  <h2 class="gl-h2">State</h2>
+  <div class="gl-item">
+    <div class="gl-rule">
+      <h3 class="gl-h3">One pill per item, in one place</h3>
+      <p class="gl-p">An item's state shows once: at the end of its row in a list, by its title on its page. Its colour is its state and nothing else.</p>
+    </div>
+    <div class="gl-ex">
+      <div class="gl-row">
+        <span class="spill" data-s="open">Open</span>
+        <span class="spill" data-s="dev">In dev</span>
+        <span class="spill" data-s="shipped">Shipped</span>
+        <span class="spill" data-s="none">No review needed</span>
+        <span class="spill" data-s="closed">Closed</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="gl-sect" id="colour">
+  <h2 class="gl-h2">Colour</h2>
+  <div class="gl-item">
+    <div class="gl-rule">
+      <h3 class="gl-h3">Neutral by default</h3>
+      <p class="gl-p">Colour only for a state, a warning, the one primary action, or the reader's own comments: an ink means a state (who has the move, approved, live, closed), never decoration. Never a near copy of a token. Text on a coloured fill is a token that turns with the theme (<code>--bg</code>, <code>--panel</code> or <code>--accent-ink</code>), never a fixed colour such as <code>#fff</code>, so it reads in light and dark.</p>
+    </div>
+    <div class="gl-ex gl-wide">
+      <div class="gl-sw">
+        <div class="gl-swatch"><i class="gl-swatch-ink" style="background: var(--ink)"></i><b class="gl-name">--ink</b><span class="gl-val" data-gl-var="--ink"></span></div>
+        <div class="gl-swatch"><i class="gl-swatch-ink" style="background: var(--muted)"></i><b class="gl-name">--muted</b><span class="gl-val" data-gl-var="--muted"></span></div>
+        <div class="gl-swatch"><i class="gl-swatch-ink" style="background: var(--line)"></i><b class="gl-name">--line</b><span class="gl-val" data-gl-var="--line"></span></div>
+        <div class="gl-swatch"><i class="gl-swatch-ink" style="background: var(--soft)"></i><b class="gl-name">--soft</b><span class="gl-val" data-gl-var="--soft"></span></div>
+        <div class="gl-swatch"><i class="gl-swatch-ink" style="background: var(--panel)"></i><b class="gl-name">--panel</b><span class="gl-val" data-gl-var="--panel"></span></div>
+        <div class="gl-swatch"><i class="gl-swatch-ink" style="background: var(--bg)"></i><b class="gl-name">--bg</b><span class="gl-val" data-gl-var="--bg"></span></div>
+        <div class="gl-swatch"><i class="gl-swatch-ink" style="background: var(--accent)"></i><b class="gl-name">--accent</b><span class="gl-val" data-gl-var="--accent"></span></div>
+        <div class="gl-swatch"><i class="gl-swatch-ink" style="background: var(--ok)"></i><b class="gl-name">--ok</b><span class="gl-val" data-gl-var="--ok"></span><span class="gl-use">approved</span></div>
+        <div class="gl-swatch"><i class="gl-swatch-ink" style="background: var(--warn)"></i><b class="gl-name">--warn</b><span class="gl-val" data-gl-var="--warn"></span><span class="gl-use">waiting</span></div>
+        <div class="gl-swatch"><i class="gl-swatch-ink" style="background: var(--bad)"></i><b class="gl-name">--bad</b><span class="gl-val" data-gl-var="--bad"></span></div>
+        <div class="gl-swatch"><i class="gl-swatch-ink" style="background: var(--live)"></i><b class="gl-name">--live</b><span class="gl-val" data-gl-var="--live"></span></div>
+        <div class="gl-swatch"><i class="gl-swatch-ink" style="background: var(--why)"></i><b class="gl-name">--why</b><span class="gl-val" data-gl-var="--why"></span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="gl-sect" id="chips">
+  <h2 class="gl-h2">Chips</h2>
+  <div class="gl-item">
+    <div class="gl-rule">
+      <h3 class="gl-h3">A short fact about the thing beside it</h3>
+      <p class="gl-p">A version, a kind, a warning. Grey unless it is a state; a chip never does what a button does.</p>
+    </div>
+    <div class="gl-ex">
+      <div class="gl-row">
+        <span class="chip">version 2</span>
+        <span class="chip ok">Approved</span>
+        <span class="chip warn">Waiting</span>
+        <span class="chip bad">🐛 Bug</span>
+        <span class="chip info">▶ Goes live</span>
+        <span class="chip live">Live</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="gl-sect" id="folds">
+  <h2 class="gl-h2">Folds</h2>
+  <div class="gl-item">
+    <div class="gl-rule">
+      <h3 class="gl-h3">One style for every long read that starts closed</h3>
+      <p class="gl-p">A line above, the name as a heading, + and − at the right. What the page is for stays open; the long reads fold.</p>
+    </div>
+    <div class="gl-ex gl-wide">
+      <details class="fold big sfold"><summary><h3>The request in full</h3></summary><p>What the person asked for, word for word, with their pictures.</p></details>
+      <details class="fold big sfold"><summary><h3>What changed and why</h3></summary><p>The change, section by section.</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="gl-sect" id="text">
+  <h2 class="gl-h2">Text</h2>
+  <div class="gl-item">
+    <div class="gl-rule">
+      <h3 class="gl-h3">Every label earns its place</h3>
+      <ul class="gl-ul">
+        <li>No sentence that explains a heading.</li>
+        <li>No label on a value that explains itself.</li>
+        <li>Dates without the year when it is this year.</li>
+        <li>Sentence case; capitals with spacing only head a group.</li>
+      </ul>
+    </div>
+    <div class="gl-ex">
+      <p>Tue 3 Nov, 2:40 PM</p>
+      <p class="gl-no"><s>Created on: Tuesday, 3 November 2026 at 14:40</s></p>
+    </div>
+  </div>
+</section>
+
+<section class="gl-sect" id="comments">
+  <h2 class="gl-h2">Comments</h2>
+  <div class="gl-item">
+    <div class="gl-rule">
+      <h3 class="gl-h3">A thread, a resolved thread</h3>
+      <p class="gl-p">Replies indent under the first message. Who wrote it shows by role: a designer, a developer, Design Desk. A resolved thread folds to one line.</p>
+    </div>
+    <div class="gl-ex gl-wide">
+      <article class="sthread">
+        <div class="smsg"><span class="sav" data-r="designer">AN</span><div class="sm-b"><div class="who"><b>Alice Novak</b><span class="role">Designer</span><span class="at">Today, 9:12 AM</span></div><p>Can the empty state say what to do next?</p></div></div>
+        <div class="smsg re"><span class="sav" data-r="agent">DD</span><div class="sm-b"><div class="who"><b>Design Desk</b><span class="at">Today, 9:14 AM</span></div><p>Version 2 adds a button that opens the new-request form.</p></div></div>
+      </article>
+      <details class="sthread done"><summary><span class="q">Pat Lee: The spacing under the header looks off</span><span class="hint">Resolved · Mon 2 Nov</span></summary><p>The spacing is back on the scale.</p></details>
+    </div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-rule">
+      <h3 class="gl-h3">A review, and a draft not sent yet</h3>
+      <p class="gl-p">Comments written while reviewing wait as drafts, in amber, seen by their writer alone, until <b>Send review…</b> sends them together with one verdict. The review then shows as one block: who, the verdict in its colour on the block's edge (amber for changes asked for, green for approved), its note, then its comments.</p>
+      <p class="gl-where">On the Desk: a request's and a pull request's comments.</p>
+    </div>
+    <div class="gl-ex gl-wide">
+      <section class="yreview" aria-label="Example review in the making"><div class="yr-h"><b>Your review · 2</b><button class="btn small" type="button">Send review…</button></div>
+        <div class="dbub"><div class="db-b"><span class="about">Option 2 · Compact · Send button</span>The button should say what it sends.</div><button class="x" type="button" aria-label="Remove this comment from your review">✕</button></div>
+        <div class="dbub"><div class="db-b"><span class="about">Option 2 · Compact</span>The empty state needs a next step.</div><button class="x" type="button" aria-label="Remove this comment from your review">✕</button></div>
+      </section>
+      <article class="rvw" data-v="request-changes"><div class="rv-h"><b>Alice Novak</b><span class="hint">Designer</span><span class="rv-v">Changes requested</span><span class="hint">Today, 10:02 AM</span></div>
+        <div class="rv-note"><p>Close, two things to fix before it goes on.</p></div>
+        <article class="sthread"><div class="smsg"><span class="sav" data-r="designer">AN</span><div class="sm-b"><div class="who"><b>Alice Novak</b><span class="role">Designer</span><span class="at">Today, 10:02 AM</span></div><p>The button should say what it sends.</p></div></div></article>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="gl-sect" id="dialogs">
+  <h2 class="gl-h2">Dialogs and forms</h2>
+  <div class="gl-item">
+    <div class="gl-rule">
+      <h3 class="gl-h3">A dialog asks one thing</h3>
+      <p class="gl-p">Its name is the action that opened it, and its main button says the action again. A label sits above its field, grey and short. Nothing submits a form: every button is <code>type="button"</code>.</p>
+    </div>
+    <div class="gl-ex gl-dlg">
+      <dialog class="gl-static" open aria-label="Example dialog">
+        <form>
+          <h2 class="gl-h2">Request changes</h2>
+          <label>What should change<textarea>The empty state should say what to do next.</textarea></label>
+          <label class="check"><input type="checkbox" checked> Tell the person who asked</label>
+          <label class="switch"><input type="checkbox"><span>Draw it at once<small>Otherwise it waits for the next round.</small></span></label>
+          <div class="gl-row"><button class="btn" type="button">Cancel</button><button class="btn primary" type="button">Request changes</button></div>
+        </form>
+      </dialog>
+    </div>
+  </div>
+</section>
+
+<section class="gl-sect" id="tiles">
+  <h2 class="gl-h2">Tiles and empty states</h2>
+  <div class="gl-item">
+    <div class="gl-rule">
+      <h3 class="gl-h3">A tile is a count that opens its list</h3>
+      <p class="gl-p">The number in the state's colour, its name under it. An empty list says what is missing and what to do, in one or two lines.</p>
+    </div>
+    <div class="gl-ex gl-wide">
+      <div class="gl-row">
+        <button class="sbox" data-s="open"><span class="n">4</span>Open</button>
+        <button class="sbox" data-s="dev"><span class="n">2</span>In dev</button>
+        <button class="sbox" data-s="closed"><span class="n">12</span>Closed</button>
+      </div>
+      <p class="empty">Nothing is waiting for you. New requests show up here.</p>
+    </div>
+  </div>
+</section>
+
+<section class="gl-sect" id="toast">
+  <h2 class="gl-h2">The toast</h2>
+  <div class="gl-item">
+    <div class="gl-rule">
+      <h3 class="gl-h3">What just happened, once</h3>
+      <p class="gl-p">At the bottom, for a few seconds, after an action whose result does not show where you are. Never a question, never an error that needs a move.</p>
+    </div>
+    <div class="gl-ex gl-fixed"><div class="toast">Sent to Design Desk: 2 changes.</div></div>
+  </div>
+</section>
+
+<section class="gl-sect" id="tokens">
+  <h2 class="gl-h2">Tokens</h2>
+  <div class="gl-item">
+    <div class="gl-rule">
+      <h3 class="gl-h3">Type</h3>
+      <p class="gl-p">Picked by what the text is. Medium weight for a control's label, semibold for names and emphasis. The scale is in <a href="../docs/desk-page.md#the-look">The look</a>.</p>
+    </div>
+    <div class="gl-ex gl-type">
+      <p class="gl-fs-title"><span class="gl-type-k">--fs-title <span data-gl-var="--fs-title"></span></span>an item's or a page's name</p>
+      <p class="gl-fs-head"><span class="gl-type-k">--fs-head <span data-gl-var="--fs-head"></span></span>a section, a dialog's name</p>
+      <p class="gl-fs-ui"><span class="gl-type-k">--fs-ui <span data-gl-var="--fs-ui"></span></span>text to read, controls, lists</p>
+      <p class="gl-fs-meta"><span class="gl-type-k">--fs-meta <span data-gl-var="--fs-meta"></span></span>dates, who, counts</p>
+      <p class="gl-fs-micro"><span class="gl-type-k">--fs-micro <span data-gl-var="--fs-micro"></span></span>badges, tiny labels</p>
+    </div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-rule">
+      <h3 class="gl-h3">Corners</h3>
+      <p class="gl-p">Two corners, by what the thing is. Small for what you press or what sits inside something else; large for a surface that holds things. Beyond them only two shapes: a pill, round at its ends, and a circle.</p>
+    </div>
+    <div class="gl-ex gl-wide">
+      <div class="gl-scale">
+        <div class="gl-tok"><span class="gl-box" style="border-radius: var(--r-sm)"></span><b class="gl-name">--r-sm</b><span class="gl-val" data-gl-var="--r-sm"></span><span class="gl-use">buttons, fields, menus and their items, tags, pictures, a control's parts</span></div>
+        <div class="gl-tok"><span class="gl-box" style="border-radius: var(--radius)"></span><b class="gl-name">--radius</b><span class="gl-val" data-gl-var="--radius"></span><span class="gl-use">cards, panels, dialogs, what floats</span></div>
+        <div class="gl-tok"><span class="gl-box" style="border-radius: 999px"></span><b class="gl-name">999px</b><span class="gl-use">a pill: a chip, a state, a count</span></div>
+        <div class="gl-tok"><span class="gl-box gl-circle" style="border-radius: 50%"></span><b class="gl-name">50%</b><span class="gl-use">a dot, an avatar</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-rule">
+      <h3 class="gl-h3">Shadow</h3>
+      <p class="gl-p">Most things sit flat on a line. A shadow only for a card that stands out, and a deeper one for what floats over the page.</p>
+    </div>
+    <div class="gl-ex gl-wide">
+      <div class="gl-scale">
+        <div class="gl-tok"><span class="gl-card" style="box-shadow: var(--shadow)"></span><b class="gl-name">--shadow</b><span class="gl-use">a panel, a card that stands out</span></div>
+        <div class="gl-tok"><span class="gl-card" style="box-shadow: var(--float)"></span><b class="gl-name">--float</b><span class="gl-use">the private ask, what floats</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</div>
+<script>
+  // Each token's value, read from the Desk's stylesheet as the page shows it: never written here.
+  const root = getComputedStyle(document.documentElement);
+  document.querySelectorAll("[data-gl-var]").forEach((x) => { x.textContent = root.getPropertyValue(x.dataset.glVar).trim(); });
+  document.querySelectorAll("[data-gl-width]").forEach((x) => { x.textContent = `${Math.round(x.previousElementSibling.getBoundingClientRect().width)}px`; });
+  // Light or dark, as the Desk's own header switch sets it: data-theme on the root.
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-gl-theme]");
+    if (b) {
+      document.documentElement.dataset.theme = b.dataset.glTheme;
+      document.querySelectorAll("[data-gl-theme]").forEach((x) => { x.classList.toggle("on", x === b); x.setAttribute("aria-pressed", String(x === b)); });
+      return;
+    }
+    // The examples switch as the Desk's do; they change nothing else.
+    const t = e.target.closest(".filters:not(.gl-top .filters) .btn, .subtabs > button, .utabs .vscroll > button");
+    if (!t) return;
+    for (const x of t.parentElement.children) {
+      const on = x === t;
+      if (x.hasAttribute("aria-pressed")) x.setAttribute("aria-pressed", String(on));
+      if (x.hasAttribute("aria-current")) x.setAttribute("aria-current", on ? "page" : "false");
+      if (!t.closest(".utabs")) x.classList.toggle("on", on);
+    }
+  });
+  if (matchMedia("(prefers-color-scheme: dark)").matches) document.querySelector('[data-gl-theme="dark"]').click();
+</script>
+</body>
+</html>
