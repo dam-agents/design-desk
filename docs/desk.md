@@ -301,6 +301,7 @@ with spaces as hyphens (`UI dev owner` → `ui-dev-owner`); `lead-developer`, it
 | `ui-dev-owner`, `admin` | move a request, a change or an issue between For Developers and For Designers, and pick one when filing a request |
 | `ui-dev-owner`, `pm`, `designer`, `admin` | approve or decide a request straight away ([Deciding straight away](#deciding-straight-away)) |
 | `pm`, `designer`, `admin` | close and reopen a request, delete a closed one |
+| a draft's author, `ui-dev-owner` and `admin` | move a request on before it goes to design, and close it ([Draft and Proposal](#draft-and-proposal)) |
 | `designer`, `admin` | also decide: approve (a design against a decision too), choose what the presentation shows and mark it presented, mark a change handled, remove an option from any request, record or approve a decision |
 | `ui-dev-owner` | mark a change or an issue For Developers handled ([For Developers or For Designers](#for-developers-or-for-designers)) |
 | roles in `prototype_requesters` (default `designer`, `pm`, `admin`) | start a live prototype |
@@ -356,6 +357,29 @@ developer or an admin moves it (**For Developers** / **For Designers** on the ca
 `size`, any one not handled). One For Developers is marked handled by a UI dev owner or a
 designer, one that goes against a decision in force by a designer only; a change For
 Developers is in Needs a designer only for such a decision.
+
+### Draft and Proposal
+
+A request a person files on the Desk starts before design: a **draft**, then a **proposal**
+(`stage` on the card and the list's row; none: open). The statuses go on underneath as for an open
+request — Design Desk checks it and draws its options — and only a designer's request, and every
+one you file (Slack, GitHub, chat, a run, an agent over MCP), opens at once.
+
+| Who files it | Moves it on with (`POST /api/cards/<id>/stage {to}`) |
+| --- | --- |
+| `pm` | **Send to design** (`design`) |
+| `ui-dev-owner` | **Propose** (`proposal`), **Send to design**, **Keep for developers** (`developers`) |
+| `developer` | **Propose** |
+
+On a proposal the `ui-dev-owner` (any of them) picks **Send to design**, **Keep for developers**,
+**Back to draft** (`draft`) or **Close**; an `admin` makes any move on either. A draft's author
+closes and reopens it whatever their role, and a closed one keeps its stage. Leaving its last stage
+opens it, never to go back: For Designers, or For Developers for Keep for developers
+([For Developers or For Designers](#for-developers-or-for-designers)), with `opened_at`;
+`staged` keeps each move (`from`, `to`, `by`, `at`). Until it opens the store refuses approving
+it (an Approve review too), deciding it, team feedback and votes, Slack, the presentation, a
+live prototype and moving its side; comments, reviews with Comment or Request changes, and
+Design Desk's work go on.
 
 ### Deciding straight away
 

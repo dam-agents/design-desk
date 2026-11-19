@@ -12,7 +12,7 @@ import { createServer } from "node:http";
 import { existsSync, readFileSync, writeFileSync, mkdirSync, chmodSync } from "node:fs";
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { join } from "node:path";
-import { Store, DeskError, forgetIdle, can, ROLES, ADDABLE_ROLES, abilities, rosterOf, readRole, personOf, namesOf, LOOK_ROLES } from "./store.mjs";
+import { Store, DeskError, forgetIdle, can, ROLES, ADDABLE_ROLES, abilities, rosterOf, readRole, personOf, namesOf, LOOK_ROLES, stageFor } from "./store.mjs";
 import { cfg, cfgTable, WORK } from "../toolkit/lib/core.mjs";
 import { requestSkills } from "../toolkit/lib/actions.mjs";
 
@@ -166,7 +166,7 @@ const PEER_EMAIL = "agents@mcp.design-desk.invalid";
 const PEER_ROLES = ["guest", "developer", "pm"];
 const peerWho = () => {
   const role = readRole(cfg("mcp_role", "developer"));
-  return { role: "viewer", email: PEER_EMAIL, emails: [PEER_EMAIL], sub: "satellite", deskRole: PEER_ROLES.includes(role) ? role : "guest" };
+  return { role: "viewer", email: PEER_EMAIL, emails: [PEER_EMAIL], sub: "satellite", deskRole: PEER_ROLES.includes(role) ? role : "guest", peer: true };
 };
 const ID = "[A-Za-z]+-\\d+";
 const PEER_ROUTES = [
@@ -334,6 +334,8 @@ async function viewerRoute(req, res, url, who) {
   if (m === "POST" && p[1] === "cards" && p[3] === "end-vote") return send(res, 200, store.endVote(p[2], actor));
   // The developer spec, read before it goes: edit it, ask for changes, or send it (docs/handoff.md).
   if (m === "POST" && p[1] === "cards" && p[3] === "spec") { const r = store.specAction(p[2], actor, { action: b.action, text: b.text, note: b.note, implement: typeof b.implement === "boolean" ? b.implement : null, closeEarlier: b.close_earlier === true, comment: b.comment === true }); return send(res, 200, r.inbox ? withPing(r, s, who) : r); }
+  // A request before design moves on: Propose, Send to design, Keep for developers, Back to draft (docs/desk.md → Draft and Proposal).
+  if (m === "POST" && p[1] === "cards" && p[3] === "stage" && !p[4]) return send(res, 200, store.moveStage(p[2], actor, String(b.to || "")));
   if (m === "POST" && p[1] === "cards" && p[3] === "size") { need("size"); return send(res, 200, store.setSize(p[2], actor, b.small)); }
   // An approved design's elements into Product → Elements (docs/catalog.md → From approved designs).
   if (m === "POST" && p[1] === "cards" && p[3] === "catalog") { need("add"); return send(res, 200, store.addDesignToCatalog(p[2], actor, typeof b.element === "string" ? b.element : "")); }
@@ -366,7 +368,10 @@ async function viewerRoute(req, res, url, who) {
     const options = type === "bug" ? 0 : b.options, grill = type !== "bug" && b.grill === true;
     // The options start right after triage only for someone who may start them.
     const auto = type !== "bug" && can(who.deskRole, "explore", s.prototypeRoles);
-    return send(res, 201, withPing(store.createRequest(actor, { title, problem, goal, screen, steps, type, from, screens, figma, vision, skills, options, grill, auto, audience, carry }), s, who));
+    // A person's request starts as a draft unless a designer files it; an agent's over MCP opens
+    // as the agent's own do (docs/desk.md → Draft and Proposal).
+    const stage = who.peer ? null : stageFor(who.deskRole);
+    return send(res, 201, withPing(store.createRequest(actor, { title, problem, goal, screen, steps, type, from, screens, figma, vision, skills, options, grill, auto, audience, carry, stage }), s, who));
   }
   // An admin asks for a new person on the list; the agent writes the row (docs/desk.md → People).
   if (m === "POST" && p[1] === "people") { need("people"); return send(res, 201, withPing(store.askForPerson(actor, { email: b.email, role: b.role }, roster(), { owner: who.role === "owner" }), s, who)); }
@@ -404,7 +409,9 @@ async function viewerRoute(req, res, url, who) {
     // the store checks who (docs/desk.md → For Developers or For Designers, Deciding straight away).
     // Drawing every state of a part is changing the option: a designer's, a PM's or a developer's.
     // A request's author removes its options whatever their role (docs/desk.md → Roles).
-    if (!(action === "approve" && (store.card(p[2]).size?.small || can(who.deskRole, "skip", s.prototypeRoles))) && !(action === "drop-option" && store.filedBy(p[2], actor))) need(action.startsWith("figma-") ? "figma" : action.startsWith("slack-") ? "share" : ["states", "alternatives", "pick-alternative"].includes(action) ? "revise" : action === "drop-option" ? "choose" : ["add-option", "draw-now"].includes(action) ? "explore" : action === "take-before" ? "before" : action === "switch-off" ? "build" : action);
+    // A draft's author closes it, the UI dev owner a proposal, whatever their role (docs/desk.md → Draft and Proposal).
+    const staged = ["close", "reopen"].includes(action) && store.mayCloseStaged(p[2], actor);
+    if (!staged && !(action === "approve" && (store.card(p[2]).size?.small || can(who.deskRole, "skip", s.prototypeRoles))) && !(action === "drop-option" && store.filedBy(p[2], actor))) need(action.startsWith("figma-") ? "figma" : action.startsWith("slack-") ? "share" : ["states", "alternatives", "pick-alternative"].includes(action) ? "revise" : action === "drop-option" ? "choose" : ["add-option", "draw-now"].includes(action) ? "explore" : action === "take-before" ? "before" : action === "switch-off" ? "build" : action);
     if (action.startsWith("figma-") && !s.figma) throw new DeskError(400, "Figma is not connected to this Desk yet.");
     if (action === "take-before" && !s.screens) throw new DeskError(400, `Pictures from the product need Design Desk's own copy of it, which is not turned on yet. Ask ${s.contact}.`);
     if (action === "slack-share" && !s.slack) throw new DeskError(400, "Slack voting is not turned on for this Desk yet.");
