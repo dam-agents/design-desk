@@ -3949,6 +3949,7 @@ test("full mode shows a sent review as one block in the conversation", (t) => op
   await desk.waitForSelector("#detail .rvw", { state: "attached" });
   assert.equal(await desk.locator("#detail .rvw .thread").count(), 2);
   assert.match(await desk.textContent("#detail .rvw .rv-v"), /Changes requested/);
+  assert.match(await desk.textContent("#detail .sh-resp"), /Changes requested · developer/, "full mode says who makes the next version too");
 }));
 
 test("full mode collects drafts under an option and sends them from Your review with the same dialog", (t) => open(t, REVIEW_DESK({ ...HEAD_ME, simple: false }, [drawn]), async (desk) => {

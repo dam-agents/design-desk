@@ -3118,7 +3118,18 @@ test("a new version is judged against what the reviewer saw: a copy that was beh
   const r8 = s.sendReview(other.id, alice, { verdict: "request-changes" }).review;
   s.putGithub([{ key: "acme/widgets#8", kind: "pr", title: "Rows", head: h2, comments: [] }]);
   s.reviewPosted(r8.id, { url: "https://github.com/acme/widgets/pull/8#r", sha: h1 });
-  assert.equal(s.getCard(other.id).responsible, null);
+  s.putGithub([{ key: "acme/widgets#8", kind: "pr", title: "Rows", head: h2, comments: [] }]);
+  assert.equal(s.getCard(other.id).responsible, null, "the next read sees h2 is past what the reviewer saw");
+  // A post naming a commit the Desk's copy has not read yet is no new version: the next read judges.
+  const late = s.upsertCard({ kind: "change", title: "Late", source: { repo: "acme/widgets", pr: 9 } }).card;
+  s.putGithub([{ key: "acme/widgets#9", kind: "pr", title: "Late", head: h1, comments: [] }]);
+  s.addDraft(late.id, alice, { text: "Hm" });
+  const r9 = s.sendReview(late.id, alice, { verdict: "request-changes" }).review;
+  s.reviewPosted(r9.id, { url: "https://github.com/acme/widgets/pull/9#r", sha: h2 });
+  assert.equal(s.getCard(late.id).responsible?.who, "developer");
+  s.putGithub([{ key: "acme/widgets#9", kind: "pr", title: "Late", head: h2, comments: [] }]);
+  assert.equal(s.getCard(late.id).responsible?.who, "developer", "h2 is what the reviewer saw");
+  assert.equal(s.notifications(alice).items.filter((x) => x.event === "new-version" && x.item === late.id).length, 0, "no false New version");
 });
 
 test("reviews: a refused send leaves the drafts as they were; Approve on a handled change marks nothing again; a deleted request takes its reviews", () => {

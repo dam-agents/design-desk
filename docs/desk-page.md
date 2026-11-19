@@ -207,7 +207,7 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   its own questions included, then the review. A sent review shows in Comments, in both modes, as
   one block: who, the verdict (**Changes requested** amber, **Approved** green, **Comments**), when,
   **On GitHub ↗** once posted, the note, then each of its comments with its replies. Full mode has
-  the same boxes, under the option shown and a change's Screens, and **Your review** at the top
+  the same **Changes requested** line under the title, the same boxes, under the option shown and a change's Screens, and **Your review** at the top
   of Questions and comments, whose **Send review…** opens the same dialog. ⋯ holds **Close…** or **Reopen** on a request, **Turn into a design request** on a
   change (and **Undo approval** on one approved), and **Open on GitHub** where there is a link. No vote buttons, rename or For Developers
   move. Under the head the page reads one way for both kinds: a short lead (a request's first

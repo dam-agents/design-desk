@@ -3274,6 +3274,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // Who makes the next version after a review asked for changes, in words (docs/desk.md → Reviews).
   const RESP = { developer: ["developer", "Changes requested: the developer makes the next version; it is Open again when new commits arrive"],
     "design-desk": ["Design Desk", "Changes requested: Design Desk draws the next version"] };
+  const respLine = (c) => (c.responsible && RESP[c.responsible.who] ? `<p class="sh-resp" title="${esc(RESP[c.responsible.who][1])}">Changes requested · ${esc(RESP[c.responsible.who][0])}</p>` : "");
   const simTip = (c, k) => (c.responsible && RESP[c.responsible.who] ? RESP[c.responsible.who][1] : SIM_TIP[k]);
   const simplePill = (c) => { const s = simpleState(c); const k = s?.pill || s?.state; return k ? `<span class="spill" data-s="${k}" title="${esc(simTip(c, k))}">${SIM_PILL[k]}</span>` : ""; };
   const KIND_ICON = { request: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg>`,
@@ -4835,7 +4836,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ${renderImpact(c.impact)}
       ${simpleThreads(c)}`;
     return `${backBar()}
-      ${simple() ? simpleHead(c) : `<h2>${txt(c.title)}${num(c)}${titleLink(c)}</h2>
+      ${simple() ? simpleHead(c) : `<h2>${txt(c.title)}${num(c)}${titleLink(c)}</h2>${respLine(c)}
       ${(() => {
         const [o, word, tip] = src.merged_at ? ["gh-merged", "Merged", "Its pull request is merged: the change is in the product"] : src.draft ? ["gh-draft", "Draft", "Its pull request is a draft: not ready for review, not in the product yet"] : ["gh-open", "Open", "Its pull request is open: not in the product yet"];
         // The facts in the list's style: grey words, the values in ink (docs/desk.md → Where a card came from).
@@ -5752,7 +5753,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       <div class="standing">${asksBox((c.threads || []).filter((th) => th.kind === "asks" && th.state === "open"))}${renderPolls(c)}
       ${c.status === "spec" && c.spec?.review === "draft" && c.spec?.asset ? specPanel(c) : ""}${cannotFold(c)}${live(c) ? renderPrototype(c) : ""}</div>` : "";
     return head ? head + simpleBody() : `${backBar()}
-      <h2 class="renamable">${txt(title)}${num(c)}${titleLink(c)}${!simple() && (filedIt(c) || can("close")) ? `<button class="linkbtn rename" data-rename aria-label="Rename this request" title="Give this request a clearer name; Design Desk keeps it">${PEN_ICON}</button>` : ""}</h2>
+      <h2 class="renamable">${txt(title)}${num(c)}${titleLink(c)}${!simple() && (filedIt(c) || can("close")) ? `<button class="linkbtn rename" data-rename aria-label="Rename this request" title="Give this request a clearer name; Design Desk keeps it">${PEN_ICON}</button>` : ""}</h2>${respLine(c)}
       <div class="sub">${bug ? `<span class="chip bad" title="Someone reported something broken on a screen">🐛 Bug</span>` : ""}${c.origin?.severity ? `<span class="chip" title="How bad the reporter says it is">${esc(c.origin.severity)} severity</span>` : ""}${simple() ? "" : c.agenda?.status === "queued" ? `<span class="chip info" title="The team looks at it at its next design meeting">▶ On the presentation${c.agenda.variant ? ` · ${esc(optionName(c, c.agenda.variant))}` : ""}</span>` : c.agenda?.status === "presented" ? `<span class="chip ok" title="The meeting it was shown at">✓ Presented ${esc(day(c.agenda.call))}</span>` : ""}${verdictChip(c)}<span>${esc(when(c.created))}</span></div>
       <div class="standing">
       ${c.status === "handed-off" ? "" : sentBox(c)}

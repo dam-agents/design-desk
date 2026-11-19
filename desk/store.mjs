@@ -879,7 +879,8 @@ export class Store {
     r.posted = { url: String(url), at: this.clock() };
     // The pull request's last commit before the review was sent, as GitHub has it: the one the
     // reviewer saw, whatever the Desk's copy held then. A new version is a head other than it.
-    if (/^[0-9a-f]{40}$/.test(String(sha || ""))) { r.sha = String(sha); this.judgeNext(r, this.headOf(this.card(r.card))); }
+    // The Desk's copy may be older than that commit: the next read judges, never this one.
+    if (/^[0-9a-f]{40}$/.test(String(sha || ""))) { r.sha = String(sha); delete r.next_at; }
     this.save();
     return { review: structuredClone(r) };
   }
