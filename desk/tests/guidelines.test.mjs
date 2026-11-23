@@ -125,6 +125,7 @@ const PRESSED = [
   [/^\.ws-seg button/, "Segmented control"],
   [/^\.(?:pl-seg|pl-chips) button|^\.pl-sw(?![\w-])/, "A property's value"],
   [/^\.spec-versions button/, "Version links"],
+  [/^\.el-tile\[aria-pressed/, "Pictures to pick from"],
   [/^#hits \.hit/, null, "a search result picked by the keys, not a switch"],
   [/^#(?:simple|figma)\b/, null, "an on/off switch in a menu, not a pick-one"],
   [/^\.stories ol button/, null, "a user story that plays in the design, not a switch"],

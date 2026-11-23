@@ -372,9 +372,21 @@ A part under **All elements** opens in one dialog, the same in simple and full m
 - **Open in design workspace** opens the option with the part selected, on its Properties.
 - **Comments**: the part's open comments (a click opens one in the design workspace), the
   viewer's notes on it waiting in their feedback ("Not sent yet", ✕), and a box: **Add to
-  feedback** keeps a note on the part ([desk.md](desk.md) → Reviews), **Comment** posts one for the
-  team at once. Not on a closed request.
-- Its states follow, with the button that draws them.
+  feedback** (the dialog's one primary button, as in the design workspace) keeps a note on the part
+  ([desk.md](desk.md) → Reviews), **Comment** posts one for the team at once. Not on a closed request.
+- **Its states**, seen without leaving Before and After:
+  - A **switcher** over After: ‹ and › round a pick, **As designed** first, then each state in the
+    option's order, as the design workspace's State menu names and orders them. Only After
+    changes; under it, the state's name and its one-line note, and "drawn for an earlier
+    version" when it shows the option before its latest change. The step goes round.
+  - **All states**, a fold under the pictures: As designed and each state; a click on one shows
+    it in After, ringed in ink, so the fold and the switcher always agree. Simple mode shows a
+    small tile of each; full mode each state's card with its number and the use case it covers.
+    It starts folded; opened or folded, it stays so while the page is open.
+  - Beside the switcher, for those who may draw: **Draw all states** while none is drawn,
+    **Redraw states** while some are of an earlier version of the option, nothing once all are
+    current; while Design Desk draws them, a chip says so. Never from the dialog the workspace
+    opens to look through its states ([requests.md](requests.md) → Every state of a part).
 
 ## Product → Kit
 

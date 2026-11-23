@@ -86,7 +86,7 @@ Decided by the operator while reviewing 01:
 
 | #  | Title | Scope | Depends on | Done |
 |----|-------|-------|------------|------|
-| 01 | Switcher and All states | The switcher over After, the fold, the draw button beside the switcher, "As designed" in the workspace; docs; page tests | — | [ ] |
+| 01 | Switcher and All states | The switcher over After, the fold, the draw button beside the switcher, "As designed" in the workspace; docs; page tests | — | [x] |
 | 02 | Fixed header, step between elements | The header stays while the dialog scrolls; ‹ n of m › through the option's elements | 01 | [ ] |
 | 03 | ✕ and Esc close every dialog | A lone ✕ top-right on every dialog, the enlarged picture and the private questions; Esc closes each; the guidelines' rule | 02 | [ ] |
 | 04 | Comments on a state; release | Comments and drafts carry the state shown and say so; the workspace opens at it, and the dialog at the workspace's; `VERSION`, `CHANGELOG.md` | 01–03 | [ ] |

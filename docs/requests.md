@@ -490,9 +490,10 @@ mode:
 ## Every state of a part (`variants_due`: `states`)
 
 A designer, PM or developer opens an element of an option under **All elements** and presses
-**Draw every state**; the design workspace has no such button. Once every state is drawn for
-the option's latest version, the dialog says so instead of the button: nothing is left to draw
-until the option changes. A chat request names the part
+**Draw all states** beside its switcher ([desk-page.md](desk-page.md) → The element dialog);
+the design workspace has no such button. Once every state is drawn for the option's latest
+version the button goes: nothing is left to draw until the option changes, and then it comes
+back as **Redraw states**. A chat request names the part
 instead. The item names the option (`variant`), the element (`element`: its id, or `part-…`
 for a part only its states named), the part (`part`: `{selector, text, label, view,
 view_name}`; none when they only named it) and their words (`note`). It works on a request
