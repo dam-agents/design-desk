@@ -388,7 +388,7 @@ Request changes, and Design Desk's work go on.
 
 **Who sees it**: its author (by any of their addresses), an `admin`, and on a proposal every
 `developer` and `ui-dev-owner`; you see every one. For anyone else the server has none: not in a
-list, the bell, a decision's items or an MCP peer's reads; its page, its conversations, its
+list, the bell, a decision's items, or the reads of an MCP peer whose `mcp_role` may not see it; its page, its conversations, its
 pictures and every write on it answer as for a card that does not exist. The bell tells of it as
 new when it opens, and nothing from before the first stage each viewer could see it in. Never
 name, quote or link a draft where anyone else reads, nor a proposal outside Slack, the dev team's

@@ -4637,3 +4637,14 @@ test("Approve for dev asks as an approval does, then sends it For Developers", (
   const sent = await desk.evaluate(() => window.posts.find((p) => p.path.endsWith("/actions")).body);
   assert.deepEqual([sent.action, sent.for_dev], ["approve", true]);
 }));
+
+test("full mode: a proposal's options go to the dev team's vote with Ask for feedback; a draft's do not", async (t) => {
+  const me = { ...DESIGNER, role: "ui-dev-owner", can: { request: true, revise: true, "stage-propose": true, "stage-design": true, "stage-own": true, vote: true } };
+  const opts = { status: "variants", triage: { verdict: "design", reasons: [] }, variants: [{ id: "v1", name: "Calm", asset: "A-1" }], votes: {}, team_feedback: { state: "waiting" } };
+  for (const [card, want] of [[{ ...STAGED[1], ...opts }, 1], [{ ...STAGED[0], ...opts }, 0]]) await open(t, DESK(me, [card]), async (desk) => {
+    await desk.click('[data-filter="reqFilter:open"]');
+    await desk.click(`#list [data-card="${card.id}"]`);
+    await desk.waitForSelector("#detail .status");
+    assert.equal(await desk.locator("#detail .status [data-team-feedback]").count(), want, card.stage);
+  });
+});

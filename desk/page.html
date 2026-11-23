@@ -2008,7 +2008,7 @@
     admin: "The Desk's owner is always an admin. The first admin on the list is who people ask for access or help.",
     designer: "Shapes the designs: starts options, changes and approves them.",
     pm: "Brings problems and ideas, and moves a request along: starts and changes options, builds live prototypes, approves, decides or closes a request straight away. A design that goes against a decision is still a designer's to approve. Their request starts as a draft they send to design.",
-    "ui-dev-owner": "A developer who also approves designs or decides a request straight away, marks a change or an issue For Developers handled, and moves a request, a change or an issue between For Developers, which a developer handles instead of a designer, and For Designers. Sends a proposal to design, keeps it for developers, or sends it back to its author.",
+    "ui-dev-owner": "A developer who also approves designs or decides a request straight away, marks a change or an issue For Developers handled, and moves a request, a change or an issue between For Developers, which a developer handles instead of a designer, and For Designers. Sends a proposal to design, approves it for developers, or sends it back to its author.",
     developer: "Brings problems and bug reports, and starts and changes design options; a designer decides, or another developer on a request For Developers. Their request starts as a draft they propose to the dev team.",
     guest: "Follows along. Anyone the Desk is shared with who has no role on the list.",
   };
@@ -2030,7 +2030,7 @@
     [["size"], "Move a request, a change or an issue to For Developers, which a developer handles, or to For Designers"],
     [["skip"], "Approve or decide a request straight away, without a vote or a live prototype"],
     // Before design (docs/desk.md → Draft and Proposal).
-    [["stage-own"], "Move a proposal on: send it to design, keep it for developers, or send it back to its author"],
+    [["stage-own"], "Move a proposal on: send it to design, approve it for developers, or send it back to its author"],
     [["build"], "Build live prototypes"],
     [["figma"], "Work with Figma", "figma"],
     [["share"], "Share options in Slack", "slack"],
@@ -5456,9 +5456,13 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // Before design the ways on are the stage's alone (docs/desk.md → Draft and Proposal).
     if (preDesign(c) && !closed(c)) {
       const first = stageMoves(c)[0].match(/data-stage="(\w+)">([^<]+)</);
-      return { ways: first ? [way(`data-stage="${first[1]}"`, first[2])] : [], buttons: stageMoves(c)[2] + stageMoves(c)[1], wait: preDesign(c) === "draft" ? "its author" : "the UI dev owner",
+      // A proposal is the dev team's to vote on: Ask for feedback, then End the vote, as in Team feedback.
+      const team = preDesign(c) !== "proposal" || !hasOptions ? []
+        : c.status === "variants" && (can("revise") || filedIt(c)) && c.team_feedback?.state !== "open" ? [way("data-team-feedback", "Ask for feedback", "The dev team votes and comments on the options from now on")]
+        : mayEndVote(c) ? [way("data-end-vote", "End the vote", "Nobody votes on the options after this; a vote in Slack closes there with its result")] : [];
+      return { ways: [...(first ? [way(`data-stage="${first[1]}"`, first[2])] : []), ...team], buttons: stageMoves(c)[2] + stageMoves(c)[1], wait: preDesign(c) === "draft" ? "its author" : "the UI dev owner",
         text: preDesign(c) === "draft" ? "A draft: only its author and admins see it. Design Desk works on it as on any request; its author sends it on when it is ready."
-          : "A proposal: the dev team talks it over. The UI dev owner sends it to design, keeps it for developers, or sends it back to its author." };
+          : "A proposal: the dev team talks it over and may vote. The UI dev owner sends it to design, approves it for developers, or sends it back to its author." };
     }
     // A draft's author, or the UI dev owner on a proposal, reopens it whatever their role (docs/desk.md → Draft and Proposal).
     const reopens = can("reopen") || closesStaged(c);

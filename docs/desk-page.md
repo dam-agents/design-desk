@@ -211,11 +211,12 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   line — who approved it and when, the issue or pull request it was sent to, when it shipped —
   then at most two buttons and ⋯. Before design a request offers its stage's moves
   ([desk.md](desk.md) → Draft and Proposal), each only for who may: on a draft, to its author,
-  **Send to design** (else **Propose**) then **Request changes**, with ⋯ holding **Propose** and
-  **Keep for developers** for a UI dev owner, and **Close…**; on a proposal, to the UI dev owner,
-  **Send to design** then Request changes, with ⋯ holding **Keep for developers**, **Back to draft**
-  and **Close…**. Sending it to design or keeping it for developers asks first, it cannot come back;
-  no votes and no Approve. While it is Open, a request offers **Request changes** (with options drawn) and **Approve** — which sends the spec
+  **Send to design** (else **Propose**) then **Request changes**, with ⋯ holding **Propose** for a
+  UI dev owner, and **Close…**; to a UI dev owner, on their draft or on a proposal, **Send to
+  design** then **Approve for dev**, with ⋯ holding **Request changes**, **Propose** or **Back to
+  draft**, and **Close…**. Both ask first, as it cannot come back; Approve for dev asks as an
+  approval does. No plain Approve; votes on a proposal in full mode (**Ask for feedback**, **End the
+  vote**), none on a draft. While it is In review, a request offers **Request changes** (with options drawn) and **Approve** — which sends the spec
   as soon as it is written, with no box to tick, or, for one the Desk may not send by itself (a
   Slack origin, an open pull request; [handoff.md](handoff.md) → Review before it goes), leaves it
   Open with **Send to developers** — and a change **Request changes** and **Approve** (marks it handled); each only for
