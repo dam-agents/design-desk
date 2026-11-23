@@ -369,6 +369,12 @@ A part under **All elements** opens in one dialog, the same in simple and full m
   border or shadow of its own is fitted by what it holds. A part on another view than the first
   opens that view first, once the design's review bar has made its view buttons. The tiles under
   All elements are drawn the same way; an enlarged part opens its view and is laid out wide too.
+- **Its header stays** at the top while the dialog scrolls: the part's name and chips, **Open in
+  design workspace**, the way to the option's other elements and Close. **‹ n of m ›** steps
+  through the option's elements in the order of its All elements tiles (a part it leaves out is
+  skipped), round from the last to the first; each arrow names the element it opens. Another
+  element opens as designed, at the top; what someone was writing on a part stays with it, and is
+  back in its box when they come back to it, while the page is open.
 - **Open in design workspace** opens the option with the part selected, on its Properties.
 - **Comments**: the part's open comments (a click opens one in the design workspace), the
   viewer's notes on it waiting in their feedback ("Not sent yet", ✕), and a box: **Add to

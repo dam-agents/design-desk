@@ -512,8 +512,9 @@
   .kit-tile .kval { font: var(--fs-meta)/1.4 var(--mono); color: var(--muted); overflow-wrap: anywhere; }
   /* One element of an option: its states and what each covers, in a dialog over the request. */
   dialog.eldlg { width: min(1040px, calc(100% - 32px)); max-height: calc(100vh - 48px); }
-  dialog.eldlg > div { padding: 20px 20px 20px; }
-  .elbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 8px; }
+  dialog.eldlg > div { padding: 0 20px 20px; }
+  /* The element dialog's header stays at its top while the rest scrolls: name, chips, the ways out and to the next element. */
+  .elbar { position: sticky; top: 0; z-index: 4; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin: 0 -20px 8px; padding: 20px 20px 12px; background: var(--panel); border-bottom: 1px solid var(--line); }
   /* An element's dialog: the part before (the product) beside after (the design), or one picture when it is new. */
   .elbar .el-acts { display: flex; gap: 8px; align-items: center; flex: none; }
   .el-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 12px 0 16px; }
@@ -528,6 +529,7 @@
   .el-from { font-size: var(--fs-meta); color: var(--muted); margin: 0; } .el-from b { color: var(--ink); font-weight: 600; }
   /* After's head: its label, the states stepper (the guidelines' Stepper, a pick in its middle) and Draw all states. */
   .el-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 28px; } .el-head .el-lab { margin-right: auto; }
+  .el-nav { flex: none; } .el-nav .pl-v { flex: none; padding: 0 8px; }
   .el-sw { flex: none; max-width: 100%; } .el-sw select { flex: 1; min-width: 0; max-width: 220px; height: 28px; border: 0; border-inline: 1px solid var(--line); border-radius: 0; background: var(--panel); color: inherit; font: inherit; font-size: var(--fs-meta); padding: 0 4px; }
   /* All states, folded under the pictures: a click shows one in After; the one shown is ringed in ink. */
   .el-all { margin: 0 0 16px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }

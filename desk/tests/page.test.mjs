@@ -2297,6 +2297,39 @@ test("in simple mode All states is tiles; the button draws all states, or is gon
   }
 });
 
+// The element dialog's header stays while it scrolls, and steps through the option's elements in
+// the order of the All elements tiles, round; another element opens as designed, and what was
+// being written stays with its element (docs/desk-page.md → The element dialog).
+test("an element's dialog keeps its header and steps to the option's other elements", async (t) => {
+  const run = await launch(t, bridgeBefore({ states: CARD_STATES(2) }));
+  if (!run) return;
+  const { desk } = run;
+  try {
+    await desk.click('[data-card="r7"]');
+    await desk.click('#detail [data-el="card"]');
+    await desk.waitForSelector("#element-dialog[open] .el-nav");
+    const head = () => desk.$eval("#element-dialog .elbar", (b) => [b.querySelector("h2").textContent, b.querySelector(".el-nav .pl-v").textContent, b.querySelector('[data-el-nav="-1"]').dataset.tip, b.querySelector('[data-el-nav="1"]').dataset.tip]);
+    assert.equal(await desk.$eval("#element-dialog .elbar", (b) => getComputedStyle(b).position), "sticky", "the header stays while the dialog scrolls");
+    assert.deepEqual(await head(), ["Agent card", "1 of 3", "Previous: Added note", "Next: Limit label"]);
+    await desk.selectOption("#el-state", "hover");
+    await desk.fill("#el-text", "Half a thought");
+    await desk.click('#element-dialog [data-el-nav="1"]');
+    assert.deepEqual(await head(), ["Limit label", "2 of 3", "Previous: Agent card", "Next: Added note"]);
+    assert.equal(await desk.inputValue("#el-text"), "", "another part's box is its own");
+    assert.equal(await desk.locator("#element-dialog #el-state").count(), 0, "it has no states");
+    await desk.click('#element-dialog [data-el-nav="1"]');
+    assert.equal((await head())[0], "Added note");
+    await desk.click('#element-dialog [data-el-nav="1"]');
+    assert.deepEqual((await head()).slice(0, 2), ["Agent card", "1 of 3"], "past the last, the first");
+    assert.equal(await desk.inputValue("#el-state"), "", "it opens as designed");
+    assert.equal(await desk.inputValue("#el-text"), "Half a thought", "what was written on it is back");
+    await desk.click('#element-dialog [data-el-nav="-1"]');
+    assert.equal((await head())[0], "Added note", "and back round the other way");
+  } finally {
+    await run.close();
+  }
+});
+
 test("only a member takes a part from the product, and only with Design Desk's copy of the product", async (t) => {
   for (const [me, why] of [['role: "designer", email: "alice@example.com", screens: true, can: { comment: true }', "without the ability (a guest's)"], ['role: "designer", email: "alice@example.com", screens: false, can: { comment: true, before: true }', "screens off"]]) {
     const run = await launch(t, bridgeBefore({ me }));

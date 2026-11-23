@@ -524,8 +524,9 @@
   .kit-tile .kval { font: var(--fs-meta)/1.4 var(--mono); color: var(--muted); overflow-wrap: anywhere; }
   /* One element of an option: its states and what each covers, in a dialog over the request. */
   dialog.eldlg { width: min(1040px, calc(100% - 32px)); max-height: calc(100vh - 48px); }
-  dialog.eldlg > div { padding: 20px 20px 20px; }
-  .elbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 8px; }
+  dialog.eldlg > div { padding: 0 20px 20px; }
+  /* The element dialog's header stays at its top while the rest scrolls: name, chips, the ways out and to the next element. */
+  .elbar { position: sticky; top: 0; z-index: 4; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin: 0 -20px 8px; padding: 20px 20px 12px; background: var(--panel); border-bottom: 1px solid var(--line); }
   /* An element's dialog: the part before (the product) beside after (the design), or one picture when it is new. */
   .elbar .el-acts { display: flex; gap: 8px; align-items: center; flex: none; }
   .el-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 12px 0 16px; }
@@ -540,6 +541,7 @@
   .el-from { font-size: var(--fs-meta); color: var(--muted); margin: 0; } .el-from b { color: var(--ink); font-weight: 600; }
   /* After's head: its label, the states stepper (the guidelines' Stepper, a pick in its middle) and Draw all states. */
   .el-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 28px; } .el-head .el-lab { margin-right: auto; }
+  .el-nav { flex: none; } .el-nav .pl-v { flex: none; padding: 0 8px; }
   .el-sw { flex: none; max-width: 100%; } .el-sw select { flex: 1; min-width: 0; max-width: 220px; height: 28px; border: 0; border-inline: 1px solid var(--line); border-radius: 0; background: var(--panel); color: inherit; font: inherit; font-size: var(--fs-meta); padding: 0 4px; }
   /* All states, folded under the pictures: a click shows one in After; the one shown is ringed in ink. */
   .el-all { margin: 0 0 16px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
@@ -2233,6 +2235,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     wsMode: (v) => ({ select: "Click a part of the design to select it", edit: "Click a text and type the new words", off: "Use the design as it is: switch views, open menus" }[v]),
     wsState: (v) => v ? "Shows the option in this state" : "Shows the option as designed, in no particular state",
     elStep: (v) => v === "1" ? "Next state" : "Previous state",
+    elNav: (v) => v === "1" ? "Next element" : "Previous element",
     wsStep: (v) => v === "1" ? "Next state" : "Previous state",
     wsBuild: "Builds exactly this version, with the states shown, as a live prototype",
     wsEdit: "Goes back to change the design before building",
@@ -6554,6 +6557,18 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         : `<li class="el-shown${on("") ? " on" : ""}"><button class="el-cpick" data-el-pick="" aria-pressed="${on("")}" title="Shows it above">${x.shot ? `<figure class="shot">${pic(x)}</figure>` : `<div class="snipbox">${pic(x)}</div>`}</button><div><b>As designed</b><p class="hint">${esc(x.how)}</p></div></li>`).join("")}</ol></div>`;
     return `<details class="el-all" data-el-all${open ? " open" : ""}><summary><b>All states</b><span class="hint">${plural(e.states.length, "state", "states")}</span></summary>${body}</details>`;
   }
+  // The option's elements to step through in the dialog's header, in the order of its All elements
+  // tiles, a part it leaves out skipped (docs/desk-page.md → The element dialog).
+  const elSteps = (c, v) => alignedElements(c, v).filter((x) => !x.gap);
+  function elNav(c, v, e) {
+    const els = elSteps(c, v), i = els.findIndex((x) => x.key === e.key);
+    if (els.length < 2 || i < 0) return "";
+    const at = (d) => els[(i + d + els.length) % els.length];
+    return `<span class="pl-step el-nav"><button data-el-nav="-1" aria-label="Previous element" title="Previous: ${esc(at(-1).name)}">‹</button><span class="pl-v">${i + 1} of ${els.length}</span><button data-el-nav="1" aria-label="Next element" title="Next: ${esc(at(1).name)}">›</button></span>`;
+  }
+  // What someone was writing on a part stays with it while the page is open: kept when they step to
+  // another element, given back to its box when they come back to it.
+  const elTypedKey = () => S.el ? `${S.el.card}|${S.el.variant}|${S.el.key}` : "";
   // `look`: only to look through the states drawn (from the design workspace): nothing is drawn or added from it.
   function openElement(variant, key, { look = false, state = null } = {}) { S.el = { card: S.card?.id, variant, key, look, st: state }; renderElementDialog(); const d = $("#element-dialog"); if (!d.open) d.showModal(); }
   function renderElementDialog() {
@@ -6580,7 +6595,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const toWs = S.el.look ? "" : `<button class="btn small" data-el-ws title="Opens the design at this part, to comment on it or ask for a change">Open in design workspace</button>`;
     $("#el-body").innerHTML = `<div class="elbar"><div><h2>${esc(e.name)}</h2>
         <div class="sub">${ch ? `<span class="chip ${ch[1]}" title="${esc(ch[2])}">${ch[0]}</span>` : ""}<span class="chip" title="The design option this element is part of"><span class="ono">${vs.indexOf(v) + 1}</span> ${esc(v.name)} · version ${esc(v.version || 1)}</span>${approvedOption(c)?.id === v.id ? `<span class="chip ok" title="The option that was approved">✓ Approved</span>` : ""}</div></div>
-        <div class="el-acts">${toWs}<button class="btn small" data-el-close aria-label="Close">✕ Close</button></div></div>
+        <div class="el-acts">${toWs}${elNav(c, v, e)}<button class="btn small" data-el-close aria-label="Close">✕ Close</button></div></div>
       ${e.how ? `<p style="max-width:var(--measure)">${txt(e.how)}</p>` : ""}
       ${catalogButton(c, v, e) && !S.el.look ? `<div class="actions" style="margin:0 0 8px">${catalogButton(c, v, e)}</div>` : ""}
       ${stale.length ? `<p class="hint"><span class="chip warn" title="These states show the option before its latest change">${plural(stale.length, "state", "states")} drawn for an earlier version</span> Design Desk redraws them when it changes the option.</p>` : ""}
@@ -6589,7 +6604,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ${elementTalk(c, v, e)}`
       // A lazy frame in a modal dialog never loads: the browser does not see it come into view.
       .replaceAll(' loading="lazy"', "");
-    const box = $("#el-text"); if (box && keep) box.value = keep; if (box && focused) { box.focus(); box.setSelectionRange(caret[0], caret[1]); }
+    const back = !keep && S.elTyped?.[elTypedKey()];
+    if (back) delete S.elTyped[elTypedKey()];
+    const box = $("#el-text"); if (box && (keep || back)) box.value = keep || back; if (box && focused) { box.focus(); box.setSelectionRange(caret[0], caret[1]); }
     loadPictures(dlg).catch(() => {});
   }
   // The story's parts, in the order the story goes through them.
@@ -8626,6 +8643,16 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       const ids = [null, ...e.states.map((x) => x.id)], k = Math.max(0, ids.indexOf(S.el.st || null));
       S.el.st = ids[(k + Number(ds.elStep) + ids.length) % ids.length];
       renderElementDialog(); $(`#el-body [data-el-step="${ds.elStep}"]`)?.focus(); return;
+    }
+    // Another element of the option, from the header: it opens as designed, at the dialog's top.
+    if (ds.elNav && S.el) {
+      const v = (S.card?.variants || []).find((x) => x.id === S.el.variant), els = v ? elSteps(S.card, v) : [], i = els.findIndex((x) => x.key === S.el.key);
+      if (i < 0 || els.length < 2) return;
+      const box = $("#el-text");
+      if (box?.value.trim()) (S.elTyped ||= {})[elTypedKey()] = box.value;
+      if (box) box.value = "";
+      S.el.key = els[(i + Number(ds.elNav) + els.length) % els.length].key; S.el.st = null;
+      renderElementDialog(); $("#element-dialog").scrollTop = 0; $(`#el-body [data-el-nav="${ds.elNav}"]`)?.focus(); return;
     }
     if (ds.elPick !== undefined && S.el) { S.el.st = ds.elPick || null; renderElementDialog(); $("#el-body .el-pair")?.scrollIntoView({ block: "nearest", behavior: "smooth" }); return; }
     // A comment on the part, from its dialog: on it at once, the dialog stays on the part.
