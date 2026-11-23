@@ -2380,6 +2380,9 @@ test("an element's dialog keeps its header and steps to the option's other eleme
     await desk.waitForSelector("#element-dialog[open] .el-nav");
     const head = () => desk.$eval("#element-dialog .elbar", (b) => [b.querySelector("h2").textContent, b.querySelector(".el-nav .pl-v").textContent, b.querySelector('[data-el-nav="-1"]').dataset.tip, b.querySelector('[data-el-nav="1"]').dataset.tip]);
     assert.equal(await desk.$eval("#element-dialog .elbar", (b) => getComputedStyle(b).position), "sticky", "the header stays while the dialog scrolls");
+    // Its controls are one height; the way into the workspace has its fill and no border there.
+    assert.deepEqual(await desk.$eval("#element-dialog .el-acts", (a) => [...a.children].map((x) => Math.round(x.getBoundingClientRect().height))), [32, 32, 32]);
+    assert.equal(await desk.$eval("#element-dialog .el-acts .ws-way", (x) => getComputedStyle(x).borderTopWidth), "0px");
     assert.deepEqual(await head(), ["Agent card", "1 of 3", "Previous: Added note", "Next: Limit label"]);
     await desk.selectOption("#el-state", "hover");
     await desk.fill("#el-text", "Half a thought");
