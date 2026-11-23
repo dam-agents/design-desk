@@ -190,7 +190,8 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   filter shows), and **+ New request**; its one list holds every request and pull request change,
   whatever its side — For Developers or For Designers only decides which review it is in — each in
   one state ([A request's state in the list](#a-requests-state-in-the-list)), the newest change
-  first; only someone else's draft and an archived change are not listed. A row is the kind's icon (a change's in its pull request's ink, as the head's pill: green open, grey draft, purple merged; with a red dot on its upper right corner while an unread notification
+  first; only an archived change is not listed, nor someone else's draft, which the server sends only
+  to its author and an admin. A row is the kind's icon (a change's in its pull request's ink, as the head's pill: green open, grey draft, purple merged; with a red dot on its upper right corner while an unread notification
   for the viewer is about the item, [Notifications](#notifications)), the title (two lines at most), when it last changed (Today, Yesterday or the
   day, with the time; the year only when it is not this year), then its number in the same grey
   words, never broken across lines (a change its pull request's, `PR#812`; a request, or a change
@@ -522,7 +523,7 @@ violet, one grey on every page, the green the same as Approved): a change's pull
 request **Draft** (grey), **Open** (green) or **Merged** (purple, `source.draft`, `source.merged_at`);
 an issue **Open** (green) or **Designed** (purple, once its design went to developers). Whether a
 person has seen an item is its bold title alone ([Read and unread](#read-and-unread)).
-**In simple mode** an item has one state, by who works on it, whatever its side, and no dot. **Draft**
+**In simple mode** an item has one state, by who works on it, whatever its side, and no status dot. **Draft**
 (grey, dashed): a draft, its author's ([desk.md](desk.md) → Draft and Proposal). **Dev review**
 (amber; its key `proposal`): the dev team decides — a proposal, and, For Developers, an open request
 at any step before it is approved, one approved whose spec draft waits for a person to send it, and a
@@ -539,7 +540,7 @@ review asked changes of stays in its review, its head saying **Changes requested
 works on it, and its pill says how it ended — **Shipped** (purple) a request built or a handled
 change merged, **No review needed** (grey) an auto handled change merged, **Closed** (red) a
 request closed, with a decision or without. An archived change is not listed, nor someone else's
-draft (the server sends none). Issues, screens, elements and decisions have no
+draft (the server sends it only to its author and an admin, [desk.md](desk.md) → Draft and Proposal). Issues, screens, elements and decisions have no
 simple state: simple mode lists none of them, and a link to one opens its full page.
 
 A list row's title, in both modes, takes two lines at most and ends with an ellipsis; its tooltip
