@@ -8,12 +8,19 @@ import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium, req } from "../../toolkit/lib/core.mjs";
-import { ROLES, ADDABLE_ROLES, abilities } from "../store.mjs";
+import { ROLES, ADDABLE_ROLES, DEVELOPERS, abilities } from "../store.mjs";
 
 // Requests open on Your turn, which shows only what the viewer may act on. The tests look at
 // every request, so they start on Open, as a browser that picked it; TURN_FIRST keeps the default.
 const TURN_FIRST = "<script>window.TURN_FIRST = true;</script>";
-const OPEN_FIRST = `<script>try { if (!window.TURN_FIRST && !localStorage.getItem("desk-turn")) { localStorage.setItem("desk-turn", "1"); if (!localStorage.getItem("desk-reqFilter")) localStorage.setItem("desk-reqFilter", "open"); } } catch {}</script>`;
+// Every role starts in simple mode with no choice of its own (docs/desk-page.md → Simple mode). A
+// stand-in /api/me that says nothing of simple mode is a person who chose full mode, as these
+// tests were written for it; one that sends simple: null (no choice, as the server does) gets the default.
+const FULL_UNLESS_SAID = `<script>(() => { const p = window.platform; if (!p || typeof p.request !== "function") return; const ask = p.request.bind(p);
+  p.request = async (a) => { const x = await ask(a); if (String(a?.path || "").split("?")[0] !== "/api/me" || typeof x?.body !== "string") return x;
+    try { const b = JSON.parse(x.body); if (b && typeof b === "object" && !Array.isArray(b) && !("simple" in b)) return { ...x, body: JSON.stringify({ ...b, simple: false }) }; } catch {}
+    return x; }; })();</script>`;
+const OPEN_FIRST = `<script>try { if (!window.TURN_FIRST && !localStorage.getItem("desk-turn")) { localStorage.setItem("desk-turn", "1"); if (!localStorage.getItem("desk-reqFilter")) localStorage.setItem("desk-reqFilter", "open"); } } catch {}</script>${FULL_UNLESS_SAID}`;
 const page = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "page.html"), "utf8");
 
 test("nothing on the page submits a form", () => {
@@ -380,7 +387,7 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     // People: the roster with its roles, and what each role adds to the one below it.
     await desk.click('[data-tab="people"]');
     await desk.waitForSelector("table.people");
-    assert.deepEqual((await desk.locator("table.people tbody tr").allInnerTexts()).map((t) => t.replace(/\s+/g, " ")), ["lead@example.com you Admin", "pat@example.com PM"]);
+    assert.deepEqual((await desk.locator("table.people tbody tr").allInnerTexts()).map((t) => t.replace(/\s+/g, " ").trim()), ["lead@example.com you Admin", "pat@example.com PM"]);
     // A row folds open to what that person did; a server that sends no activity shows that it can't, never zeros.
     await desk.click('[data-person-open="pat@example.com"]');
     assert.match(await desk.locator("tr.pact").innerText(), /can't be shown right now/);
@@ -496,12 +503,12 @@ test("a viewer starts in simple mode; the switch in their menu shows it and keep
 
 // A save whose answer carries no simple (a stand-in server, such as the mock Desk once answered)
 // keeps the choice just made: the next redraw stays in simple mode, not the role's default (#201).
-const DESIGNER_BARE_PREFS = VIEWER.replace('{ theme: null, simple: JSON.parse(body).simple }', '{}').replace('role: "guest", email: "v@example.com", key: "v@example.com"', 'role: "designer", email: "d@example.com", key: "d@example.com"');
+const DESIGNER_BARE_PREFS = VIEWER.replace('{ theme: null, simple: JSON.parse(body).simple }', '{}').replace('role: "guest", email: "v@example.com", key: "v@example.com", simple: null', 'role: "designer", email: "d@example.com", key: "d@example.com", simple: false');
 
 test("simple mode switched on stays on after the next redraw, whatever the save answers", (t) => open(t, DESIGNER_BARE_PREFS, async (desk) => {
   await desk.waitForSelector("#nav [data-tab]");
   const tabs = () => desk.$$eval("#nav [data-tab]", (xs) => xs.map((x) => x.dataset.tab));
-  assert.ok((await tabs()).includes("product"), "a designer starts in full mode");
+  assert.ok((await tabs()).includes("product"), "a designer who chose full mode starts in it");
   await desk.click("#me");
   await desk.click("#simple");
   await desk.waitForFunction(() => posts.some((p) => p.path === "/api/prefs"));
@@ -5178,3 +5185,99 @@ test("full mode: a proposal's vote ends with End the vote; one with no options, 
     assert.equal(await desk.locator(`#detail .status ${sel}`).count(), want, `${card.status} ${sel}`);
   });
 });
+
+// Simple mode for every role (#181; docs/desk-page.md → Simple mode). A stand-in that records what
+// is posted, and answers a GitHub username as the server does.
+const POSTING = (me, cards) => DESK(me, cards).replace("window.platform = { async request({ path }) {", `window.posts = [];
+window.platform = { async request({ method, path, body }) {
+  if (method === "POST") { posts.push({ path, body: JSON.parse(body || "{}") }); const b = JSON.parse(body || "{}");
+    return { status: 200, contentType: "application/json", body: JSON.stringify(path === "/api/people/github" ? { email: b.email, login: b.login || null } : {}) }; }`);
+// The two requests sent to developers, by numbers a link opens.
+const SENT = [{ ...SIMPLE_CARDS.find((c) => c.id === "r-sent"), id: "R-31" }, { ...SIMPLE_CARDS.find((c) => c.id === "r-built"), id: "R-32" }];
+const navTabs = (desk) => desk.$$eval("#nav [data-tab]", (xs) => xs.map((x) => x.dataset.tab));
+
+for (const role of ["designer", "pm", "developer", "ui-dev-owner", "guest"]) test(`a ${role} with no choice of their own starts in simple mode, its menu one entry`, (t) => open(t, DESK({ role, email: "x@example.com", simple: null, can: { request: role !== "guest", designs: DEVELOPERS.includes(role) } }, SIMPLE_CARDS), async (desk) => {
+  await desk.waitForSelector("#nav [data-tab]");
+  assert.deepEqual(await navTabs(desk), ["requests"]);
+  assert.equal(await desk.getAttribute("#simple", "aria-pressed"), "true");
+}));
+
+test("an admin in simple mode keeps every page in the menu, Product's pages included", (t) => open(t, DESK({ role: "admin", email: "lead@example.com", simple: null, can: { request: true, designs: true, people: true } }, SIMPLE_CARDS), async (desk) => {
+  await desk.waitForSelector("#nav [data-tab]");
+  assert.equal(await desk.getAttribute("#simple", "aria-pressed"), "true", "simple mode, by default");
+  assert.deepEqual(await navTabs(desk), ["requests", "designs", "issues", "product", "people"], "Requests & PRs stands for Requests and PR Changes");
+  assert.match(await desk.textContent('#nav [data-tab="requests"]'), /^Requests & PRs/);
+  await desk.click('#nav [data-tab="product"]');
+  await desk.waitForSelector('[data-filter="productFilter:decisions"]');
+  await desk.click('#nav [data-tab="people"]');
+  await desk.waitForSelector("table.people");
+}));
+
+test("a PM's list starts on every state, so what they filed shows through to Shipped", (t) => open(t, DESK({ ...SIMPLE_ME, role: "pm" }, SIMPLE_CARDS), async (desk) => {
+  await desk.waitForSelector('#list [data-card="r-built"]');
+  await desk.click("details.sf > summary");
+  assert.deepEqual(await ticked(desk), ["Draft", "Dev review", "Design review", "In dev", "Closed"]);
+}));
+
+test("Mine narrows simple mode's list to the viewer's own items, and the browser keeps it", (t) => open(t, DESK(SIMPLE_ME, SIMPLE_CARDS.map((c) => ["r-check", "c-open", "r-sent"].includes(c.id) ? { ...c, mine: true } : { ...c, mine: false })), async (desk) => {
+  await desk.waitForSelector('#list [data-card="r-check"]');
+  await desk.click("details.sf > summary");
+  assert.equal(await desk.getAttribute('[data-simf="who:all"]', "aria-checked"), "true", "Everyone, by default");
+  assert.match(await desk.textContent('[data-simf="who:mine"]'), /Mine\s*2/, "its count, in the states shown");
+  await desk.click('[data-simf="who:mine"]');
+  assert.deepEqual((await rows(desk)).map(([id]) => id), ["r-check", "c-open"]);
+  assert.equal(await desk.locator(".sf-btn.filtered").count(), 1, "the filter's dot says it hides something");
+  assert.equal(JSON.parse(await desk.evaluate(() => localStorage.getItem("desk-simFilter"))).who, "mine");
+  await desk.click('[data-simf="states:dev"]');
+  assert.deepEqual((await rows(desk)).map(([id]) => id), ["r-check", "r-sent", "c-open"], "newest change first");
+  await desk.click("[data-simf-reset]");
+  assert.equal((await rows(desk)).length, 4, "Reset to default: everyone's again");
+}));
+
+test("a pull request a review asked changes of says 'you' to its author, by the GitHub username People keeps", (t) => open(t, DESK({ ...SIMPLE_ME, role: "developer", github: "Bob-Dev" }, [
+  { id: "P-41", kind: "change", title: "Mine to fix", status: "new", responsible: { who: "developer" }, source: { kind: "pr", pr: 9, url: "https://github.com/o/r/pull/9", author: "bob-dev", merged_at: null }, updated: at(5) },
+  { id: "P-42", kind: "change", title: "Theirs to fix", status: "new", responsible: { who: "developer" }, source: { kind: "pr", pr: 8, url: "https://github.com/o/r/pull/8", author: "zed", merged_at: null }, updated: at(4) }]), async (desk) => {
+  await desk.evaluate(() => { location.hash = "#P-41"; });
+  await desk.waitForSelector("#detail .shead .sh-resp");
+  assert.match(await desk.textContent("#detail .sh-resp"), /Changes requested · you/);
+  assert.match(await desk.$eval("#detail .sh-resp", (x) => x.title || x.dataset.tip || ""), /your turn/);
+  await desk.evaluate(() => { location.hash = "#P-42"; });
+  await desk.waitForFunction(() => /Theirs to fix/.test(document.querySelector("#detail .shead")?.textContent || ""));
+  assert.match(await desk.textContent("#detail .sh-resp"), /Changes requested · developer/, "someone else's says who");
+}));
+
+test("a request In dev offers Mark as shipped under ⋯ to whoever marks designs done, and a shipped one Not shipped yet", (t) => open(t, POSTING({ ...SIMPLE_ME, role: "developer", can: { request: true, built: true } }, SENT), async (desk) => {
+  await desk.evaluate(() => { location.hash = "#R-31"; });
+  await desk.waitForSelector("#detail .shead");
+  await desk.click("#detail details.sh-more > summary");
+  assert.deepEqual(await desk.$$eval("#detail .sh-more .menu > *", (xs) => xs.map((x) => x.textContent.trim())), ["Mark as shipped"]);
+  await desk.click('#detail .sh-more [data-built="1"]');
+  await desk.waitForFunction(() => posts.some((p) => p.path.endsWith("/built")));
+  assert.deepEqual(await desk.evaluate(() => posts.filter((p) => p.path.endsWith("/built"))), [{ path: "/api/cards/R-31/built", body: { built: true } }]);
+  await desk.evaluate(() => { location.hash = "#R-32"; });
+  await desk.waitForFunction(() => /Built/.test(document.querySelector("#detail .shead h2")?.textContent || ""));
+  assert.equal(await desk.locator('#detail .sh-more [data-built="0"]').count(), 1, "Not shipped yet takes it back");
+}));
+
+test("a designer marks nothing shipped: Mark as shipped is not theirs", (t) => open(t, DESK(SIMPLE_ME, SENT), async (desk) => {
+  await desk.evaluate(() => { location.hash = "#R-31"; });
+  await desk.waitForSelector("#detail .shead");
+  assert.equal(await desk.locator("#detail [data-built]").count(), 0);
+}));
+
+test("an admin sets a person's GitHub username on People; others read it", (t) => open(t, POSTING({ role: "admin", email: "lead@example.com", simple: false, can: { people: true } }, []), async (desk) => {
+  await desk.click('#nav [data-tab="people"]');
+  await desk.waitForSelector("table.people");
+  assert.deepEqual(await desk.$$eval("table.people:first-of-type thead th", (xs) => xs.map((x) => x.textContent)), ["Email", "Role", "GitHub"]);
+  await desk.fill('[data-gh-login="pat@example.com"]', "@pat-gh");
+  await desk.press('[data-gh-login="pat@example.com"]', "Tab");
+  await desk.waitForFunction(() => posts.some((p) => p.path === "/api/people/github"));
+  assert.deepEqual(await desk.evaluate(() => posts.filter((p) => p.path === "/api/people/github").map((p) => p.body)), [{ email: "pat@example.com", login: "pat-gh" }], "a leading @ is dropped");
+}));
+
+test("someone who is not an admin reads a GitHub username on People, with nothing to type", (t) => open(t, DESK({ ...DESIGNER }, []).replace(`path === "/api/people" ? ${PEOPLE}`, `path === "/api/people" ? ${JSON.stringify({ ...JSON.parse(PEOPLE), github: { "pat@example.com": "pat-gh" } })}`), async (desk) => {
+  await desk.click('#nav [data-tab="people"]');
+  await desk.waitForSelector("table.people");
+  assert.equal(await desk.locator("[data-gh-login]").count(), 0);
+  assert.match(await desk.textContent("table.people tbody"), /@pat-gh/);
+}));

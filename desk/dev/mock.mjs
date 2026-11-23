@@ -4,7 +4,8 @@
 //   node desk/dev/mock.mjs 5610
 //   open "http://localhost:5610/?role=designer#R-1"        (designer; also admin, pm, developer, ui-dev-owner, guest)
 //   open "http://localhost:5610/?role=designer&ws=1#R-1"   (opens the design workspace at once)
-// The Desk shows light by default; &theme=dark shows it dark; &simple=1 starts in simple mode (a guest does anyway).
+// The Desk shows light by default; &theme=dark shows it dark; every role starts in simple mode, &simple=0 in full mode.
+// &github=<username> is this person's GitHub username, as an admin sets it on People: their pull requests are theirs.
 // The person menu's switches (simple mode, Figma, day or night) are kept while the mock runs, as the server keeps them.
 // What a person sends changes the made-up Desk until the page reloads; a change note is
 // claimed after 4 s and worked in after 25 s, so Design Desk's work shows as it happens.
@@ -26,6 +27,7 @@ function shim() {
   const me = { role, email: "alice@example.com", emails: ["alice@example.com", "alice@slack.example.com"], names: { "alice@example.com": "Alice Novak", "alice@slack.example.com": "Alice Novak", "pat@example.com": "Pat Lee" }, name: "Alice Novak", my_name: "Alice Novak", can: CAN[role] || CAN.designer, figma: true, screens: q.get("screens") !== "0", theme: q.get("theme") || "light", due_days: 21, auto_days: 14 };
   me.link = "https://desk.example.com/a/mock"; // the Desk's own link: the title's link icon copies an item's link from it
   if (q.get("simple")) me.simple = q.get("simple") === "1";
+  me.github = q.get("github") || null;
   const cards = structuredClone(CARDS), notes = structuredClone(NOTES);
   const now = () => new Date().toISOString();
   const card = (id) => cards.find((c) => c.id === id);
@@ -59,6 +61,8 @@ function shim() {
       if (body && "figma" in body) me.figma_pref = body.figma;
       return { theme: me.theme || null, simple: typeof me.simple === "boolean" ? me.simple : null, figma: typeof me.figma_pref === "boolean" ? me.figma_pref : null };
     }
+    // An admin's GitHub username for a person (docs/desk.md → People): kept while the mock runs.
+    if (p === "/api/people/github" && method === "POST") { if (body.email === me.email) me.github = body.login || null; return { email: body.email, login: body.login || null }; }
     if (p === "/api/cards" && method === "GET") return { cards: list() };
     if (p.startsWith("/api/assets/")) return ASSETS[decodeURIComponent(p.slice(12))] || {};
     if (p === "/api/agenda") return { agenda: [] };
