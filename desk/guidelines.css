@@ -231,6 +231,7 @@
     color: var(--p); background: color-mix(in srgb, var(--p) 14%, transparent); }
   .spill[data-s="open"] { --p: var(--ok); } .spill[data-s="dev"] { --p: var(--accent); } .spill[data-s="shipped"] { --p: var(--live); }
   .spill[data-s="none"] { --p: var(--muted); } .spill[data-s="closed"] { --p: var(--bad); }
+  .spill[data-s="draft"] { --p: var(--muted); background: transparent; border: 1px dashed color-mix(in srgb, var(--p) 70%, transparent); line-height: 18px; } .spill[data-s="proposal"] { --p: var(--warn); }
   /* Simple mode's head of an item: kept in view while the page scrolls. */
   .shead { position: sticky; top: -24px; z-index: 6; display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; margin: -24px calc(-1 * var(--pad-x)) 16px; padding: 16px var(--pad-x); background: var(--bg); border-bottom: 1px solid var(--line); }
   .sh-main { min-width: 0; } .shead h2 { margin: 0; } .shead h2 > span:not(.kic) { margin-right: 8px; }
@@ -238,7 +239,9 @@
   .sh-line { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; font-size: var(--fs-meta); color: var(--muted); }
   .sh-facts { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; } .sh-facts .sep { color: var(--line); }
   .sh-work { display: inline-flex; align-items: center; gap: 4px; color: var(--ink); } .sh-resp { color: var(--warn); font-weight: 500; }
-  .sh-pr { color: var(--ink); text-decoration: none; font-weight: 500; } .sh-pr:hover { text-decoration: underline; }
+  .sh-pr { --t: var(--gh-open); display: inline-flex; align-items: center; gap: 4px; padding: 0 8px; border-radius: 999px; font-size: var(--fs-micro); font-weight: 500; line-height: 20px; white-space: nowrap;
+    color: var(--t); background: color-mix(in srgb, var(--t) 14%, transparent); text-decoration: none; } .sh-pr:hover { text-decoration: underline; }
+  .sh-pr[data-s="pr-draft"] { --t: var(--gh-draft); } .sh-pr[data-s="pr-merged"] { --t: var(--gh-merged); }
   .sh-acts { display: flex; gap: 8px; align-items: center; flex: none; } details.more.sh-more .menu { left: auto; right: 0; }
   @media (max-width: 860px) { .shead { top: 28px; margin: 0 -16px 12px; padding: 12px 16px; flex-wrap: wrap; } }
   /* Simple mode's page: a short lead, what Design Desk found, the folds, the comments. */
@@ -257,7 +260,7 @@
   .smsg .who { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: var(--fs-meta); } .smsg .who .role, .smsg .who .at { color: var(--muted); }
   .smsg .who .role { display: inline-flex; align-items: center; gap: 4px; }
   .sav { width: 28px; height: 28px; flex: none; border-radius: 50%; display: grid; place-items: center; font-size: var(--fs-meta); font-weight: 600; color: var(--ink); background: var(--soft); }
-  .sav[data-r="designer"], .sav[data-r="admin"] { background: var(--live-soft); color: var(--live); } .sav[data-r="developer"], .sav[data-r="lead-developer"] { background: var(--info-soft); color: var(--accent); }
+  .sav[data-r="designer"], .sav[data-r="admin"] { background: var(--live-soft); color: var(--live); } .sav[data-r="developer"], .sav[data-r="ui-dev-owner"] { background: var(--info-soft); color: var(--accent); }
   .sav[data-r="agent"] { background: var(--ink); color: var(--bg); } .sav svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; }
   .sthread .chip { margin-bottom: 8px; } .sthread .reply { margin-top: 12px; margin-left: 40px; }
   .sh-after { margin-top: 4px; font-size: var(--fs-meta); color: var(--muted); } .sh-after a { color: inherit; }
@@ -293,10 +296,10 @@
   .rvw .rv-v { color: var(--v); font-weight: 600; } .rvw .rv-gh { margin-left: auto; color: var(--muted); } .rvw .rv-note { margin-bottom: 12px; }
   .rvw .rv-note p { margin: 0; } .rvw .sthread:last-child, .rvw .thread:last-child { margin-bottom: 0; }
   .sthread .chip.sjump { cursor: pointer; border: 0; font: inherit; font-size: var(--fs-micro); } .sthread .chip.sjump:hover { text-decoration: underline; }
-  .sboxes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; max-width: 720px; margin: 16px auto 0; }
+  .sboxes { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; max-width: 720px; margin: 16px auto 0; }
   .sbox { --p: var(--muted); display: grid; align-content: start; gap: 4px; text-align: left; padding: 16px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--panel); color: inherit; font: inherit; cursor: pointer; }
   .sbox:hover { border-color: var(--p); } .sbox .n { font-size: var(--fs-title); font-weight: 600; color: var(--p); line-height: 1.1; }
-  .sbox[data-s="open"] { --p: var(--ok); } .sbox[data-s="dev"] { --p: var(--accent); } .sbox[data-s="closed"] { --p: var(--live); }
+  .sbox[data-s="proposal"] { --p: var(--warn); } .sbox[data-s="open"] { --p: var(--ok); } .sbox[data-s="dev"] { --p: var(--accent); } .sbox[data-s="closed"] { --p: var(--live); }
   @media (max-width: 860px) { .sboxes { grid-template-columns: 1fr; } }
   /* Simple mode's filter: one button, its menu of ticks, and a chip for each thing it narrows by. */
   .simfilter { align-items: center; } .simfilter details.sf > summary { display: inline-flex; align-items: center; gap: 4px; }
@@ -305,6 +308,10 @@
   .sf-h { padding: 4px 8px 0; font-size: var(--fs-micro); color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
   .sf-opt { display: flex; align-items: center; gap: 8px; width: 100%; padding: 4px 8px; border: 0; border-radius: var(--r-sm); background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
   .sf-opt:hover:not(:disabled) { background: var(--soft); } .sf-opt:disabled { cursor: default; }
+  /* Only sits just before the count, which keeps to the right edge (3 digits wide). */
+  .sf-row { position: relative; } .sf-row .sf-opt { padding-right: 8px; } .sf-row .sf-opt .n { min-width: 3ch; text-align: right; }
+  .sf-only { position: absolute; top: 50%; right: calc(8px + 3ch + 4px); transform: translateY(-50%); visibility: hidden; padding: 2px 8px; border: 0; border-radius: var(--r-sm); background: none; color: var(--accent); font: inherit; font-size: var(--fs-meta); cursor: pointer; }
+  .sf-row:hover .sf-only, .sf-only:focus-visible { visibility: visible; } .sf-only:hover { background: var(--soft); }
   .sf-opt .box { width: 14px; height: 14px; border: 1px solid var(--muted); border-radius: var(--r-sm); flex: none; display: grid; place-items: center; }
   .sf-opt[aria-checked="true"] .box { background: var(--accent); border-color: var(--accent); }
   .sf-opt[aria-checked="true"] .box::after { content: ""; width: 6px; height: 3px; border: solid var(--accent-ink); border-width: 0 0 2px 2px; transform: rotate(-45deg) translate(1px, -1px); }
@@ -645,7 +652,6 @@
   label.switch input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   label.switch.ws-switch { gap: 8px; font-size: var(--fs-meta); margin-left: 4px; } label.switch.ws-switch input { width: 28px; height: 16px; } label.switch.ws-switch input::after { width: 12px; height: 12px; } label.switch.ws-switch input:checked::after { transform: translateX(12px); }
   /* New request: how many options (none to five), and questions first. */
-  .for-pick { display: grid; gap: 8px; margin-bottom: 4px; } .for-pick .tabs { margin: 0; }
   .count-pick { display: grid; gap: 4px; } .count-pick .row2 { display: flex; gap: 12px; align-items: center; }
   .count-pick input[type=range] { flex: 1; accent-color: var(--accent); padding: 0; border: 0; background: none; }
   .count-pick output { min-width: 15ch; font-weight: 600; font-size: var(--fs-ui); }
@@ -1087,6 +1093,7 @@
   .tag::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: none; }
   .t-approved { --t: var(--approved); --ts: var(--approved-soft); } .t-waiting { --t: var(--waiting); --ts: var(--waiting-soft); }
   .t-decided { --t: var(--decided); --ts: var(--decided-soft); } .t-closed { --t: var(--closed); --ts: var(--closed-soft); }
+  .t-draft { --t: var(--muted); --ts: var(--soft); } .t-proposal { --t: var(--warn); --ts: var(--warn-soft); }
   .t-checking { --t: var(--accent); --ts: var(--info-soft); } .t-turn { --t: var(--turn); --ts: var(--turn-soft); } .t-live { --t: var(--live); --ts: var(--live-soft); }
   .t-checking::before { background: none; box-shadow: inset 0 0 0 1.5px currentColor; }
   /* A request's state in the list: a dot as large as the one on the request's page, in the top-right corner of
@@ -1105,6 +1112,7 @@
   .row .sdot:hover .tag.busy::before, .row .open:focus-visible .sdot .tag.busy::before { animation: pulse 1.2s ease-in-out infinite; }
   .row .sdot:hover .tag .w, .row .open:focus-visible .sdot .tag .w { max-width: 24ch; opacity: 1; }
   .sdot[data-s="checking"] .tag { --t: var(--accent); } .sdot[data-s="waiting"] .tag { --t: var(--waiting); }
+  .sdot[data-s="draft"] .tag { --t: var(--muted); } .sdot[data-s="proposal"] .tag { --t: var(--warn); }
   .sdot[data-s="turn"] .tag { --t: var(--turn); } .sdot[data-s="approved"] .tag { --t: var(--approved); }
   /* A PR's and an issue's state, in GitHub's colours: draft grey, open green, merged and done purple. */
   .sdot[data-s="pr-draft"] .tag { --t: var(--gh-draft); } .sdot[data-s="pr-open"] .tag, .sdot[data-s="issue-open"] .tag { --t: var(--gh-open); }
@@ -1154,9 +1162,9 @@
   .step .n { background: none; box-shadow: inset 0 0 0 1.5px var(--line); font-weight: 600; }
   .step.done .n { background: var(--ink); color: var(--panel); box-shadow: none; }
   .step.now .n { background: none; color: var(--ink); box-shadow: inset 0 0 0 2px var(--ink); }
-  /* Approve is the one green button. */
-  .btn[data-act="approve"] { background: var(--approved); border-color: var(--approved); color: var(--panel); }
-  .btn[data-act="approve"]:hover { opacity: .88; background: var(--approved); }
+  /* What moves an item forward wears Approve's green: approving, sending it on, proposing it (docs/desk-page.md → The look). */
+  :is(.btn[data-act="approve"], .btn[data-act="approve-dev"], .btn[data-review="approve"], .btn[data-handle="1"], .btn[data-spec-send], .btn[data-stage="proposal"], .btn[data-stage="design"]):not(.menu .btn) { background: var(--approved); border-color: var(--approved); color: var(--panel); }
+  :is(.btn[data-act="approve"], .btn[data-act="approve-dev"], .btn[data-review="approve"], .btn[data-handle="1"], .btn[data-spec-send], .btn[data-stage="proposal"], .btn[data-stage="design"]):not(.menu .btn):hover { opacity: .88; background: var(--approved); }
   /* Design options: the tabs stay; each carries a square number, so "option 2" is easy to say. */
   .ono { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 8px; margin-right: 8px; border-radius: var(--r-sm); background: var(--muted); color: var(--panel); font-size: var(--fs-meta); font-weight: 600; vertical-align: 1px; }
   .tabs button[aria-pressed="true"] .ono { background: var(--ink); }

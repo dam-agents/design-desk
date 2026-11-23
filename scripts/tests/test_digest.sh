@@ -40,6 +40,15 @@ assert "its items are those days, this morning's wait for next week" '[.changes[
 jq '.threads = {"T-1":{"id":"T-1","card":"C-3","kind":"comment","created":"2026-11-03T10:00:00Z","messages":[{"by":{"email":"a@example.com"},"text":"Too small."}]},
   "T-2":{"id":"T-2","card":"C-3","kind":"comment","dev":true,"created":"2026-11-03T11:00:00Z","messages":[{"by":{"email":"b@example.com"},"text":"Is it sticky?"}]}}' "$DESK_DIR/db.json" > "$STUB_DIR/db" && mv "$STUB_DIR/db" "$DESK_DIR/db.json"
 assert "feedback leaves out questions for the designer" '[.feedback[].text] == ["Too small."]' "$(bash "$ROOT/scripts/preflight.sh" digest)"
+# A request before design is no news (docs/desk.md → Draft and Proposal): a draft, its conversation, and
+# one opened this week that was filed before it, counted from when it opened.
+jq '.cards["R-1"] = {"id":"R-1","kind":"request","title":"A draft","stage":"draft","status":"variants","created":"2026-11-02T10:00:00Z","request":{"type":"idea"}}
+  | .cards["R-2"] = {"id":"R-2","kind":"request","title":"Sent to design","status":"variants","created":"2026-10-20T10:00:00Z","opened_at":"2026-11-03T10:00:00Z","staged":[{"from":"draft","to":"design","at":"2026-11-03T10:00:00Z"}],"request":{"type":"idea"}}
+  | .threads["T-3"] = {"id":"T-3","card":"R-1","kind":"comment","created":"2026-11-03T12:00:00Z","messages":[{"by":{"email":"c@example.com"},"text":"Only the author sees this."}]}' "$DESK_DIR/db.json" > "$STUB_DIR/db" && mv "$STUB_DIR/db" "$DESK_DIR/db.json"
+out3="$(bash "$ROOT/scripts/preflight.sh" digest)"
+assert "a draft is not new this week; one sent to design this week is" '[.requests_new[].id] == ["R-2"]' "$out3"
+assert "a draft's conversation is no feedback" '[.feedback[].text] == ["Too small."]' "$out3"
+jq 'del(.cards["R-1"], .cards["R-2"], .threads["T-3"])' "$DESK_DIR/db.json" > "$STUB_DIR/db" && mv "$STUB_DIR/db" "$DESK_DIR/db.json"
 
 export FAKE_NOW=1767427200 # Sat 2026-01-03 08:00 UTC
 out2="$(bash "$ROOT/scripts/preflight.sh" digest)"

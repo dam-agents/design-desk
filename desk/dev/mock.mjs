@@ -2,7 +2,7 @@
 // Development only: serves the Desk page with a made-up Desk in the browser (desk/dev/mock-data.mjs),
 // no Desk server needed. The page is read again on every load.
 //   node desk/dev/mock.mjs 5610
-//   open "http://localhost:5610/?role=designer#R-1"        (designer; also admin, pm, developer, lead-developer, guest)
+//   open "http://localhost:5610/?role=designer#R-1"        (designer; also admin, pm, developer, ui-dev-owner, guest)
 //   open "http://localhost:5610/?role=designer&ws=1#R-1"   (opens the design workspace at once)
 // The Desk shows light by default; &theme=dark shows it dark; &simple=1 starts in simple mode (a guest does anyway).
 // What a person sends changes the made-up Desk until the page reloads; a change note is
@@ -16,7 +16,7 @@ import { CARDS, ASSETS, NOTES } from "./mock-data.mjs";
 
 const [port = "5610"] = process.argv.slice(2);
 const page = join(dirname(fileURLToPath(import.meta.url)), "..", "page.html");
-const ROLES = ["admin", "designer", "pm", "lead-developer", "developer", "guest"];
+const ROLES = ["admin", "designer", "pm", "ui-dev-owner", "developer", "guest"];
 const CAN = Object.fromEntries(ROLES.map((r) => [r, abilities(r)]));
 
 function shim() {
@@ -43,7 +43,10 @@ function shim() {
       if (c.responsible?.who === "design-desk") delete c.responsible;
     }, 25000);
   };
-  const list = () => cards.map((c) => ({ ...c, variants: c.variants.length, threads: undefined }));
+  // A request before design shows only to whom the server shows it (docs/desk.md → Draft and Proposal).
+  // Only a draft is private: its author's (who files drafts) and an admin's; a proposal is everyone's.
+  const seen = (c) => c.stage !== "draft" || role === "admin" || (!["designer", "guest"].includes(role) && c.by?.email === me.email);
+  const list = () => cards.filter(seen).map((c) => ({ ...c, variants: c.variants.length, threads: undefined }));
   const answer = (method, path, body) => {
     const p = path.replace(/\?.*$/, ""), m = (re) => p.match(re);
     if (p === "/api/me") return me;
@@ -56,7 +59,13 @@ function shim() {
     if (p.startsWith("/api/decisions/")) { const id = decodeURIComponent(p.slice(15)); const d = cards[0].cited[id]; return d ? { decision: { id, ...d, side: "design", at: now(), concepts: [] } } : {}; }
     if (p.startsWith("/api/decisions")) return { decisions: Object.entries(cards[0].cited).map(([id, d]) => ({ id, ...d, side: "design", at: now(), concepts: [] })) };
     let x;
-    if ((x = m(/^\/api\/cards\/([^/]+)$/)) && method === "GET") return { card: structuredClone(card(decodeURIComponent(x[1]))) };
+    if ((x = m(/^\/api\/cards\/([^/]+)$/)) && method === "GET") { const c = card(decodeURIComponent(x[1])); return c && seen(c) ? { card: structuredClone(c) } : { error: "no card" }; }
+    if ((x = m(/^\/api\/cards\/([^/]+)\/stage$/)) && method === "POST") {
+      const c = card(decodeURIComponent(x[1]));
+      if (["design", "developers"].includes(body.to)) { delete c.stage; c.opened_at = now(); if (body.to === "developers") c.for = "developers"; } else c.stage = body.to;
+      c.updated = now();
+      return { card: structuredClone(c) };
+    }
     // A review (docs/desk.md → Reviews): drafts kept for this person, sent as one review whose comments are threads.
     if ((x = m(/^\/api\/cards\/([^/]+)\/drafts$/))) {
       const c = card(decodeURIComponent(x[1]));

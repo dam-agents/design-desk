@@ -12,7 +12,7 @@ import { createServer } from "node:http";
 import { existsSync, readFileSync, writeFileSync, mkdirSync, chmodSync } from "node:fs";
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { join } from "node:path";
-import { Store, DeskError, forgetIdle, can, ROLES, ADDABLE_ROLES, abilities, rosterOf, readRole, personOf, namesOf, LOOK_ROLES } from "./store.mjs";
+import { Store, DeskError, forgetIdle, can, ROLES, ADDABLE_ROLES, abilities, rosterOf, readRole, personOf, namesOf, LOOK_ROLES, stageFor } from "./store.mjs";
 import { cfg, cfgTable, WORK } from "../toolkit/lib/core.mjs";
 import { requestSkills } from "../toolkit/lib/actions.mjs";
 
@@ -53,6 +53,9 @@ const log = (level, event, msg) => {
 // edit by the operator takes effect at once.
 const roster = () => rosterOf(cfgTable("Desk people"));
 const rowOf = (email) => personOf(roster(), email);
+// A request asked for in Slack, a public channel, goes to the dev team first, as a proposal, unless
+// a designer asked for it (docs/desk.md → Draft and Proposal). The agent never names a stage itself.
+const slackStage = (b) => (b?.origin?.channel === "slack" && rowOf(b.origin.email)?.role !== "designer" ? "proposal" : null);
 function roleOf(caller) {
   if (caller.role === "owner") return "admin";
   if (!caller.email) return "guest";
@@ -65,7 +68,7 @@ function roleOf(caller) {
 // address; the role the record names only where the Desk verified it (a comment, an approval)
 // or the operator or a designer said it (chat, the meeting), never from text Design Desk read. Else a pull request, a commit or an
 // architecture page is a developer's; unknown stays null.
-const DESIGN_SIDE = ["admin", "designer", "pm"], DEVELOPER_SIDE = ["lead-developer", "developer"];
+const DESIGN_SIDE = ["admin", "designer", "pm"], DEVELOPER_SIDE = ["ui-dev-owner", "developer"];
 const SAID_ROLE = ["desk", "approval", "chat", "call"], FROM_GITHUB = ["pr", "issue", "commit", "doc"];
 function sideOf(d) {
   const email = String(d.author?.email || "").toLowerCase();
@@ -100,7 +103,7 @@ function settings() {
   const admin = roster().find((r) => r.role === "admin");
   const ideas = cfg("handoff", "desk");
   return {
-    // Read as the roster reads a role, so `lead developer` here is the roster's `lead-developer`.
+    // Read as the roster reads a role, so `UI dev owner` here is the roster's `ui-dev-owner`.
     prototypeRoles: list(cfg("prototype_requesters"), ["designer", "pm", "admin"]).map(readRole),
     ping: cfg("desk_ping", "enabled") !== "disabled",
     name: cfg("display_name", "Design Desk"),
@@ -166,7 +169,7 @@ const PEER_EMAIL = "agents@mcp.design-desk.invalid";
 const PEER_ROLES = ["guest", "developer", "pm"];
 const peerWho = () => {
   const role = readRole(cfg("mcp_role", "developer"));
-  return { role: "viewer", email: PEER_EMAIL, emails: [PEER_EMAIL], sub: "satellite", deskRole: PEER_ROLES.includes(role) ? role : "guest" };
+  return { role: "viewer", email: PEER_EMAIL, emails: [PEER_EMAIL], sub: "satellite", deskRole: PEER_ROLES.includes(role) ? role : "guest", peer: true };
 };
 const ID = "[A-Za-z]+-\\d+";
 const PEER_ROUTES = [
@@ -215,10 +218,15 @@ async function viewerRoute(req, res, url, who) {
     const verb = VERBS[action] || "do that";
     throw new DeskError(403, who.deskRole === "guest"
       ? `To ${verb}, ask ${s.contact} to add ${who.email || "you"} to the Desk's members.`
-      : `Only ${action === "people" ? "an admin" : action === "size" ? "lead developers and admins" : action === "skip" ? "designers, PMs and lead developers" : action === "close" || action === "reopen" ? "designers and PMs" : action === "built" ? "developers" : "designers"} can ${verb}. Ask ${s.contact} if you need it.`);
+      : `Only ${action === "people" ? "an admin" : action === "size" ? "UI dev owners and admins" : action === "skip" ? "designers, PMs and UI dev owners" : action === "close" || action === "reopen" ? "designers and PMs" : action === "built" ? "developers" : "designers"} can ${verb}. Ask ${s.contact} if you need it.`);
   };
   const p = url.pathname.split("/").filter(Boolean); // ["api", ...]
   const m = req.method;
+  // A request before design is not there for whom it is not (docs/desk.md → Draft and Proposal):
+  // reading it, writing on it, its conversations — the same 404 as a card that does not exist.
+  if (p[1] === "cards" && p[2]) store.cardFor(p[2], actor);
+  // A private ask stays its owner's to read and answer, even once its card is hidden from them.
+  if (p[1] === "threads" && p[2]) { const t = store.thread(p[2]); if (t.card && !(t.kind === "private" && t.owner === (who.email || who.sub)) && !store.visibleTo(store.card(t.card), actor)) throw new DeskError(404, `no thread ${p[2]}`); }
   if (m === "GET" && p[1] === "me") {
     // The page asks who it is once, when it loads: that is the sign-in People reads (docs/desk.md → People).
     // A read never fails for it: a full store keeps no record, and a failed write is dropped.
@@ -231,13 +239,13 @@ async function viewerRoute(req, res, url, who) {
   // A person's own draft comments on an item, for them alone (docs/desk.md → Reviews).
   if (m === "GET" && p[1] === "cards" && p[2] && p[3] === "drafts" && !p[4]) return send(res, 200, store.drafts(p[2], actor));
   if (m === "GET" && p[1] === "cards" && p[2]) {
-    const card = store.getCard(p[2], { viewer: who.email || who.sub || null });
+    const card = store.getCard(p[2], { viewer: who.email || who.sub || null, who: actor });
     // Each conversation says what this reader may do in it, so the page shows only the controls
     // the routes below accept (reply and answer, reopen; resolve: Mark done).
     const may = (t, move) => can(who.deskRole, store.threadNeed(t.id, actor, move), s.prototypeRoles);
     return send(res, 200, { card: { ...card, threads: card.threads.map((t) => ({ ...t, may: { reply: may(t), resolve: may(t, "resolve") } })) } });
   }
-  if (m === "GET" && p[1] === "assets" && p[2]) return send(res, 200, store.getAsset(p[2]));
+  if (m === "GET" && p[1] === "assets" && p[2]) return send(res, 200, store.getAsset(p[2], actor));
   // What the Desk keeps of the issues and pull requests its items point at, for previews.
   if (m === "GET" && p[1] === "github") return send(res, 200, { records: store.github(String(url.searchParams.get("keys") || "").split(",").filter(Boolean).slice(0, 50)) });
   // A person's own private asks, and no one else's (docs/desk.md → Private asks).
@@ -246,15 +254,15 @@ async function viewerRoute(req, res, url, who) {
   if (m === "GET" && p[1] === "agenda") return send(res, 200, { agenda: store.agenda(), presented: store.presented(), calls: (store.db.calls || []).slice(-5) });
   // The product's releases, for Product → History (docs/watch.md → Releases).
   if (m === "GET" && p[1] === "releases") return send(res, 200, store.getReleases());
-  // The product's kit: an admin's, a designer's and a lead developer's page (docs/desk-page.md → Product → Kit).
-  if (m === "GET" && p[1] === "kit") { if (!LOOK_ROLES.includes(who.deskRole)) throw new DeskError(403, `Only admins, designers and lead developers see the kit. Ask ${s.contact} if you need it.`); return send(res, 200, store.getKit()); }
+  // The product's kit: an admin's, a designer's and a UI dev owner's page (docs/desk-page.md → Product → Kit).
+  if (m === "GET" && p[1] === "kit") { if (!LOOK_ROLES.includes(who.deskRole)) throw new DeskError(403, `Only admins, designers and UI dev owners see the kit. Ask ${s.contact} if you need it.`); return send(res, 200, store.getKit()); }
   if (m === "GET" && p[1] === "decisions" && !p[2]) {
     // Not approved: the ones in force that wait for a designer's approval.
     const q = decisionQuery(url), pending = url.searchParams.get("state") === "unapproved";
     const all = store.listDecisions({ ...q, state: pending ? "active" : q.state }).map(withSide);
     return send(res, 200, { decisions: (pending ? all.filter((d) => d.unapproved) : all).slice(0, 200) });
   }
-  if (m === "GET" && p[1] === "decisions" && p[2]) { const r = store.getDecision(p[2]); return send(res, 200, { ...r, decision: withSide(r.decision) }); }
+  if (m === "GET" && p[1] === "decisions" && p[2]) { const r = store.getDecision(p[2], actor); return send(res, 200, { ...r, decision: withSide(r.decision) }); }
   // Opening an item marks it read for this person alone (docs/desk-page.md → Read and unread). It is
   // outside the write budget: browsing many items must not use up what comments and votes need,
   // and it writes at most once per person and item.
@@ -334,20 +342,22 @@ async function viewerRoute(req, res, url, who) {
   if (m === "POST" && p[1] === "cards" && p[3] === "end-vote") return send(res, 200, store.endVote(p[2], actor));
   // The developer spec, read before it goes: edit it, ask for changes, or send it (docs/handoff.md).
   if (m === "POST" && p[1] === "cards" && p[3] === "spec") { const r = store.specAction(p[2], actor, { action: b.action, text: b.text, note: b.note, implement: typeof b.implement === "boolean" ? b.implement : null, closeEarlier: b.close_earlier === true, comment: b.comment === true }); return send(res, 200, r.inbox ? withPing(r, s, who) : r); }
+  // A request before design moves on: Propose, Send to design, Back to draft; Approve for dev is an approval (docs/desk.md → Draft and Proposal).
+  if (m === "POST" && p[1] === "cards" && p[3] === "stage" && !p[4]) return send(res, 200, store.moveStage(p[2], actor, String(b.to || "")));
   if (m === "POST" && p[1] === "cards" && p[3] === "size") { need("size"); return send(res, 200, store.setSize(p[2], actor, b.small)); }
   // An approved design's elements into Product → Elements (docs/catalog.md → From approved designs).
   if (m === "POST" && p[1] === "cards" && p[3] === "catalog") { need("add"); return send(res, 200, store.addDesignToCatalog(p[2], actor, typeof b.element === "string" ? b.element : "")); }
   if (m === "POST" && p[1] === "cards" && p[3] === "votes") { need("vote"); return send(res, 200, store.vote(p[2], actor, b)); }
   if (m === "POST" && p[1] === "requests") {
     need(b.from ? "follow-up" : "request");
-    if (b.from) store.card(String(b.from));
+    if (b.from) store.cardFor(String(b.from), actor);
     // Only what a person types: an origin (where the agent answers) is the agent's to set.
     // A person files an idea, a bug, or an adjustment of a change card; features and
     // proposals are the agent's (from an issue, from a shipped change).
     const { title, problem, goal, screen, steps, from, figma } = b;
-    // For Developers or For Designers, the dialog's switch, for the roles that may move a
-    // request between the two; the Desk's default is the designers'.
-    const audience = b.audience === "developers" && can(who.deskRole, "size", s.prototypeRoles) ? "developers" : "designers";
+    // A person's request is For Designers; one that starts as a draft takes its side when it opens
+    // (docs/desk.md → Draft and Proposal). Only the agent's own requests name an audience.
+    const audience = "designers";
     // How many options, and questions first: a bug is fixed, not designed, so it has neither.
     // From an issue on the Issues page it designs that feature; from a change it adjusts it.
     // From an approved request, a new one of the same kind, its options carried over as ticked.
@@ -366,7 +376,10 @@ async function viewerRoute(req, res, url, who) {
     const options = type === "bug" ? 0 : b.options, grill = type !== "bug" && b.grill === true;
     // The options start right after triage only for someone who may start them.
     const auto = type !== "bug" && can(who.deskRole, "explore", s.prototypeRoles);
-    return send(res, 201, withPing(store.createRequest(actor, { title, problem, goal, screen, steps, type, from, screens, figma, vision, skills, options, grill, auto, audience, carry }), s, who));
+    // A person's request starts as a draft unless a designer files it; an agent's over MCP opens
+    // as the agent's own do (docs/desk.md → Draft and Proposal).
+    const stage = who.peer ? null : stageFor(who.deskRole);
+    return send(res, 201, withPing(store.createRequest(actor, { title, problem, goal, screen, steps, type, from, screens, figma, vision, skills, options, grill, auto, audience, carry, stage }), s, who));
   }
   // An admin asks for a new person on the list; the agent writes the row (docs/desk.md → People).
   if (m === "POST" && p[1] === "people") { need("people"); return send(res, 201, withPing(store.askForPerson(actor, { email: b.email, role: b.role }, roster(), { owner: who.role === "owner" }), s, who)); }
@@ -400,11 +413,13 @@ async function viewerRoute(req, res, url, who) {
   }
   if (m === "POST" && p[1] === "cards" && p[3] === "actions") {
     const action = String(b.action);
-    // A request For Developers is approved by a developer too, and a lead developer approves any request;
+    // A request For Developers is approved by a developer too, and a UI dev owner approves any request;
     // the store checks who (docs/desk.md → For Developers or For Designers, Deciding straight away).
     // Drawing every state of a part is changing the option: a designer's, a PM's or a developer's.
     // A request's author removes its options whatever their role (docs/desk.md → Roles).
-    if (!(action === "approve" && (store.card(p[2]).size?.small || can(who.deskRole, "skip", s.prototypeRoles))) && !(action === "drop-option" && store.filedBy(p[2], actor))) need(action.startsWith("figma-") ? "figma" : action.startsWith("slack-") ? "share" : ["states", "alternatives", "pick-alternative"].includes(action) ? "revise" : action === "drop-option" ? "choose" : ["add-option", "draw-now"].includes(action) ? "explore" : action === "take-before" ? "before" : action === "switch-off" ? "build" : action);
+    // A draft's author closes it, the UI dev owner a proposal, whatever their role (docs/desk.md → Draft and Proposal).
+    const staged = ["close", "reopen"].includes(action) && store.mayCloseStaged(p[2], actor);
+    if (!staged && !(action === "approve" && (store.card(p[2]).size?.small || can(who.deskRole, "skip", s.prototypeRoles))) && !(action === "drop-option" && store.filedBy(p[2], actor))) need(action.startsWith("figma-") ? "figma" : action.startsWith("slack-") ? "share" : ["states", "alternatives", "pick-alternative"].includes(action) ? "revise" : action === "drop-option" ? "choose" : ["add-option", "draw-now"].includes(action) ? "explore" : action === "take-before" ? "before" : action === "switch-off" ? "build" : action);
     if (action.startsWith("figma-") && !s.figma) throw new DeskError(400, "Figma is not connected to this Desk yet.");
     if (action === "take-before" && !s.screens) throw new DeskError(400, `Pictures from the product need Design Desk's own copy of it, which is not turned on yet. Ask ${s.contact}.`);
     if (action === "slack-share" && !s.slack) throw new DeskError(400, "Slack voting is not turned on for this Desk yet.");
@@ -412,7 +427,7 @@ async function viewerRoute(req, res, url, who) {
     if (action === "approve" && b.implement === true && (s.handoff[store.card(p[2]).request?.type || "idea"] || "desk") === "desk") throw new DeskError(400, "This request's spec stays on the Desk, so it cannot go straight to the coding agent.");
     if (action === "slack-send" && !s.slackSend && store.card(p[2]).origin?.channel !== "slack") throw new DeskError(400, `Sending designs to Slack is not turned on for this Desk yet. Ask ${s.contact}.`);
     return send(res, 200, withPing(store.act(p[2], actor, action, b.note, { askFirst: b.ask_first === true, count: b.count ?? null, overrule: b.overrule === true, implement: b.implement === true, closeEarlier: b.close_earlier === true, autoSend: b.auto_send === true,
-      variant: typeof b.variant === "string" ? b.variant : null, version: Number.isInteger(b.version) ? b.version : null,
+      variant: typeof b.variant === "string" ? b.variant : null, version: Number.isInteger(b.version) ? b.version : null, forDev: b.for_dev === true,
       states: b.states && typeof b.states === "object" && !Array.isArray(b.states) ? b.states : null, part: b.part && typeof b.part === "object" ? b.part : null, element: typeof b.element === "string" ? b.element : null }), s, who));
   }
   throw new DeskError(404, `no route ${m} ${url.pathname}`);
@@ -454,12 +469,12 @@ async function agentRoute(req, res, url) {
   // of it or a thread of it renews the lease of the items claimed on it (docs/desk.md → Claims).
   if (m === "POST" && ["cards", "assets", "threads"].includes(p[1])) store.renewClaims({ card: p[1] === "cards" ? p[2] || b.id : p[1] === "assets" ? b.card : null, thread: p[1] === "threads" ? p[2] : null });
   if (m === "POST" && p[1] === "cards" && !p[2]) return send(res, 200, store.upsertCard(b));
-  if (m === "POST" && p[1] === "reports") return send(res, 201, store.createRequest({ agent: true }, { ...b, type: "bug" }));
+  if (m === "POST" && p[1] === "reports") return send(res, 201, store.createRequest({ agent: true }, { ...b, type: "bug", stage: slackStage(b) }));
   // The product's kit as `design kit` read it (docs/requests.md → Smart controls).
   if (m === "POST" && p[1] === "kit") return send(res, 200, store.setKit(b));
   // The releases the watch pre-flight found (docs/watch.md → Releases).
   if (m === "POST" && p[1] === "releases") return send(res, 200, store.setReleases(b.releases ?? b));
-  if (m === "POST" && p[1] === "requests") return send(res, 201, store.createRequest({ agent: true }, b));
+  if (m === "POST" && p[1] === "requests") return send(res, 201, store.createRequest({ agent: true }, { ...b, stage: slackStage(b) }));
   // An earlier look of an element drawn from the code's history (docs/catalog.md → History).
   if (m === "POST" && p[1] === "cards" && p[3] === "looks") return send(res, 201, store.addLook(p[2], b));
   // Names a redraw gave notes stored before parts had them (design desk asset --option).

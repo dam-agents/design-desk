@@ -163,7 +163,7 @@ Merged and closed pull requests are never touched: their checks no longer matter
 
 - **Set it** right after the card is written (step 13), on an open PR, by the card as `design
   desk card P-<n>` returns it: `attention` `fyi` (auto handled) or handled → **pass**; `designer`
-  or `developer` → **fail** until a designer, or on a change For Developers a lead developer,
+  or `developer` → **fail** until a designer, or on a change For Developers a UI dev owner,
   marks it handled ([desk.md](desk.md) → For Developers or For Designers); no `attention` →
   set nothing: the change is not judged yet, so a required check keeps waiting. A PR that builds a Desk design is judged the same way, by the card's own derived
   `attention`: a difference from the design, or a decision it goes against, is one of its reasons.
@@ -187,7 +187,7 @@ Merged and closed pull requests are never touched: their checks no longer matter
   <!-- design-desk ci=<card id> -->
   **Design Desk: this UI change needs approval**
 
-  The `design-desk` check fails until <a designer | a lead developer> marks the change handled on the Design Desk.
+  The `design-desk` check fails until <a designer | a UI dev owner> marks the change handled on the Design Desk.
 
   **Why**
   - <each attention reason, with its source, or the no-source reason as written>

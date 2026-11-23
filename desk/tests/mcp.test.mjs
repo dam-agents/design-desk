@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SERVER = join(HERE, "..", "server.mjs"), MCP = join(HERE, "..", "mcp.mjs");
-const ROSTER = "## Desk people\n\n| email | role |\n| --- | --- |\n| alice@example.com | designer |\n";
+const ROSTER = "## Desk people\n\n| email | role |\n| --- | --- |\n| alice@example.com | designer |\n| bob@example.com | developer |\n";
 
 const freePort = () => new Promise((ok) => { const s = createServer(); s.listen(0, "127.0.0.1", () => { const { port } = s.address(); s.close(() => ok(port)); }); });
 
@@ -32,7 +32,12 @@ async function desk(t, config) {
     const r = await fetch(base + path, { method, headers: { "content-type": "application/json", "x-desk-peer-token": tok }, body: body && JSON.stringify(body) });
     return { status: r.status, body: await r.json() };
   };
-  return { peer, env, work };
+  // A person on the page, through the platform's relay: files the request a peer then reads.
+  const viewer = async (email, path, body) => {
+    const r = await fetch(base + path, { method: body ? "POST" : "GET", headers: { "content-type": "application/json", "x-platform-caller-role": "viewer", "x-platform-caller-email": email }, body: body && JSON.stringify(body) });
+    return { status: r.status, body: await r.json() };
+  };
+  return { peer, viewer, env, work };
 }
 
 test("the peer routes are closed while mcp_satellite is disabled, and need the peer token", async (t) => {
@@ -48,6 +53,8 @@ test("a peer reads, asks and files requests, as one caller of mcp_role, and reac
   const made = await d.peer("POST", "/peer/requests", { title: "Busy list", problem: "The list is busy." });
   assert.equal(made.status, 201, JSON.stringify(made.body));
   const id = made.body.card.id;
+  assert.equal(made.body.card.stage, undefined, "an agent's request opens, as Design Desk's own do, whatever mcp_role");
+  assert.equal((await d.peer("POST", `/peer/cards/${id}/stage`, { to: "design" })).status, 404, "a peer moves no request on");
   assert.equal((await d.peer("GET", `/peer/cards/${id}`)).status, 200);
   const asked = await d.peer("POST", `/peer/cards/${id}/threads`, { kind: "question", text: "Why two columns?" });
   assert.equal(asked.status, 201);
@@ -107,4 +114,13 @@ test("a long tool result stays valid JSON and names what was shortened", async (
   assert.equal(c.threads.at(-1).id, "t49", "a conversation keeps its newest end");
   assert.match(c._cut, /threads/);
   assert.equal(fit({ a: 1 }, 6000).a, 1, "a short result is untouched");
+});
+
+test("a peer reads a proposal, as anyone does, and none of a draft", async (t) => {
+  const d = await desk(t, "- mcp_satellite: always\n- mcp_role: pm\n");
+  const id = (await d.viewer("bob@example.com", "/api/requests", { problem: "Rows are too airy.", options: 0 })).body.card.id;
+  assert.equal((await d.peer("GET", `/peer/cards/${id}`)).status, 404, "no draft of someone else's");
+  assert.equal((await d.peer("GET", "/peer/cards")).body.cards.some((c) => c.id === id), false);
+  assert.equal((await d.viewer("bob@example.com", `/api/cards/${id}/stage`, { to: "proposal" })).status, 200);
+  assert.equal((await d.peer("GET", `/peer/cards/${id}`)).status, 200, "a proposal is everyone's");
 });

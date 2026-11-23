@@ -12,7 +12,8 @@ and feedback before any live prototype ([prototype.md](prototype.md)) and the ha
 | 2. Small, built first | a developer's pull request with a basic UI (a change card, open or merged) → **Adjust the design** | `adjustment` | the adjusted design sent to the coding agent (`implementer`) to build into the product |
 | 3. Reported | a UI bug, or something that looks wrong to someone (Desk or Slack) | `bug` | as flow 2 |
 
-Ideas filed on the Desk or asked for in Slack (`idea`) and the agent's own proposals for new features
+A request a person files on the Desk is a draft or a proposal before it goes to design
+([desk.md](desk.md) → Draft and Proposal); you work on it as on any other. Ideas filed on the Desk or asked for in Slack (`idea`) and the agent's own proposals for new features
 (`proposal`, [watch.md](watch.md) step 12) end per `handoff`.
 
 **The request is the person's words.** `problem`, `goal`, `steps` and `vision` hold what the
@@ -454,7 +455,7 @@ nothing, so its notes are gone from it.
 
 ## Smart controls
 
-The design workspace's look palette offers an admin, a designer or a lead developer, for an element, the choices the product
+The design workspace's look palette offers an admin, a designer or a UI dev owner, for an element, the choices the product
 already has for it, on a **Suggested** tab ([desk-page.md](desk-page.md) → The look palette).
 Only in repo mode, where the option is drawn from the product's own code (the `variants` skill
 → Repo mode only: the profile). In brand or Carbon mode there is no product code to read:
@@ -716,11 +717,10 @@ one per step, with a PNG of the design or screen whenever the step has one:
 2. on intake: `intake-slack` step 5 (a bug) or Design requests step 3 (a design);
 3. after triage: "<the verdict's title, as on the Desk>: <one sentence>. Next: <the next step>.",
    with each decision in force it goes against by its `D-<n>`;
-4. options on the card (`feedback`): run `share-options` with the request's thread as its
-   destination when `slack_polls: enabled`; it opens the vote, closing 48 hours later
-   (`slack-polls` → Share), and posts each option with its PNG still (`design shot`). With
-   polls off, send "Options ready to vote on: <link>", one line per option (its name and when
-   it wins), then one reply per option with its PNG still;
+4. options on the card (`feedback`): "Options ready: <link>", one line per option (its name and
+   when it wins), then one reply per option with its PNG still (`design shot`), all in this
+   thread, by `reply` as above, with no item and no skill. No vote opens by itself: a vote is a
+   person's **Send to Slack… → Ask for a vote** (a proposal's too), worked as `slack_due`;
 5. live (`testing`): "Live prototype ready to try: <link>";
 6. handed off: "Sent to developers: <link>"; closed: one sentence why;
 7. a request that stood still: the reminder of [A request that stands still](#a-request-that-stands-still-stale_due).

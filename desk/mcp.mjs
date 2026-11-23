@@ -22,12 +22,12 @@ const TEXT = (what, max) => ({ type: "string", minLength: 1, maxLength: max, des
 export const TOOLS = [
   {
     name: "list_items",
-    description: "List the Desk's items, newest change first: id, kind, title, status, summary. Kinds: change (a merged or open pull request that changed the UI), request, issue, screen, element, week.",
+    description: "List the Desk's items, newest change first: id, kind, title, status, stage (a request before design: draft or proposal), summary. Kinds: change (a merged or open pull request that changed the UI), request, issue, screen, element, week.",
     inputSchema: { type: "object", properties: { kind: { type: "string", enum: ["change", "request", "issue", "screen", "element", "week"] }, status: { type: "string" }, limit: { type: "integer", minimum: 1, maximum: 200 } }, additionalProperties: false },
     call: async (a) => {
       const q = new URLSearchParams(Object.entries({ kind: a.kind, status: a.status }).filter(([, v]) => v));
       const { cards } = await desk("GET", `/cards${q.size ? `?${q}` : ""}`);
-      return cards.slice(0, a.limit || 50).map((c) => ({ id: c.id, kind: c.kind, title: c.title, status: c.status, summary: c.summary, updated: c.updated, type: c.type, triage: c.triage, prototype: c.prototype, open_threads: c.open_threads }));
+      return cards.slice(0, a.limit || 50).map((c) => ({ id: c.id, kind: c.kind, title: c.title, status: c.status, stage: c.stage || undefined, summary: c.summary, updated: c.updated, type: c.type, triage: c.triage, prototype: c.prototype, open_threads: c.open_threads }));
     },
   },
   {

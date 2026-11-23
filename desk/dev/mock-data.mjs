@@ -284,5 +284,11 @@ const p6 = pr("P-6", 815, "Agents: spend shown in the list", 12, { merged: false
     { asset: "A-limit-dialog", caption: "The weekly limit dialog", source: "instance" },
     { asset: "A-usage", caption: "The usage page", source: "pr" }] });
 
-export const CARDS = [r1, r2, r3, r4, r5, r6, r7, p1, p2, p3, p4, p5, p6];
+// Before design (docs/desk.md → Draft and Proposal): the mock's person's own draft, and Pat's
+// proposal; the page shows them to the roles that see them (?role=developer, ui-dev-owner, admin).
+const r8 = { ...r3, id: "R-8", title: "Agents list: fewer columns", stage: "draft", created: ago(90), updated: ago(20), by: ALICE,
+  request: { type: "idea", problem: "The agents list has more columns than anyone reads." }, threads: [], votes: {} };
+const r9 = { ...r3, id: "R-9", title: "A quieter usage chart", stage: "proposal", created: ago(300), updated: ago(15),
+  request: { type: "idea", problem: "The usage chart pulls the eye from the totals." }, threads: [], votes: {} };
+export const CARDS = [r1, r2, r3, r4, r5, r6, r7, r8, r9, p1, p2, p3, p4, p5, p6];
 export const ASSETS = A;
