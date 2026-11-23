@@ -3512,3 +3512,10 @@ test("a request back to draft is out of the dev team's bell again until it is pr
   assert.deepEqual(s.blindSpans(s.card(id), dana), [["2030-01-01T09:00:00Z", "2030-01-02T09:00:00Z"], ["2030-01-03T09:00:00Z", "2030-01-04T09:00:00Z"]]);
   assert.deepEqual(s.blindSpans(s.card(id), alice), [["2030-01-01T09:00:00Z", "9999"]], "a designer saw none of it yet");
 });
+
+test("a private ask about a request before design is only for whom it is there", () => {
+  const s = fresh();
+  const id = s.createRequest(bob, { problem: "Rows are too airy.", stage: "draft" }).card.id;
+  assert.throws(() => s.openPrivate(alice, { text: "What is this?", context: { card: id } }), new RegExp(`no card ${id}`));
+  assert.equal(s.openPrivate(bob, { text: "Is it ready?", context: { card: id } }).thread.card, id, "its author asks about it");
+});

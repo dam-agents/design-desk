@@ -2023,6 +2023,10 @@
     [["draw"], "Draw an issue: how it looks now and a sketch of how it could look"],
     [["size"], "Move a request, a change or an issue to For Developers, which a developer handles, or to For Designers"],
     [["skip"], "Approve or decide a request straight away, without a vote or a live prototype"],
+    // Before design (docs/desk.md → Draft and Proposal).
+    [["stage-propose"], "Propose their own draft to the dev team"],
+    [["stage-design"], "Send their own draft to design"],
+    [["stage-own"], "Move a proposal on: send it to design, keep it for developers, or send it back to its author"],
     [["build"], "Build live prototypes"],
     [["figma"], "Work with Figma", "figma"],
     [["share"], "Share options in Slack", "slack"],
@@ -3396,6 +3400,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       if (!r) return;
     } else await go();
     toast(STAGE_DONE[to]);
+    // Back to draft is its author's alone: whoever sent it back sees it no more, unless an admin.
+    if (to === "draft" && !filedIt(c) && S.me?.role !== "admin") { S.card = null; history.replaceState(null, "", location.pathname + location.search); await refreshList(); renderDetail(); return; }
     await refreshList(); await openCard(c.id);
   }
   // Simple mode's head of a request or a change (docs/desk-page.md → Simple mode): what it is,

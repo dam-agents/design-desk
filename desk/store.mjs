@@ -1172,7 +1172,8 @@ export class Store {
     if (starter !== null && !STARTERS.includes(starter)) throw bad(`starter must be one of ${STARTERS.join(", ")}`);
     const ctx = cleanContext(context, this.db.cards, this.db.decisions);
     // The issues and pull requests the item points at go with it, for the agent to read.
-    if (ctx.card) { const refs = refsOf(this.card(ctx.card)); if (refs.length) ctx.refs = refs; }
+    // A request before design that the asker may not see is not there to ask about (docs/desk.md → Draft and Proposal).
+    if (ctx.card) { const refs = refsOf(this.cardFor(ctx.card, who)); if (refs.length) ctx.refs = refs; }
     const mine = Object.values(this.db.threads).filter((t) => t.kind === "private" && t.owner === owner);
     if (mine.length >= LIMITS.threadsPerCard) throw bad("You have 300 private asks. Mark some as done first.");
     const id = this.next("thread", "T");

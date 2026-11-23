@@ -4602,3 +4602,14 @@ test("simple mode: a PM sees their own request once it is a proposal, with Propo
   await desk.click("details.sf > summary");
   assert.ok((await desk.$$eval('[data-simf^="states:"]', (xs) => xs.map((x) => x.dataset.simf.slice(7)))).includes("proposal"));
 }));
+
+test("Back to draft closes the page for whoever sent it back, who sees it no more", (t) => open(t, HEAD_DESK({ ...HEAD_ME, role: "ui-dev-owner", can: { ...HEAD_ME.can, request: true, "stage-propose": true, "stage-design": true, "stage-own": true } }, [{ ...drawn, ...STAGED[1] }]), async (desk) => {
+  await desk.waitForSelector("#list");
+  await desk.evaluate(() => { location.hash = "#R-21"; });
+  await desk.waitForSelector('#detail [data-stage="design"]');
+  await desk.click("#detail .sh-more > summary");
+  await desk.click('#detail [data-stage="draft"]');
+  await desk.waitForFunction(() => window.posts.some((p) => p.path.endsWith("/stage")));
+  await desk.waitForFunction(() => !document.querySelector("#detail .shead"));
+  assert.doesNotMatch(await desk.evaluate(() => location.hash), /R-21/, "no link left to a page they cannot open");
+}));
