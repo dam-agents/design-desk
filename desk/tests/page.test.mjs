@@ -179,10 +179,10 @@ test("✕ and Esc close a dialog; a form with something typed asks first", async
     await desk.waitForFunction(() => !document.getElementById("request-dialog").open, null, { timeout: 5000 }).catch(() => {});
     assert.equal(await open("request-dialog"), false, "and closes it once confirmed");
     await settled("/api/requests", 0, "nothing is sent");
-    // The confirmation dialog, through Close… on a request just sent: ✕ and Esc confirm nothing.
+    // The confirmation dialog, through Close… on a request just filed (a draft): ✕ and Esc confirm nothing.
     await desk.click("#new-request");
     await desk.fill("#request-dialog textarea[name=problem]", "Make the send button bigger");
-    await desk.locator("#request-dialog .actions button", { hasText: "Send" }).click();
+    await desk.locator("#request-dialog .actions button", { hasText: "Create draft" }).click();
     await desk.waitForFunction(() => calls.some((c) => c.path === "/api/cards/r1"));
     await desk.click('.next [data-act="close"]');
     await desk.click("#confirm-dialog .dlg-x");
