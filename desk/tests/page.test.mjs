@@ -175,6 +175,8 @@ test("✕ and Esc close a dialog; a form with something typed asks first", async
     assert.equal(await desk.inputValue("#request-dialog textarea[name=problem]"), "Half a request");
     await desk.click("#request-dialog .dlg-x");
     await desk.locator("#confirm-dialog .actions button", { hasText: "Close it" }).click();
+    // The form closes once the question has: wait for it rather than look at once (slower on CI).
+    await desk.waitForFunction(() => !document.getElementById("request-dialog").open, null, { timeout: 5000 }).catch(() => {});
     assert.equal(await open("request-dialog"), false, "and closes it once confirmed");
     await settled("/api/requests", 0, "nothing is sent");
     // The confirmation dialog, through Close… on a request just sent: ✕ and Esc confirm nothing.
