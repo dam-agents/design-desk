@@ -156,6 +156,8 @@ const addressesOf = (who) => [who?.email, ...(who?.emails || [])].map((e) => Str
 // The roles an admin may ask Design Desk to give a new person (docs/desk.md → People);
 // making an admin stays the operator's.
 export const ADDABLE_ROLES = ["designer", "pm", "ui-dev-owner", "developer"];
+// A GitHub username: letters, digits and single inner hyphens, 39 at most.
+const GITHUB_LOGIN = /^[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}$/;
 const EMAIL = /^[^\s@|`<>]+@[^\s@|`<>]+\.[^\s@|`<>]+$/;
 
 export const REQUEST_TYPES = ["idea", "bug", "feature", "adjustment", "proposal"];
@@ -321,7 +323,7 @@ function cleanCount(v, fallback = 3) {
 export const LETTERS = { change: "P", request: "R", issue: "I", screen: "S", element: "E", digest: "W", figma: "F", design: "G", item: "Q", poll: "V", council: "K", review: "U" };
 
 export function emptyDb() {
-  return { version: 1, seq: { card: 0, thread: 0, asset: 0, item: 0, decision: 0, poll: 0, council: 0 }, cards: {}, threads: {}, assets: {}, inbox: {}, decisions: {}, github: {}, gh_failed: {}, prefs: {}, reads: {}, seen: {}, noted: {}, opened: {}, drafts: {}, reviews: {} };
+  return { version: 1, seq: { card: 0, thread: 0, asset: 0, item: 0, decision: 0, poll: 0, council: 0 }, cards: {}, threads: {}, assets: {}, inbox: {}, decisions: {}, github: {}, gh_failed: {}, prefs: {}, reads: {}, seen: {}, noted: {}, opened: {}, drafts: {}, reviews: {}, logins: {} };
 }
 
 // The bell's events that fold into one row per item and day, with their count.
@@ -343,6 +345,7 @@ export class Store {
   }
 
   load() {
+    this.rev = (this.rev || 0) + 1;
     // A role stored before 1.59.0 as `lead` (a vote, a decision's author, who approved) reads as `admin`.
     this.db = existsSync(this.dbPath) ? JSON.parse(readFileSync(this.dbPath, "utf8"), (k, v) => (k === "role" && typeof v === "string" ? newRole(v) : v)) : emptyDb();
     // A store from before `opened` (who loaded the Desk, docs/desk.md → People) starts it from
@@ -390,6 +393,8 @@ export class Store {
     renameSync(tmp, this.dbPath);
     this.mtime = statSync(this.dbPath).mtimeMs;
     this.bytes = text.length;
+    // What was read from the store before this write is stale now (wroteIndex).
+    this.rev = (this.rev || 0) + 1;
     this.writeInbox();
   }
 
@@ -540,7 +545,7 @@ export class Store {
   // ---------- reads ----------
 
   listCards({ kind, status, viewer, who = null } = {}) {
-    const me = addressesOf(who);
+    const me = addressesOf(who), login = this.loginOf(who), wrote = this.wroteIndex(me);
     // One index of the pull requests sent requests are built by, for the whole list.
     let index = null;
     const builds = (c) => (c.kind === "change" ? this.buildsOf(c, (index ||= this.buildsIndex())) : null);
@@ -569,6 +574,8 @@ export class Store {
         for: ["request", "change", "issue"].includes(c.kind) ? this.forOf(c) : null,
         // Whether the viewer voted on it: Your turn reads it on a row (docs/desk-page.md → Pages and filters).
         voted_mine: c.kind === "request" && Object.values(c.votes || {}).some((x) => Object.keys(x || {}).some((e) => me.includes(e.toLowerCase()))),
+        // Whether it is the viewer's: simple mode's Mine (docs/desk-page.md → Simple mode).
+        mine: this.mineOf(c, me, login, wrote),
         group: c.group || null, thumb: c.screens?.[0]?.asset || c.design_part?.shot || null, state_count: (c.states || []).length, looks: (c.history || []).length,
         busy: Object.values(this.db.inbox).some((i) => i.card === c.id && i.state !== "done" && i.kind !== "question"),
         asks: (c.threads || []).some((t) => this.db.threads[t]?.kind === "asks" && this.db.threads[t]?.state === "open"),
@@ -1189,8 +1196,8 @@ export class Store {
   }
 
   // What a person chose for themselves on the page, kept by their email (docs/desk.md → The
-  // menu): the day or night mode (null follows their system) and simple mode (null: on for a
-  // viewer, off for every other role).
+  // menu): the day or night mode (null follows their system) and simple mode (null: on, for every
+  // role, while they made no choice).
   prefsOf(who) {
     const key = viewerKey(who);
     const p = (key && own(this.db.prefs, key)) || {};
@@ -1211,6 +1218,78 @@ export class Store {
     else Object.defineProperty(this.db.prefs, key, { value: { ...(next.theme ? { theme: next.theme } : {}), ...(next.simple !== null ? { simple: next.simple } : {}), ...(next.figma !== null ? { figma: next.figma } : {}), at: this.clock() }, enumerable: true, writable: true, configurable: true });
     this.save();
     return this.prefsOf(who);
+  }
+
+  // Each person's GitHub username, set by an admin on People (docs/desk.md → People): it ties a
+  // pull request's author to a person on the roster, for simple mode's Mine and "Changes requested
+  // · you". Kept by an address of theirs, the row's first when set; it grants nothing, so it applies at once.
+  // People's map: one username per roster row, by its first address, found by any of its addresses;
+  // an entry no row owns (someone who left the roster) is not shown.
+  logins(roster) {
+    const out = {};
+    for (const r of roster) { const x = this.loginEntry(r); if (x) out[r.email] = x[1].login; }
+    return out;
+  }
+
+  // A roster row's entry, by any of its addresses: [the address it is kept by, the entry].
+  loginEntry(row) {
+    for (const e of [row.email, ...(row.also || [])]) { const x = own(this.db.logins, e); if (x?.login) return [e, x]; }
+    return null;
+  }
+
+  // The username of whoever this is, by any of their addresses; null with none set.
+  loginOf(who) {
+    for (const e of addressesOf(who)) { const x = own(this.db.logins, e); if (x?.login) return x.login; }
+    return null;
+  }
+
+  // An admin sets a person's username, or clears it with an empty one. The person is a roster row
+  // by any of their addresses; one username belongs to one person on the roster. An entry no row
+  // owns any longer is dropped first, so a departed person's username is free again.
+  setLogin(who, email, login, roster) {
+    const row = personOf(roster, email);
+    if (!row) throw bad(`${String(email || "").slice(0, 120) || "that address"} is not on the Desk's people`);
+    const name = String(login ?? "").trim().replace(/^@/, "");
+    if (name && !GITHUB_LOGIN.test(name)) throw bad("a GitHub username is letters, digits and single hyphens, at most 39, not starting or ending with a hyphen");
+    for (const e of Object.keys(this.db.logins)) if (!personOf(roster, e)) delete this.db.logins[e];
+    const mine = new Set([row.email, ...(row.also || [])]);
+    const other = name && Object.entries(this.db.logins).find(([e, x]) => !mine.has(e) && String(x.login).toLowerCase() === name.toLowerCase());
+    if (other) throw bad(`${name} is already the GitHub username of ${personOf(roster, other[0]).email}`);
+    for (const e of mine) delete this.db.logins[e];
+    if (name) Object.defineProperty(this.db.logins, row.email, { value: { login: name, by: person(who), at: this.clock() }, enumerable: true, writable: true, configurable: true });
+    this.save();
+    return { email: row.email, login: name || null };
+  }
+
+  // Whether an item is the viewer's for simple mode's Mine (docs/desk-page.md → Simple mode): they
+  // filed it, wrote in one of its conversations they can read, sent a review or voted on it, or
+  // authored its pull request (their GitHub username, from People).
+  mineOf(c, me, login, wrote = this.wroteIndex(me)) {
+    if (!me.length && !login) return false;
+    const is = (by) => Boolean(by?.email) && !by.agent && me.includes(String(by.email).toLowerCase());
+    if (is(c.created_by) || is(c.origin)) return true;
+    if (login && c.kind === "change" && String(c.source?.author || "").toLowerCase() === login.toLowerCase()) return true;
+    if (Object.values(c.votes || {}).some((x) => Object.keys(x || {}).some((e) => me.includes(e.toLowerCase())))) return true;
+    return wrote.has(c.id);
+  }
+
+  // The items a person wrote in (a message in a conversation they can read; a private ask is not
+  // one) or sent a review on: one pass over the store, kept until its next write, so a list read
+  // and the poll after it do not read every message of every item again.
+  wroteIndex(me) {
+    if (!me.length) return new Set();
+    const key = [...me].sort().join(",");
+    if (this.wrote?.rev !== this.rev) this.wrote = { rev: this.rev, by: new Map() };
+    const kept = this.wrote.by.get(key);
+    if (kept) return kept;
+    const is = (by) => Boolean(by?.email) && !by.agent && me.includes(String(by.email).toLowerCase());
+    const out = new Set();
+    for (const t of Object.values(this.db.threads)) if (t?.card && t.kind !== "private" && !out.has(t.card) && (t.messages || []).some((m) => is(m.by))) out.add(t.card);
+    for (const r of Object.values(this.db.reviews)) if (r?.card && is(r.by)) out.add(r.card);
+    // A handful of people use one Desk; past 200 at once, start again rather than grow.
+    if (this.wrote.by.size >= 200) this.wrote.by.clear();
+    this.wrote.by.set(key, out);
+    return out;
   }
 
   // A person opened an item: from now on its title is not bold in their list, and only theirs

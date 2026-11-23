@@ -3561,3 +3561,61 @@ test("a request born a proposal keeps its proposal news for everyone once it ope
   assert.ok(events(dana).includes("options-drawn"), "everyone saw it as a proposal from the start");
   assert.ok(events(alice).includes("options-drawn"), "a designer too");
 });
+
+// A person's GitHub username, set by an admin on People (docs/desk.md → People), ties a pull
+// request's author to them; Mine is what a person filed, wrote in, voted on or authored.
+test("an admin sets a person's GitHub username; Mine follows it, and what they filed or wrote", () => {
+  const s = fresh(), admin = { email: "lead@example.com", role: "admin" };
+  const roster = rosterOf([{ email: "lead@example.com", role: "admin" }, { email: "bob@example.com, bob@home.example.com", role: "developer" }, { email: "alice@example.com", role: "designer" }]);
+  assert.deepEqual(s.setLogin(admin, "BOB@home.example.com", "@bob-dev", roster), { email: "bob@example.com", login: "bob-dev" }, "any of a row's addresses, kept by its first; a leading @ is dropped");
+  assert.equal(s.loginOf(bob), "bob-dev");
+  assert.equal(s.loginOf({ email: "bob@home.example.com", emails: ["bob@example.com", "bob@home.example.com"], role: "developer" }), "bob-dev", "by any address the person signs in with: the server gives their row's");
+  assert.deepEqual(s.logins(roster), { "bob@example.com": "bob-dev" });
+  assert.equal(s.db.logins["bob@example.com"].by.email, "lead@example.com", "who set it is kept");
+  assert.throws(() => s.setLogin(admin, "carol@example.com", "carol", roster), /not on the Desk's people/);
+  assert.throws(() => s.setLogin(admin, "alice@example.com", "-alice", roster), /GitHub username/);
+  assert.throws(() => s.setLogin(admin, "alice@example.com", "a--b", roster), /GitHub username/);
+  assert.throws(() => s.setLogin(admin, "alice@example.com", "x".repeat(40), roster), /GitHub username/);
+  assert.throws(() => s.setLogin(admin, "alice@example.com", "Bob-Dev", roster), /already the GitHub username of bob@example\.com/, "one username, one person");
+
+  const theirs = s.upsertCard({ kind: "change", title: "Bob's change", source: { repo: "acme/widgets", pr: 11, author: "Bob-Dev" } }).card;
+  const other = s.upsertCard({ kind: "change", title: "Someone else's", source: { repo: "acme/widgets", pr: 12, author: "zed" } }).card;
+  const filed = s.createRequest(alice, { title: "Alice's request", problem: "P." }).card;
+  const talked = s.upsertCard({ kind: "change", title: "Alice wrote here", source: { repo: "acme/widgets", pr: 13, author: "zed" } }).card;
+  s.openThread(talked.id, alice, { kind: "comment", text: "Looks off." });
+  const asked = s.upsertCard({ kind: "change", title: "A private ask only", source: { repo: "acme/widgets", pr: 14, author: "zed" } }).card;
+  s.openPrivate(alice, { text: "Just me.", context: { card: asked.id } });
+  const mine = (who) => s.listCards({ viewer: who.email, who }).filter((c) => c.mine).map((c) => c.id).sort();
+  assert.deepEqual(mine(bob), [theirs.id], "their pull request, by the username, in any case");
+  assert.deepEqual(mine(alice), [filed.id, talked.id].sort(), "what they filed and wrote in; a private ask is not on the list's Mine");
+  assert.equal(s.listCards({ viewer: bob.email, who: bob }).find((c) => c.id === other.id).mine, false);
+  // A review alone makes it theirs, and so does a vote alone; each shows on the next list read.
+  const reviewed = s.upsertCard({ kind: "change", title: "Reviewed only", source: { repo: "acme/widgets", pr: 15, author: "zed" } }).card;
+  assert.equal(mine(bob).includes(reviewed.id), false);
+  s.sendReview(reviewed.id, bob, { verdict: "comment", note: "Fine by me." });
+  assert.ok(mine(bob).includes(reviewed.id), "a review sent");
+  const voted = s.createRequest(alice, { title: "Voted only", problem: "P." }).card;
+  assert.equal(mine(bob).includes(voted.id), false);
+  s.db.cards[voted.id].votes = { v1: { "bob@example.com": { vote: "prefer", at: "2026-11-23T10:00:00Z" } } };
+  s.save();
+  assert.ok(mine(bob).includes(voted.id), "a vote given");
+
+  // A row whose first address changed still finds its entry, and setting it again keeps one entry.
+  const moved = rosterOf([{ email: "lead@example.com", role: "admin" }, { email: "bob@home.example.com, bob@example.com", role: "developer" }, { email: "alice@example.com", role: "designer" }]);
+  assert.deepEqual(s.logins(moved), { "bob@home.example.com": "bob-dev" }, "by any of the row's addresses");
+  assert.throws(() => s.setLogin(admin, "alice@example.com", "bob-dev", moved), /already the GitHub username of bob@home\.example\.com/);
+  s.setLogin(admin, "bob@home.example.com", "bob-dev", moved);
+  assert.deepEqual(Object.keys(s.db.logins), ["bob@home.example.com"], "one entry per person");
+  s.setLogin(admin, "bob@home.example.com", "bob-dev", roster);
+
+  assert.deepEqual(s.setLogin(admin, "bob@example.com", "", roster), { email: "bob@example.com", login: null }, "an empty one clears it");
+  assert.equal(s.loginOf(bob), null);
+  assert.equal(mine(bob).includes(theirs.id), false, "without the username, their pull request is no longer theirs");
+
+  // Someone who leaves the roster frees their username: People no longer shows it, and it can be given again.
+  s.setLogin(admin, "bob@example.com", "bob-dev", roster);
+  const left = rosterOf([{ email: "lead@example.com", role: "admin" }, { email: "alice@example.com", role: "designer" }]);
+  assert.deepEqual(s.logins(left), {});
+  assert.deepEqual(s.setLogin(admin, "alice@example.com", "bob-dev", left), { email: "alice@example.com", login: "bob-dev" });
+  assert.deepEqual(Object.keys(s.db.logins), ["alice@example.com"], "the departed entry is dropped");
+});

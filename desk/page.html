@@ -372,6 +372,7 @@
   .sf-opt .box { width: 14px; height: 14px; border: 1px solid var(--muted); border-radius: var(--r-sm); flex: none; display: grid; place-items: center; }
   .sf-opt[aria-checked="true"] .box { background: var(--accent); border-color: var(--accent); }
   .sf-opt[aria-checked="true"] .box::after { content: ""; width: 6px; height: 3px; border: solid var(--accent-ink); border-width: 0 0 2px 2px; transform: rotate(-45deg) translate(1px, -1px); }
+  .sf-opt .box.round { border-radius: 50%; } .sf-opt[aria-checked="true"] .box.round::after { width: 6px; height: 6px; border: 0; border-radius: 50%; background: var(--accent-ink); transform: none; }
   .sf-opt .n { margin-left: auto; color: var(--muted); font-size: var(--fs-meta); }
   .sf-reset { margin-top: 4px; }
   .prov { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; font-size: var(--fs-meta); color: var(--muted); }
@@ -938,6 +939,8 @@
   .people .who .chev { width: 14px; height: 14px; color: var(--muted); transition: transform .15s ease; flex: none; }
   .people .who[aria-expanded="true"] .chev { transform: rotate(90deg); }
   .people tr.open > td { border-bottom-color: transparent; background: var(--soft); }
+  .people .gh-login { width: 100%; max-width: 180px; padding: 4px 8px; font: inherit; font-size: var(--fs-meta); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-sm); }
+  .people .gh-login:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   .people tr.pact > td { padding: 0 12px 16px; background: var(--soft); }
   .pact-box { display: grid; grid-template-columns: minmax(180px, 1fr) auto; gap: 20px 28px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 20px; }
   .pact-head { display: flex; align-items: center; gap: 12px; min-width: 0; }
@@ -2562,16 +2565,20 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // and a request its buttons that build a live prototype and an option its Why it looks like
   // this strip (the design workspace keeps it). A link to anything in them still opens it: a D-3 in a request opens the decision.
   const SIMPLE_HIDES = ["designs", "issues", "product", "people"];
+  // The tabs simple mode hides from this viewer: none from an admin, for now, who keeps every page
+  // (docs/desk-page.md → Simple mode).
+  const tabsHidden = () => (simple() && S.me?.role !== "admin" ? SIMPLE_HIDES : []);
   // A choice this browser has not saved yet wins (desk-simple-unsaved:<email>), then the person's
-  // saved one; with neither, a viewer starts in simple mode and every other role in full mode.
+  // saved one; with neither, simple mode, for every role.
   const simple = () => {
     const me = myKey();
     if (me && store.get(`desk-simple-unsaved:${me}`)) return store.get(`desk-simple:${me}`) === "on";
-    return typeof S.me?.simple === "boolean" ? S.me.simple : S.me?.role === "guest";
+    // With no choice of their own, every role starts in simple mode (docs/desk-page.md → Simple mode).
+    return typeof S.me?.simple === "boolean" ? S.me.simple : Boolean(S.me);
   };
   // Nor does it offer to build a live prototype; one already up still shows.
   // Nor a way to Designs: a link to a design still opens it.
-  const seesDesigns = () => can("designs") && !simple();
+  const seesDesigns = () => can("designs") && !tabsHidden().includes("designs");
   const canBuild = () => can("build") && !simple();
   // Help text only full mode shows: a string, or a list's items (spread).
   const full = (x) => simple() ? (typeof x === "string" ? "" : []) : x;
@@ -2579,7 +2586,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // presentation and the live prototype, and the actions that lead there. A tab intro's line
   // that names one of them is left out in simple mode.
   const SIMPLE_ACTS = ["queue", "build"];
-  const simpleNames = () => new RegExp(`\\b(?:${SIMPLE_HIDES.map((k) => TABS[k]).join("|")})\\b|\\b(?:[Pp]resent(?:ation|ed)?|[Ll]ive prototype|[Bb]uild it live)\\b`);
+  const simpleNames = () => new RegExp(`${tabsHidden().length ? `\\b(?:${tabsHidden().map((k) => TABS[k]).join("|")})\\b|` : ""}\\b(?:[Pp]resent(?:ation|ed)?|[Ll]ive prototype|[Bb]uild it live)\\b`);
   const hiddenInSimple = (words, act) => simple() && (SIMPLE_ACTS.includes(act) || simpleNames().test(words));
 
   // Issue and pull request numbers link to their source (docs/desk.md → Writing on the Desk):
@@ -3159,9 +3166,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // Simple mode: one entry for requests and pull request changes, current on either tab; its count
     // the items in the reviews the viewer's default filter shows (Design review, Dev review or both).
     const reviews = simple() ? SIM_DEFAULT().states.filter((k) => ["proposal", "open"].includes(k)) : [];
-    const opens = reviews.length ? simpleCards({ states: reviews, kinds: SIM_KINDS.map(([k]) => k) }).length : 0;
+    const opens = reviews.length ? simpleCards({ states: reviews, kinds: SIM_KINDS.map(([k]) => k), who: "all" }).length : 0;
     const one = `<button data-tab="requests" aria-current="${S.tab === "requests" || S.tab === "new"}" class="main">Requests &amp; PRs${opens ? `<span class="count" title="${opens} in ${esc(reviews.map((k) => SIM_PILL[k]).join(" or "))}">${opens}</span>` : ""}</button>`;
-    const html = simple() ? one : [[["requests", open.length, asks && plural(asks, "request waits", "requests wait") + " for an answer"]], ...designs, [["new", unseen], ["issues", openIssues]], [["product"], ["people"]]]
+    // An admin keeps every page in simple mode, for now; Requests & PRs stands for Requests and PR Changes.
+    const html = simple() ? (tabsHidden().length ? one : [one, ...[...designs, [["issues", openIssues]], [["product"], ["people"]]].map((group) => group.map(tab).join(""))].join(sep)) : [[["requests", open.length, asks && plural(asks, "request waits", "requests wait") + " for an answer"]], ...designs, [["new", unseen], ["issues", openIssues]], [["product"], ["people"]]]
       .map((group) => group.map(tab).join("")).join(sep);
     // The poll redraws the menu every few seconds: an unchanged menu is left as it is, so a
     // tooltip stays open and keyboard focus stays where it was.
@@ -3430,20 +3438,27 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // The filter: states and kinds, any of each; kept in this browser (desk-simFilter). By default
   // Design review for a designer, Draft and Dev review for a developer or a UI dev owner, every
   // state before In dev for anyone else; a kept state they cannot see is left out.
-  const SIM_DEFAULT = () => ({ states: S.me?.role === "designer" ? ["open"] : simStates().map(([k]) => k).filter((k) => !["dev", "closed", ...(DEVELOPERS.includes(S.me?.role) ? ["open"] : [])].includes(k)), kinds: ["request", "change"] });
+  // A PM follows what they filed through to shipped: every state. Whose: everyone's, for every role.
+  const SIM_DEFAULT = () => ({ states: S.me?.role === "designer" ? ["open"] : simStates().map(([k]) => k).filter((k) => S.me?.role === "pm" || !["dev", "closed", ...(DEVELOPERS.includes(S.me?.role) ? ["open"] : [])].includes(k)), kinds: ["request", "change"], who: "all" });
+  // Whose items the list shows: everyone's, or the viewer's own. The server alone says which are
+  // theirs (the list row's `mine`: filed, written in, reviewed, voted on, or their pull request's, by
+  // the GitHub username People keeps); the page has no rule of its own.
+  const SIM_WHO = [["all", "Everyone"], ["mine", "Mine"]];
+  const mineIs = (c) => c.mine === true;
   S.simFilter = (() => {
     try {
       const v = JSON.parse(store.get("desk-simFilter") || "null"), ok = (xs, all) => Array.isArray(xs) && xs.filter((x) => all.some(([k]) => k === x));
       const states = v && ok(v.states, SIM_ALL), kinds = v && ok(v.kinds, SIM_KINDS);
-      return states?.length && kinds?.length ? { states, kinds } : null;
+      return states?.length && kinds?.length ? { states, kinds, who: SIM_WHO.some(([k]) => k === v.who) ? v.who : "all" } : null;
     } catch { return null; }
   })();
-  const simFilter = () => { const f = S.simFilter, states = (f?.states || []).filter(seesStage); return f && states.length ? { states, kinds: f.kinds } : SIM_DEFAULT(); };
+  const simFilter = () => { const f = S.simFilter, states = (f?.states || []).filter(seesStage); return f && states.length ? { states, kinds: f.kinds, who: f.who || "all" } : SIM_DEFAULT(); };
   const simpleList = () => simple() && (S.tab === "requests" || S.tab === "new") && !presenting();
   const lastChange = (c) => String(c.updated || dateOf(c));
-  const simpleCards = (f = simFilter()) => S.cards.map((c) => [c, simpleState(c)])
-    .filter(([c, s]) => s && f.states.includes(s.state) && f.kinds.includes(c.kind)).map(([c]) => c)
-    .sort((a, b) => lastChange(b).localeCompare(lastChange(a)));
+  // A filter given without `who` takes the list's own (the overview's counts follow Mine).
+  const simpleCards = (f = simFilter()) => { const who = f.who || simFilter().who; return S.cards.map((c) => [c, simpleState(c)])
+    .filter(([c, s]) => s && f.states.includes(s.state) && f.kinds.includes(c.kind) && (who !== "mine" || mineIs(c))).map(([c]) => c)
+    .sort((a, b) => lastChange(b).localeCompare(lastChange(a))); };
   // A row's date: Today, Yesterday or the day, with the time; the year only when it is not this year.
   const sWhen = (iso) => {
     if (!iso) return "";
@@ -3454,8 +3469,12 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // Who makes the next version after a review asked for changes, in words (docs/desk.md → Reviews).
   const RESP = { developer: ["developer", "Changes requested: the developer makes the next version; it is Open again when new commits arrive"],
     "design-desk": ["Design Desk", "Changes requested: Design Desk draws the next version"] };
-  const respLine = (c) => (c.responsible && RESP[c.responsible.who] ? `<p class="sh-resp" title="${esc(RESP[c.responsible.who][1])}">Changes requested · ${esc(RESP[c.responsible.who][0])}</p>` : "");
-  const simTip = (c, k) => (c.responsible && RESP[c.responsible.who] ? RESP[c.responsible.who][1] : SIM_TIP[k]);
+  // The pull request's author reads it as theirs: "you", by the GitHub username People keeps.
+  const myPr = (c) => c.kind === "change" && Boolean(S.me?.github) && String(c.source?.author || "").toLowerCase() === S.me.github.toLowerCase();
+  const respOf = (c) => (!c.responsible || !RESP[c.responsible.who] ? null
+    : c.responsible.who === "developer" && myPr(c) ? ["you", "Changes requested: your turn. Push the next version; it is in review again when new commits arrive"] : RESP[c.responsible.who]);
+  const respLine = (c) => (respOf(c) ? `<p class="sh-resp" title="${esc(respOf(c)[1])}">Changes requested · ${esc(respOf(c)[0])}</p>` : "");
+  const simTip = (c, k) => (respOf(c) ? respOf(c)[1] : SIM_TIP[k]);
   const simplePill = (c) => { const s = simpleState(c); const k = s?.pill || s?.state; return k ? `<span class="spill" data-s="${k}" title="${esc(simTip(c, k))}">${SIM_PILL[k]}</span>` : ""; };
   const KIND_ICON = { request: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg>`,
     change: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M6 8.5v7M18 15.5V9a3 3 0 0 0-3-3h-4"/><path d="m13 4-2 2 2 2"/></svg>` };
@@ -3467,19 +3486,21 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // One filter for the list: a button whose menu ticks any of each group, its counts by what the
   // other group lets through; beside it only what narrows the list, each a chip that drops it.
   function simpleFilterBar() {
-    const f = simFilter(), n = (states, kinds) => simpleCards({ states, kinds }).length;
+    const f = simFilter(), n = (states, kinds, who = f.who) => simpleCards({ states, kinds, who }).length;
     // A state's row also has Only: that state alone, the kinds as they are.
     const only = (group, k, label) => group === "states" ? `<button class="sf-only" data-simf-only="${k}" data-simf-keep title="Show only ${esc(label)}">Only</button>` : "";
     const opt = (group, k, label, on, count) => `<div class="sf-row"><button class="sf-opt" data-keep data-simf="${group}:${k}" role="menuitemcheckbox" aria-checked="${on}"${on && f[group].length === 1 ? ` disabled title="Keep at least one"` : ""}><span class="box" aria-hidden="true"></span><span>${label}</span><span class="n">${count}</span></button>${only(group, k, label)}</div>`;
     const states = simStates().map(([k, l]) => opt("states", k, l, f.states.includes(k), n([k], f.kinds))).join("");
     const kinds = SIM_KINDS.map(([k, l]) => opt("kinds", k, l, f.kinds.includes(k), n(f.states, [k]))).join("");
+    // Whose: one of the two, a radio pair.
+    const whose = SIM_WHO.map(([k, l]) => `<div class="sf-row"><button class="sf-opt" data-keep data-simf="who:${k}" role="menuitemradio" aria-checked="${f.who === k}"><span class="box round" aria-hidden="true"></span><span>${l}</span><span class="n">${n(f.states, f.kinds, k)}</span></button></div>`).join("");
     const narrowed = JSON.stringify(f) !== JSON.stringify(SIM_DEFAULT());
     // The button is its icon alone, with a dot while the filter hides anything (not every state and
     // kind ticked); its tooltip and its name say what the list shows.
-    const on = f.states.length < simStates().length || f.kinds.length < SIM_KINDS.length;
-    const shown = on ? [...simStates().filter(([k]) => f.states.includes(k)).map(([, l]) => l), ...(f.kinds.length < SIM_KINDS.length ? SIM_KINDS.filter(([k]) => f.kinds.includes(k)).map(([, l]) => l) : [])].join(", ") : "everything";
+    const on = f.states.length < simStates().length || f.kinds.length < SIM_KINDS.length || f.who === "mine";
+    const shown = on ? [...(f.who === "mine" ? ["mine"] : []), ...simStates().filter(([k]) => f.states.includes(k)).map(([, l]) => l), ...(f.kinds.length < SIM_KINDS.length ? SIM_KINDS.filter(([k]) => f.kinds.includes(k)).map(([, l]) => l) : [])].join(", ") : "everything";
     return `<div class="listhead"><div class="filterbar simfilter"><details class="more sf"${S.simMenu ? " open" : ""}><summary class="btn sf-btn${on ? " filtered" : ""}" aria-haspopup="menu" aria-label="Filter the list. Shown: ${esc(shown)}" title="Filter the list. Shown: ${esc(shown)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4-2v-4z"/></svg></summary>
-      <div class="menu" role="menu"><div class="sf-h" role="presentation">State</div>${states}<div class="sf-h" role="presentation">Kind</div>${kinds}${narrowed ? `<button class="btn small sf-reset" role="menuitem" data-simf-reset>Reset to default</button>` : ""}</div></details></div></div>`;
+      <div class="menu" role="menu"><div class="sf-h" role="presentation">State</div>${states}<div class="sf-h" role="presentation">Kind</div>${kinds}<div class="sf-h" role="presentation">Whose</div>${whose}${narrowed ? `<button class="btn small sf-reset" role="menuitem" data-simf-reset>Reset to default</button>` : ""}</div></details></div></div>`;
   }
   // A person by their name on the roster, else the part of their address before the @, never the whole address.
   const shortName = (e, name = "") => !e ? name : isMe(e) ? "you" : S.me?.names?.[String(e).toLowerCase()] || name || (String(e).includes("@") ? String(e).split("@")[0] : String(e));
@@ -3495,6 +3516,12 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const from = c.kind === "change" || p.kind === "desk" ? "" : String(p.src || "").replace(/<[^>]+>/g, "").replace(/(&nbsp;|\s)*↗/g, "").trim();
     return [who && `by ${who}`, from && `from ${from}`].filter(Boolean).join(", ");
   }
+  // A request sent to developers moves from In dev to Closed · Shipped when it is marked built: the
+  // store does it when a merged change that builds it arrives; this is the fallback by hand, and its
+  // undo (docs/desk-page.md → Simple mode).
+  const shipMove = (c) => (c.kind !== "request" || c.status !== "handed-off" || !can("built") || c.send ? ""
+    : c.built ? `<button class="btn" data-built="0" title="Back to In dev: it is not built yet">Not shipped yet</button>`
+    : `<button class="btn" data-built="1" title="It is built and shipped: it moves to Closed · Shipped, and its designer sees it">Mark as shipped</button>`);
   // Who closes a request before design: its author or an admin a draft, the UI dev owner a proposal.
   const closesStaged = (c) => (preDesign(c) === "draft" ? filedIt(c) || S.me?.role === "admin" : preDesign(c) === "proposal" && can("stage-own"));
   // A request's moves before design, by its stage and the viewer: [the head's first button, the ones under ⋯].
@@ -3570,12 +3597,12 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       : changes + approveReq();
     const url = change ? src.url : c.spec?.issue_url || c.spec?.pr_url || "";
     const items = [devMoves.slice(2).join(""), change ? (can("follow-up") && !hasRequest(c) ? btn("data-adjust", "Turn into a design request") : "") + (handledAt(c) && mayHandle(c) ? btn('data-handle="0"', "Undo approval") : "")
-        : closed(c) ? ((c.status === "handed-off" ? S.me?.role === "admin" : can("reopen") || closesStaged(c)) ? btn('data-act="reopen"', "Reopen") : "")
+        : closed(c) ? shipMove(c) + ((c.status === "handed-off" ? S.me?.role === "admin" : can("reopen") || closesStaged(c)) ? btn('data-act="reopen"', "Reopen") : "")
         : (stage && stageMain.includes("approve-dev") ? changes : "") + stageMore + ((preDesign(c) ? closesStaged(c) : can("close") || can("skip")) ? btn('data-act="close"', "Close…") : ""),
       url ? `<a class="btn" href="${safeUrl(url)}" target="_blank" rel="noopener noreferrer">Open on GitHub ↗</a>` : ""].join("");
     const more = items ? `<details class="more sh-more"><summary class="btn" aria-label="More" title="More">⋯</summary><div class="menu">${items}</div></details>` : "";
     return `<div class="shead"><div class="sh-main"><h2>${kindIcon(c)}<span class="sh-t" title="${esc(sTitle(c))}">${txt(sTitle(c))}</span>${num(c)}${titleLink(c)}</h2>
-      <div class="sh-line"><span class="spill" data-s="${k}" title="${esc(simTip(c, k))}">${SIM_PILL[k]}</span>${bug}${c.responsible && RESP[c.responsible.who] ? `<span class="sh-resp" title="${esc(RESP[c.responsible.who][1])}">Changes requested · ${esc(RESP[c.responsible.who][0])}</span>` : ""}${work}${facts ? `<span class="sh-facts">${facts}</span>` : ""}</div>${after ? `<div class="sh-after">${after}</div>` : ""}</div>
+      <div class="sh-line"><span class="spill" data-s="${k}" title="${esc(simTip(c, k))}">${SIM_PILL[k]}</span>${bug}${respOf(c) ? `<span class="sh-resp" title="${esc(respOf(c)[1])}">Changes requested · ${esc(respOf(c)[0])}</span>` : ""}${work}${facts ? `<span class="sh-facts">${facts}</span>` : ""}</div>${after ? `<div class="sh-after">${after}</div>` : ""}</div>
       <div class="sh-acts">${moves}${more}</div></div>`;
   }
   // What Design Desk found: what it checked the item against — the decisions in force, what a
@@ -3945,7 +3972,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const head = S.tab === "new" ? pages("chgFor", [chgTab("designers", "For Designers"), chgTab("developers", "For Developers")], (k) => chgFor() === k)
       : S.tab === "issues" ? pages("issFor", [issTab("designers", "For Designers"), issTab("developers", "For Developers")], (k) => issFor() === k)
       : S.tab === "requests" ? pages("reqFor", [forTab("designers", "For Designers"), forTab("developers", "For Developers"), ...full([["presentation", "For presentation", S.agenda.length]])], (k) => k === "presentation" ? !reqList : reqList && reqFor() === k)
-      : S.tab === "product" && !simple() ? pages("productFilter", [["screens", "Screens"], ["elements", "Elements"], ["decisions", "Decisions"], ...(kitOn() ? [["kit", "Kit"]] : []), ...(figmaOn() ? [["differences", "Differences"]] : []), ["history", "History"]], (k) => S.productFilter === k, add) : "";
+      : S.tab === "product" && !tabsHidden().includes("product") ? pages("productFilter", [["screens", "Screens"], ["elements", "Elements"], ["decisions", "Decisions"], ...(kitOn() ? [["kit", "Kit"]] : []), ...(figmaOn() ? [["differences", "Differences"]] : []), ["history", "History"]], (k) => S.productFilter === k, add) : "";
     const filter = S.tab === "new" ? seg("newFilter", [["open", "Open", newCards("open").length], ["handled", "Handled", newCards("handled").length], ["auto", "Auto handled", newCards("auto").length], ["designer", "Needs a designer", newCards("designer").length, `<span class="ai-tag" title="Design Desk judges which changes a designer should see">AI</span>`]])
       : S.tab === "requests" && reqList ? seg("reqFilter", [["turn", "Your turn", requestCards("turn").length], ["unread", "Unread", requestCards("unread").length], ["open", "Open", requestCards("open").length], ["closed", "Closed", requestCards("closed").length]])
       : S.tab === "designs" ? seg("designFilter", [["todo", "To build", designCards("todo").length], ["done", "Done", designCards("done").length]])
@@ -3969,7 +3996,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         : (S.productFilter === "elements" ? "No elements yet. Design Desk draws the product's main parts after it is set up; they appear here within a day."
         : "No screens yet. Design Desk maps the product's screens on its own copy of the product; they appear here once it runs.") + (can("add") ? " Missing one? Press + Add." : ""),
     }[S.tab];
-    const simpleEmpty = () => { const f = simFilter().states; return f.length === 1 && f[0] === "draft" ? "You have no drafts." : f.length === 1 && f[0] === "proposal" ? "Nothing waits for the dev team." :  f.length === 1 && f[0] === "open" ? "Nothing needs a design decision right now." : f.length === 1 && f[0] === "dev" ? "Nothing is being built right now." : f.length === 1 && f[0] === "closed" ? "Nothing is closed yet." : "Nothing here."; };
+    const simpleEmpty = () => { if (simFilter().who === "mine") return "Nothing of yours here. Mine is what you filed, wrote in, reviewed or voted on, and your pull requests."; const f = simFilter().states; return f.length === 1 && f[0] === "draft" ? "You have no drafts." : f.length === 1 && f[0] === "proposal" ? "Nothing waits for the dev team." :  f.length === 1 && f[0] === "open" ? "Nothing needs a design decision right now." : f.length === 1 && f[0] === "dev" ? "Nothing is being built right now." : f.length === 1 && f[0] === "closed" ? "Nothing is closed yet." : "Nothing here."; };
     if (!cards.length) { list.innerHTML = filters + `<div class="empty">${esc(simpleList() ? simpleEmpty() : empty)}</div>`; return; }
     // Every list says where each item came from, without a description, Product included.
     const sourced = S.tab === "new" || S.tab === "requests" || S.tab === "designs" || S.tab === "issues" || S.tab === "product";
@@ -4036,6 +4063,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       <div class="pact-spark"><svg viewBox="0 0 ${12 * (bw + gap) - gap} ${h}" role="img" aria-label="${total} things in the last 12 weeks">${bars}</svg><div class="k">${total ? `${total} in the last 12 weeks` : "Quiet the last 12 weeks"}</div></div>
       <div class="pact-stats">${stats}</div></div>`;
   }
+  // A person's GitHub username: it ties a pull request's author to them, for simple mode's Mine and
+  // "Changes requested · you". An admin types it here and it is saved on change (docs/desk.md → People).
+  const ghCell = (x) => { const v = S.people?.github?.[x.email] || "";
+    return can("people") ? `<input class="gh-login" data-gh-login="${esc(x.email)}" value="${esc(v)}" placeholder="username" maxlength="40" spellcheck="false" autocomplete="off" aria-label="GitHub username of ${esc(x.name || x.email)}" title="Their GitHub username: their pull requests count as theirs" />`
+      : v ? `<span class="hint">@${esc(v)}</span>` : ""; };
   function renderPeople() {
     const P = S.people;
     if (!P) return `<div class="empty">Loading…</div>`;
@@ -4046,7 +4078,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const rows = people.map((x) => {
       const open = S.personOpen === x.email;
       const who = `<button class="who" data-person-open="${esc(x.email)}" aria-expanded="${open}" title="${open ? "Hide" : "Show"} what they did on the Desk"><svg class="chev" viewBox="0 0 16 16" aria-hidden="true"><path d="m6 4 4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>${x.name ? `<b>${esc(x.name)}</b> ` : ""}${esc(x.email)}</span></button>`;
-      return `<tr class="${open ? "open" : ""}"><td>${who}${(x.also || []).length ? ` <span class="hint">also ${esc(x.also.join(", "))}</span>` : ""}${isMe(x.email) ? ` <span class="chip" title="This is you">you</span>` : ""}</td><td>${roleIcon(x.role)}${esc(roleLabel(x.role))}</td></tr>${open ? `<tr class="pact"><td colspan="2">${personActivity(x, P.activity?.[x.email])}</td></tr>` : ""}`;
+      return `<tr class="${open ? "open" : ""}"><td>${who}${(x.also || []).length ? ` <span class="hint">also ${esc(x.also.join(", "))}</span>` : ""}${isMe(x.email) ? ` <span class="chip" title="This is you">you</span>` : ""}</td><td>${roleIcon(x.role)}${esc(roleLabel(x.role))}</td><td>${ghCell(x)}</td></tr>${open ? `<tr class="pact"><td colspan="3">${personActivity(x, P.activity?.[x.email])}</td></tr>` : ""}`;
     }).join("");
     const shown = order.filter((r) => P.roles[r]);
     const mayAll = Object.fromEntries(shown.map((r) => [r, ABILITIES.filter(([acts, , on]) => (!on || S.me?.[on]) && acts.every((a) => P.roles[r][a]))]));
@@ -4081,7 +4113,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     }).join("");
     return `<h2>People and roles</h2>
       <div class="sec-head"><h3>People</h3>${can("people") ? `<button class="btn small primary" data-add-person style="margin-left:auto">+ Add a person</button>` : ""}</div>
-      ${rows ? `<table class="people"><thead><tr><th>Email</th><th>Role</th></tr></thead><tbody>${rows}</tbody></table>` : `<div class="empty">Nobody has a role yet.</div>`}
+      ${rows ? `<table class="people"><thead><tr><th>Email</th><th>Role</th><th>GitHub</th></tr></thead><tbody>${rows}</tbody></table>` : `<div class="empty">Nobody has a role yet.</div>`}
       <p class="sub">The Desk's owner is always an admin. Anyone else the Desk is shared with is a viewer. To get another role${can("people") ? "" : " or to add someone"}, ask ${esc(contact())}.</p>
       ${asked ? `<h3>Asked to add</h3><table class="people"><thead><tr><th>Email</th><th>Role</th><th>Where it stands</th></tr></thead><tbody>${asked}</tbody></table>` : ""}
       <h3>Roles</h3>
@@ -8505,14 +8537,16 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (ds.simf || ds.simfOnly || "simfReset" in ds) {
       const f = simFilter(), all = { states: simStates(), kinds: SIM_KINDS };
       if ("simfReset" in ds) { setSimFilter(SIM_DEFAULT()); S.simMenu = false; }
-      else if (ds.simfOnly) { setSimFilter({ states: [ds.simfOnly], kinds: "simfKeep" in ds ? f.kinds : SIM_KINDS.map(([k]) => k) }); S.simMenu = false; }
+      else if (ds.simfOnly) { setSimFilter({ states: [ds.simfOnly], kinds: "simfKeep" in ds ? f.kinds : SIM_KINDS.map(([k]) => k), who: f.who }); S.simMenu = false; }
+      else if (ds.simf.startsWith("who:")) setSimFilter({ ...f, who: ds.simf.slice(4) });
       else {
         const [g, k] = ds.simf.split(":"), on = f[g].includes(k);
         const next = on ? f[g].filter((x) => x !== k) : [...f[g], k];
         if (!next.length) return;
         setSimFilter({ ...f, [g]: all[g].map(([x]) => x).filter((x) => next.includes(x)) });
       }
-      renderList(); renderNav(); return;
+      // With nothing open, the overview's counts follow Mine: it is drawn again.
+      renderList(); renderNav(); if (!S.card && !S.decision) renderDetail(); return;
     }
     if (ds.filter) {
       // Presentation sits beside For Designers and For Developers; either of those leaves it.
@@ -9111,6 +9145,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
 
   document.addEventListener("input", (e) => { if (e.target.dataset?.plColor) lookSet(e.target.dataset.plColor, e.target.value); });
   document.addEventListener("change", (e) => {
+    if (e.target.dataset?.ghLogin !== undefined) { saveLogin(e.target); return; }
     if (e.target.dataset?.plColor) { lookSet(e.target.dataset.plColor, e.target.value); e.target.blur(); renderWorkspace(); return; }
     if ("outline" in e.target.dataset) { showOutline(e.target.checked); return; }
     // The final check keeps "Ask me first" across its redraws (a step to a state, a new version).
@@ -9339,6 +9374,17 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     await openDecision(r.decision.id);
   }));
 
+  // An admin's GitHub username for a person on People: saved as typed, cleared when emptied.
+  const saveLogin = guard(async (input) => {
+    const email = input.dataset.ghLogin, login = input.value.trim().replace(/^@/, "");
+    try { const r = await api("POST", "/api/people/github", { email, login });
+      S.people.github = { ...(S.people.github || {}), [r.email]: r.login || undefined };
+      if (!r.login) delete S.people.github[r.email];
+      if (isMe(email)) S.me.github = r.login || null;
+      toast(r.login ? `Saved: @${r.login}.` : "GitHub username removed."); }
+    catch (err) { input.value = S.people?.github?.[email] || ""; throw err; }
+  });
+
   // ---------- the Add a person dialog ----------
   function openPersonDialog() {
     $("#person-form").reset();
@@ -9439,7 +9485,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // An open decision stays: it came from a link.
   function leaveHidden() {
     if (!simple()) return;
-    if (SIMPLE_HIDES.includes(S.tab) && !S.decision) { S.tab = "requests"; S.card = null; S.decision = null; }
+    if (tabsHidden().includes(S.tab) && !S.decision) { S.tab = "requests"; S.card = null; S.decision = null; }
     if (S.reqFilter === "presentation") S.reqFilter = "open";
     if (S.newFilter === "designer") S.newFilter = "open";
   }
@@ -9529,8 +9575,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // Simple mode leaves out what lives on the pages it hides: Issues' issues, Product's screens,
   // elements and decisions (docs/desk-page.md → Notifications); the count counts what is left.
   const NOTE_HIDDEN = ["issue", "screen", "element", "decision"];
-  const noteShown = (x) => !(simple() && NOTE_HIDDEN.includes(x.kind));
-  const noteUnread = () => simple() ? S.notes.items.filter((x) => noteShown(x) && x.for_you && !x.read).length : S.notes.unread;
+  const noteShown = (x) => !(tabsHidden().length && NOTE_HIDDEN.includes(x.kind));
+  // Only while simple mode hides some notifications does the count come from the list fetched; an
+  // admin's, who sees them all, is the server's, as in full mode.
+  const noteUnread = () => tabsHidden().length ? S.notes.items.filter((x) => noteShown(x) && x.for_you && !x.read).length : S.notes.unread;
   // For you leads: the bell counts only what is for you (docs/desk-page.md → Notifications).
   // `clicked`: the rows this person clicked here, read at once, whatever a poll sent before the
   // server had their click.
