@@ -4922,6 +4922,7 @@ for (const simple of [true, false]) {
     await desk.click('#detail .chg-same [data-chg-open="S-3"]');
     await desk.waitForFunction(() => document.querySelector("#element-dialog .elbar h2")?.textContent === "The settings page");
     assert.match(await desk.textContent("#element-dialog .elbar .sub"), /Looks the same/);
+    assert.equal(await desk.locator("#element-dialog [data-draft-ok]").count(), 0, "nothing to mark: no Looks good");
     assert.equal(await desk.locator("#element-dialog .pl-v").count(), 0, "no steps: it is alone");
     await desk.click("#element-dialog [data-el-close]");
     // With no screens: how they come.
@@ -4967,6 +4968,15 @@ test("a change's tile marks how far the viewer got; Looks good moves on, the las
   await desk.waitForFunction(() => !document.querySelector("#element-dialog[open]"));
 }));
 
+test("on a narrow screen Submit feedback's panel spans it and hangs off no edge", (t) => open(t, REVIEW_DESK(HEAD_ME, [drawn]), async (desk) => {
+  await desk.setViewportSize({ width: 360, height: 800 });
+  await desk.evaluate(() => { location.hash = "#R-5"; });
+  await desk.waitForSelector('#detail [data-fb="head"]');
+  await openFeedback(desk);
+  const [l, r] = await desk.$eval(".fb-pop", (p) => { const b = p.getBoundingClientRect(); return [b.left, b.right]; });
+  assert.ok(l >= 0 && r <= 360, `the panel stays on the screen (${l} to ${r} of 360)`);
+}));
+
 test("the last Looks good with no note opens Submit feedback with Approve picked", (t) => open(t, CHANGES_DESK(HEAD_ME), async (desk) => {
   await desk.waitForSelector("#list");
   await desk.evaluate(() => { location.hash = "#P-7"; });
@@ -4982,13 +4992,15 @@ test("the last Looks good with no note opens Submit feedback with Approve picked
   assert.equal(await desk.getAttribute('#element-dialog [data-fb="dlg"]', "data-v"), "ok", "green: it approves");
 }));
 
-test("sent feedback shows its Looks good; the mark holds on this version; a conversation about a change opens it", (t) => open(t, CHANGES_DESK(HEAD_ME).replace(JSON.stringify(threeChanges), JSON.stringify({ ...threeChanges, looks_good: ["S-1"],
+test("sent feedback shows its Looks good; the mark holds on this version; a change the developer owes is Changes asked; a conversation about a change opens it", (t) => open(t, CHANGES_DESK(HEAD_ME).replace(JSON.stringify(threeChanges), JSON.stringify({ ...threeChanges, looks_good: ["S-1"],
+  responsible: { who: "developer", review: "U-3", since: "2026-11-18T10:00:00Z" },
   reviews: [{ id: "U-3", by: { email: "d.k@example.com", name: "Dana Kim", role: "designer" }, at: "2026-11-18T10:00:00Z", verdict: "comment", note: "", threads: ["T-31"], looks_good: [{ key: "S-1", name: "The limit dialog" }] }],
   threads: [{ id: "T-31", kind: "comment", review: "U-3", change: "S-2", state: "open", may: { reply: true, resolve: true }, messages: [{ by: { email: "d.k@example.com", role: "designer" }, at: "2026-11-18T10:00:00Z", text: "Bigger numbers." }] }] })), async (desk) => {
   await desk.waitForSelector("#list");
   await desk.evaluate(() => { location.hash = "#P-7"; });
   await desk.waitForSelector("#detail .chg-tiles");
-  assert.deepEqual(await desk.$$eval("#detail .chg-tile", (bs) => bs.map((b) => b.dataset.m || "")), ["", "ok", ""], "a sent Looks good on this version");
+  assert.deepEqual(await desk.$$eval("#detail .chg-tile", (bs) => bs.map((b) => b.dataset.m || "")), ["", "ok", "changes"], "a sent Looks good on this version; a sent note the developer owes");
+  assert.match(await desk.textContent('#detail .chg-tile[data-m="changes"] .elmeta'), /Changes asked/, "the amber state is said on the tile");
   assert.match(await desk.textContent("#detail .rvw .rv-ok"), /✓ Looks good: The limit dialog/);
   await desk.click('#detail .rvw [data-chg-open="S-2"]');
   await desk.waitForFunction(() => document.querySelector("#element-dialog .elbar h2")?.textContent === "The usage page");

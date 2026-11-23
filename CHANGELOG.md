@@ -10,7 +10,8 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 ## 1.110.0 — 2026-11-23
 
 **Upgrade:**
-1. Republish the page ([desk.md](docs/desk.md) → Publishing the page). **Submit feedback** replaces
+1. Restart the Desk server ([desk.md](docs/desk.md) → Server), which keeps a screen's `unchanged` and
+   `new`, then republish the page ([desk.md](docs/desk.md) → Publishing the page). **Submit feedback** replaces
    the **Your feedback** box under the head and the head's Request changes, Approve and Approve for
    dev: one button, coloured by the verdict it sends, with its counts, whose panel sends the review; it
    stands in the element's dialog too, which opens with the cursor in its comment box. A pull

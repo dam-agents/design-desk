@@ -348,12 +348,15 @@
   .fb-pop .fb-hint { margin: -4px 0 0; } .fb-pop textarea { width: 100%; min-height: 56px; }
   .fb-pop .fb-send { display: flex; gap: 8px; } .fb-pop .fb-send .fbk { flex: 1; }
   .elbar .el-acts .fb-pop { z-index: 6; }
+  /* On a narrow screen the panel spans it, edge to edge, so none of it hangs off to the left. */
+  @media (max-width: 560px) { .fb-pop { position: fixed; top: 64px; left: 8px; right: 8px; width: auto; max-height: calc(100vh - 80px); } }
   /* Changes as tiles (docs/desk-page.md → Changes): an option's All elements, on the same canvas. */
   .chg-canvas { padding: 16px; border-radius: var(--radius); background: var(--canvas) radial-gradient(circle, var(--dot) 1px, transparent 1.4px) 0 0 / 18px 18px; }
   .chg-tiles .elname { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; min-height: 2.8em; }
   .chg-tiles .elpic { background: var(--bg); } .chg-tiles .elpic img { object-fit: cover; object-position: top; }
   .chg-tiles .elpic .ono { position: absolute; top: 8px; left: 8px; margin: 0; background: var(--ink); }
-  .chip.todo { background: none; border: 1px dashed var(--line); } .chip.warn-line { background: none; border: 1px solid var(--warn); color: var(--warn); }
+  .chip.todo { background: none; border: 1px dashed var(--line); }
+  .chg-tile[data-m="ok"] { border-color: color-mix(in srgb, var(--approved) 45%, var(--line)); } .chg-tile[data-m="changes"] { border-color: color-mix(in srgb, var(--waiting) 45%, var(--line)); } .chip.warn-line { background: none; border: 1px solid var(--warn); color: var(--warn); }
   .chg-prog { display: inline-flex; align-items: center; gap: 8px; margin-left: 12px; font-size: var(--fs-meta); font-weight: 400; color: var(--muted); white-space: nowrap; }
   .chg-prog .chg-done { margin: 0; }
   .pbar { display: inline-block; width: 80px; height: 6px; border-radius: 999px; background: var(--soft); overflow: hidden; } .pbar > i { display: block; height: 100%; border-radius: 999px; background: var(--approved); }
@@ -836,7 +839,7 @@
   .vtabs .vscroll { display: flex; gap: 4px; align-items: flex-end; min-width: 0; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; margin-bottom: -1px; }
   .tabs.vtabs .vscroll button { margin-bottom: 0; flex: none; white-space: nowrap; }
   /* An option's tab shrinks to fit, its name cut with an ellipsis (on the baseline: "Desk Ellipsis");
-     what still does not fit folds into +n at the row's end (docs/desk-page.md → The options' tabs). */
+     what still does not fit folds into +n at the row's end (docs/desk-page.md → The page, "The options' tabs"). */
   .tabs.vtabs .vscroll button[data-variant] { flex: 0 1 auto; min-width: 0; max-width: 320px; }
   .tabs.vtabs .vscroll button[data-variant] .vname { min-width: 64px; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tabs.vtabs .vscroll button[data-variant] > :not(.vname) { flex: none; }
@@ -3732,7 +3735,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const FB_ICON = { "request-changes": "pen", approve: "checkOnly", "approve-dev": "code", comment: "chat" };
   const fbSvg = (k) => `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">${ICON_PATH[k]}</svg>`;
   const notesWaiting = (c) => draftsOf(c).filter((d) => !d.ok).length + lookFeedback(c).length;
-  const marksWaiting = (c) => draftsOf(c).filter((d) => d.ok).length;
+  // A Looks good on a screen that looks the same as before is no mark: it is not counted.
+  const marksWaiting = (c) => { const same = new Set(c?.kind === "change" ? changesOf(c).filter((x) => x.unchanged).map((x) => x.key) : []); return draftsOf(c).filter((d) => d.ok && !same.has(d.change)).length; };
   // The verdict it sends: the one picked in its panel, else Request changes while notes wait, else
   // the approval, else Comment only.
   function fbPick(c) {
@@ -5265,7 +5269,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     : x.before ? `<span class="chip warn" title="A screen of the product this change changes: before and after">Changed</span>`
     : x.new ? `<span class="chip info" title="A screen this change adds">New</span>`
     : `<span class="chip" title="Only a picture from after: there is none from before">No picture from before</span>`;
-  const MARK_CHIP = { ok: `<span class="chip ok">✓ Looks good</span>`, changes: "", "": `<span class="chip todo">Not looked at</span>` };
+  const MARK_CHIP = { ok: `<span class="chip ok">✓ Looks good</span>`, changes: `<span class="chip warn-line">Changes asked</span>`, "": `<span class="chip todo">Not looked at</span>` };
   function changeTile(c, x, k) {
     const m = markOf(c, x.key), n = draftsOf(c).filter((d) => d.change === x.key && !d.ok).length;
     const mine = n ? `<span class="chip warn-line">${esc(plural(n, "note", "notes"))}</span>` : x.unchanged ? "" : MARK_CHIP[m] || "";
@@ -5329,7 +5333,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const said = ok ? `<span class="chg-ok">${CHECK}You marked it as good<button class="link" data-draft-del="${esc(ok.id)}" title="Takes your Looks good back">Undo</button></span>` : "";
     return `<div class="composer rbox chg-foot" data-rbox data-change="${esc(x.key)}">${talk}${notes.map((d) => draftBubble(c, d)).join("")}
       <textarea maxlength="4000" placeholder="What should change here?" aria-label="${esc(`A comment on ${x.name}`)}"></textarea>
-      <div class="bar">${said}<span class="grow"></span><button class="btn primary" data-draft-add>Add to feedback</button>${ok || notes.length ? "" : `<button class="btn cv-ok" data-draft-ok>${CHECK}Looks good</button>`}</div></div>`;
+      <div class="bar">${said}<span class="grow"></span><button class="btn primary" data-draft-add>Add to feedback</button>${ok || notes.length || x.unchanged ? "" : `<button class="btn cv-ok" data-draft-ok>${CHECK}Looks good</button>`}</div></div>`;
   }
   // How far the viewer got with a change (desk/guidelines.html → Tabs and switchers): "changes"
   // with a note of theirs on it, "ok" marked Looks good (theirs, or sent on this version), else "".
@@ -5339,7 +5343,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const owed = c.responsible?.who === "developer" && (c.threads || []).some((th) => th.change === key && th.state !== "resolved");
     return ds.some((d) => !d.ok) || owed ? "changes" : ds.some((d) => d.ok) || (c.looks_good || []).includes(key) ? "ok" : "";
   }
-  const MARK_TIP = { ok: "Looks good", changes: "You ask for changes here; not sent yet", "": "Not looked at yet" };
+  const MARK_TIP = { ok: "Looks good", changes: "Changes asked here: a note of yours waits to be sent, or one sent waits for the developer's next version", "": "Not looked at yet" };
   const changeMark = (c, key) => { const m = markOf(c, key); return `${m ? ` data-m="${m}"` : ""} title="${esc(MARK_TIP[m])}"`; };
   const notLookedAt = (c) => changesToLook(c).filter((x) => !markOf(c, x.key));
 

@@ -91,9 +91,7 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   its name cut with an ellipsis on the text's baseline (the page's `Desk Ellipsis` font; the full name on
   hover); what still does not fit folds, from the last tab, into **+n** at the row's end, a menu of the
   options it holds (the one shown always stays out), measured again as the pane changes width. **Design
-  workspace** stays fixed at its right end. A redraw of the same
-  item keeps the row where the person scrolled it; only another tab picked moves it, just enough to
-  show that tab; another item's row starts at its beginning.
+  workspace** stays fixed at its right end. A redraw folds the row again for the tab shown.
   **Side by side:** an option's tab dragged onto the panel the tabs switch lights the half of
   that whole panel it would land on (left or right); the drop splits the design in two, that option in its half, the other half
   empty until another tab is dragged there. The empty half also offers **Show how it looks
@@ -310,7 +308,8 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   as an option's **All elements** — its after picture (else its before), its number, its name cut at
   two lines (in full on hover), a pill in the elements' words, **Changed** (a before and an after),
   **New** (a screen the change adds, `new`) or grey **No picture from before** (an after alone not
-  known to be new), and where the viewer stands: *Not looked at*, *n notes* or *✓ Looks good*. A
+  known to be new), and where the viewer stands: *Not looked at*, *n notes*, *Changes asked* (a note
+  sent on it while the developer owes the next version) or *✓ Looks good*, the tile's edge in the same colour. A
   change is a screen pair (`pair`, its pictures by `stage`) or a screen with no `stage`, in that order
   (`changesOf`, [desk.md](desk.md) → Reviews); one tile even for a single change. Beside **Changes**,
   its count, a bar and "n of m looked at", or "✓ All looked at". A screen Design Desk found looks the
@@ -401,7 +400,7 @@ head, in every dialog's head (a change's, a part's), and in full mode's **Your f
 - **Its panel** opens under it and never moves the page; one is open at a time, closed by Esc, a
   click outside it or **Keep drafting**, and kept through the page's redraws: on a change, how many
   of the changes to look at were looked at, a bar, and the ones not looked at as chips that open them
-  (else "✓ All looked at"); each note and Looks good waiting, with what it is about (a change's opens
+  (else "✓ All looked at"); each note and Looks good waiting (a Looks good on an unchanged screen is not counted), with what it is about (a change's opens
   it) and ✕; else a line saying where notes come from; the verdicts as one control, each with its
   line under it; a note for the whole feedback; and the send button in the verdict's colour (`Request
   changes · 2`, `Approve with 2 notes`, `Approve for dev`, `Send comments`).
