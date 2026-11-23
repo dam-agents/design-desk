@@ -7,6 +7,13 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.104.1 — 2026-11-23
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): a part of an option on
+   another view than the first is drawn under All elements, in the element dialog and enlarged;
+   before, its picture was empty. No data migration.
+
 ## 1.104.0 — 2026-11-23
 
 **Upgrade:**

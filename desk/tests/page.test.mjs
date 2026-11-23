@@ -2119,6 +2119,56 @@ test("an element's dialog shows the part before and after, says where before cam
   }
 });
 
+// A part with no picture of its own is cut live from its option's page, in All elements and in the
+// element dialog alike: on its own view (the review bar makes the view buttons only once the page
+// has loaded) and laid out wide, so a part only a wide screen shows has its size (docs/desk-page.md
+// → The element dialog).
+const PART_VIEWS_PAGE = `<!doctype html><html><head><style>@media (max-width: 767px) { .wide-only { display: none } }</style></head><body>${BAR}
+<div data-view="1" data-view-name="Closed"><header class="wide-only"><span id="tip" style="display:inline-block;padding:8px">Notifications</span></header><p>Home</p></div>
+<div data-view="2" data-view-name="Open"><h2 id="panel-title">Notifications</h2><button id="deny">Deny all</button></div></body></html>`;
+const bridgePartViews = `<script>
+window.calls = [];
+const at = new Date().toISOString();
+const request = { id: "r8", kind: "request", title: "Notifications panel", status: "feedback", created: at, triage: { verdict: "design", reasons: [] }, prototype: { state: "none" },
+  variants: [{ id: "v1", name: "Panel", asset: "A-1", fidelity: "mockup", version: 1, elements: [
+    { id: "tip", name: "Bell tooltip", change: "new", selector: "#tip", view: "1", view_name: "Closed" },
+    { id: "title", name: "Panel title", change: "new", selector: "#panel-title", view: "2", view_name: "Open" },
+    { id: "deny", name: "Deny all", change: "new", selector: "#deny", view: "2", view_name: "Open" }] }],
+  threads: [], waiting: [] };
+window.platform = { async request({ method, path, body }) {
+  calls.push({ method, path, body });
+  const answer = path === "/api/me" ? { role: "designer", email: "alice@example.com", can: { comment: true, change: true } }
+    : path === "/api/cards" ? { cards: [{ ...request, variants: 1, threads: undefined }] } : path === "/api/agenda" ? { agenda: [] }
+    : path === "/api/cards/r8" ? { card: request }
+    : path === "/api/assets/A-1" ? { contentType: "text/html", encoding: "utf8", data: ${JSON.stringify(PART_VIEWS_PAGE).replace(/</g, "\\u003c")} } : {};
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
+</script>`;
+
+test("a part cut from its option shows on its own view and at a desktop width, in All elements and in its dialog", async (t) => {
+  const run = await launch(t, bridgePartViews);
+  if (!run) return;
+  const { desk } = run;
+  // The part in a frame: shown, with a size, and the design scaled to it.
+  const drawn = async (f, sel) => {
+    const frame = await (await desk.waitForSelector(f)).contentFrame();
+    await frame.waitForFunction((s) => { const e = document.querySelector(s), r = e?.getBoundingClientRect();
+      return !!r && r.width > 0 && r.height > 0 && /scale\(/.test(document.body.style.transform); }, sel, { timeout: 5000 })
+      .catch(() => assert.fail(`${sel} has no size in ${f}`));
+  };
+  try {
+    await desk.click('[data-card="r8"]');
+    await desk.waitForSelector("#detail .elgrid");
+    for (const [id, sel] of [["tip", "#tip"], ["title", "#panel-title"], ["deny", "#deny"]]) await drawn(`#detail [data-el="${id}"] iframe`, sel);
+    // The dialog's picture is the same cut.
+    await desk.click('#detail [data-el="deny"]');
+    await drawn("#element-dialog[open] .el-col iframe", "#deny");
+  } finally {
+    await run.close();
+  }
+});
+
 test("an element's dialog lists the part's open comments and comments on the part", async (t) => {
   const run = await launch(t, bridgeBefore());
   if (!run) return;
@@ -3060,6 +3110,8 @@ test("a preview of a design shows neither the review bar nor the hotspots' outli
     for (const [name, sc] of [["a part's preview", SNIP_SCRIPT(sel, "", false)], ["the whole design's preview", SNIP_SCRIPT("", "", false)], ["an enlarged part", ZOOM_SCRIPT(sel)]]) {
       await pg.setContent(WITH_BAR.replace("</body>", `${sc}</body>`));
       assert.deepEqual(await state(), { bar: "none", hot: false, checked: "false" }, name);
+      // The part is on view 2: it opens, though the bar makes its buttons only once the page is parsed.
+      if (name !== "the whole design's preview") assert.equal(await pg.evaluate(() => document.querySelector("[data-view].review-shown")?.dataset.view), "2", `${name} opens the part's view`);
     }
   } finally {
     await chrome.close();
