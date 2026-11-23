@@ -160,7 +160,12 @@ The person deciding should know it before a single variant exists.
    question for a developer** copies a link to the request, its state and these parts. Once a
    person opened it, it leaves their row: the spec carries `cannot` to developers. Keep `status: triage`. Put the request's own words in `summary` only if its title is unclear.
    A request written in a language other than English gets its English in the same upsert
-   ([A request in another language](#a-request-in-another-language)).
+   ([A request in another language](#a-request-in-another-language)). Every request also gets
+   `gist`: what the problem is and what will be done, in two or three short sentences of plain
+   English after ASD-STE100 — simple words, one idea per sentence, active voice, at most 20
+   words each, 600 characters in all — whatever language it was asked in; never a verdict or a
+   decision. Simple mode leads with it and folds the request's own words under it
+   ([desk-page.md](desk-page.md) → Simple mode); a request with none shows its words in full.
 5. A request someone asked for in Slack (`idea` with a Slack `origin`) whose verdict is not
    `product`: they asked for options, so `design desk enqueue explore R-<n>`, unless
    `design desk inbox` already holds an open `explore` item of the card. So does a request

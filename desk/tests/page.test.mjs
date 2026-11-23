@@ -4248,7 +4248,7 @@ const rows = (desk) => desk.$$eval("#list [data-card]", (xs) => xs.map((x) => [x
 test("simple mode lists requests and changes of the viewer's side in one list, each in one state, and its menu has one entry", (t) => open(t, DESK(SIMPLE_ME, SIMPLE_CARDS), async (desk) => {
   await desk.waitForSelector('#list [data-card="r-check"]');
   assert.equal((await desk.textContent("#nav")).replace(/\d+$/, "").trim(), "Requests & PRs", "one entry, no PR Changes");
-  assert.deepEqual(await rows(desk), [["r-check", ""], ["r-busy", ""], ["r-draft", ""], ["c-open", ""]], "Open by default, newest change first, no pill with one state");
+  assert.deepEqual(await rows(desk), [["r-check", "In review"], ["r-busy", "In review"], ["r-draft", "In review"], ["c-open", "In review"]], "Open by default, newest change first, the pill on every row even with one state");
   assert.equal(await desk.locator('#list [data-card="r-busy"] .dd-spin').count(), 1, "Design Desk at work: the spinner, still Open");
   await desk.click("details.sf > summary");
   await desk.click('[data-simf="states:dev"]');
@@ -4279,9 +4279,9 @@ test("a simple mode row says when it last changed, then its number: a change its
 // phone's: at 280 px the date breaks without the row's own style, at 320 px it still fits.
 const NARROW_CARDS = [
   { id: "c-nopr", kind: "change", title: "A change with a long enough title to wrap", status: "new", attention: { level: "designer", reasons: ["New"] }, source: { kind: "commit" }, updated: "2025-10-15T14:11:00Z" },
-  { id: "r-long", kind: "request", title: "A request", status: "triage", updated: "2025-10-14T14:11:00Z" },
+  { id: "r-long", kind: "request", title: "A request", status: "triage", updated: "2025-10-14T14:11:00Z", origin: { channel: "slack", email: "a.very.long.person.name.here@example.com" } },
 ];
-test("on a phone-wide list a simple mode row keeps its date and number on one line; a change with no pull request shows its Desk number", (t) => open(t, DESK(SIMPLE_ME, NARROW_CARDS), async (desk) => {
+test("on a phone-wide list a simple mode row keeps its date and number on one line, its pill on a line of its own under them; a change with no pull request shows its Desk number", (t) => open(t, DESK(SIMPLE_ME, NARROW_CARDS), async (desk) => {
   await desk.setViewportSize({ width: 280, height: 640 });
   await desk.waitForSelector('#list [data-card="c-nopr"]');
   await desk.click("details.sf > summary");
@@ -4289,14 +4289,17 @@ test("on a phone-wide list a simple mode row keeps its date and number on one li
   await desk.keyboard.press("Escape");
   const box = (id) => desk.$eval(`#list [data-card="${id}"] .sline`, (l) => {
     const r = (x) => x.getBoundingClientRect(), w = l.querySelector(".when"), n = l.querySelector(".snum");
-    const p = l.querySelector(".spill");
+    const row = l.closest(".open"), p = row.querySelector(":scope > .spill"), title = row.querySelector(".t");
     return { num: n.textContent, oneLine: r(w).height <= parseFloat(getComputedStyle(w).lineHeight) + 1 && Math.abs(r(n).top - r(w).top) < 2,
-      pill: Boolean(p) && Math.abs(r(p).right - r(l).right) < 2 && r(p).bottom <= r(l).bottom + 1 && (r(p).top >= r(w).bottom - 1 || r(p).left >= r(n).right) };
+      pill: Boolean(p) && !l.contains(p) && r(p).top >= r(l).bottom - 1 && Math.abs(r(p).right - r(l).right) < 2 };
   });
   const change = await box("c-nopr"), request = await box("r-long");
   assert.equal(change.num, "c-nopr", "no pull request: its number on the Desk");
   assert.ok(change.oneLine && request.oneLine, "the date and the number stay on one line");
-  assert.ok(change.pill && request.pill, "the pill shows at the line's right end, beside the number or on a line of its own, never over them");
+  assert.ok(change.pill && request.pill, "under 400 px the pill takes a line of its own under the date, at the row's right end");
+  const by = await desk.$eval('#list [data-card="r-long"]', (b) => { const s = b.querySelector(".sby"), l = b.querySelector(".sline");
+    return { inside: s.getBoundingClientRect().right <= l.getBoundingClientRect().right + 1, cut: getComputedStyle(s).textOverflow === "ellipsis" && s.scrollWidth > s.clientWidth }; });
+  assert.ok(by.inside && by.cut, "a long name is cut with an ellipsis inside its line");
 }));
 
 test("simple mode's filter shows only what narrows the list, keeps one of each group and is kept in the browser", (t) => open(t, DESK(SIMPLE_ME, SIMPLE_CARDS), async (desk) => {
@@ -4568,13 +4571,13 @@ const talked = { ...drawn, id: "R-7", title: "Talked about", request: { problem:
       messages: [{ by: { email: "dana@example.com", name: "Dana Kim", role: "developer" }, at: "2026-11-18T08:00:00Z", text: "Title a bit smaller?" }] },
     { id: "T-3", kind: "comment", state: "open", anchor: { variant: "v1", label: "Title" }, may: { reply: true, resolve: true }, messages: [{ by: { email: "pat.lee@example.com", role: "designer" }, at: "2026-11-18T07:00:00Z", text: "Warmer title?" }] }] };
 
-test("simple mode's request page: lead, designs, what Design Desk found, folds, then threaded comments", (t) => open(t, HEAD_DESK(HEAD_ME, [talked, drawn]), async (desk) => {
+test("simple mode's request page with no summary: the request in full, designs, what Design Desk found, folds, then threaded comments", (t) => open(t, HEAD_DESK(HEAD_ME, [talked, drawn]), async (desk) => {
   await desk.waitForSelector('#list [data-card="R-7"]');
   await desk.click('#list [data-card="R-7"]');
   await desk.waitForSelector("#detail .sthreads");
   const order = await desk.$$eval("#detail .slead, #detail .vtabs, #detail .sfound, #detail details.fold.big:not(.vpanel details), #detail .sthreads", (xs) => xs.map((x) => x.className.split(" ")[0] === "fold" ? x.querySelector("summary").textContent.trim() : x.className.split(" ").find((k) => ["slead", "vtabs", "sfound", "sthreads"].includes(k))));
-  assert.deepEqual(order, ["slead", "The request in full", "vtabs", "sfound", "Where else this shows up", "sthreads"]);
-  assert.equal((await desk.textContent("#detail .slead")).trim(), "First paragraph.", "the lead is the first paragraph");
+  assert.deepEqual(order, ["vtabs", "sfound", "Where else this shows up", "sthreads"], "no summary yet: no lead and no fold");
+  assert.match(await desk.textContent("#detail .sfull"), /First paragraph\.[\s\S]*Second paragraph\./, "the request in full leads instead, open");
   assert.match(await desk.textContent("#detail .sfound"), /Goes against D-3/);
   assert.equal(await desk.locator("#detail .votes button.vote").count(), 0, "no vote buttons in simple mode");
   assert.match(await desk.textContent("#th-T-1 .smsg:not(.re) .who"), /pat\.lee[\s\S]*designer/i, "who by name (the part before the @) and role");
@@ -4586,6 +4589,76 @@ test("simple mode's request page: lead, designs, what Design Desk found, folds, 
   assert.match(await desk.textContent("#th-T-2 summary"), /Dana Kim: Title a bit smaller\?[\s\S]*Resolved by you/);
   await desk.click("#th-T-2 summary");
   assert.equal(await desk.locator("#th-T-2[open]").count(), 1, "and opens on a click");
+}));
+
+// Who asked, a short summary first, and the request as asked folded under it (docs/desk-page.md →
+// Simple mode): a request from Slack written in Czech, with Design Desk's English and its gist.
+const czech = { ...drawn, id: "R-8", title: "Prázdný seznam providerů u nového agenta", origin: { channel: "slack", email: "sam@example.com" },
+  request: { problem: "Nový agent ukáže prázdnou stránku." },
+  translation: { lang: "cs", title: "Empty provider list for a new agent that has no provider turned on yet", problem: "A new agent shows an empty page." },
+  gist: "A new agent has no providers. Its Providers page is empty. The design adds a short text and a button." };
+
+test("a simple mode row says who asked and where from, in the date's words, and its title in English", (t) => open(t, HEAD_DESK(HEAD_ME, [czech, drawn, prChange]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="R-8"]');
+  const row = (id) => desk.$eval(`#list [data-card="${id}"]`, (b) => {
+    const by = b.querySelector(".sby"), w = b.querySelector(".when"), font = (x) => { const s = getComputedStyle(x); return [s.fontFamily, s.fontSize, s.fontWeight, s.color].join(); };
+    return { title: b.querySelector(".t").textContent, by: by?.textContent || "", same: Boolean(by) && font(by) === font(w), links: by ? by.querySelectorAll("a, button, svg").length : 0 };
+  });
+  const slack = await row("R-8"), here = await row("R-5"), change = await row("P-3");
+  assert.equal(slack.title, czech.translation.title, "Design Desk's English title");
+  assert.equal(slack.by, "by sam, from Slack", "the person behind the Slack message, not the Desk");
+  assert.equal(here.by, "by jana.novak", "filed on the Desk: the name alone, never a whole address");
+  assert.equal(change.by, "by dana-dev", "a change: its pull request's author");
+  assert.ok(slack.same && here.same && change.same, "in the date's font, size and grey");
+  assert.equal(slack.links + here.links + change.links, 0, "only words: no link, no icon");
+  const column = await desk.$$eval("#list .srow .open", (os) => os.every((o) => { const r = (x) => x.getBoundingClientRect(), p = o.querySelector(":scope > .spill"), l = o.querySelector(".sline"), t = o.querySelector(".t");
+    return p && r(p).left >= Math.max(r(l).right, r(t).right) - 1 && r(p).top >= r(t).top - 1 && r(p).bottom <= r(l).bottom + 1; }));
+  assert.ok(column, "the pill keeps a column of its own on the right, beside the title and its line");
+}));
+
+test("simple mode's head keeps the English title on one line with an ellipsis and a bigger pill; the page leads with the gist, the request as asked folded with its language", (t) => open(t, HEAD_DESK(HEAD_ME, [czech, drawn]), async (desk) => {
+  await desk.setViewportSize({ width: 1000, height: 800 });
+  await desk.waitForSelector('#list [data-card="R-8"]');
+  await desk.click('#list [data-card="R-8"]');
+  await desk.waitForSelector("#detail .shead .sh-t");
+  const head = await desk.$eval("#detail .shead", (h) => {
+    const t = h.querySelector(".sh-t"), h2 = h.querySelector("h2"), r = (x) => x.getBoundingClientRect();
+    return { text: t.textContent, tip: t.title || t.dataset.tip, cut: t.scrollWidth > t.clientWidth && getComputedStyle(t).textOverflow === "ellipsis",
+      oneLine: r(h2).height < 2 * parseFloat(getComputedStyle(h2).fontSize) * 1.2, numNear: r(h2.querySelector(".num")).left - r(t).right < 10,
+      line: h.querySelector(".sh-line").textContent, lineWide: r(h.querySelector(".sh-line")).right > r(h.querySelector(".sh-acts")).left,
+      pill: parseFloat(getComputedStyle(h.querySelector(".spill")).fontSize) };
+  });
+  const rowPill = await desk.$eval('#list [data-card="R-8"] .spill', (p) => parseFloat(getComputedStyle(p).fontSize));
+  assert.equal(head.text, czech.translation.title, "the title in English");
+  assert.ok(head.cut && head.oneLine, "on one line, cut with an ellipsis");
+  assert.equal(head.tip, czech.translation.title, "its full words on hover");
+  assert.ok(head.numNear, "the number close after the title");
+  assert.match(head.line, /by sam, from Slack/);
+  assert.ok(head.lineWide, "the state's line runs under the buttons, across the whole width");
+  assert.ok(head.pill > rowPill, "the head's pill is larger than a row's");
+  assert.equal((await desk.textContent("#detail .slead")).trim(), czech.gist, "the gist leads");
+  assert.equal(await desk.locator("#detail details.sorig[open]").count(), 0, "the request as asked is folded");
+  const summary = await desk.textContent("#detail details.sorig > summary");
+  assert.match(summary, /Original request\s*From Slack/, "where it came from");
+  assert.doesNotMatch(summary, /sam/, "no name: the head has it");
+  await desk.click("#detail details.sorig > summary");
+  assert.match(await desk.textContent("#detail .tr-bar"), /Written in Czech\s*Show in English/);
+  assert.match(await desk.textContent("#detail .so-body"), /Nový agent ukáže prázdnou stránku\./, "in their own words first");
+  await desk.click("#detail .tr-btn");
+  await desk.waitForSelector('#detail .tr-btn[aria-pressed="true"]');
+  assert.equal(await desk.locator("#detail details.sorig[open]").count(), 1, "the button leaves the fold open");
+  assert.match(await desk.textContent("#detail .tr-bar"), /Translated from Czech by Design Desk\s*Show original/);
+  assert.match(await desk.textContent("#detail .so-body"), /A new agent shows an empty page\./);
+}));
+
+test("simple mode's words keep a readable width on a wide screen; the designs take the whole width", (t) => open(t, HEAD_DESK(HEAD_ME, [czech, drawn]), async (desk) => {
+  await desk.setViewportSize({ width: 2000, height: 900 });
+  await desk.waitForSelector('#list [data-card="R-8"]');
+  await desk.click('#list [data-card="R-8"]');
+  await desk.waitForSelector("#detail .slead");
+  const w = (sel) => desk.$eval(sel, (x) => x.getBoundingClientRect().width);
+  for (const sel of ["#detail .slead", "#detail details.sorig", "#detail .sfound"]) assert.ok(await w(sel) <= 680, `${sel} keeps to 680 px`);
+  assert.ok(await w("#detail .vtabs") > 900, "the designs are wider");
 }));
 
 test("simple mode's change page: lead, the changes, what to look at, comments; Nothing to flag without findings", (t) => open(t, HEAD_DESK(HEAD_ME, [prChange, { ...prChange, id: "P-4", title: "Quiet", attention: { level: "fyi", reasons: [] }, source: { ...prChange.source, draft: false } }]), async (desk) => {

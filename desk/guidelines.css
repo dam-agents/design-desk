@@ -5,7 +5,7 @@
     --bad: #b3261e; --bad-soft: #fbe5e3; --info-soft: #e7edfc; --live: #6b3fc4; --live-soft: #efe8fb; --why: #0d7d78; --why-soft: #e0f3f1; --r-sm: 6px; --radius: 12px; --shadow: 0 1px 2px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.04);
     /* What floats over the page (the private ask): a near shadow for the edge, a far one for the lift. */
     --float: 0 2px 6px rgba(0,0,0,.10), 0 14px 32px rgba(0,0,0,.18), 0 36px 84px rgba(0,0,0,.24);
-    --font: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font: "Desk Ellipsis", "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
     --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
     /* The page grows with the window: text runs wider, the list and pictures get room. */
     --measure: 96ch; --pad-x: 32px; --list-w: 380px; --side-w: 380px; --shot-w: 260px; --shot-h: 260px;
@@ -25,6 +25,9 @@
   :root[data-theme="light"] { color-scheme: light; }
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
+  /* The ellipsis sits on the baseline whatever fonts a viewer has: U+2026 alone comes from a font
+     whose dots sit low, Plex first where it is installed (a fallback font may centre them). */
+  @font-face { font-family: "Desk Ellipsis"; src: local("IBM Plex Sans"), local("Helvetica"), local("Arial"), local("Liberation Sans"), local("DejaVu Sans"), local("FreeSans"); unicode-range: U+2026; }
   html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font: 14px/1.5 var(--font); }
   button { font: inherit; color: inherit; }
   /* Links read in ink with a faint underline; under the pointer only the underline darkens, the ink stays. */
@@ -225,21 +228,32 @@
   .row.item > .open::after { content: ""; position: absolute; inset: 0; border-radius: var(--radius); }
   .row.item:has(> .open:focus-visible) { outline: 2px solid var(--accent); outline-offset: 1px; } .row.item > .open:focus-visible { outline: 0; }
   /* Simple mode's row: the kind's icon, the title, then when it last changed with its number, and
-     its state. The date and number never break; on a narrow list the pill takes its own line. */
-  .row.item.srow > .open { display: grid; grid-template-columns: 20px 1fr; column-gap: 8px; row-gap: 4px; align-items: start; }
+     who asked, then its state. The date and number never break; the pill keeps its own column on the
+     right, as high as both lines, and the title and its line narrow instead. */
+  .row.item.srow > .open { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; column-gap: 8px; row-gap: 4px; align-items: start; }
   .srow .kic { grid-row: span 2; color: var(--muted); padding-top: 2px; } .kic svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; display: block; }
   .srow .sline { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: var(--fs-meta); color: var(--muted); min-height: 20px; }
-  .srow .sline .spill { margin-left: auto; }
+  .srow .open > .spill { grid-column: 3; grid-row: 1 / span 2; align-self: center; margin-left: 8px; }
+  /* A phone narrower than 400 px has no room for a long date beside the pill (it never breaks):
+     there the pill takes a line of its own under the date, at the row's right end. */
+  @media (max-width: 399px) { .row.item.srow > .open { grid-template-columns: 20px minmax(0, 1fr); } .srow .kic { grid-row: span 3; } .srow .open > .spill { grid-column: 2; grid-row: 3; justify-self: end; margin-left: 0; } }
   .srow .sline .sdate { display: inline-flex; gap: 4px; white-space: nowrap; } .srow .sline .snum { color: var(--muted); }
+  .srow .sline .sby { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .srow .sline .sby::before { content: "·"; margin-right: 4px; }
   .spill { --p: var(--muted); display: inline-flex; align-items: center; gap: 4px; padding: 0 8px; border-radius: 999px; font-size: var(--fs-micro); font-weight: 500; line-height: 20px; white-space: nowrap;
     color: var(--p); background: color-mix(in srgb, var(--p) 14%, transparent); }
   .spill[data-s="open"] { --p: var(--ok); } .spill[data-s="dev"] { --p: var(--accent); } .spill[data-s="shipped"] { --p: var(--live); }
   .spill[data-s="none"] { --p: var(--muted); } .spill[data-s="closed"] { --p: var(--bad); }
   .spill[data-s="draft"] { --p: var(--muted); background: transparent; border: 1px dashed color-mix(in srgb, var(--p) 70%, transparent); line-height: 18px; } .spill[data-s="proposal"] { --p: var(--warn); }
-  /* Simple mode's head of an item: kept in view while the page scrolls. */
-  .shead { position: sticky; top: -24px; z-index: 6; display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; margin: -24px calc(-1 * var(--pad-x)) 16px; padding: 16px var(--pad-x); background: var(--bg); border-bottom: 1px solid var(--line); }
-  .sh-main { min-width: 0; } .shead h2 { margin: 0; } .shead h2 > span:not(.kic) { margin-right: 8px; }
-  .shead h2 .kic { display: inline-block; color: var(--muted); margin-right: 8px; vertical-align: -2px; } .shead h2 .kic svg { width: 20px; height: 20px; }
+  /* Simple mode's head of an item: kept in view while the page scrolls. Its moves sit beside the
+     title alone; the line of its state and facts takes the whole width under both. The title keeps
+     to one line, cut with an ellipsis (its full words on hover), the number and the link close by. */
+  .shead { position: sticky; top: -24px; z-index: 6; display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 16px; align-items: center; margin: -24px calc(-1 * var(--pad-x)) 16px; padding: 16px var(--pad-x); background: var(--bg); border-bottom: 1px solid var(--line); }
+  .sh-main { display: contents; } .sh-acts { grid-column: 2; grid-row: 1; } .sh-line, .sh-after { grid-column: 1 / -1; }
+  .shead h2 { grid-column: 1; grid-row: 1; display: flex; align-items: center; min-width: 0; margin: 0; white-space: nowrap; }
+  .shead h2 > * { flex: none; } .shead h2 > .sh-t { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .shead h2 > .num { margin-left: 4px; } .shead h2 > .linkbtn { margin-left: 4px; }
+  .shead h2 .kic { color: var(--muted); margin-right: 8px; } .shead h2 .kic svg { width: 20px; height: 20px; }
+  .shead .spill { font-size: var(--fs-meta); font-weight: 600; line-height: 24px; padding: 0 12px; }
   .sh-line { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; font-size: var(--fs-meta); color: var(--muted); }
   .sh-facts { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; } .sh-facts .sep { color: var(--line); }
   .sh-work { display: inline-flex; align-items: center; gap: 4px; color: var(--ink); } .sh-resp { color: var(--warn); font-weight: 500; }
@@ -247,10 +261,25 @@
     color: var(--t); background: color-mix(in srgb, var(--t) 14%, transparent); text-decoration: none; } .sh-pr:hover { text-decoration: underline; }
   .sh-pr[data-s="pr-draft"] { --t: var(--gh-draft); } .sh-pr[data-s="pr-merged"] { --t: var(--gh-merged); }
   .sh-acts { display: flex; gap: 8px; align-items: center; flex: none; } details.more.sh-more .menu { left: auto; right: 0; }
-  @media (max-width: 860px) { .shead { top: 28px; margin: 0 -16px 12px; padding: 12px 16px; flex-wrap: wrap; } }
-  /* Simple mode's page: a short lead, what Design Desk found, the folds, the comments. */
-  .slead { max-width: var(--measure); font-size: var(--fs-head); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
-  .slead p { margin: 0; }
+  @media (max-width: 860px) { .shead { top: 28px; margin: 0 -16px 12px; padding: 12px 16px; } }
+  @media (max-width: 560px) { .sh-acts { grid-column: 1 / -1; grid-row: auto; margin-top: 8px; } }
+  /* Simple mode's page: Design Desk's short summary, the request as it was asked, what Design Desk
+     found, the folds, the comments. Its words keep a readable width however wide the page is; the
+     designs and the pictures take the whole width. */
+  :root { --read: 680px; }
+  .slead { max-width: var(--read); font-size: var(--fs-head); line-height: 1.55; margin: 4px 0 8px; }
+  .slead p { margin: 0; } .slead p + p { margin-top: 8px; }
+  #detail details.fold.big.sfold, #detail .sfound, #detail .sthreads, #detail .yreview, #detail .rvw, #detail .slead + .hint, #detail .sfull { max-width: var(--read); }
+  /* A request with no summary yet (filed before Design Desk wrote one) shows its words in full, open. */
+  #detail .sfull { font-size: var(--fs-head); line-height: 1.55; } #detail .sfull p { margin: 0 0 8px; } #detail .sfull h4 { margin: 12px 0 4px; }
+  /* The request as it was asked, folded under the summary: where it came from and when, no name. */
+  details.sorig > summary { flex-wrap: wrap; row-gap: 4px; }
+  details.sorig > summary .so-who { font-size: var(--fs-meta); color: var(--muted); } details.sorig > summary .so-who a { color: inherit; }
+  details.sorig .so-body { padding: 0 0 16px; }
+  /* Its language, and a small button to read it in English and back. */
+  .tr-bar { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font-size: var(--fs-meta); color: var(--muted); }
+  .tr-btn { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); color: var(--ink); font: inherit; font-size: var(--fs-meta); cursor: pointer; }
+  .tr-btn:hover { background: var(--soft); } .tr-btn svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
   .sfound { max-width: var(--measure); margin-top: 24px; padding: 16px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--panel); }
   .sfound h3 { margin-top: 0; } .sfound h4 { margin: 12px 0 4px; } .sfound ul { margin: 4px 0 0; padding-left: 20px; }
   details.sfold { max-width: var(--measure); border-top: 1px solid var(--line); }

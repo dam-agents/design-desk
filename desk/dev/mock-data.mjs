@@ -167,7 +167,7 @@ const changeControls = [
 
 const r1 = {
   id: "R-1", kind: "request", title: "Make the daily limit easier to read", status: "variants", created: ago(60 * 26), updated: ago(3),
-  by: ALICE, triage: { verdict: "design", reasons: ["Only the look of the Providers page changes."] }, team_feedback: { state: "waiting", since: ago(60 * 20) },
+  by: ALICE, gist: "The daily limit card does not show clearly which limit stops the agent first. Owners think that the agent stopped too early. The design shows the limit that stops the agent first, and how much of it is used.", triage: { verdict: "design", reasons: ["Only the look of the Providers page changes."] }, team_feedback: { state: "waiting", since: ago(60 * 20) },
   request: { type: "adjustment", problem: "People miss that another counter stops the agent first: the daily limit card shows the bar, but “stops first” is small grey text at the bottom. Two owners asked support last week why their agent stopped at 40% of its limit; both had a workspace limit lower than the agent's own. The card should say plainly which limit is hit first, and how far that one is." },
   research: { summary: "Someone is already changing this card: PR #6467, which adds a second counter to the daily limit card, is still open, so its author can take the wording in before it ships.\n\n**Already asked for:** no issue is about which limit stops first. Issue #4311 asks for one place that lists every limit of an agent, and the Usage page already shows the workspace limit beside the agent's own.\n\n**Made of:** the card is the shared Limit card; the bar and its label come from the Progress element, so a change to the label shows on every page that uses it.", links: [{ url: "https://github.com/example/app/pull/6467", label: "PR #6467" }, { url: "https://github.com/example/app/issues/4311", label: "Issue #4311" }] },
   cited: { "D-12": { text: "One primary button per screen", status: "active" }, "D-7": { text: "Limits show money, not tokens", status: "revoked" } },
@@ -219,7 +219,8 @@ const r1 = {
 
 const r2 = {
   id: "R-2", kind: "request", title: "Prázdný seznam providerů u nového agenta", status: "variants", created: ago(60 * 6), updated: ago(1),
-  by: PAT, triage: { verdict: "design", reasons: ["A new state of one screen."] }, team_feedback: { state: "waiting", since: ago(60 * 2) },
+  by: PAT, origin: { channel: "slack", email: "pat@example.com", reporter: "pat@example.com", url: "https://example.slack.com/archives/C1/p1" },
+  gist: "A new agent has no providers, so its Providers page is empty. People think that the page is broken. The design adds a short text about the page and a button that adds the first provider.", triage: { verdict: "design", reasons: ["A new state of one screen."] }, team_feedback: { state: "waiting", since: ago(60 * 2) },
   request: { type: "idea", problem: "Nový agent ukáže prázdnou stránku Providers a lidé si myslí, že je rozbitá.", vision: "Místo prázdna krátká věta, co sem patří, a tlačítko na přidání prvního providera." },
   translation: { lang: "cs", title: "Empty provider list for new agents", problem: "A new agent shows an empty Providers page and people think it is broken.", vision: "Instead of nothing, a short line on what belongs here, and a button to add the first provider." },
   variants: [{ id: "w1", name: "Plain", asset: "A-r2-1", version: 1, drawn: ago(60 * 3), fidelity: "mockup" }],
@@ -254,13 +255,13 @@ const bare = { threads: [], waiting: [], variants: [], prototype: { state: "none
 const req = (id, title, status, min, extra = {}) => ({ id, kind: "request", title, status, created: ago(min + 60 * 24), updated: ago(min), by: PAT,
   triage: { verdict: "design", reasons: [] }, request: { type: "idea", problem: title }, ...bare, ...extra });
 const pr = (id, n, title, min, extra = {}) => ({ id, kind: "change", title, status: "new", created: ago(min), updated: ago(min), summary: `${title}.`,
-  source: { kind: "pr", pr: n, url: `https://github.com/example/product/pull/${n}`, repo: "example/product", ...(extra.merged === false ? {} : { merged_at: ago(min) }) },
+  source: { kind: "pr", author: "dana-kim", pr: n, url: `https://github.com/example/product/pull/${n}`, repo: "example/product", ...(extra.merged === false ? {} : { merged_at: ago(min) }) },
   attention: { level: "designer", reasons: ["A new element: the diff adds it."] }, screens: [], ...bare, ...extra });
 const r4 = req("R-4", "Settings: group the toggles by topic", "spec", 90, { approved: { by: ALICE, at: ago(90) }, spec: { review: "sent" } });
 const r5 = req("R-5", "Login: a calmer error state", "handed-off", 60 * 26, { approved: { by: ALICE, at: ago(60 * 30) }, built: { by: DEV, at: ago(60 * 26) } });
 const r6 = req("R-6", "A second primary button on Billing", "declined", 60 * 50);
 const r7 = req("R-7", "Rounded corners on every table", "declined", 60 * 24 * 400, { decided: { by: ALICE, at: ago(60 * 24 * 400), text: "Tables keep square corners." } });
-const p1 = pr("P-1", 812, "Settings: a new toggle row", 25, { merged: false, source: { kind: "pr", pr: 812, url: "https://github.com/example/product/pull/812", repo: "example/product", draft: true } });
+const p1 = pr("P-1", 812, "Settings: a new toggle row", 25, { merged: false, source: { kind: "pr", author: "dana-kim", pr: 812, url: "https://github.com/example/product/pull/812", repo: "example/product", draft: true } });
 // Changes asked of it in a review (docs/desk.md → Reviews): In dev, its developer's, until new commits arrive.
 const p2 = pr("P-2", 806, "Reports: denser table rows", 60 * 5, { merged: false, responsible: { who: "developer", review: "U-1", since: ago(60 * 4) },
   reviews: [{ id: "U-1", by: { ...ALICE, role: "designer" }, at: ago(60 * 4), verdict: "request-changes", note: "Close; two things before it ships.", threads: ["T-81", "T-82"], posted: { url: "https://github.com/example/product/pull/806#pullrequestreview-1" } }],
