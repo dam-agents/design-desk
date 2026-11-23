@@ -2119,11 +2119,11 @@ test("an element's dialog shows the part before and after, says where before cam
   }
 });
 
-// A part with no picture of its own is cut live from its option's page, in All elements and in the
-// element dialog alike: on its own view (the review bar makes the view buttons only once the page
-// has loaded) and laid out wide, so a part only a wide screen shows has its size (docs/desk-page.md
-// → The element dialog).
-const PART_VIEWS_PAGE = `<!doctype html><html><head><style>@media (max-width: 767px) { .wide-only { display: none } }</style></head><body>${BAR}
+// A part with no picture of its own is cut live from its option's page, in All elements, in the
+// element dialog and enlarged alike: on its own view (the review bar makes the view buttons only once
+// the page has loaded) and laid out wide, so a part only a wide screen shows has its size
+// (docs/desk-page.md → The element dialog).
+const PART_VIEWS_PAGE = `<!doctype html><html><head><style>@media (max-width: 1279px) { .wide-only { display: none } }</style></head><body>${BAR}
 <div data-view="1" data-view-name="Closed"><header class="wide-only"><span id="tip" style="display:inline-block;padding:8px">Notifications</span></header><p>Home</p></div>
 <div data-view="2" data-view-name="Open"><h2 id="panel-title">Notifications</h2><button id="deny">Deny all</button></div></body></html>`;
 const bridgePartViews = `<script>
@@ -2146,7 +2146,7 @@ window.platform = { async request({ method, path, body }) {
 try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
 </script>`;
 
-test("a part cut from its option shows on its own view and at a desktop width, in All elements and in its dialog", async (t) => {
+test("a part cut from its option shows on its own view and at a desktop width, in All elements, its dialog and enlarged", async (t) => {
   const run = await launch(t, bridgePartViews);
   if (!run) return;
   const { desk } = run;
@@ -2161,9 +2161,14 @@ test("a part cut from its option shows on its own view and at a desktop width, i
     await desk.click('[data-card="r8"]');
     await desk.waitForSelector("#detail .elgrid");
     for (const [id, sel] of [["tip", "#tip"], ["title", "#panel-title"], ["deny", "#deny"]]) await drawn(`#detail [data-el="${id}"] iframe`, sel);
-    // The dialog's picture is the same cut.
+    // The dialog's picture is the same cut, and so is the part enlarged.
     await desk.click('#detail [data-el="deny"]');
     await drawn("#element-dialog[open] .el-col iframe", "#deny");
+    await desk.click("[data-el-close]");
+    await desk.click('#detail [data-el="tip"]');
+    await drawn("#element-dialog[open] .el-col iframe", "#tip");
+    await desk.click("#element-dialog[open] .el-pic[data-zoom-snip]");
+    await drawn(".zoom .zoomframe", "#tip");
   } finally {
     await run.close();
   }
@@ -3095,6 +3100,7 @@ test("a preview of a design shows neither the review bar nor the hotspots' outli
   Object.assign(process.env, browser.env);
   const src = (re) => { const m = page.match(re); assert.ok(m, `the page has ${re}`); return m[0]; };
   const { SNIP_SCRIPT, ZOOM_SCRIPT } = new Function(`${src(/const js = \(v\) => [^\n]+;/)}
+    ${src(/const OPEN_VIEW = [^\n]+;/)}
     ${src(/const SNIP_SCRIPT = [\s\S]*?<\\\/script>`;/)}
     ${src(/const ZOOM_SCRIPT = [\s\S]*?<\\\/script>`;/)}
     return { SNIP_SCRIPT, ZOOM_SCRIPT };`)();
