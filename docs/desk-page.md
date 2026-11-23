@@ -495,7 +495,9 @@ person has seen an item is its bold title alone ([Read and unread](#read-and-unr
 (amber; its key `proposal`): the dev team decides — a proposal, and, For Developers, an open request
 at any step before it is approved, one approved whose spec draft waits for a person to send it, and a
 change nobody marked handled that is not auto handled; a UI dev owner approves it for developers or
-sends it to design. **Design review** (green; its key `open`): it needs a design decision — the same
+sends it to design. Its pill says **Proposal** on a request not yet approved (a proposal, or an open
+For Developers request), **Dev review** on a change and on a spec draft waiting, as Closed's pill says
+how it ended. **Design review** (green; its key `open`): it needs a design decision — the same
 three For Designers. Design Desk at work on an item leaves it in its review: the spinner says so. **In dev** (the accent): it is
 approved and developers build it — a request writing its spec or sent to developers and not yet
 built, a change handled or auto handled whose pull request is not merged, and a change a review asked

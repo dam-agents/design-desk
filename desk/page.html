@@ -251,7 +251,7 @@
     color: var(--p); background: color-mix(in srgb, var(--p) 14%, transparent); }
   .spill[data-s="open"] { --p: var(--ok); } .spill[data-s="dev"] { --p: var(--accent); } .spill[data-s="shipped"] { --p: var(--live); }
   .spill[data-s="none"] { --p: var(--muted); } .spill[data-s="closed"] { --p: var(--bad); }
-  .spill[data-s="draft"] { --p: var(--muted); background: transparent; border: 1px dashed color-mix(in srgb, var(--p) 70%, transparent); line-height: 18px; } .spill[data-s="proposal"] { --p: var(--warn); }
+  .spill[data-s="draft"] { --p: var(--muted); background: transparent; border: 1px dashed color-mix(in srgb, var(--p) 70%, transparent); line-height: 18px; } .spill:is([data-s="proposal"], [data-s="proposed"]) { --p: var(--warn); }
   /* Simple mode's head of an item: kept in view while the page scrolls. Its moves sit beside the
      title alone; the line of its state and facts takes the whole width under both. The title keeps
      to one line, cut with an ellipsis (its full words on hover), the number and the link close by. */
@@ -3345,12 +3345,14 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // As full mode reads it: a spec draft waits until a person sends it, unless its approver asked it to go by itself.
   const specWaits = (c) => c.status === "spec" && c.spec?.review === "draft" && !c.approved?.auto_send;
   // Its review, by its side: Dev review (key `proposal`) For Developers, Design review (key `open`) For Designers.
-  const reviewOf = (c) => ({ state: forOf(c) === "developers" ? "proposal" : "open", pill: null });
+  // In Dev review a request not yet approved says Proposal on its pill; a change, or a spec draft waiting, Dev review.
+  const reviewOf = (c) => (forOf(c) !== "developers" ? { state: "open", pill: null }
+    : { state: "proposal", pill: c.kind === "request" && !specWaits(c) ? "proposed" : null });
   function simpleState(c, onPage = false) {
     if (!c || !["request", "change"].includes(c.kind)) return null;
     if (c.kind === "request") {
       if (c.status === "declined") return { state: "closed", pill: "closed" };
-      if (preDesign(c)) return { state: c.stage, pill: null };
+      if (preDesign(c)) return { state: c.stage, pill: c.stage === "proposal" ? "proposed" : null };
       if (c.status === "handed-off") return c.built ? { state: "closed", pill: "shipped" } : { state: "dev", pill: null };
       return c.status === "spec" && !specWaits(c) ? { state: "dev", pill: null } : reviewOf(c);
     }
@@ -3369,8 +3371,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const seesStage = (k) => (k === "draft" ? startsDraft() && can("request") : true) || S.cards.some((c) => !closed(c) && preDesign(c) === k);
   const simStates = () => SIM_ALL.filter(([k]) => seesStage(k));
   const SIM_KINDS = [["request", "Requests"], ["change", "PR changes"]];
-  const SIM_PILL = { draft: "Draft", proposal: "Dev review", open: "Design review", dev: "In dev", shipped: "Shipped", none: "No review needed", closed: "Closed" };
+  const SIM_PILL = { draft: "Draft", proposal: "Dev review", proposed: "Proposal", open: "Design review", dev: "In dev", shipped: "Shipped", none: "No review needed", closed: "Closed" };
   const SIM_TIP = { draft: "A draft: only its author sees it until they send it on", proposal: "Dev review: the dev team approves it for dev or sends it to design; everyone may read it",
+    proposed: "A proposal: the dev team approves it for dev or sends it to design; everyone may read it",
     open: "Design review: it needs a design decision", dev: "Approved: developers are building it", shipped: "Approved by a person and shipped",
     none: "Merged; Design Desk found nothing to review", closed: "Closed without being built" };
   // The filter: states and kinds, any of each; kept in this browser (desk-simFilter). By default
