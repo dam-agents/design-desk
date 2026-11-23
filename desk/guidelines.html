@@ -230,6 +230,18 @@
       </div>
     </div>
   </div>
+  <div class="gl-item">
+    <div class="gl-rule">
+      <h3 class="gl-h3">An icon alone, for a tool the list always has</h3>
+      <p class="gl-p">A tool every visit uses, such as a list's filter, can be its icon alone: a 32 px square, the icon 17 px, neutral, at the end of its row. Its name and tooltip say what it does and what it is set to.</p>
+      <p class="gl-p">While it holds a setting that hides something, an accent dot sits on its border's upper right corner. Never a dark ring: that marks only the pressed segment of a switcher.</p>
+    </div>
+    <div class="gl-ex">
+      <div class="gl-row">
+        <div class="filterbar simfilter"><details class="more sf"><summary class="btn sf-btn" aria-label="Filter the list. Shown: everything" title="Filter the list. Shown: everything"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4-2v-4z"/></svg></summary></details><details class="more sf"><summary class="btn sf-btn filtered" aria-label="Filter the list. Shown: Design review" title="Filter the list. Shown: Design review"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4-2v-4z"/></svg></summary></details></div>
+      </div>
+    </div>
+  </div>
 </section>
 
 <section class="gl-sect" id="state">
@@ -242,8 +254,9 @@
     <div class="gl-ex">
       <div class="gl-row">
         <span class="spill" data-s="draft">Draft</span>
-        <span class="spill" data-s="proposal">Proposal</span>
-        <span class="spill" data-s="open">Open</span>
+        <span class="spill" data-s="proposed">Proposal</span>
+        <span class="spill" data-s="proposal">Dev review</span>
+        <span class="spill" data-s="open">Design review</span>
         <span class="spill" data-s="dev">In dev</span>
         <span class="spill" data-s="shipped">Shipped</span>
         <span class="spill" data-s="none">No review needed</span>
@@ -399,8 +412,8 @@
     </div>
     <div class="gl-ex gl-wide">
       <div class="gl-row">
-        <button class="sbox" data-s="proposal"><span class="n">1</span>Proposal</button>
-        <button class="sbox" data-s="open"><span class="n">4</span>Open</button>
+        <button class="sbox" data-s="proposal"><span class="n">1</span>Dev review</button>
+        <button class="sbox" data-s="open"><span class="n">4</span>Design review</button>
         <button class="sbox" data-s="dev"><span class="n">2</span>In dev</button>
         <button class="sbox" data-s="closed"><span class="n">12</span>Closed</button>
       </div>

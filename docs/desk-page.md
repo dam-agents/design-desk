@@ -186,11 +186,13 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   the server takes it, and sent again on the next load.
   **Simple mode**, a switch in the menu under the person's name (an on/off switch beside its
   words, in the accent when on), is review-first. The menu has one entry, **Requests & PRs**
-  (current on Requests and PR Changes, its count the Open items), and **+ New request**; its one
-  list holds the requests and the pull request changes of the viewer's own side — For Developers
-  for a developer or a UI dev owner, For Designers for everyone else, with no switch — each in
+  (current on Requests and PR Changes, its count the items in the reviews the viewer's default
+  filter shows), and **+ New request**; its one list holds every request and pull request change,
+  whatever its side — For Developers or For Designers only decides which review it is in — each in
   one state ([A request's state in the list](#a-requests-state-in-the-list)), the newest change
-  first. A row is the kind's icon, the title, when it last changed (Today, Yesterday or the
+  first; only an archived change is not listed, nor someone else's draft, which the server sends only
+  to its author and an admin. A row is the kind's icon (a change's in its pull request's ink, as the head's pill: green open, grey draft, purple merged; with a red dot on its upper right corner while an unread notification
+  for the viewer is about the item, [Notifications](#notifications)), the title (two lines at most), when it last changed (Today, Yesterday or the
   day, with the time; the year only when it is not this year), then its number in the same grey
   words, never broken across lines (a change its pull request's, `PR#812`; a request, or a change
   with no pull request, its own on the Desk, `R-12` or `P-3`), who asked and where from in the same
@@ -200,19 +202,21 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   it (on a screen under 400 px, where a long date has no room beside it, on a line of its own under
   the date, at the right); a long name is cut with an ellipsis. A title is in English, here and in the head: Design Desk's translation, unless a person
   renamed it. The
-  filter is one **Filter** button: its menu ticks any of State (**Draft** for anyone whose request
-  starts as one, then **Proposal**, **In review**, **In dev**, **Closed**) and Kind (**Requests**,
+  filter is one button at the list's right, its funnel icon alone (32 px, a dot on its border's corner while the
+  filter hides anything — not every state and kind ticked; its tooltip says what the list shows):
+  its menu, opening inside the list, ticks any of State (**Draft** for anyone whose request
+  starts as one, then **Dev review**, **Design review**, **In dev**, **Closed**) and Kind (**Requests**,
   **PR changes**), each with its count, at least one of each ticked, a state's row offering
-  **Only** under the pointer (that state alone, the kinds kept), and **Reset to default** (In review
-  for a designer, every state before In dev for anyone else; both kinds; a kept state they do not
-  have is left out); beside the button only what narrows the
-  list, a chip each, × dropping it (a kind's chip only while one kind is ticked). This browser
+  **Only** under the pointer (that state alone, the kinds kept), and **Reset to default** (Design review
+  for a designer, Draft and Dev review for a developer or a UI dev owner, every state before In dev
+  for anyone else; both kinds; a kept state they do not have is left out; the keys stay `proposal`
+  for Dev review and `open` for Design review, so a kept filter keeps working); nothing shows beside the button. This browser
   keeps it (`desk-simFilter`). There is no Your turn, Unread or Needs a designer filter, and no
   For Designers / For Developers switch. An opened request or change starts with one head that
   stays in view while the page scrolls: the kind's icon, the title on one line (cut with an
   ellipsis, its full words on hover) with its number and the link icon close after it, the buttons
   beside it alone; under them, across the whole width, its state's pill a size larger than a row's, Design Desk's work in words beside the spinner, a change's pull request
-  as a pill in GitHub's inks, as full mode's dot (`#812 Draft` grey, `#812 Open` green, `#812 Merged`
+  as a pill in GitHub's inks as tall as the state's, as full mode's dot (`#812 Draft` grey, `#812 Open` green, `#812 Merged`
   purple), a link to GitHub, a reported bug's **Bug** chip (with
   its severity), who asked and where from in the row's words, and when (a person by their name on
   the roster, else the name the item keeps, else the part of their address before the @), and once approved one muted
@@ -224,11 +228,16 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   design** then **Approve for dev**, with ⋯ holding **Request changes**, **Propose** or **Back to
   draft**, and **Close…**. Both ask first, as it cannot come back; Approve for dev asks as an
   approval does. No plain Approve; votes on a proposal in full mode (**Ask for feedback**, **End the
-  vote**), none on a draft. While it is In review, a request offers **Request changes** (with options drawn) and **Approve** — which sends the spec
+  vote**), none on a draft. While it is in Design review, a request offers **Request changes** (with options drawn) and **Approve** — which sends the spec
   as soon as it is written, with no box to tick, or, for one the Desk may not send by itself (a
   Slack origin, an open pull request; [handoff.md](handoff.md) → Review before it goes), leaves it
-  Open with **Send to developers** — and a change **Request changes** and **Approve** (marks it handled); each only for
-  who may. **Feedback** ([desk.md](desk.md) → Reviews): under the shown option, and under a change's
+  in its review with **Send to developers** — and a change **Request changes** and **Approve** (marks it handled); each only for
+  who may. In Dev review after design opened, a request or a change has a proposal's two moves:
+  **Approve for dev** (on a change **Approve**, which marks it handled; on an approved request whose
+  spec draft waits, **Send to developers**) and **Send to design** — the move to For Designers, for
+  a UI dev owner or an admin, asking first; it then is in Design review — with **Request changes**
+  under ⋯; while feedback drafts wait, **Request changes · n** and the approval come first and Send
+  to design goes under ⋯. **Feedback** ([desk.md](desk.md) → Reviews): under the shown option, and under a change's
   screens, a box offers **Add to feedback** — a draft, the viewer's alone — and **Comment**, a
   comment on the Desk at once (never on GitHub); the box at the end of the page posts at once. While
   drafts wait, **Your feedback · n** under the head lists them, each with what it is about and ✕, and
@@ -244,7 +253,7 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   offers no Approve. A request that went to design folds the conversations and feedback begun
   before it opened (`opened_at`) into **Before design · n**, after the rest, in both modes. ⋯ holds **Close…** or **Reopen** on a request, **Turn into a design request** on a
   change (and **Undo approval** on one approved), and **Open on GitHub** where there is a link. No vote buttons, rename or For Developers
-  move. Under the head the page reads one way for both kinds: a short lead — a request's `gist`,
+  move (Send to design is the one move to For Designers). Under the head the page reads one way for both kinds: a short lead — a request's `gist`,
   Design Desk's few plain sentences on the problem and what will be done ([requests.md](requests.md)
   → Triage), a change's summary — then a request's **Original request** folded: where it came from
   and when (no name: the head has it), its words, and for one in another language `Written in
@@ -262,9 +271,9 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   design led by its option (and part) as a chip that opens the design workspace there; one marked
   done folds to one line (who wrote it and how it starts, who resolved it and when) that opens on
   a click. Reply, Mark done, Add to my feedback and Reopen work as in full mode. With nothing open, the pane shows
-  instead of the Requests intro a box per state, **Draft** and **Proposal** only while they hold
-  something, then **In review**, **In dev** and **Closed**: how many items of
-  the viewer's side are in each (Open and In dev with their kinds, Closed with how many of them
+  instead of the Requests intro a box per state, **Draft** only while it holds
+  something, then **Dev review**, **Design review**, **In dev** and **Closed**: how many items are
+  in each (the reviews and In dev with their kinds, Closed with how many of them
   shipped in the last 7 days); a click on one filters the list to that state. Otherwise it hides: **Designs**, **Issues**, **Product** and **People** leave the menu (a sent
   request offers no **Show the design**), Product's pages their bar, the presentation leaves Requests (its page, its buttons on a card and in an intro), a
   request offers no **Build a live prototype** (a prototype already up still shows), and an
@@ -514,22 +523,29 @@ violet, one grey on every page, the green the same as Approved): a change's pull
 request **Draft** (grey), **Open** (green) or **Merged** (purple, `source.draft`, `source.merged_at`);
 an issue **Open** (green) or **Designed** (purple, once its design went to developers). Whether a
 person has seen an item is its bold title alone ([Read and unread](#read-and-unread)).
-**In simple mode** an item has one of three states, by who works on it, and no dot; a request before
-design has its stage instead, on the list of whoever sees it whatever its side: **Draft** (grey,
-dashed) and **Proposal** (amber; [desk.md](desk.md) → Draft and Proposal). **In review**
-(green; its key `open`): it needs a design decision — an open request at any step before it is approved (Design Desk
-at work on it included: the spinner says so), one approved whose spec draft waits for a person to send
-it, a change nobody marked handled that is not auto handled. **In dev** (the accent): it is
+**In simple mode** an item has one state, by who works on it, whatever its side, and no status dot. **Draft**
+(grey, dashed): a draft, its author's ([desk.md](desk.md) → Draft and Proposal). **Dev review**
+(amber; its key `proposal`): the dev team decides — a proposal, and, For Developers, an open request
+at any step before it is approved, one approved whose spec draft waits for a person to send it, and a
+change nobody marked handled that is not auto handled; a UI dev owner approves it for developers or
+sends it to design. Its pill says **Proposal** on a request not yet approved (a proposal, or an open
+For Developers request), **Dev review** on a change and on a spec draft waiting, as Closed's pill says
+how it ended. **Design review** (green; its key `open`): it needs a design decision — the same
+three For Designers. Design Desk at work on an item leaves it in its review: the spinner says so. **In dev** (the accent): it is
 approved and developers build it — a request writing its spec or sent to developers and not yet
 built, a change handled or auto handled whose pull request is not merged, and a change a review asked
 changes of until new commits arrive (its head says **Changes requested · developer**; a request a
-review asked changes of stays In review, its head saying **Changes requested · Design Desk**,
+review asked changes of stays in its review, its head saying **Changes requested · Design Desk**,
 [desk.md](desk.md) → Reviews). **Closed**: nobody
 works on it, and its pill says how it ended — **Shipped** (purple) a request built or a handled
 change merged, **No review needed** (grey) an auto handled change merged, **Closed** (red) a
-request closed, with a decision or without. An archived change, and anything on the other side,
-is not listed. Issues, screens, elements and decisions have no
+request closed, with a decision or without. An archived change is not listed, nor someone else's
+draft (the server sends it only to its author and an admin, [desk.md](desk.md) → Draft and Proposal). Issues, screens, elements and decisions have no
 simple state: simple mode lists none of them, and a link to one opens its full page.
+
+A list row's title, in both modes, takes two lines at most and ends with an ellipsis; its tooltip
+has it in full, and so does full mode's page (simple mode's head cuts it to one line, its words on
+hover).
 
 On a wide window the list folds away with an arrow halfway down its edge and comes back with
 it; each browser remembers it (`desk-list-folded` in local storage). Dragging the edge makes
@@ -551,7 +567,9 @@ without marking anything.
 The bell at the far right of the header, right of the person's name, lists what happened on the Desk in the
 last 30 days, newest first, at most 50 (`GET /api/notifications`). Nothing new is logged: each
 event is read from what the store keeps anyway. A person never sees their own doings, and a
-private ask only its owner: Design Desk's answers to it are theirs alone, and for them. The events:
+private ask only its owner: Design Desk's answers to it are theirs alone, and for them. In simple
+mode a row of the list whose item an unread notification For you is about has a red dot on its
+icon's upper right corner, gone once the notification is read. The events:
 
 | Event | When |
 | --- | --- |

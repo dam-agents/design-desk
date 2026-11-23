@@ -217,6 +217,8 @@
   .row[aria-current="true"], .row.item:has(> .open[aria-current="true"]) { --row-bg: var(--soft); background: var(--row-bg); }
   /* A title is bold until this person first opens the item (docs/desk-page.md → Read and unread). */
   .row .t { font-weight: 400; display: flex; gap: 8px; align-items: baseline; } .row.unread .t { font-weight: 600; }
+  /* A list row's title: two lines at most, then an ellipsis; its tooltip and its page have it all. */
+  .row.item .t > span:first-child { min-width: 0; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
   .row .s { color: var(--muted); font-size: var(--fs-meta); margin-top: 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .row .meta { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
   /* A label in the list sits above the card's button, so its own line shows on it alone; a click on it still opens the card. */
@@ -231,7 +233,9 @@
      who asked, then its state. The date and number never break; the pill keeps its own column on the
      right, as high as both lines, and the title and its line narrow instead. */
   .row.item.srow > .open { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; column-gap: 8px; row-gap: 4px; align-items: start; }
-  .srow .kic { grid-row: span 2; color: var(--muted); padding-top: 2px; } .kic svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; display: block; }
+  .srow .kic { grid-row: span 2; color: var(--muted); padding-top: 2px; position: relative; }
+  .srow .kic[data-s="pr-open"] { color: var(--gh-open); } .srow .kic[data-s="pr-draft"] { color: var(--gh-draft); } .srow .kic[data-s="pr-merged"] { color: var(--gh-merged); }
+  .srow .kic .kdot { position: absolute; top: 0; left: 10px; width: 8px; height: 8px; border-radius: 50%; background: var(--bad); box-shadow: 0 0 0 2px var(--row-bg, var(--panel)); } .kic svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; display: block; }
   .srow .sline { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: var(--fs-meta); color: var(--muted); min-height: 20px; }
   .srow .open > .spill { grid-column: 3; grid-row: 1 / span 2; align-self: center; margin-left: 8px; }
   /* A phone narrower than 400 px has no room for a long date beside the pill (it never breaks):
@@ -243,7 +247,7 @@
     color: var(--p); background: color-mix(in srgb, var(--p) 14%, transparent); }
   .spill[data-s="open"] { --p: var(--ok); } .spill[data-s="dev"] { --p: var(--accent); } .spill[data-s="shipped"] { --p: var(--live); }
   .spill[data-s="none"] { --p: var(--muted); } .spill[data-s="closed"] { --p: var(--bad); }
-  .spill[data-s="draft"] { --p: var(--muted); background: transparent; border: 1px dashed color-mix(in srgb, var(--p) 70%, transparent); line-height: 18px; } .spill[data-s="proposal"] { --p: var(--warn); }
+  .spill[data-s="draft"] { --p: var(--muted); background: transparent; border: 1px dashed color-mix(in srgb, var(--p) 70%, transparent); line-height: 18px; } .spill:is([data-s="proposal"], [data-s="proposed"]) { --p: var(--warn); }
   /* Simple mode's head of an item: kept in view while the page scrolls. Its moves sit beside the
      title alone; the line of its state and facts takes the whole width under both. The title keeps
      to one line, cut with an ellipsis (its full words on hover), the number and the link close by. */
@@ -260,6 +264,8 @@
   .sh-pr { --t: var(--gh-open); display: inline-flex; align-items: center; gap: 4px; padding: 0 8px; border-radius: 999px; font-size: var(--fs-micro); font-weight: 500; line-height: 20px; white-space: nowrap;
     color: var(--t); background: color-mix(in srgb, var(--t) 14%, transparent); text-decoration: none; } .sh-pr:hover { text-decoration: underline; }
   .sh-pr[data-s="pr-draft"] { --t: var(--gh-draft); } .sh-pr[data-s="pr-merged"] { --t: var(--gh-merged); }
+  /* As tall as the state's pill beside it. */
+  .shead .sh-pr { line-height: 24px; }
   .sh-acts { display: flex; gap: 8px; align-items: center; flex: none; } details.more.sh-more .menu { left: auto; right: 0; }
   @media (max-width: 860px) { .shead { top: 28px; margin: 0 -16px 12px; padding: 12px 16px; } }
   @media (max-width: 560px) { .sh-acts { grid-column: 1 / -1; grid-row: auto; margin-top: 8px; } }
@@ -335,8 +341,14 @@
   .sbox[data-s="proposal"] { --p: var(--warn); } .sbox[data-s="open"] { --p: var(--ok); } .sbox[data-s="dev"] { --p: var(--accent); } .sbox[data-s="closed"] { --p: var(--live); }
   @media (max-width: 860px) { .sboxes { grid-template-columns: 1fr; } }
   /* Simple mode's filter: one button, its menu of ticks, and a chip for each thing it narrows by. */
-  .simfilter { align-items: center; } .simfilter details.sf > summary { display: inline-flex; align-items: center; gap: 4px; }
-  .simfilter details.sf > summary svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
+  .simfilter { align-items: center; flex-wrap: nowrap; min-width: 0; justify-content: flex-end; width: 100%; }
+  .simfilter details.more.sf .menu { left: auto; right: 0; } .simfilter details.sf > summary { display: inline-flex; align-items: center; justify-content: center; }
+  /* The filter: its icon alone, larger, in a square button; a dot on it while it hides anything. */
+  .simfilter details.sf > summary.sf-btn { position: relative; width: 32px; height: 32px; padding: 0; }
+  /* Its bar takes no more than the button: the list starts right under it. */
+  .listhead:has(.simfilter) { padding-top: 8px; margin-bottom: 0; } .filterbar.simfilter { padding: 0; }
+  .simfilter details.sf > summary svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
+  .simfilter .sf-btn.filtered::after { content: ""; position: absolute; top: -4px; right: -4px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--panel); }
   .simfilter .menu { min-width: 220px; }
   .sf-h { padding: 4px 8px 0; font-size: var(--fs-micro); color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
   .sf-opt { display: flex; align-items: center; gap: 8px; width: 100%; padding: 4px 8px; border: 0; border-radius: var(--r-sm); background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
@@ -350,8 +362,6 @@
   .sf-opt[aria-checked="true"] .box::after { content: ""; width: 6px; height: 3px; border: solid var(--accent-ink); border-width: 0 0 2px 2px; transform: rotate(-45deg) translate(1px, -1px); }
   .sf-opt .n { margin-left: auto; color: var(--muted); font-size: var(--fs-meta); }
   .sf-reset { margin-top: 4px; }
-  .sf-chip { display: inline-flex; align-items: center; gap: 4px; padding: 0 8px; border: 1px solid var(--line); border-radius: 999px; font-size: var(--fs-meta); line-height: 24px; }
-  .sf-chip .linkbtn { color: var(--muted); padding: 0 2px; }
   .prov { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; font-size: var(--fs-meta); color: var(--muted); }
   .prov .when { color: var(--ink); font-weight: 500; }
   .row .prov { margin-top: 4px; position: relative; z-index: 1; pointer-events: none; font-size: var(--fs-meta); }

@@ -4230,8 +4230,8 @@ test("Product → Kit is not on the page for a PM", (t) => open(t, withKit({ ...
   assert.equal(await desk.locator('[data-filter="productFilter:kit"]').count(), 0);
 }));
 
-// Simple mode's one list (docs/desk-page.md → A request's state in the list): requests and pull
-// request changes of the viewer's side, each Open, In dev or Closed, a closed one saying how it ended.
+// Simple mode's one list (docs/desk-page.md → A request's state in the list): every request and pull
+// request change, whatever its side, each Dev review, Design review, In dev or Closed, a closed one saying how it ended.
 const at = (h) => `2026-11-18T${String(h).padStart(2, "0")}:00:00Z`;
 const merged = { kind: "pr", pr: 7, url: "https://github.com/o/r/pull/7", merged_at: at(1) };
 const SIMPLE_CARDS = [
@@ -4253,18 +4253,22 @@ const SIMPLE_CARDS = [
 ];
 const SIMPLE_ME = { role: "designer", email: "d@example.com", simple: true, spec_review: true, can: { request: true } };
 const rows = (desk) => desk.$$eval("#list [data-card]", (xs) => xs.map((x) => [x.dataset.card, x.querySelector(".spill")?.textContent || ""]));
+// What simple mode's filter lets through, as its menu ticks it: the states, and a kind only while one alone is.
+const ticked = (desk) => desk.$eval(".sf .menu", (m) => { const on = (g) => [...m.querySelectorAll(`[data-simf^="${g}:"][aria-checked="true"]`)].map((x) => x.children[1].textContent.trim());
+  const k = on("kinds"); return [...on("states"), ...(k.length < m.querySelectorAll('[data-simf^="kinds:"]').length ? k : [])]; });
 
-test("simple mode lists requests and changes of the viewer's side in one list, each in one state, and its menu has one entry", (t) => open(t, DESK(SIMPLE_ME, SIMPLE_CARDS), async (desk) => {
+test("simple mode lists every request and change in one list, each in one state, and its menu has one entry", (t) => open(t, DESK(SIMPLE_ME, SIMPLE_CARDS), async (desk) => {
   await desk.waitForSelector('#list [data-card="r-check"]');
   assert.equal((await desk.textContent("#nav")).replace(/\d+$/, "").trim(), "Requests & PRs", "one entry, no PR Changes");
-  assert.deepEqual(await rows(desk), [["r-check", "In review"], ["r-busy", "In review"], ["r-draft", "In review"], ["c-open", "In review"]], "Open by default, newest change first, the pill on every row even with one state");
+  assert.deepEqual(await rows(desk), [["r-check", "Design review"], ["r-busy", "Design review"], ["r-draft", "Design review"], ["c-open", "Design review"]], "Design review by default, newest change first, the pill on every row even with one state");
   assert.equal(await desk.locator('#list [data-card="r-busy"] .dd-spin').count(), 1, "Design Desk at work: the spinner, still Open");
   await desk.click("details.sf > summary");
+  await desk.click('[data-simf="states:proposal"]');
   await desk.click('[data-simf="states:dev"]');
   await desk.click('[data-simf="states:closed"]');
-  assert.deepEqual(await rows(desk), [["r-check", "In review"], ["r-busy", "In review"], ["r-draft", "In review"], ["r-spec", "In dev"], ["r-sent", "In dev"], ["r-built", "Shipped"],
-    ["r-declined", "Closed"], ["r-decided", "Closed"], ["c-open", "In review"], ["c-review", "In dev"], ["c-shipped", "Shipped"], ["c-auto", "No review needed"]],
-    "every item one state; the other side's items and an archived change are not listed");
+  assert.deepEqual(await rows(desk), [["r-check", "Design review"], ["r-busy", "Design review"], ["r-draft", "Design review"], ["r-spec", "In dev"], ["r-sent", "In dev"], ["r-built", "Shipped"],
+    ["r-declined", "Closed"], ["r-decided", "Closed"], ["r-small", "Proposal"], ["c-open", "Design review"], ["c-review", "In dev"], ["c-shipped", "Shipped"], ["c-auto", "No review needed"], ["c-small", "Dev review"]],
+    "every item one state, whatever its side; only an archived change is not listed");
   assert.equal(await desk.locator("details.sf[open]").count(), 1, "the menu stays open while ticking");
 }));
 
@@ -4277,11 +4281,61 @@ test("a simple mode row says when it last changed, then its number: a change its
   const change = await line("c-open"), request = await line("r-check");
   assert.equal(change.num, "PR#7", "a change: PR and its pull request's number");
   assert.match(change.title, /pull request/);
+  const ink = (id) => desk.$eval(`#list [data-card="${id}"] .kic`, (k) => [k.dataset.s || "", getComputedStyle(k).color]);
+  const [mergedInk, mergedColor] = await ink("c-open"), [, requestColor] = await ink("r-check");
+  assert.equal(mergedInk, "pr-merged", "its icon wears its pull request's state, merged in purple");
+  assert.notEqual(mergedColor, requestColor, "a request's icon stays grey");
+  await desk.click("details.sf > summary");
+  await desk.click('[data-simf="states:dev"]');
+  await desk.keyboard.press("Escape");
+  assert.equal((await ink("c-review"))[0], "pr-open", "an open one in green");
   assert.equal(request.num, "r-check", "a request: its number on the Desk");
   assert.match(request.title, /number on the Desk/);
   assert.doesNotMatch(request.title, /pull request/);
   assert.deepEqual(request.order.slice(0, 3), ["when", "ssep", "snum"], "the number after when it last changed");
   assert.ok(change.same && request.same, "in the date's font, size and grey");
+}));
+
+// A list row's title: two lines at most, then an ellipsis, in both modes; its tooltip has it all.
+const LONG_TITLE = { id: "r-long-title", kind: "request", title: "A request whose title goes on and on about the limits banner on the agents page, the spend panel, the bell and every other place it shows up", status: "triage", updated: at(21) };
+for (const [mode, me] of [["simple", SIMPLE_ME], ["full", { ...SIMPLE_ME, simple: false }]])
+  test(`${mode} mode: a list row's title stops at two lines with an ellipsis, and its tooltip has it all`, (t) => open(t, DESK(me, [LONG_TITLE]), async (desk) => {
+    await desk.setViewportSize({ width: 1024, height: 700 });
+    await desk.waitForSelector('#list [data-card="r-long-title"]');
+    const box = await desk.$eval('#list [data-card="r-long-title"] .t > span', (x) => {
+      const s = getComputedStyle(x); return { lines: Math.round(x.getBoundingClientRect().height / parseFloat(s.lineHeight)), cut: x.scrollHeight > x.clientHeight + 1, title: x.title || x.dataset.tip };
+    });
+    assert.equal(box.lines, 2, "two lines");
+    assert.ok(box.cut, "the rest is cut");
+    assert.equal(box.title, LONG_TITLE.title);
+  }));
+
+// Every state ticked reads All states; a red dot on a row's icon while an unread notification for
+// the viewer is about it; the head's pull request pill as tall as its state's.
+test("simple mode's filter is its icon on the right, with no dot once every state and kind is ticked", (t) => open(t, DESK(SIMPLE_ME, SIMPLE_CARDS), async (desk) => {
+  await desk.waitForSelector('#list [data-card="r-check"]');
+  const right = await desk.evaluate(() => { const b = document.querySelector("details.sf > summary").getBoundingClientRect(), l = document.querySelector("#list").getBoundingClientRect(); return l.right - b.right < 24; });
+  assert.ok(right, "at the list's right edge");
+  await desk.click("details.sf > summary");
+  for (const k of ["proposal", "dev", "closed"]) await desk.click(`[data-simf="states:${k}"]`);
+  assert.equal(await desk.locator("details.sf > summary.filtered").count(), 0, "everything shown: no dot");
+  assert.match(await desk.getAttribute("details.sf > summary", "aria-label"), /Shown: everything/);
+  const inside = await desk.evaluate(() => { const m = document.querySelector("details.sf .menu").getBoundingClientRect(), l = document.querySelector("#list").getBoundingClientRect(); return m.left >= l.left && m.right <= l.right; });
+  assert.ok(inside, "its menu opens inside the list");
+  await desk.click('[data-simf="kinds:change"]');
+  assert.equal(await desk.locator("details.sf > summary.filtered").count(), 1, "one kind alone: the dot again");
+}));
+
+const NOTE_DESK = (notes) => DESK(SIMPLE_ME, SIMPLE_CARDS).replace(': path === "/api/agenda" ? { agenda: [] }', `: path === "/api/notifications" ? { seen: null, unread: 1, items: ${JSON.stringify(notes)} } : path === "/api/agenda" ? { agenda: [] }`);
+test("simple mode: a row has a red dot on its icon while an unread notification for the viewer is about it", (t) => open(t, NOTE_DESK([
+  { id: "n1", at: at(22), event: "comment", item: "r-check", kind: "request", title: "Checking", for_you: true, read: false, by: { email: "x@example.com" } },
+  { id: "n2", at: at(22), event: "comment", item: "r-busy", kind: "request", title: "Drawing", for_you: true, read: true, by: { email: "x@example.com" } },
+  { id: "n3", at: at(22), event: "comment", item: "c-open", kind: "change", title: "To review", for_you: false, read: false, by: { email: "x@example.com" } }]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="r-check"] .kic .kdot');
+  assert.deepEqual(await desk.$$eval("#list [data-card]:has(.kdot)", (xs) => xs.map((x) => x.dataset.card)), ["r-check"], "only an unread one for the viewer");
+  const corner = await desk.$eval('#list [data-card="r-check"] .kic', (k) => { const i = k.querySelector("svg").getBoundingClientRect(), d = k.querySelector(".kdot").getBoundingClientRect();
+    return d.left > i.left + i.width / 2 && d.left < i.right && d.top <= i.top + 2; });
+  assert.ok(corner, "on the icon's upper right corner, partly over it");
 }));
 
 // A change with no pull request, and a date as long as they get, in a list as narrow as a small
@@ -4313,28 +4367,53 @@ test("on a phone-wide list a simple mode row keeps its date and number on one li
 
 test("simple mode's filter shows only what narrows the list, keeps one of each group and is kept in the browser", (t) => open(t, DESK(SIMPLE_ME, SIMPLE_CARDS), async (desk) => {
   await desk.waitForSelector('#list [data-card="r-check"]');
-  assert.deepEqual(await desk.$$eval(".sf-chip", (xs) => xs.map((x) => x.textContent.trim())), ["In review"], "the default: one chip, no ×, no kind");
+  assert.deepEqual(await ticked(desk), ["Design review"], "the default: one state, no kind");
+  assert.equal((await desk.textContent("details.sf > summary")).trim(), "", "the filter is its icon alone");
+  assert.equal(await desk.locator("details.sf > summary.filtered").count(), 1, "a dot on it: it hides something");
+  assert.match(await desk.getAttribute("details.sf > summary", "aria-label"), /Shown: Design review$/, "its name says what it shows");
+  assert.equal(await desk.locator(".sf-chip, .sf-shown").count(), 0, "nothing beside it");
   await desk.click("details.sf > summary");
   assert.equal(await desk.getAttribute('[data-simf="states:open"]', "disabled"), "", "the last state cannot be unticked");
   assert.match(await desk.textContent('[data-simf="states:closed"]'), /Closed\s*5/, "a count by what the kinds let through");
   await desk.click('[data-simf="states:dev"]');
   await desk.click('[data-simf="kinds:change"]');
-  assert.deepEqual(await desk.$$eval(".sf-chip", (xs) => xs.map((x) => x.textContent.replace("×", "").trim())), ["In review", "In dev", "Requests"], "a kind shows once it narrows");
+  assert.deepEqual(await ticked(desk), ["Design review", "In dev", "Requests"], "a kind shows once it narrows");
   assert.deepEqual((await rows(desk)).map(([id]) => id), ["r-check", "r-busy", "r-draft", "r-spec", "r-sent"]);
+  await desk.click('[data-simf="states:open"]');
   await desk.keyboard.press("Escape");
-  await desk.click('[data-simf-drop="states:open"]');
-  assert.deepEqual((await rows(desk)).map(([id]) => id), ["r-spec", "r-sent"], "× drops it");
+  assert.deepEqual((await rows(desk)).map(([id]) => id), ["r-spec", "r-sent"], "unticked in the menu");
+  assert.equal(await desk.locator("details.sf > summary.filtered").count(), 1);
   await desk.reload();
   await desk.waitForSelector('#list [data-card="r-spec"]');
   assert.deepEqual((await rows(desk)).map(([id]) => id), ["r-spec", "r-sent"], "kept in this browser");
   await desk.click("details.sf > summary");
   await desk.click("[data-simf-reset]");
-  assert.deepEqual((await rows(desk)).map(([id]) => id), ["r-check", "r-busy", "r-draft", "c-open"], "Reset goes back to Open");
+  assert.deepEqual((await rows(desk)).map(([id]) => id), ["r-check", "r-busy", "r-draft", "c-open"], "Reset goes back to Design review");
 }));
 
-test("simple mode lists a developer's side for a developer", (t) => open(t, DESK({ ...SIMPLE_ME, role: "developer" }, SIMPLE_CARDS), async (desk) => {
+test("a developer's simple mode starts at Dev review, and Design review holds the designers' items", (t) => open(t, DESK({ ...SIMPLE_ME, role: "developer" }, SIMPLE_CARDS), async (desk) => {
   await desk.waitForSelector('#list [data-card="r-small"]');
   assert.deepEqual((await rows(desk)).map(([id]) => id), ["r-small", "c-small"]);
+  assert.equal((await desk.textContent("#nav .count")).trim(), "2", "the menu counts what Dev review holds");
+  await desk.click("details.sf > summary");
+  await desk.click('[data-simf="states:open"]');
+  assert.deepEqual(await rows(desk), [["r-check", "Design review"], ["r-busy", "Design review"], ["r-draft", "Design review"], ["r-small", "Proposal"], ["c-open", "Design review"], ["c-small", "Dev review"]],
+    "nothing is left out by its side");
+}));
+
+// R-6's case: a For Developers request at the team's feedback is in Dev review for everyone, a
+// designer included; approved and building, it is In dev.
+test("a For Developers request in feedback is in Dev review for a designer too, In dev once approved", (t) => open(t, DESK(SIMPLE_ME, [
+  { id: "R-6", kind: "request", title: "Feedback, For Developers", status: "feedback", for: "developers", updated: at(5) },
+  { id: "R-7", kind: "request", title: "Approved, For Developers", status: "spec", spec: { review: "sent" }, for: "developers", updated: at(4) },
+  { id: "R-8", kind: "request", title: "Spec draft waits, For Developers", status: "spec", spec: { review: "draft" }, for: "developers", updated: at(3) },
+]), async (desk) => {
+  await desk.waitForSelector(".sf");
+  await desk.click("details.sf > summary");
+  assert.match(await desk.textContent('[data-simf="states:proposal"]'), /Dev review\s*2/);
+  await desk.click('[data-simf="states:proposal"]');
+  await desk.click('[data-simf="states:dev"]');
+  assert.deepEqual(await rows(desk), [["R-6", "Proposal"], ["R-7", "In dev"], ["R-8", "Dev review"]], "in Dev review a request not yet approved says Proposal; a spec draft waiting, Dev review");
 }));
 
 // Simple mode's head of an item (docs/desk-page.md → Simple mode): what it is, where it stands,
@@ -4367,7 +4446,7 @@ test("simple mode heads a request with its number, link, state, author and two m
   await desk.waitForSelector("#detail .shead");
   assert.match(await desk.textContent("#detail .shead h2"), /Calmer limits\s*R-5/, "the title with its number");
   assert.equal(await desk.locator("#detail .shead h2 [data-copy-link]").count(), 1, "and the link icon that copies its link");
-  assert.match(await desk.textContent("#detail .sh-line"), /In review[\s\S]*jana\.novak[\s\S]*\d:\d\d [AP]M/, "its state, who (no name: the part before the @) and when");
+  assert.match(await desk.textContent("#detail .sh-line"), /Design review[\s\S]*jana\.novak[\s\S]*\d:\d\d [AP]M/, "its state, who (no name: the part before the @) and when");
   assert.doesNotMatch(await desk.textContent("#detail .sh-line"), /@example\.com/, "never a whole address");
   assert.deepEqual(await desk.$$eval("#detail .sh-acts > .btn", (xs) => xs.map((x) => x.textContent.trim())), ["Request changes", "Approve"]);
   assert.equal(await desk.locator("#detail .status.req").count(), 0, "no status box in simple mode");
@@ -4377,6 +4456,30 @@ test("simple mode heads a request with its number, link, state, author and two m
   await desk.click("#cf-ok");
   await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/R-5/actions"));
   assert.equal((await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/R-5/actions").body)).auto_send, true);
+}));
+
+// Dev review after design opened: a For Developers request or change has the proposal's two moves,
+// Approve for dev (a change: Approve) and Send to design, the move to For Designers.
+test("simple mode: a For Developers item in Dev review offers Approve for dev and Send to design", (t) => open(t, HEAD_DESK({ ...HEAD_ME, role: "ui-dev-owner",
+  can: { comment: true, change: true, size: true, "handle-small": true } }, [{ ...drawn, size: { small: true } }, { ...prChange, attention: { level: "developer", reasons: ["Copy"] } }]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="R-5"]');
+  await desk.click('#list [data-card="R-5"]');
+  await desk.waitForSelector("#detail .shead");
+  assert.match(await desk.textContent("#detail .sh-line .spill"), /Proposal/);
+  assert.deepEqual(await desk.$$eval("#detail .sh-acts > .btn", (xs) => xs.map((x) => x.textContent.trim())), ["Approve for dev", "Send to design"]);
+  assert.equal(await desk.locator('#detail .sh-more [data-review="request-changes"]').count(), 1, "Request changes under ⋯");
+  await desk.click('#detail .sh-acts > [data-size="designer"]');
+  await desk.waitForSelector("#confirm-dialog[open]");
+  assert.equal(await desk.textContent("#cf-title"), "Send it to design?");
+  assert.match(await desk.textContent("#cf-body"), /Design review/);
+  await desk.click("#cf-ok");
+  await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/R-5/size"));
+  assert.deepEqual(await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/R-5/size").body), { small: false });
+  await desk.evaluate(() => { location.hash = "#P-3"; });
+  await desk.waitForSelector('#detail .shead [data-handle="1"]');
+  assert.match(await desk.textContent("#detail .sh-line .spill"), /Dev review/, "a change is no proposal");
+  assert.equal(await desk.$eval("#detail .sh-line", (l) => l.querySelector(".sh-pr").getBoundingClientRect().height === l.querySelector(".spill").getBoundingClientRect().height), true, "its pull request's pill as tall as its state's");
+  assert.deepEqual(await desk.$$eval("#detail .sh-acts > .btn", (xs) => xs.map((x) => x.textContent.trim())), ["Approve", "Send to design"]);
 }));
 
 test("simple mode's Request changes opens the review: a note alone is sent with the verdict; ⋯ holds Close", (t) => open(t, HEAD_DESK(HEAD_ME, [drawn]), async (desk) => {
@@ -4551,7 +4654,7 @@ test("simple mode: a spec draft that cannot go by itself is Open with Send to de
   await desk.waitForSelector('#list [data-card="R-6"]');
   await desk.click('#list [data-card="R-6"]');
   await desk.waitForSelector("#detail .shead");
-  assert.match(await desk.textContent("#detail .sh-line .spill"), /In review/);
+  assert.match(await desk.textContent("#detail .sh-line .spill"), /Design review/);
   assert.deepEqual(await desk.$$eval("#detail .sh-acts > .btn", (xs) => xs.map((x) => x.textContent.trim())), ["Send to developers"]);
 }));
 
@@ -4770,7 +4873,8 @@ test("sent feedback shows its Looks good; the mark holds on this version; a conv
 // Simple mode with nothing open: how many items are in each state, each box filtering the list.
 test("simple mode's overview counts the items in each state, and a box filters the list to its state", (t) => open(t, DESK(SIMPLE_ME, SIMPLE_CARDS), async (desk) => {
   await desk.waitForSelector("#detail .sboxes");
-  assert.deepEqual(await desk.$$eval("#detail .sbox .n", (xs) => xs.map((x) => x.textContent)), ["4", "3", "5"]);
+  assert.deepEqual(await desk.$$eval("#detail .sbox .n", (xs) => xs.map((x) => x.textContent)), ["2", "4", "3", "5"], "Dev review, Design review, In dev, Closed");
+  assert.match(await desk.textContent('#detail .sbox[data-s="proposal"]'), /1 request, 1 PR change/, "the other side's items count too");
   assert.match(await desk.textContent('#detail .sbox[data-s="open"]'), /3 requests, 1 PR change/);
   await desk.click('#detail .sbox[data-s="dev"]');
   assert.deepEqual((await rows(desk)).map(([id]) => id), ["r-spec", "r-sent", "c-review"], "In dev only");
@@ -4868,21 +4972,22 @@ const STAGED = [
   { id: "R-22", kind: "request", title: "Open, For Designers", status: "triage", updated: at(23) },
 ];
 const DEV_ME = { ...SIMPLE_ME, role: "developer", can: { request: true, "stage-propose": true } };
-test("simple mode: Draft and Proposal are states of their own, for whom they can hold anything, ticked by default", (t) => open(t, DESK(DEV_ME, [...STAGED, ...SIMPLE_CARDS]), async (desk) => {
+test("simple mode: a developer starts at Draft and Dev review, a proposal in Dev review", (t) => open(t, DESK(DEV_ME, [...STAGED, ...SIMPLE_CARDS]), async (desk) => {
   await desk.waitForSelector('#list [data-card="R-20"]');
-  assert.deepEqual((await rows(desk)).slice(0, 2), [["R-20", "Draft"], ["R-21", "Proposal"]], "on a developer's list whatever the side, each with its pill");
-  assert.deepEqual(await desk.$$eval(".sf-chip", (xs) => xs.map((x) => x.textContent.replace("×", "").trim())), ["Draft", "Proposal", "In review"], "every state before In dev by default");
+  assert.deepEqual((await rows(desk)).slice(0, 2), [["R-20", "Draft"], ["R-21", "Proposal"]], "each with its pill");
+  assert.deepEqual(await ticked(desk), ["Draft", "Dev review"], "Draft and Dev review by default");
   await desk.click("details.sf > summary");
   assert.deepEqual(await desk.$$eval('[data-simf^="states:"]', (xs) => xs.map((x) => x.dataset.simf.slice(7))), ["draft", "proposal", "open", "dev", "closed"]);
   await desk.keyboard.press("Escape");
   await desk.evaluate(() => { location.hash = ""; });
   await desk.waitForSelector(".sboxes");
-  assert.deepEqual(await desk.$$eval(".sbox b", (xs) => xs.map((x) => x.textContent)), ["Draft", "Proposal", "In review", "In dev", "Closed"], "the boxes, Draft and Proposal while they hold something");
+  assert.deepEqual(await desk.$$eval(".sbox b", (xs) => xs.map((x) => x.textContent)), ["Draft", "Dev review", "Design review", "In dev", "Closed"], "the boxes, Draft while it holds something");
 }));
 
-test("simple mode: a PM has every state; a designer has no Draft and starts at In review", async (t) => {
+test("simple mode: a PM has every state and starts at every one before In dev; a designer has no Draft and starts at Design review", async (t) => {
   await open(t, DESK({ ...SIMPLE_ME, role: "pm", can: { request: true, "stage-design": true } }, [STAGED[0], STAGED[2]]), async (desk) => {
     await desk.waitForSelector('#list [data-card="R-20"]');
+    assert.deepEqual(await ticked(desk), ["Draft", "Dev review", "Design review"]);
     await desk.click("details.sf > summary");
     assert.deepEqual(await desk.$$eval('[data-simf^="states:"]', (xs) => xs.map((x) => x.dataset.simf.slice(7))), ["draft", "proposal", "open", "dev", "closed"]);
   });
@@ -4890,7 +4995,7 @@ test("simple mode: a PM has every state; a designer has no Draft and starts at I
     await desk.evaluate(() => localStorage.setItem("desk-simFilter", JSON.stringify({ states: ["draft"], kinds: ["request", "change"] })));
     await desk.reload();
     await desk.waitForSelector('#list [data-card="R-22"]');
-    assert.deepEqual(await desk.$$eval(".sf-chip", (xs) => xs.map((x) => x.textContent.trim())), ["In review"], "a kept state they cannot see is left out");
+    assert.deepEqual(await ticked(desk), ["Design review"], "a kept state they cannot see is left out");
   });
 });
 
@@ -4996,7 +5101,7 @@ test("full mode: a draft's author reopens it once closed, whatever their role", 
   assert.equal(await desk.locator('#detail .status [data-act="reopen"]').count(), 1);
 }));
 
-test("simple mode: a PM sees their own request once it is a proposal, with Proposal in the filter", (t) => open(t, DESK({ ...SIMPLE_ME, role: "pm", can: { request: true, "stage-design": true } }, [{ ...STAGED[1], by: { email: "d@example.com" } }, STAGED[2]]), async (desk) => {
+test("simple mode: a PM sees their own request once it is a proposal, in Dev review", (t) => open(t, DESK({ ...SIMPLE_ME, role: "pm", can: { request: true, "stage-design": true } }, [{ ...STAGED[1], by: { email: "d@example.com" } }, STAGED[2]]), async (desk) => {
   await desk.waitForSelector('#list [data-card="R-21"]');
   assert.deepEqual((await rows(desk)).map(([id, pill]) => [id, pill]).find(([id]) => id === "R-21"), ["R-21", "Proposal"]);
   await desk.click("details.sf > summary");
@@ -5020,8 +5125,8 @@ test("simple mode's filter: Only shows one state at once and keeps the kinds", (
   await desk.click('[data-simf="kinds:change"]');
   await desk.hover('[data-simf="states:proposal"]');
   await desk.click('.sf-row:has([data-simf="states:proposal"]) .sf-only');
-  assert.deepEqual(await desk.$$eval(".sf-chip", (xs) => xs.map((x) => x.textContent.replace("×", "").trim())), ["Proposal", "Requests"], "one state, the kind as it was");
-  assert.deepEqual((await rows(desk)).map(([id]) => id), ["R-21"]);
+  assert.deepEqual(await ticked(desk), ["Dev review", "Requests"], "one state, the kind as it was");
+  assert.deepEqual((await rows(desk)).map(([id]) => id), ["R-21", "r-small"], "a proposal and an open For Developers request");
 }));
 
 test("Approve for dev asks as an approval does, then sends it For Developers", (t) => open(t, HEAD_DESK({ ...HEAD_ME, role: "ui-dev-owner", can: { ...HEAD_ME.can, request: true, "stage-propose": true, "stage-design": true, "stage-own": true } }, [{ ...drawn, ...STAGED[1] }]), async (desk) => {
@@ -5049,12 +5154,12 @@ test("full mode: a proposal's options go to the dev team's vote with Ask for fee
   });
 });
 
-test("simple mode: a designer reads proposals, from a filter that starts at In review", (t) => open(t, DESK(SIMPLE_ME, [STAGED[1], STAGED[2]]), async (desk) => {
+test("simple mode: a designer reads proposals, from a filter that starts at Design review", (t) => open(t, DESK(SIMPLE_ME, [STAGED[1], STAGED[2]]), async (desk) => {
   await desk.waitForSelector('#list [data-card="R-22"]');
-  assert.deepEqual(await desk.$$eval(".sf-chip", (xs) => xs.map((x) => x.textContent.trim())), ["In review"], "In review alone by default");
-  assert.equal(await desk.locator('#list [data-card="R-21"]').count(), 0, "a proposal waits under its own state");
+  assert.deepEqual(await ticked(desk), ["Design review"], "Design review alone by default");
+  assert.equal(await desk.locator('#list [data-card="R-21"]').count(), 0, "a proposal waits under Dev review");
   await desk.click("details.sf > summary");
-  assert.deepEqual(await desk.$$eval('[data-simf^="states:"]', (xs) => xs.map((x) => x.dataset.simf.slice(7))), ["proposal", "open", "dev", "closed"], "Proposal to tick, no Draft");
+  assert.deepEqual(await desk.$$eval('[data-simf^="states:"]', (xs) => xs.map((x) => x.dataset.simf.slice(7))), ["proposal", "open", "dev", "closed"], "Dev review to tick, no Draft");
   await desk.click('[data-simf="states:proposal"]');
   assert.equal(await desk.locator('#list [data-card="R-21"]').count(), 1);
 }));
