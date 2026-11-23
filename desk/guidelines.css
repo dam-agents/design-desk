@@ -1163,8 +1163,8 @@
   .step.now .n { background: none; color: var(--ink); box-shadow: inset 0 0 0 2px var(--ink); }
   /* Approve is the one green button. */
   /* What moves an item forward wears Approve's green: approving, sending it on, proposing it (docs/desk-page.md → The look). */
-  :is(.btn[data-act="approve"], .btn[data-review="approve"], .btn[data-handle="1"], .btn[data-spec-send], .btn[data-stage="proposal"], .btn[data-stage="design"], .btn[data-stage="developers"]):not(.menu .btn) { background: var(--approved); border-color: var(--approved); color: var(--panel); }
-  :is(.btn[data-act="approve"], .btn[data-review="approve"], .btn[data-handle="1"], .btn[data-spec-send], .btn[data-stage="proposal"], .btn[data-stage="design"], .btn[data-stage="developers"]):not(.menu .btn):hover { opacity: .88; background: var(--approved); }
+  :is(.btn[data-act="approve"], .btn[data-act="approve-dev"], .btn[data-review="approve"], .btn[data-handle="1"], .btn[data-spec-send], .btn[data-stage="proposal"], .btn[data-stage="design"]):not(.menu .btn) { background: var(--approved); border-color: var(--approved); color: var(--panel); }
+  :is(.btn[data-act="approve"], .btn[data-act="approve-dev"], .btn[data-review="approve"], .btn[data-handle="1"], .btn[data-spec-send], .btn[data-stage="proposal"], .btn[data-stage="design"]):not(.menu .btn):hover { opacity: .88; background: var(--approved); }
   /* Design options: the tabs stay; each carries a square number, so "option 2" is easy to say. */
   .ono { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 8px; margin-right: 8px; border-radius: var(--r-sm); background: var(--muted); color: var(--panel); font-size: var(--fs-meta); font-weight: 600; vertical-align: 1px; }
   .tabs button[aria-pressed="true"] .ono { background: var(--ink); }

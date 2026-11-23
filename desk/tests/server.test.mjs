@@ -549,7 +549,9 @@ test("a person files For Designers: one that starts as a draft takes its side wh
   const filed = async (email) => (await d.viewer(email, "/api/requests", { problem: "Rows are too airy.", options: 0, audience: "developers" })).body.card;
   for (const email of ["lou@example.com", "lee@example.com", "alice@example.com", "pat@example.com", "bob@example.com"]) assert.equal((await filed(email)).size.small, false, `${email}: no audience from a person`);
   const id = (await filed("lou@example.com")).id;
-  assert.equal((await d.viewer("lou@example.com", `/api/cards/${id}/stage`, { to: "developers" })).body.card.size.small, true, "Keep for developers sets it");
+  assert.equal((await d.agent("/agent/cards", { id, status: "feedback", triage: { verdict: "design", reasons: ["Spacing only."] } })).status, 200);
+  const dev = await d.viewer("lou@example.com", `/api/cards/${id}/actions`, { action: "approve", for_dev: true });
+  assert.deepEqual([dev.status, dev.body.card.size.small, Boolean(dev.body.card.approved), dev.body.card.stage], [200, true, true, undefined], "Approve for dev sets it, approved");
 });
 
 test("a PM moves a request along — close, reopen, build by default — and marks no presentation presented", async (t) => {

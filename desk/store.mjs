@@ -163,10 +163,12 @@ export const REQUEST_STAGES = ["draft", "proposal"];
 // Where a person's request starts: a designer's opens at once, anyone else's is a draft.
 export const stageFor = (role) => (role === "designer" ? null : "draft");
 // The four moves, by the stages each starts from.
-const STAGE_MOVES = { proposal: ["draft"], design: ["draft", "proposal"], developers: ["draft", "proposal"], draft: ["proposal"] };
+const STAGE_MOVES = { proposal: ["draft"], design: ["draft", "proposal"], draft: ["proposal"] };
 const STAGE_WORD = { draft: "a draft", proposal: "a proposal" };
-// What waits until a request goes to design: approval, the team's votes, Slack, the presentation, a live prototype.
+// What waits until a request goes to design: approval (save Approve for dev), the presentation, a live
+// prototype. Votes and Slack wait only for a draft: a proposal is the dev team's to talk over.
 const notStaged = (c) => { if (c?.stage) throw bad(`This request is still ${STAGE_WORD[c.stage] || "not open"}. That waits until it goes to design.`); };
+const notDraft = (c) => { if (c?.stage === "draft") throw bad("This request is still a draft. Propose it, or send it to design, first."); };
 export const REQUEST_STATES = ["triage", "variants", "feedback", "prototype", "testing", "spec", "handed-off", "declined"];
 export const CHANGE_STATES = ["new", "handled", "archived"];
 // A catalog element: one real UI part drawn in every state it can be in. A screen card
@@ -1454,7 +1456,7 @@ export class Store {
   // `vote: "concern"` raises the flag too; an old entry `vote: "concern"` reads as the flag alone.
   vote(cardId, who, { variant, vote, concern, note = "" }) {
     const c = this.card(cardId);
-    notStaged(c);
+    notDraft(c);
     if (!(c.variants || []).some((v) => v.id === variant)) throw bad(`no variant ${variant}`);
     if ((vote !== undefined || concern === undefined) && !["prefer", "dislike", "concern", "none"].includes(vote)) throw bad("vote must be prefer, dislike, concern or none");
     if (concern !== undefined && typeof concern !== "boolean") throw bad("concern must be true or false");
@@ -1581,25 +1583,30 @@ export class Store {
     if (!c.stage) throw bad("This request is open already: it does not go back.");
     if (c.status === "declined" || c.status === "handed-off") throw bad("This request is closed. Press Reopen first.");
     if (!STAGE_MOVES[to].includes(c.stage)) throw bad(c.stage === "draft" ? "A draft is proposed or sent to design." : "This request is a proposal already.");
-    if (!this.mayStage(c, who, to)) {
-      if (c.stage === "proposal") throw forbidden("The UI dev owner moves a proposal on.");
-      if (!this.filedBy(c.id, who)) throw forbidden("Only the person who filed this draft moves it on.");
-      throw forbidden(to === "proposal" ? "Only developers and the UI dev owner propose a draft; send it to design instead."
-        : to === "developers" ? "The UI dev owner keeps a request for developers." : "A developer's draft goes to design as a proposal: press Propose, and the UI dev owner sends it on.");
-    }
+    this.mayMove(c, who, to);
     const at = this.clock(), from = c.stage;
-    if (to === "proposal" || to === "draft") c.stage = to;
-    else {
-      delete c.stage;
-      c.opened_at = at;
-      // Its side is decided now: For Designers, or For Developers, which a developer approves.
-      const small = to === "developers";
-      if (Boolean(c.size?.small) !== small) c.size = { small, by: person(who), at };
-    }
-    c.staged = [...(c.staged || []), { from, to, by: person(who), at }];
+    if (to === "proposal" || to === "draft") { c.stage = to; c.staged = [...(c.staged || []), { from, to, by: person(who), at }]; }
+    else this.openStaged(c, who, "design");
     c.updated = at;
     this.save();
     return { card: c };
+  }
+  // Refuses a stage move `who` may not make, in plain words.
+  mayMove(c, who, to) {
+    if (this.mayStage(c, who, to)) return;
+    if (c.stage === "proposal") throw forbidden("The UI dev owner moves a proposal on.");
+    if (!this.filedBy(c.id, who)) throw forbidden("Only the person who filed this draft moves it on.");
+    throw forbidden(to === "proposal" ? "Only developers and the UI dev owner propose a draft; send it to design instead."
+      : to === "developers" ? "The UI dev owner approves a request for developers." : "A developer's draft goes to design as a proposal: press Propose, and the UI dev owner sends it on.");
+  }
+  // A request leaves its last stage, never to come back: For Designers (`design`), or For Developers
+  // (`developers`, Approve for dev, which approves it in the same step).
+  openStaged(c, who, to) {
+    const at = this.clock(), small = to === "developers";
+    c.staged = [...(c.staged || []), { from: c.stage, to, by: person(who), at }];
+    delete c.stage;
+    c.opened_at = at;
+    if (Boolean(c.size?.small) !== small) c.size = { small, by: person(who), at };
   }
 
   // A request's title, in a person's words: its author's, or anyone's who may close it
@@ -1973,7 +1980,7 @@ export class Store {
   }
 
   // A state change a person asks for on a request card; the agent does the work.
-  act(cardId, who, action, note = "", { askFirst = false, count = null, overrule = false, implement = false, closeEarlier = false, autoSend = false, variant = null, version = null, states = null, part = null, element = null } = {}) {
+  act(cardId, who, action, note = "", { askFirst = false, count = null, overrule = false, implement = false, closeEarlier = false, autoSend = false, variant = null, version = null, states = null, part = null, element = null, forDev = false } = {}) {
     const c = this.card(cardId);
     // Check again: Design Desk takes the screen's pictures again on the live product; the same
     // pictures mark it checked, new ones redraw it (docs/map.md → Check again).
@@ -2005,7 +2012,11 @@ export class Store {
       return { card: c, inbox: item };
     }
     if (c.kind !== "request") throw bad("only a design request takes actions");
-    if (["approve", "build", "slack-share", "slack-send"].includes(action)) notStaged(c);
+    // Approve for dev opens a proposal, or the UI dev owner's own draft, For Developers and approves it (docs/desk.md → Draft and Proposal).
+    const devNow = action === "approve" && forDev === true && Boolean(c.stage);
+    if (devNow) this.mayMove(c, who, "developers");
+    else if (["approve", "build"].includes(action)) notStaged(c);
+    if (["slack-share", "slack-send"].includes(action)) notDraft(c);
     const closed = c.status === "declined" || c.status === "handed-off";
     // How the screen looks today, to set beside an option: once the request is checked.
     if (action === "draw-now" && !c.triage) throw bad("Design Desk is still checking this request. Ask for how it looks today once it is checked.");
@@ -2138,6 +2149,7 @@ export class Store {
       if (n < 1) throw bad("Pick how many options to draw: one to five.");
       c.request = { ...c.request, options: n };
     }
+    if (devNow) this.openStaged(c, who, "developers");
     if (against.length) c.overruled = { by: person(who), at: this.clock(), decisions: against };
     else if (action === "approve") delete c.overruled;
     // Who approved, shown on the card; an approval For Developers says so (`small`).
@@ -2238,7 +2250,7 @@ export class Store {
   // comment, as on a request from Slack (docs/desk.md → Team feedback).
   openFeedback(cardId, who) {
     const c = this.card(cardId);
-    notStaged(c);
+    notDraft(c);
     if (c.kind !== "request" || c.status !== "variants" || !(c.variants || []).length) throw bad("There are no drawn options to show the team yet.");
     if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && ["explore", "revise", "states"].includes(i.kind) && !SIDE_SCOPES.includes(i.scope)))
       throw bad("Design Desk is still drawing the options. Ask the team once they are here.");
@@ -2257,7 +2269,7 @@ export class Store {
   // agent's next look closes it there and posts its result (docs/desk.md → Team feedback).
   endVote(cardId, who) {
     const c = this.card(cardId);
-    notStaged(c);
+    notDraft(c);
     if (c.kind !== "request" || c.status !== "feedback") throw bad("The team is not voting on this request now.");
     if (c.vote_ended) throw bad("The vote on these options has already ended.");
     if (!can(who?.role, "revise") && !isAuthor(c, who)) throw forbidden("Only designers, PMs, developers, admins or the person who filed it end the vote.");
@@ -2843,7 +2855,7 @@ export class Store {
   // place with the tally (none on a poll opened before 1.80.0: it gets no tally).
   openPoll(cardId, { chat, root_ts, posts, closes, url = null, channel = null, head_ts = null, head_text = null }) {
     const c = this.card(cardId);
-    notStaged(c);
+    notDraft(c);
     if (!Array.isArray(posts) || !posts.length) throw bad("a poll needs one post per option");
     for (const x of posts) if (!(c.variants || []).some((v) => v.id === x.variant)) throw bad(`no option ${x.variant}`);
     const poll = {
@@ -2878,7 +2890,7 @@ export class Store {
   // agent has read it (`seen`, a Slack ts) and when it last looked.
   openCouncil(cardId, { chat, thread_ts, url = null, channel = null }) {
     const c = this.card(cardId);
-    notStaged(c);
+    notDraft(c);
     const ts = clean(String(thread_ts || ""), 40, "thread_ts");
     const held = this.findCouncil(ts);
     if (held && held.state === "open") return { council: this.card(held.card).councils.find((x) => x.id === held.council), duplicate: true };

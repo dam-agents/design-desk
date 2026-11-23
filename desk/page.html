@@ -1175,8 +1175,8 @@
   .step.now .n { background: none; color: var(--ink); box-shadow: inset 0 0 0 2px var(--ink); }
   /* Approve is the one green button. */
   /* What moves an item forward wears Approve's green: approving, sending it on, proposing it (docs/desk-page.md → The look). */
-  :is(.btn[data-act="approve"], .btn[data-review="approve"], .btn[data-handle="1"], .btn[data-spec-send], .btn[data-stage="proposal"], .btn[data-stage="design"], .btn[data-stage="developers"]):not(.menu .btn) { background: var(--approved); border-color: var(--approved); color: var(--panel); }
-  :is(.btn[data-act="approve"], .btn[data-review="approve"], .btn[data-handle="1"], .btn[data-spec-send], .btn[data-stage="proposal"], .btn[data-stage="design"], .btn[data-stage="developers"]):not(.menu .btn):hover { opacity: .88; background: var(--approved); }
+  :is(.btn[data-act="approve"], .btn[data-act="approve-dev"], .btn[data-review="approve"], .btn[data-handle="1"], .btn[data-spec-send], .btn[data-stage="proposal"], .btn[data-stage="design"]):not(.menu .btn) { background: var(--approved); border-color: var(--approved); color: var(--panel); }
+  :is(.btn[data-act="approve"], .btn[data-act="approve-dev"], .btn[data-review="approve"], .btn[data-handle="1"], .btn[data-spec-send], .btn[data-stage="proposal"], .btn[data-stage="design"]):not(.menu .btn):hover { opacity: .88; background: var(--approved); }
   /* Design options: the tabs stay; each carries a square number, so "option 2" is easy to say. */
   .ono { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 8px; margin-right: 8px; border-radius: var(--r-sm); background: var(--muted); color: var(--panel); font-size: var(--fs-meta); font-weight: 600; vertical-align: 1px; }
   .tabs button[aria-pressed="true"] .ono { background: var(--ink); }
@@ -3391,19 +3391,22 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   function stageMoves(c) {
     const b = (to, label, primary = false) => `<button class="btn${primary ? " primary" : ""}" data-stage="${to}">${label}</button>`;
     const lead = can("stage-own"), design = can("stage-design") || lead;
-    if (preDesign(c) === "proposal") return lead ? [b("design", "Send to design", true), b("developers", "Keep for developers") + b("draft", "Back to draft")] : ["", ""];
-    if (!(filedIt(c) || S.me?.role === "admin")) return ["", ""];
+    // Approve for dev: For Developers and approved in one step, once Design Desk checked it.
+    const dev = lead && (c.triage || (c.variants || []).length) ? `<button class="btn" data-act="approve-dev" title="Approve it for developers: it goes to In dev, without a designer">Approve for dev</button>` : "";
+    // [the first move, the others under ⋯, Approve for dev]: simple mode's head shows the first and Approve for dev.
+    if (preDesign(c) === "proposal") return lead ? [b("design", "Send to design", true), b("draft", "Back to draft"), dev] : ["", "", ""];
+    if (!(filedIt(c) || S.me?.role === "admin")) return ["", "", ""];
     const first = design ? b("design", "Send to design", true) : can("stage-propose") ? b("proposal", "Propose", true) : "";
-    return [first, (design && can("stage-propose") ? b("proposal", "Propose") : "") + (lead ? b("developers", "Keep for developers") : "")];
+    return [first, design && can("stage-propose") ? b("proposal", "Propose") : "", dev];
   }
   const STAGE_DONE = { proposal: "Proposed: the dev team sees it now, and the UI dev owner sends it to design.", design: "Sent to design: designers see it In review now.",
-    developers: "Kept for developers: it is In review For Developers now, and a developer approves it.", draft: "Back to draft: only its author sees it now." };
+    draft: "Back to draft: only its author sees it now." };
   // Moving a request on before design; opening it, which cannot be taken back, asks first.
   async function moveStage(c, to) {
     const go = () => api("POST", `/api/cards/${encodeURIComponent(c.id)}/stage`, { to });
-    if (to === "design" || to === "developers") {
-      const r = await ask({ title: to === "design" ? "Send it to design?" : "Keep it for developers?", ok: to === "design" ? "Send to design" : "Keep for developers", send: go,
-        body: to === "design" ? "Designers see it In review from now on, with what was said about it so far. It does not come back to a draft." : "It opens For Developers: a developer approves it, without a designer. It does not come back to a draft." });
+    if (to === "design") {
+      const r = await ask({ title: "Send it to design?", ok: "Send to design", send: go,
+        body: "Designers see it In review from now on, with what was said about it so far. It does not come back to a draft." });
       if (!r) return;
     } else await go();
     toast(STAGE_DONE[to]);
@@ -3438,16 +3441,16 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const approve = (attr) => (n ? btn('data-review="approve"', "Approve") : btn(attr, "Approve", true));
     // Before design the head's moves are the stage's (docs/desk.md → Draft and Proposal): Send to design or
     // Propose first, Request changes beside it; the rest of the stage's moves go under ⋯.
-    const stage = !change && !closed(c) && preDesign(c), [stageMain, stageMore] = stage ? stageMoves(c) : ["", ""];
+    const stage = !change && !closed(c) && preDesign(c), [stageFirst, stageMore, stageDev] = stage ? stageMoves(c) : ["", "", ""], stageMain = stageFirst + stageDev;
     const moves = change ? ((open || c.responsible?.who === "developer") && mayHandle(c) ? changes + (c.handled ? "" : approve('data-handle="1"')) : "")
-      : stage ? stageMain + changes
+      : stage ? stageMain + (stageMain.includes("approve-dev") ? "" : changes)
       : !open ? ""
       : specWaits(c) ? (canApprove(c) && !(c.threads || []).some((th) => th.kind === "asks" && th.state === "open") ? btn("data-spec-send", "Send to developers", true) : "")
       : changes + (canApprove(c) && (c.triage || (c.variants || []).length) ? approve('data-act="approve"') : "");
     const url = change ? src.url : c.spec?.issue_url || c.spec?.pr_url || "";
     const items = [change ? (can("follow-up") && !hasRequest(c) ? btn("data-adjust", "Turn into a design request") : "") + (handledAt(c) && mayHandle(c) ? btn('data-handle="0"', "Undo approval") : "")
         : closed(c) ? ((c.status === "handed-off" ? S.me?.role === "admin" : can("reopen") || closesStaged(c)) ? btn('data-act="reopen"', "Reopen") : "")
-        : stageMore + ((preDesign(c) ? closesStaged(c) : can("close") || can("skip")) ? btn('data-act="close"', "Close…") : ""),
+        : (stage && stageMain.includes("approve-dev") ? changes : "") + stageMore + ((preDesign(c) ? closesStaged(c) : can("close") || can("skip")) ? btn('data-act="close"', "Close…") : ""),
       url ? `<a class="btn" href="${safeUrl(url)}" target="_blank" rel="noopener noreferrer">Open on GitHub ↗</a>` : ""].join("");
     const more = items ? `<details class="more sh-more"><summary class="btn" aria-label="More" title="More">⋯</summary><div class="menu">${items}</div></details>` : "";
     return `<div class="shead"><div class="sh-main"><h2>${kindIcon(c)}<span>${txt(c.title)}</span>${num(c)}${titleLink(c)}</h2>
@@ -5454,7 +5457,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // Before design the ways on are the stage's alone (docs/desk.md → Draft and Proposal).
     if (preDesign(c) && !closed(c)) {
       const first = stageMoves(c)[0].match(/data-stage="(\w+)">([^<]+)</);
-      return { ways: first ? [way(`data-stage="${first[1]}"`, first[2])] : [], buttons: stageMoves(c)[1], wait: preDesign(c) === "draft" ? "its author" : "the UI dev owner",
+      return { ways: first ? [way(`data-stage="${first[1]}"`, first[2])] : [], buttons: stageMoves(c)[2] + stageMoves(c)[1], wait: preDesign(c) === "draft" ? "its author" : "the UI dev owner",
         text: preDesign(c) === "draft" ? "A draft: only its author and admins see it. Design Desk works on it as on any request; its author sends it on when it is ready."
           : "A proposal: the dev team talks it over. The UI dev owner sends it to design, keeps it for developers, or sends it back to its author." };
     }
@@ -5651,7 +5654,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const redraw = closed(c) || locked(c) || protoDown(c) || !can("revise") || !(c.variants || []).length ? "" : `<button class="btn" data-act="revise">Redraw the options with all comments</button>`;
     // Sending to Slack happens once in a request's life: it waits here, and in the design workspace's bar.
     const slack = c.status === "feedback" && slackModes(c).length ? `<button class="btn" data-act="slack">Send to Slack…</button>` : "";
-    const items = (preDesign(c) ? "" : slack + call + size) + reopenSent + del + redraw + (locked(c) && can("request") ? `<button class="btn" data-adjust>New request from this…</button>` : "");
+    const items = (preDesign(c) === "draft" ? "" : slack) + (preDesign(c) ? "" : call + size) + reopenSent + del + redraw + (locked(c) && can("request") ? `<button class="btn" data-adjust>New request from this…</button>` : "");
     return items ? `<details class="more"><summary class="btn" aria-label="More">⋯</summary><div class="menu">${items}</div></details>` : "";
   }
   // Whose turn it is, said the same way in every state: Design Desk while it works or is about to,
@@ -5803,7 +5806,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const notes = (c.threads || []).filter((th) => th.anchor?.variant === v && th.state !== "resolved").length;
     const noteLine = notes ? `<span class="notes">${plural(notes, "note", "notes")}</span>` : "";
     // A request before design takes no votes (docs/desk.md → Draft and Proposal).
-    if (c.status !== "feedback" || preDesign(c)) return noteLine ? `<span class="votes">${noteLine}</span>` : "";
+    if (c.status !== "feedback" || preDesign(c) === "draft") return noteLine ? `<span class="votes">${noteLine}</span>` : "";
     const votes = Object.values(c.votes?.[v] || {}), has = (x, k) => k === "concern" ? worried(x) : x?.vote === k, n = (k) => votes.filter((x) => has(x, k)).length;
     const ICO = { prefer: `<svg class="vi" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10v11H4V10h3zm0 0l4-7c1.7 0 2.7 1.3 2.3 3L13 9h6a2 2 0 0 1 2 2.3l-1.3 7.5A2.5 2.5 0 0 1 17.2 21H7"/></svg>`,
       dislike: `<svg class="vi" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 14V3h3v11h-3zm0 0l-4 7c-1.7 0-2.7-1.3-2.3-3L11 15H5a2 2 0 0 1-2-2.3l1.3-7.5A2.5 2.5 0 0 1 6.8 3H17"/></svg>`,
@@ -7959,6 +7962,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // ---------- events ----------
   async function act(name) {
     const c = S.card;
+    // Approve for dev: the approval, sent For Developers out of a request's stage (docs/desk.md → Draft and Proposal).
+    const forDev = name === "approve-dev";
+    if (forDev) name = "approve";
     // The workspace opens in Click through: most people come to look through the design; Select is one click away.
     if (name === "workspace") { S.ws.open = true; S.ws.check = false; S.ws.mode = "off"; renderWorkspace(); return; }
     if (name === "queue") {
@@ -8011,12 +8017,12 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       // Simple mode asks nothing: the spec goes as soon as it is written, wherever the store lets it.
       const auto = simple() && unread;
       const waits = Boolean(S.me?.spec_review || c.from_pr) && !auto;
-      res = await ask({ title: options.length ? "Approve a design" : "Approve without design options", body: `${waits ? `Design Desk writes the developer spec for ${what}. It waits here for you to read and edit; nothing goes to ${to} until you press **Send to developers**${c.from_pr ? `, where you pick a new issue or a comment on PR #${c.from_pr.pr}` : ""}${unread ? ", unless you tick the box below" : ""}.` : `Design Desk writes the developer spec for ${what} and sends it to ${to}${auto ? " as soon as it is written" : ""}. Once sent, it can't be taken back.`}${against.length ? `\n\n⚠ **It goes against ${against.join(", ")}.** Approve it only if the team means to; then revoke the decision, or Design Desk records this approval as going against it.` : ""}${earlier ? `\n\n${earlier.line}` : ""}`, ok: "Approve", choices: options.length && !built ? options : null, pick: options.length === 1 ? options[0].id : null, note: options.length ? null : "What should developers build? (optional)",
+      res = await ask({ title: forDev ? "Approve it for developers" : options.length ? "Approve a design" : "Approve without design options", body: `${forDev ? "It opens For Developers and goes to In dev at once, without a designer; it does not come back to a draft. " : ""}${waits ? `Design Desk writes the developer spec for ${what}. It waits here for you to read and edit; nothing goes to ${to} until you press **Send to developers**${c.from_pr ? `, where you pick a new issue or a comment on PR #${c.from_pr.pr}` : ""}${unread ? ", unless you tick the box below" : ""}.` : `Design Desk writes the developer spec for ${what} and sends it to ${to}${auto ? " as soon as it is written" : ""}. Once sent, it can't be taken back.`}${against.length ? `\n\n⚠ **It goes against ${against.join(", ")}.** Approve it only if the team means to; then revoke the decision, or Design Desk records this approval as going against it.` : ""}${earlier ? `\n\n${earlier.line}` : ""}`, ok: "Approve", choices: options.length && !built ? options : null, pick: options.length === 1 ? options[0].id : null, note: options.length ? null : "What should developers build? (optional)",
         ...(against.length ? { check: `I know it goes against ${against.join(", ")}` } : {}),
         ...(github && !waits && !simple() ? { check2: `Straight to implementation: the spec goes on ${to.startsWith("the GitHub issue it came from") ? "that issue" : "a GitHub issue (a new one, with the spec and pictures, if none is filed)"} with the coding agent's label, when its manifest names one` } : {}),
         ...(unread && !auto ? { check2: `Send it to ${to} as soon as the spec is written, without waiting for me to read it. Once sent, it can't be taken back` } : {}),
         ...(earlier?.open ? { check3: unread ? `${earlier.check} (only with the box above ticked; else you pick it when you send)` : earlier.check } : {}),
-        send: (a) => post(built?.id || a.choice || a.note || "", { ...(against.length ? { overrule: a.check } : {}), ...(auto ? { auto_send: true } : a.check2 ? (unread ? { auto_send: true } : { implement: true }) : {}), ...(a.check3 && (!unread || a.check2) ? { close_earlier: true } : {}) }) });
+        send: (a) => post(built?.id || a.choice || a.note || "", { ...(forDev ? { for_dev: true } : {}), ...(against.length ? { overrule: a.check } : {}), ...(auto ? { auto_send: true } : a.check2 ? (unread ? { auto_send: true } : { implement: true }) : {}), ...(a.check3 && (!unread || a.check2) ? { close_earlier: true } : {}) }) });
       if (!res) return;
     }
     // Build: pick the option, then look at its latest version and states once more in the

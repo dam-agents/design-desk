@@ -3374,7 +3374,6 @@ test("a draft moves on by its author's role; a proposal by the UI dev owner; ope
   assert.match(move(b, bob, "design").message, /goes to design as a proposal: press Propose/, "a developer goes through a proposal");
   assert.match(move(b, dana, "proposal").message, /Only the person who filed this draft/);
   assert.match(move(b, lou, "proposal").message, /Only the person who filed this draft/, "the UI dev owner does not move another's draft");
-  assert.match(move(b, bob, "developers").message, /The UI dev owner keeps a request for developers/);
   assert.equal(move(b, bob, "proposal").stage, "proposal");
   assert.match(move(b, bob, "design").message, /The UI dev owner moves a proposal on/);
   assert.match(move(b, dana, "draft").message, /The UI dev owner moves a proposal on/);
@@ -3388,15 +3387,10 @@ test("a draft moves on by its author's role; a proposal by the UI dev owner; ope
   const p = file(pat);
   assert.match(move(p, pat, "proposal").message, /Only developers and the UI dev owner propose/, "a PM sends to design");
   assert.equal(move(p, pat, "design").stage, undefined);
-  const l = file(lou);
-  assert.equal(move(l, lou, "developers").size.small, true, "the UI dev owner keeps their own draft for developers");
-  const k = file(bob);
-  move(k, bob, "proposal");
-  const kept = move(k, lee, "developers");
-  assert.deepEqual([kept.stage, kept.size.small, kept.size.by.email], [undefined, true, "lee@example.com"], "an admin keeps a proposal for developers");
+  assert.match(move(p, pat, "developers").message, /to must be one of proposal, design, draft/, "for developers is an approval now: Approve for dev");
   const a = file(dana);
   assert.equal(move(a, lee, "design").stage, undefined, "an admin moves any draft");
-  assert.match(move(a, lee, "sideways").message, /to must be one of proposal, design, developers, draft/);
+  assert.match(move(a, lee, "sideways").message, /to must be one of proposal, design, draft/);
 });
 
 test("before design a request is worked on, commented and closed by its own, but not approved, voted on or shown", () => {
@@ -3406,15 +3400,16 @@ test("before design a request is worked on, commented and closed by its own, but
   s.upsertCard({ id, status: "feedback", triage: { verdict: "design", reasons: ["Spacing only."] }, variants: [{ id: "v1", name: "Calm", asset: s.addAsset({ kind: "variant", name: "v", contentType: "text/html", data: "<p>v</p>", encoding: "utf8" }).asset.id }] });
   const still = /still a draft\. That waits until it goes to design/;
   assert.throws(() => s.act(id, alice, "approve", "v1"), still);
-  assert.throws(() => s.act(id, alice, "slack-share"), still);
+  const draft = /still a draft\. Propose it, or send it to design, first/;
+  assert.throws(() => s.act(id, alice, "slack-share"), draft);
   assert.throws(() => s.act(id, alice, "build", "v1"), still);
-  assert.throws(() => s.vote(id, bob, { variant: "v1", vote: "prefer" }), still);
-  assert.throws(() => s.openFeedback(id, bob), still);
-  assert.throws(() => s.endVote(id, bob), still);
+  assert.throws(() => s.vote(id, bob, { variant: "v1", vote: "prefer" }), draft);
+  assert.throws(() => s.openFeedback(id, bob), draft);
+  assert.throws(() => s.endVote(id, bob), draft);
   assert.throws(() => s.decideAndClose(id, pat, { text: "No." }), still);
   assert.throws(() => s.queueForCall(id, alice), still);
   assert.throws(() => s.setSize(id, lou, true), /takes its side when it goes to design/);
-  assert.throws(() => s.openPoll(id, { chat: "C1", root_ts: "1.0", posts: [{ variant: "v1", ts: "1.1" }], closes: "2030-01-01T00:00:00Z" }), still);
+  assert.throws(() => s.openPoll(id, { chat: "C1", root_ts: "1.0", posts: [{ variant: "v1", ts: "1.1" }], closes: "2030-01-01T00:00:00Z" }), draft);
   // Design Desk's work and the author's feedback go on.
   assert.equal(s.act(id, bob, "revise", "Softer rows.", { variant: "v1" }).inbox.kind, "revise");
   s.addDraft(id, bob, { text: "Less padding." });
@@ -3518,4 +3513,21 @@ test("a private ask about a request before design is only for whom it is there",
   const id = s.createRequest(bob, { problem: "Rows are too airy.", stage: "draft" }).card.id;
   assert.throws(() => s.openPrivate(alice, { text: "What is this?", context: { card: id } }), new RegExp(`no card ${id}`));
   assert.equal(s.openPrivate(bob, { text: "Is it ready?", context: { card: id } }).thread.card, id, "its author asks about it");
+});
+
+test("a proposal takes the dev team's votes and Slack, and Approve for dev sends it to In dev in one step", () => {
+  const s = fresh();
+  const lou = { email: "lou@example.com", role: "ui-dev-owner" }, dana = { email: "dana@example.com", role: "developer" };
+  const asset = s.addAsset({ kind: "variant", name: "v", contentType: "text/html", data: "<p>v</p>", encoding: "utf8" }).asset.id;
+  const id = s.createRequest(bob, { problem: "Rows are too airy.", stage: "draft" }).card.id;
+  s.upsertCard({ id, status: "feedback", triage: { verdict: "design", reasons: ["Spacing only."] }, variants: [{ id: "v1", name: "Calm", asset }] });
+  s.moveStage(id, bob, "proposal");
+  s.vote(id, dana, { variant: "v1", vote: "prefer" });
+  assert.equal(s.card(id).votes.v1["dana@example.com"].vote, "prefer", "the dev team votes on a proposal");
+  assert.ok(s.openPoll(id, { chat: "C1", root_ts: "1.0", posts: [{ variant: "v1", ts: "1.1" }], closes: "2030-01-01T00:00:00Z" }), "and in Slack");
+  assert.throws(() => s.act(id, lou, "approve", "v1"), /still a proposal\. That waits until it goes to design/, "a plain Approve still waits");
+  assert.throws(() => s.act(id, dana, "approve", "v1", { forDev: true }), /The UI dev owner moves a proposal on/, "Approve for dev is the UI dev owner's");
+  const r = s.act(id, lou, "approve", "v1", { forDev: true });
+  assert.deepEqual([r.card.stage, r.card.size.small, Boolean(r.card.approved), r.card.approved.small, r.inbox.kind], [undefined, true, true, true, "handoff"], "For Developers, approved, its spec queued");
+  assert.deepEqual(r.card.staged.at(-1).to, "developers");
 });

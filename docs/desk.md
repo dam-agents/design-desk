@@ -369,27 +369,32 @@ asked for it; who asked is its author.
 | Who files it | Moves it on with (`POST /api/cards/<id>/stage {to}`) |
 | --- | --- |
 | `pm` | **Send to design** (`design`) |
-| `ui-dev-owner` | **Propose** (`proposal`), **Send to design**, **Keep for developers** (`developers`) |
+| `ui-dev-owner` | **Propose** (`proposal`), **Send to design**, **Approve for dev** |
 | `developer` | **Propose** |
 
-On a proposal the `ui-dev-owner` (any of them) picks **Send to design**, **Keep for developers**,
-**Back to draft** (`draft`) or **Close**; an `admin` makes any move on either. A draft's author
+On a proposal the `ui-dev-owner` (any of them) picks **Send to design**, **Approve for dev**,
+**Back to draft** (`draft`) or **Close**; an `admin` makes any move on either. **Approve for dev**
+is an approval (`POST /api/cards/<id>/actions {action: "approve", for_dev: true}`) that opens the
+request For Developers in the same step, so it goes to In dev without a designer; it takes what any
+approval takes (checked by Design Desk, the decisions in force). A draft's author
 closes and reopens it whatever their role, and a closed one keeps its stage. Leaving its last stage
-opens it, never to go back: For Designers, or For Developers for Keep for developers
+opens it, never to go back: For Designers, or For Developers and approved for Approve for dev
 ([For Developers or For Designers](#for-developers-or-for-designers)), with `opened_at`;
-`staged` keeps each move (`from`, `to`, `by`, `at`). Until it opens the store refuses approving
-it (an Approve review too), deciding it, team feedback and votes, Slack, the presentation, a
-live prototype and moving its side; comments, reviews with Comment or Request changes, and
-Design Desk's work go on.
+`staged` keeps each move (`from`, `to`, `by`, `at`; `developers` for Approve for dev). Until it
+opens the store refuses approving it (an Approve review too, save Approve for dev), deciding it,
+the presentation, a live prototype and moving its side; a draft also takes no team feedback, votes
+or Slack, which a proposal takes, Slack being the dev team's. Comments, reviews with Comment or
+Request changes, and Design Desk's work go on.
 
 **Who sees it**: its author (by any of their addresses), an `admin`, and on a proposal every
 `developer` and `ui-dev-owner`; you see every one. For anyone else the server has none: not in a
 list, the bell, a decision's items or an MCP peer's reads; its page, its conversations, its
 pictures and every write on it answer as for a card that does not exist. The bell tells of it as
-new when it opens, and nothing from before the first stage each viewer could see it in. Never name, quote or link one where anyone else reads (Slack, another card, the
-digest), and never add a report to one: file a new request. The one exception is the Slack thread a
-proposal came from: answer its author there as usual, with its link, saying it is with the dev
-team for now and only they and its author open it until it goes to design.
+new when it opens, and nothing from before the first stage each viewer could see it in. Never
+name, quote or link a draft where anyone else reads, nor a proposal outside Slack, the dev team's
+(another card, the digest), and never add a report to one: file a new request. In Slack, answer
+the author of one asked for there in its thread as usual, saying it is with the dev team for now
+and only they and its author open it until it goes to design.
 
 ### Deciding straight away
 

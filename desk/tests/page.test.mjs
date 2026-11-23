@@ -4494,14 +4494,14 @@ test("simple mode: a PM has Draft and no Proposal; a designer's list and filter 
   });
 });
 
-const stageButtons = (desk) => desk.$$eval("#detail .sh-acts [data-stage], #detail .sh-acts [data-act=close]", (xs) => xs.map((x) => `${x.closest(".sh-more") ? "⋯ " : ""}${x.textContent.trim()}`));
+const stageButtons = (desk) => desk.$$eval("#detail .sh-acts [data-stage], #detail .sh-acts [data-act=approve-dev], #detail .sh-acts [data-act=close]", (xs) => xs.map((x) => `${x.closest(".sh-more") ? "⋯ " : ""}${x.textContent.trim()}`));
 for (const [who, me, card, want] of [
   ["a developer proposes their draft", DEV_ME, STAGED[0], ["Propose", "⋯ Close…"]],
   ["a PM sends their draft to design", { ...DEV_ME, role: "pm", can: { request: true, "stage-design": true, close: true } }, STAGED[0], ["Send to design", "⋯ Close…"]],
-  ["the UI dev owner sends their draft on, proposes it or keeps it for developers", { ...DEV_ME, role: "ui-dev-owner", can: { request: true, "stage-propose": true, "stage-design": true, "stage-own": true } }, STAGED[0],
-    ["Send to design", "⋯ Propose", "⋯ Keep for developers", "⋯ Close…"]],
+  ["the UI dev owner sends their draft on, proposes it or approves it for developers", { ...DEV_ME, role: "ui-dev-owner", can: { request: true, "stage-propose": true, "stage-design": true, "stage-own": true } }, STAGED[0],
+    ["Send to design", "Approve for dev", "⋯ Propose", "⋯ Close…"]],
   ["the UI dev owner moves a proposal on", { ...DEV_ME, role: "ui-dev-owner", can: { request: true, "stage-propose": true, "stage-design": true, "stage-own": true } }, STAGED[1],
-    ["Send to design", "⋯ Keep for developers", "⋯ Back to draft", "⋯ Close…"]],
+    ["Send to design", "Approve for dev", "⋯ Back to draft", "⋯ Close…"]],
   ["a developer does not move another's proposal", DEV_ME, STAGED[1], []],
 ]) test(`simple mode's head before design: ${who}`, (t) => open(t, HEAD_DESK({ ...HEAD_ME, ...me }, [{ ...drawn, ...card, variants: drawn.variants }]), async (desk) => {
   await desk.waitForSelector("#list");
@@ -4538,7 +4538,7 @@ test("New request makes a draft for anyone but a designer, and says who sees it"
 // Draft and Proposal in full mode (docs/desk-page.md → A request's state in the list): the stage as
 // the row's dot and the page's word, the stage's moves in the state's row, on the viewer's own tab.
 test("full mode: a draft and a proposal show their stage, count as Open on the viewer's tab, and offer the stage's moves", (t) => open(t, DESK({ ...DESIGNER, role: "ui-dev-owner", can: { request: true, "stage-propose": true, "stage-design": true, "stage-own": true, vote: true } },
-  [{ ...STAGED[0], for: "developers" }, { ...STAGED[1], for: "designers", variants: [{ id: "v1", name: "Calm", asset: "A-1" }], votes: {} }]), async (desk) => {
+  [{ ...STAGED[0], for: "developers" }, { ...STAGED[1], for: "designers", status: "variants", triage: { verdict: "design", reasons: [] }, variants: [{ id: "v1", name: "Calm", asset: "A-1" }], votes: {} }]), async (desk) => {
   await desk.click('[data-filter="reqFilter:open"]');
   await desk.waitForSelector('#list [data-card="R-21"]');
   assert.deepEqual(await desk.$$eval("#list [data-card] .sdot", (xs) => xs.map((x) => [x.dataset.s, x.textContent.trim()])), [["draft", "Draft"], ["proposal", "Proposal"]], "both on the viewer's own tab, whatever their side");
@@ -4546,8 +4546,8 @@ test("full mode: a draft and a proposal show their stage, count as Open on the v
   await desk.waitForSelector("#detail .status");
   assert.match(await desk.textContent("#detail .status .s-word"), /^Proposal/);
   assert.equal(await desk.textContent('#detail .status .moves [data-stage="design"]'), "Send to design", "the first way on");
-  assert.deepEqual(await desk.$$eval('#detail .status .next [data-stage]', (xs) => xs.map((x) => x.textContent)), ["Keep for developers", "Back to draft"]);
-  assert.equal(await desk.locator('#detail [data-vote], #detail [data-act="approve"], #detail [data-act="queue"], #detail [data-size]').count(), 0, "no votes, Approve, presentation or side");
+  assert.deepEqual(await desk.$$eval('#detail .status .next [data-stage], #detail .status .next [data-act="approve-dev"]', (xs) => xs.map((x) => x.textContent)), ["Approve for dev", "Back to draft"]);
+  assert.equal(await desk.locator('#detail [data-act="approve"], #detail [data-act="queue"], #detail [data-size]').count(), 0, "no plain Approve, presentation or side");
 }));
 
 test("Send feedback: one button and one dialog, in both modes; no Approve before design", (t) => open(t, HEAD_DESK({ ...HEAD_ME, role: "developer", can: { ...HEAD_ME.can, approve: false, request: true, "stage-propose": true } },
@@ -4622,4 +4622,18 @@ test("simple mode's filter: Only shows one state at once and keeps the kinds", (
   await desk.click('.sf-row:has([data-simf="states:proposal"]) .sf-only');
   assert.deepEqual(await desk.$$eval(".sf-chip", (xs) => xs.map((x) => x.textContent.replace("×", "").trim())), ["Proposal", "Requests"], "one state, the kind as it was");
   assert.deepEqual((await rows(desk)).map(([id]) => id), ["R-21"]);
+}));
+
+test("Approve for dev asks as an approval does, then sends it For Developers", (t) => open(t, HEAD_DESK({ ...HEAD_ME, role: "ui-dev-owner", can: { ...HEAD_ME.can, request: true, "stage-propose": true, "stage-design": true, "stage-own": true } }, [{ ...drawn, ...STAGED[1] }]), async (desk) => {
+  await desk.waitForSelector("#list");
+  await desk.evaluate(() => { location.hash = "#R-21"; });
+  await desk.waitForSelector('#detail [data-act="approve-dev"]');
+  assert.equal(await desk.evaluate(() => getComputedStyle(document.querySelector('#detail [data-act="approve-dev"]')).backgroundColor === getComputedStyle(document.querySelector('#detail [data-stage="design"]')).backgroundColor), true, "green, as Send to design");
+  await desk.click('#detail [data-act="approve-dev"]');
+  await desk.waitForSelector("#confirm-dialog[open]");
+  assert.equal(await desk.textContent("#cf-title"), "Approve it for developers");
+  await desk.click("#cf-ok");
+  await desk.waitForFunction(() => window.posts.some((p) => p.path.endsWith("/actions")));
+  const sent = await desk.evaluate(() => window.posts.find((p) => p.path.endsWith("/actions")).body);
+  assert.deepEqual([sent.action, sent.for_dev], ["approve", true]);
 }));
