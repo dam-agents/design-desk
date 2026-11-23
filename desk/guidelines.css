@@ -360,6 +360,7 @@
   .sf-opt .box { width: 14px; height: 14px; border: 1px solid var(--muted); border-radius: var(--r-sm); flex: none; display: grid; place-items: center; }
   .sf-opt[aria-checked="true"] .box { background: var(--accent); border-color: var(--accent); }
   .sf-opt[aria-checked="true"] .box::after { content: ""; width: 6px; height: 3px; border: solid var(--accent-ink); border-width: 0 0 2px 2px; transform: rotate(-45deg) translate(1px, -1px); }
+  .sf-opt .box.round { border-radius: 50%; } .sf-opt[aria-checked="true"] .box.round::after { width: 6px; height: 6px; border: 0; border-radius: 50%; background: var(--accent-ink); transform: none; }
   .sf-opt .n { margin-left: auto; color: var(--muted); font-size: var(--fs-meta); }
   .sf-reset { margin-top: 4px; }
   .prov { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; font-size: var(--fs-meta); color: var(--muted); }
@@ -926,6 +927,8 @@
   .people .who .chev { width: 14px; height: 14px; color: var(--muted); transition: transform .15s ease; flex: none; }
   .people .who[aria-expanded="true"] .chev { transform: rotate(90deg); }
   .people tr.open > td { border-bottom-color: transparent; background: var(--soft); }
+  .people .gh-login { width: 100%; max-width: 180px; padding: 4px 8px; font: inherit; font-size: var(--fs-meta); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-sm); }
+  .people .gh-login:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   .people tr.pact > td { padding: 0 12px 16px; background: var(--soft); }
   .pact-box { display: grid; grid-template-columns: minmax(180px, 1fr) auto; gap: 20px 28px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 20px; }
   .pact-head { display: flex; align-items: center; gap: 12px; min-width: 0; }

@@ -4991,10 +4991,10 @@ test("simple mode: a developer starts at Draft and Dev review, a proposal in Dev
   assert.deepEqual(await desk.$$eval(".sbox b", (xs) => xs.map((x) => x.textContent)), ["Draft", "Dev review", "Design review", "In dev", "Closed"], "the boxes, Draft while it holds something");
 }));
 
-test("simple mode: a PM has every state and starts at every one before In dev; a designer has no Draft and starts at Design review", async (t) => {
+test("simple mode: a PM has every state and starts at all of them; a designer has no Draft and starts at Design review", async (t) => {
   await open(t, DESK({ ...SIMPLE_ME, role: "pm", can: { request: true, "stage-design": true } }, [STAGED[0], STAGED[2]]), async (desk) => {
     await desk.waitForSelector('#list [data-card="R-20"]');
-    assert.deepEqual(await ticked(desk), ["Draft", "Dev review", "Design review"]);
+    assert.deepEqual(await ticked(desk), ["Draft", "Dev review", "Design review", "In dev", "Closed"], "what a PM filed shows through to Shipped (#181)");
     await desk.click("details.sf > summary");
     assert.deepEqual(await desk.$$eval('[data-simf^="states:"]', (xs) => xs.map((x) => x.dataset.simf.slice(7))), ["draft", "proposal", "open", "dev", "closed"]);
   });
