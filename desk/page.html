@@ -174,6 +174,10 @@
   /* People shows at once: its intro on top, beside it on a wide screen. */
   .btn > .ico { width: 15px; height: 15px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .btn.small > .ico { width: 13px; height: 13px; }
+  .ico.ws-mark { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  /* A way into the design workspace: a very light violet fill (--ws), its mark in the button's ink (desk/guidelines.html → Buttons). */
+  .btn.ws-way, .tabs.vtabs button.vws.ws-way { background: color-mix(in srgb, var(--ws) 7%, var(--panel)); border-color: color-mix(in srgb, var(--ws) 18%, var(--line)); }
+  .btn.ws-way:hover, .tabs.vtabs button.vws.ws-way:hover { background: color-mix(in srgb, var(--ws) 13%, var(--panel)); }
   /* What a button or label does, the moment the pointer is on it (docs/desk-page.md → Tooltips). */
   #tip { position: fixed; z-index: 90; max-width: min(320px, calc(100vw - 16px)); padding: 8px 12px; border-radius: var(--r-sm); background: var(--ink); color: var(--bg); font-size: var(--fs-meta); line-height: 1.4; font-weight: 400; text-transform: none; letter-spacing: 0; box-shadow: var(--shadow); pointer-events: none; }
   /* "[Opens a dialog]" in a tooltip: the other theme's green (blue reads as a link), as the box is the page's ink. */
@@ -563,12 +567,14 @@
   .kit-tile .kval { font: var(--fs-meta)/1.4 var(--mono); color: var(--muted); overflow-wrap: anywhere; }
   /* One element of an option: its states and what each covers, in a dialog over the request. */
   dialog.eldlg { width: min(1040px, calc(100% - 32px)); max-height: calc(100vh - 48px); }
-  dialog.eldlg > div { padding: 20px 20px 20px; }
-  .elbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 8px; }
+  dialog.eldlg > div { padding: 0 20px 20px; }
+  /* The element dialog's header stays at its top while the rest scrolls: name, chips, the ways out and to the next element. */
+  .elbar { position: sticky; top: 0; z-index: 4; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin: 0 -20px 8px; padding: 20px 20px 12px; background: var(--panel); border-bottom: 1px solid var(--line); }
   /* An element's dialog: the part before (the product) beside after (the design), or one picture when it is new. */
   .elbar .el-acts { display: flex; gap: 8px; align-items: center; flex: none; }
   .el-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 12px 0 16px; }
-  .el-pair.one { grid-template-columns: minmax(0, 1fr); max-width: 640px; }
+  /* A part the option adds: one picture, the dialog's whole width, so its head (the states' switcher, Draw all states) ends where a pair's does. */
+  .el-pair.one { grid-template-columns: minmax(0, 1fr); }
   .el-col { display: grid; gap: 8px; align-content: start; min-width: 0; }
   .el-lab { font-size: var(--fs-micro); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
   .el-pic { position: relative; height: 260px; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); background: #fff; }
@@ -576,7 +582,25 @@
   .el-pic img { width: 100%; height: 100%; object-fit: contain; display: block; padding: 12px; box-sizing: border-box; }
   .el-pic > iframe { width: 100%; height: 100%; border: 0; display: block; pointer-events: none; }
   .el-pic.el-none { display: grid; place-items: center; text-align: center; padding: 16px; box-sizing: border-box; background: none; border-style: dashed; color: var(--muted); font-size: var(--fs-ui); }
-  .el-from { font-size: var(--fs-meta); color: var(--muted); margin: 0; }
+  .el-from { font-size: var(--fs-meta); color: var(--muted); margin: 0; } .el-from b { color: var(--ink); font-weight: 600; }
+  /* After's head: its label, the states stepper (the guidelines' Stepper, a pick in its middle) and Draw all states. */
+  .el-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 28px; } .el-head .el-lab { margin-right: auto; }
+  /* The header's controls are one height, the ✕'s (32px): the way into the workspace, borderless on its fill, and the element stepper. */
+  .elbar .el-acts .ws-way { border: 0; min-height: 32px; padding: 4px 12px; font-size: var(--fs-ui); }
+  .el-nav { flex: none; } .el-nav button { height: 30px; } .el-nav .pl-v { flex: none; padding: 0 8px; line-height: 30px; }
+  .el-sw { flex: none; max-width: 100%; } .el-sw select { flex: 1; min-width: 0; max-width: 220px; height: 28px; border: 0; border-inline: 1px solid var(--line); border-radius: 0; background: var(--panel); color: inherit; font: inherit; font-size: var(--fs-meta); padding: 0 4px; }
+  /* All states, folded under the pictures: a click shows one in After; the one shown is ringed in ink. */
+  .el-all { margin: 0 0 16px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .el-all > summary { list-style: none; cursor: pointer; display: flex; align-items: baseline; gap: 8px; padding: 12px 0; } .el-all > summary::-webkit-details-marker { display: none; }
+  .el-all > summary::after { content: "+"; margin-left: auto; color: var(--muted); font-size: var(--fs-head); line-height: 1; } .el-all[open] > summary::after { content: "−"; }
+  .el-all .catalog { margin: 0 0 12px; }
+  .el-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); gap: 12px; padding: 0 0 12px; }
+  .el-tile { display: grid; gap: 4px; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+  .el-tile .p { position: relative; display: grid; place-items: center; height: 128px; padding: 8px; box-sizing: border-box; overflow: hidden; border: 1px solid var(--line); border-radius: var(--r-sm); background: #fff; }
+  .el-tile .p img { width: 100%; height: 100%; object-fit: scale-down; display: block; } .el-tile .p iframe { width: 100%; height: 100%; border: 0; display: block; pointer-events: none; }
+  .el-tile .n { font-size: var(--fs-meta); color: var(--muted); } .el-tile:hover .p, .el-cpick:hover { border-color: var(--muted); }
+  .el-tile[aria-pressed="true"] .p, .el-shown.on { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); } .el-tile[aria-pressed="true"] .n { color: var(--ink); font-weight: 600; }
+  .el-cpick { display: block; width: 100%; padding: 0; border: 0; background: none; cursor: pointer; } .el-cpick .snipbox, .el-cpick .shot { pointer-events: none; } .el-cpick .snipbox { position: relative; }
   .el-take { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .el-take .working { margin: 0; }
   @media (max-width: 560px) { .el-pair { grid-template-columns: minmax(0, 1fr); } }
@@ -588,6 +612,7 @@
   .el-drafts { display: grid; gap: 8px; margin: 8px 0; } .el-drafts .dbub { background: var(--warn-soft); }
   .el-box textarea { width: 100%; box-sizing: border-box; }
   .el-box .bar { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+  .el-box .el-about { margin: 0 0 4px; }
   .elbar h2 { margin: 0 0 4px; font-size: var(--fs-head); }
   /* What comes from an approved design, not from the product: a dashed edge and its own ink. */
   .row.item.fromdesign { border-left: 3px dashed var(--waiting); }
@@ -636,6 +661,7 @@
   .zoom { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: grid; place-items: center; padding: 24px; z-index: 80; cursor: zoom-out; }
   .zoom img { max-width: 100%; max-height: 100%; border-radius: var(--r-sm); background: #fff; }
   .zoom .btn { position: absolute; top: 12px; right: 12px; }
+  .zoom .dlg-x { background: var(--panel); color: var(--ink); } .zoom .dlg-x:hover { background: var(--soft); }
   .zoom figure { margin: 0; display: grid; gap: 8px; justify-items: center; }
   .zoom figure img { max-height: calc(100vh - 110px); }
   .zoom .canvas img { max-height: calc(100vh - 110px); max-width: 100%; }
@@ -646,14 +672,6 @@
   .zoom .zoombox { position: relative; overflow: hidden; width: min(1100px, calc(100vw - 48px)); height: calc(100vh - 110px); border-radius: var(--r-sm); background: #fff; }
   .zoom .zoomframe { width: 100%; height: 100%; border: 0; pointer-events: none; display: block; }
   .catalog li[data-zoom], .catalog li[data-zoom-snip] { cursor: zoom-in; }
-  /* The box after an element's states that has more drawn. */
-  .catalog li.addstate { border: 1.5px dashed color-mix(in srgb, var(--accent) 45%, var(--line)); padding: 0; min-height: 200px; display: grid; align-items: stretch; }
-  .catalog li.addstate > button { height: 100%; width: 100%; display: grid; place-content: center; gap: 8px; text-align: center; border: 0; background: none; color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; padding: 16px; border-radius: var(--radius); }
-  .catalog li.addstate > button:hover { background: var(--info-soft); }
-  .catalog li.addstate > button .hint { font-weight: 400; margin: 0; }
-  .catalog li.addstate > .working { margin: 12px; align-self: center; }
-  .catalog li.addstate.done { border-style: solid; border-color: color-mix(in srgb, var(--approved) 35%, var(--line)); background: color-mix(in srgb, var(--approved-soft) 50%, var(--panel)); align-items: center; }
-  .catalog li.addstate.done > div { padding: 16px; text-align: center; } .catalog li.addstate.done b { color: var(--approved); }
   .catalog li[data-zoom]:hover, .catalog li[data-zoom-snip]:hover { border-color: var(--accent); }
   .steps { display: flex; gap: 0; margin: 16px 0 8px; flex-wrap: wrap; }
   .step { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: var(--fs-meta); padding: 4px 12px 4px 0; }
@@ -876,6 +894,11 @@
   dialog::backdrop { background: rgba(0,0,0,.35); }
   .drop.over { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
   dialog form { padding: 20px; display: grid; gap: 12px; }
+  /* Close: ✕ alone, in the dialog's top-right corner (desk/guidelines.html → Dialogs and forms); a heading keeps room for it. */
+  .dlg-x { position: absolute; top: 12px; right: 12px; z-index: 5; width: 32px; height: 32px; padding: 0; display: grid; place-items: center; border: 0; border-radius: var(--r-sm); background: none; color: var(--muted); font: inherit; font-size: var(--fs-head); line-height: 1; cursor: pointer; }
+  .dlg-x:hover { background: var(--soft); color: var(--ink); } .dlg-x:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  dialog form > h2 { padding-right: 32px; }
+  .elbar .dlg-x, .ask-panel header .dlg-x, .ws-top .dlg-x { position: static; flex: none; }
   dialog h2 { font-size: var(--fs-head); } label { font-size: var(--fs-meta); color: var(--muted); display: grid; gap: 4px; }
   .drop { border: 1px dashed var(--line); border-radius: var(--r-sm); padding: 12px; font-size: var(--fs-meta); color: var(--muted); display: grid; gap: 8px; }
   .thumbs { display: flex; gap: 8px; flex-wrap: wrap; } .thumbs img { height: 64px; border-radius: var(--r-sm); border: 1px solid var(--line); }
@@ -1128,6 +1151,8 @@
     --canvas: #edebe7; --dot: #d6d4cd;
     /* A pull request's and an issue's state: open green, merged violet, draft grey, in the Desk's own inks. */
     --gh-open: var(--ok); --gh-draft: var(--muted); --gh-merged: var(--live);
+    /* The design workspace's mark: the icon on every button that opens it, in violet. */
+    --ws: var(--live);
     --fs-title: 26px; --fs-head: 17px; --fs-ui: 14px; --fs-meta: 12.5px; --fs-micro: 11px; }
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --turn: #f28cc6; --turn-soft: #3a1d2e;
     --decided: #9bb8e0; --decided-soft: #1d2633; --canvas: #232321; --dot: #383835; } }
@@ -1506,7 +1531,6 @@
   @keyframes ws-in { from { transform: translateY(40px); opacity: 0; } }
   .ws-top { padding: 12px 12px 12px 20px; }
   .ws-top .title { font-size: var(--fs-ui); }
-  .ws-top [data-ws-close] { font-weight: 600; min-height: 32px; padding: 4px 12px; font-size: var(--fs-ui); }
   .ws-stage { padding: 16px; gap: 12px; }
   .ws-stage .frame { border-radius: var(--radius); }
   .ws-side { padding: 20px; gap: 12px; }
@@ -1526,8 +1550,6 @@
   #workspace .ws-side h3 { font-size: var(--fs-ui); text-transform: none; letter-spacing: 0; color: var(--ink); }
   /* One clear way out, at the top right: Close, its key, a cross. */
   .ws-top .ws-slack { font-size: var(--fs-meta); min-height: 32px; padding: 4px 12px; }
-  .ws-top .ws-close { order: 0; gap: 12px; padding: 8px 12px 8px 16px; font-weight: 600; border-radius: var(--r-sm); }
-  .ws-close svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; }
   kbd { font: var(--fs-meta) var(--font); padding: 0 8px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: var(--r-sm); color: var(--muted); font-weight: 400; }
   /* The design workspace, laid out as a design tool: the request on top, the options as tabs, the pages
      and states of the one shown, the design on a canvas with one tool bar under it, Comments and Properties beside. */
@@ -1791,6 +1813,7 @@
     </div>
     <input type="hidden" name="from" />
     <div class="actions"><button type="button" class="btn primary" data-close="send">Send</button><button type="button" class="btn" data-close="cancel">Cancel</button></div>
+    <button type="button" class="dlg-x" data-dlg-x aria-label="Close">✕</button>
   </form>
 </dialog>
 
@@ -1812,6 +1835,7 @@
       <div class="thumbs" id="pd-thumbs"></div>
     </div>
     <div class="actions"><button type="button" class="btn primary" data-close="send" id="pd-send">Add</button><button type="button" class="btn" data-close="cancel">Cancel</button></div>
+    <button type="button" class="dlg-x" data-dlg-x aria-label="Close">✕</button>
   </form>
 </dialog>
 
@@ -1824,6 +1848,7 @@
       <div class="thumbs" id="sh-thumbs"></div>
     </div>
     <div class="actions"><button type="button" class="btn primary" data-close="send">Add</button><button type="button" class="btn" data-close="cancel">Cancel</button></div>
+    <button type="button" class="dlg-x" data-dlg-x aria-label="Close">✕</button>
   </form>
 </dialog>
 
@@ -1839,6 +1864,7 @@
       <div class="thumbs" id="dc-thumbs"></div>
     </div>
     <div class="actions"><button type="button" class="btn primary" data-close="send">Add</button><button type="button" class="btn" data-close="cancel">Cancel</button></div>
+    <button type="button" class="dlg-x" data-dlg-x aria-label="Close">✕</button>
   </form>
 </dialog>
 
@@ -1849,6 +1875,7 @@
     <label><span>Their email — the one they sign in with</span><input name="email" type="email" maxlength="254" required placeholder="e.g. alex@example.com" /></label>
     <div id="pe-roles" class="choices"></div>
     <div class="actions"><button type="button" class="btn primary" data-close="send">Ask Design Desk</button><button type="button" class="btn" data-close="cancel">Cancel</button></div>
+    <button type="button" class="dlg-x" data-dlg-x aria-label="Close">✕</button>
   </form>
 </dialog>
 
@@ -1875,6 +1902,7 @@
     </div>
     <p class="hint" id="of-error" style="color:var(--bad);margin:0" hidden></p>
     <div class="actions"><button type="button" class="btn primary" data-close="ok" id="of-ok">Draw the option</button><button type="button" class="btn" data-close="cancel">Cancel</button></div>
+    <button type="button" class="dlg-x" data-dlg-x aria-label="Close">✕</button>
   </form>
 </dialog>
 
@@ -1895,6 +1923,7 @@
     </div>
     <label><span id="sl-note-label">A line for Slack (optional)</span><textarea name="note" maxlength="500"></textarea></label>
     <div class="actions"><button type="button" class="btn primary" data-close="ok" id="sl-ok">Send</button><button type="button" class="btn" data-close="cancel">Cancel</button></div>
+    <button type="button" class="dlg-x" data-dlg-x aria-label="Close">✕</button>
   </form>
 </dialog>
 
@@ -1911,6 +1940,7 @@
     <label id="cf-check2-wrap" class="check" hidden><input type="checkbox" name="check2" /> <span id="cf-check2-label"></span></label>
     <label id="cf-check3-wrap" class="check" hidden><input type="checkbox" name="check3" /> <span id="cf-check3-label"></span></label>
     <div class="actions"><button type="button" class="btn primary" data-close="ok" id="cf-ok"></button><button type="button" class="btn" data-close="cancel">Cancel</button></div>
+    <button type="button" class="dlg-x" data-dlg-x aria-label="Close">✕</button>
   </form>
 </dialog>
 
@@ -2261,9 +2291,13 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     restore: "Puts this decision in force again",
     gal: (v) => v === "1" ? "Next picture (→)" : "Previous picture (←)",
     zoom: "Click to see it large",
-    wsClose: "Back to the request (Esc)",
+    wsClose: "Close (Esc)",
     wsMode: (v) => ({ select: "Click a part of the design to select it", edit: "Click a text and type the new words", off: "Use the design as it is: switch views, open menus" }[v]),
-    wsState: (v) => v ? "Shows the option in this state" : "Shows the option as it was drawn",
+    wsState: (v) => v ? "Shows the option in this state" : "Shows the option as designed, in no particular state",
+    elStep: (v) => v === "1" ? "Next state" : "Previous state",
+    elNav: (v) => v === "1" ? "Next element" : "Previous element",
+    dlgX: "Close (Esc)",
+    elClose: "Close (Esc)",
     wsStep: (v) => v === "1" ? "Next state" : "Previous state",
     wsBuild: "Builds exactly this version, with the states shown, as a live prototype",
     wsEdit: "Goes back to change the design before building",
@@ -3004,6 +3038,13 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (formState(d) === d._clean) { d.close("cancel"); return; }
     ask({ title: "Close without sending?", body: "What you wrote or added in this window is lost; nothing is sent.", ok: "Close it", send: () => d.close("cancel") });
   };
+  // ✕ in a form dialog's corner does what Escape does (desk/guidelines.html → Dialogs and forms).
+  document.addEventListener("click", (e) => {
+    const x = e.target.closest?.("dialog [data-dlg-x]");
+    if (!x) return;
+    const d = x.closest("dialog");
+    if (d.id === "confirm-dialog") d.close("cancel"); else leave(d);
+  });
   for (const d of document.querySelectorAll("dialog:not(#confirm-dialog):not(#element-dialog)")) {
     // What it held when it opened; a dialog opened again after a failed send keeps it.
     new MutationObserver(() => { if (d.open && !d._reopen) d._clean = formState(d); d._reopen = false; }).observe(d, { attributes: true, attributeFilter: ["open"] });
@@ -3184,7 +3225,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         { tone: "", text: "Someone opens a request's design workspace.", acts: [["<b>Design workspace</b>", "revise"]] },
         { tone: "", text: "They click a part of an option and say what should change, or type the new words in it.", acts: [["<b>Edit text</b>", "revise"]] },
         { tone: "checking", text: "Design Desk draws the next version in a few minutes; the earlier ones stay." },
-        { tone: "", text: "Unsure how a part should look? Three ways to pick from, or every state it can be in.", acts: [["<b>Try 3 ways</b>", "revise"], ["<b>Draw every state</b>", "revise"]] },
+        { tone: "", text: "Unsure how a part should look? Three ways to pick from, or every state it can be in.", acts: [["<b>Try 3 ways</b>", "revise"], ["<b>Draw all states</b>", "revise"]] },
         { tone: "waiting", text: "The team comments on any part; a comment can change the design.", acts: [["<b>Request changes</b>", "change"]] }] },
     product: { about: "the product's screens, parts and decisions, kept up to date",
       steps: [
@@ -4644,7 +4685,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (z.parentElement !== top) top.append(z);
     z.list = list; z.index = i;
     const many = list.length > 1, cap = list[i].caption;
-    z.innerHTML = `<button class="btn small" aria-label="Close the picture">✕ Close</button>${many ? `<button class="btn gal prev" data-gal="-1" aria-label="Previous picture">‹</button><button class="btn gal next" data-gal="1" aria-label="Next picture">›</button>` : ""}
+    z.innerHTML = `<button type="button" class="dlg-x" aria-label="Close the picture">✕</button>${many ? `<button class="btn gal prev" data-gal="-1" aria-label="Previous picture">‹</button><button class="btn gal next" data-gal="1" aria-label="Next picture">›</button>` : ""}
       <figure>${list[i].marks?.length ? `<div class="canvas"><img alt="${esc(cap)}" src="${dataUrl(a)}" />${marksOf(list[i].marks)}</div>` : `<img alt="${esc(cap)}" src="${dataUrl(a)}" />`}${many || cap ? `<figcaption>${many ? `${i + 1} / ${list.length}` : ""}${many && cap ? " · " : ""}${esc(cap)}</figcaption>` : ""}</figure>`;
   }
   const dataUrl = (a) => a.encoding === "base64" ? `data:${a.contentType};base64,${a.data}` : `data:${a.contentType};charset=utf-8,${encodeURIComponent(a.data)}`;
@@ -4965,7 +5006,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // keepFocus puts a focused button (send, a starter, close, a brief) back; the box is kept above.
     keepFocus(root, () => { root.innerHTML = `<section class="ask-panel" role="dialog" aria-label="Private ask"${size ? ` style="width:${size.w}px;height:${size.h}px"` : ""}>
       <div class="ask-grip" data-ask-grip title="Drag to resize"></div>
-      <header><div><b>Private ask</b> <span class="chip" title="Only you and Design Desk see these questions and answers: nobody else on the Desk, and nothing goes to Slack. Design Desk explains; it never changes the design from here.">🔒 only you</span></div><button class="btn small" data-ask-close title="Close; your questions stay here">✕</button></header>
+      <header><div><b>Private ask</b> <span class="chip" title="Only you and Design Desk see these questions and answers: nobody else on the Desk, and nothing goes to Slack. Design Desk explains; it never changes the design from here.">🔒 only you</span></div><button type="button" class="dlg-x" data-ask-close aria-label="Close" title="Close (Esc); your questions stay here">✕</button></header>
       <div class="ask-ctx" title="Design Desk answers about what you had open when you asked">About: <b>${esc(ctx.label)}</b></div>
       <div class="ask-body">
         ${stream(here, ctx) || `<p class="hint">Ask anything about what you have open.</p>`}
@@ -5791,7 +5832,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const who = !busy.length && nx.who ? `<span class="way still hint">${esc(nx.who)}</span>` : "";
     // The design workspace is never a way on: its button sits by the options' tabs. With a live
     // prototype the options fold away, so the button stands at the row's right end instead.
-    const ws = live(c) && (c.variants || []).length ? `<button class="btn small ws" data-act="workspace">${can("revise") && !locked(c) ? "Design workspace" : "Comment on the design"}</button>` : "";
+    const ws = live(c) && (c.variants || []).length ? `<button class="btn small ws ws-way" data-act="workspace">${wsMark()}${can("revise") && !locked(c) ? "Design workspace" : "Comment on the design"}</button>` : "";
     const moves = row.length || who || ws ? `<div class="moves">${row.length ? `<span class="mv-k">${busy.length && !asks.length ? "Now:" : "Next:"}</span>${row.join(`<span class="mv-or">or</span>`)}` : ""}${who}${ws}</div>` : "";
     // The state's help hangs under its word: what is happening now and every way on from here.
     const own = STATUS_TIP[tone(c) === "decided" ? "decided" : held(c) ? "held" : checked(c) ? "checked" : emptied(c) ? "emptied" : protoDown(c) ? "down" : asking(c) ? "asking" : c.status === "spec" && S.me?.spec_review && !c.approved?.auto_send ? "spec-review" : c.status];
@@ -5907,7 +5948,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // The last tab adds one more option from what a person writes (docs/requests.md → One more option).
   // The one way into the design workspace: at the right end of the options' tabs, beside the design it opens.
   // With a live prototype the options fold away and the state row holds the button instead.
-  const wsTab0 = (c) => (c.variants || []).length && !live(c) ? `<button class="vws" data-act="workspace"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></svg>${can("revise") && !locked(c) ? "Design workspace" : "Comment on the design"}</button>` : "";
+  const wsTab0 = (c) => (c.variants || []).length && !live(c) ? `<button class="vws ws-way" data-act="workspace">${wsMark()}${can("revise") && !locked(c) ? "Design workspace" : "Comment on the design"}</button>` : "";
   function addOptionTab(c) {
     if (closed(c) || locked(c) || !can("explore")) return "";
     if (working(c).includes("explore")) return `<button class="vadd" disabled title="Design Desk is drawing; the new tab appears by itself"><span class="spin"></span> Drawing…</button>`;
@@ -6314,7 +6355,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (!d || ["done", "stopped"].includes(d.state)) { bar?.remove(); return; }
     if (!bar) { bar = document.createElement("div"); bar.id = "story-player"; bar.setAttribute("role", "status"); document.body.append(bar); }
     if (d.state === "missing" || d.state === "unseen") {
-      bar.innerHTML = `<span class="pl-k">Can't play it</span><span class="pl-t">${d.state === "missing" ? "This version of the design does not have this story's parts." : "The design has this story's parts, but none of them is on the screen on the way through it."}</span><button class="btn small" data-play-ctl="stop">✕ Close</button>`;
+      bar.innerHTML = `<span class="pl-k">Can't play it</span><span class="pl-t">${d.state === "missing" ? "This version of the design does not have this story's parts." : "The design has this story's parts, but none of them is on the screen on the way through it."}</span><button class="btn small" data-play-ctl="stop" aria-label="Close">✕</button>`;
       return;
     }
     if (d.step) S.playStep = { step: d.step, of: d.of };
@@ -6454,7 +6495,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const sel = el.dataset.zoomSel || (base ? diffPath(decode(await asset(base)), html) : "");
     $(".zoom")?.remove();
     const z = document.createElement("div"); z.className = "zoom"; z.onclick = () => z.remove();
-    z.innerHTML = `<button class="btn small" aria-label="Close the picture">✕ Close</button><figure><div class="zoombox"><iframe class="zoomframe" sandbox="allow-scripts" title="${esc(el.dataset.zoomLabel || "")}"></iframe></div><figcaption>${esc(el.dataset.zoomLabel || "")}</figcaption></figure>`;
+    z.innerHTML = `<button type="button" class="dlg-x" aria-label="Close the picture">✕</button><figure><div class="zoombox"><iframe class="zoomframe" sandbox="allow-scripts" title="${esc(el.dataset.zoomLabel || "")}"></iframe></div><figcaption>${esc(el.dataset.zoomLabel || "")}</figcaption></figure>`;
     ($("#element-dialog[open]") || document.body).append(z);
     const f = z.querySelector("iframe");
     // The frame takes the part's own shape, enlarged to fit the screen, the part centred in it:
@@ -6483,7 +6524,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (w > 24 && h > 24) { const k = Math.min(2.5, (innerWidth - 96) / w, (innerHeight - 140) / h); Object.assign(f.parentElement.style, { width: `${Math.round(w * k)}px`, height: `${Math.round(h * k)}px` }); widen(f); }
     f.style.visibility = "";
   });
-  function catalogItem(c, v, x) {
+  function catalogItem(c, v, x, shown) {
     const ss = c.issue_brief?.stories || [], k = catalogStates(c).findIndex((y) => y.x === x) + 1;
     const told = (x.stories || []).map((id) => ss.find((st) => st.id === id)).filter(Boolean);
     const use = told.length ? told.map((st) => `<li>${txt(st.text)}</li>`).join("") : x.use ? `<li>${txt(x.use)}</li>` : "";
@@ -6491,7 +6532,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const pic = x.shot ? `<figure class="shot"><img alt="${esc(`${x.part}: ${x.name}`)}" data-asset="${esc(x.shot)}" /></figure>`
       : x.asset ? `<div class="snipbox"><iframe sandbox="allow-scripts" loading="lazy" tabindex="-1" title="${esc(`${x.part}: ${x.name}`)}" data-snip-asset="${esc(x.asset)}" data-snip-sel="${esc(x.selector || "")}" data-snip-base="${esc(x.selector ? "" : v.asset || "")}"></iframe></div>`
       : `<div class="nopic hint">No picture of the part alone yet; open it in the design workspace.</div>`;
-    return `<li id="no-${esc(c.id)}-${k}"${zoomAttrs(x, v.asset, `${x.part}: ${x.name}`)}>${pic}<div>${subTag(c, k)} <b>${esc(x.name)}</b>${stale ? ` <span class="chip warn" title="This state shows the option before its latest change">drawn for an earlier version</span>` : ""}${x.how ? `<p class="hint">${esc(x.how)}</p>` : ""}
+    // Its picture shows the state above, in After (`shown`: it is the one shown); After enlarges it.
+    return `<li id="no-${esc(c.id)}-${k}" class="el-shown${shown ? " on" : ""}"><button class="el-cpick" data-el-pick="${esc(x.id)}" aria-pressed="${shown}" title="Shows it above">${pic}</button><div>${subTag(c, k)} <b>${esc(x.name)}</b>${stale ? ` <span class="chip warn" title="This state shows the option before its latest change">drawn for an earlier version</span>` : ""}${x.how ? `<p class="hint">${esc(x.how)}</p>` : ""}
       ${use ? `<p class="k">Use case it covers</p><ul>${use}</ul>` : (x.stories || []).length ? `<p class="hint">Covers a user story the brief no longer has.</p>` : `<p class="hint">Not tied to a use case of the brief.</p>`}</div></li>`;
   }
 
@@ -6539,7 +6581,13 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
 
   // The element dialog: which design it is of, what it is, and every state drawn of it; without
   // states, the button that has them drawn. It follows the card as it refreshes.
-  $("#element-dialog").addEventListener("close", () => { S.el = null; });
+  // Closed (✕, Esc) with a comment half written, the text stays with its part, back in the box
+  // when the dialog opens on it again, as a step to another element keeps it.
+  $("#element-dialog").addEventListener("close", () => { const box = $("#el-text"), t = box?.value; if (S.el && t?.trim()) (S.elTyped ||= {})[elTypedKey()] = t; if (box) box.value = ""; delete $("#el-body").dataset.el; S.el = null; });
+  // All states open or folded: kept while the page is open, for every part. Read from the press on
+  // its summary (a click, or Enter or Space on it), before the fold opens or closes: a redraw
+  // between the press and the fold's own toggle event would lose it.
+  $("#element-dialog").addEventListener("click", (e) => { const sm = e.target.closest?.("[data-el-all] > summary"); if (sm) S.elAll = !sm.parentElement.open; });
   // Escape over an enlarged picture closes the picture, not the dialog.
   $("#element-dialog").addEventListener("cancel", (e) => { const z = $("#element-dialog .zoom"); if (z) { e.preventDefault(); z.remove(); } });
   // Escape closes it like every other dialog, also when the focus left it (a redrawn body, a
@@ -6566,8 +6614,15 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const inner = x.shot ? `<img alt="${esc(label)}" data-asset="${esc(x.shot)}" />` : partFrame(x.asset, x.selector, base, label);
     return `<div class="el-pic"${zoomAttrs(x, base, label)}>${inner}</div>`;
   }
-  function elementPair(c, v, e, look) {
-    const after = (lab) => `<div class="el-col"><span class="el-lab">${lab}</span>${elPic(look, v.asset, `${e.name}: in the design`)}<p class="el-from">As ${esc(v.name)} draws it, version ${esc(v.version || 1)}.</p></div>`;
+  // After is the part as the option draws it, or the state picked above it (docs/desk-page.md → The
+  // element dialog): its name and its one-line note under it, and whether it is of an earlier version.
+  function elementPair(c, v, e, look, st, tools) {
+    const shown = st ? { shot: st.shot, asset: st.shot ? null : st.asset, selector: st.selector } : look;
+    const label = `${e.name}: ${st ? st.name : "in the design"}`;
+    const now = shown.shot || shown.asset ? elPic(shown, v.asset, label) : `<div class="el-pic el-none">No picture of this state yet</div>`;
+    const note = st ? `<p class="el-from"><b>${esc(st.name)}</b>${st.how ? ` · ${esc(st.how)}` : ""}${(st.of || 1) < (v.version || 1) ? ` <span class="chip warn" title="This state shows the option before its latest change">drawn for an earlier version</span>` : ""}</p>`
+      : `<p class="el-from">As ${esc(v.name)} draws it, version ${esc(v.version || 1)}.</p>`;
+    const after = (lab) => `<div class="el-col"><div class="el-head"><span class="el-lab">${lab}</span>${tools}</div>${now}${note}</div>`;
     if (e.change === "new") return `<div class="el-pair one">${after("New")}</div>`;
     const bf = beforeOf(c, e), shared = sharedPart(c, e);
     const pic = bf ? elPic(bf, "", `${e.name}: before`) : `<div class="el-pic el-none">No picture from before</div>`;
@@ -6579,27 +6634,65 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const take = !shared || S.el?.look || !S.me?.screens || !can("before") || c.status === "declined" ? ""
       : takingBefore(c, e) ? `<div class="working"><span class="spin"></span><div>${esc(WORK.before)}</div></div>`
       : `<button class="btn small" data-act="take-before" title="Design Desk takes ${esc(e.name)} as it is in the product, on its own copy of the product with made-up data. One picture serves every option.">${bf?.source === "instance" ? "Take it again" : "Take it from the product"}</button>`;
-    return `<div class="el-pair"><div class="el-col"><span class="el-lab">Before</span>${pic}<p class="el-from">${from}</p>${take ? `<div class="el-take">${take}</div>` : ""}</div>${after(e.change === "changed" || bf ? "After" : "In the design")}</div>`;
+    return `<div class="el-pair"><div class="el-col"><div class="el-head"><span class="el-lab">Before</span></div>${pic}<p class="el-from">${from}</p>${take ? `<div class="el-take">${take}</div>` : ""}</div>${after(e.change === "changed" || bf ? "After" : "In the design")}</div>`;
   }
   // The comments on a part, under its pictures: those still open, the viewer's notes on it waiting
   // in their feedback, then a box: Add to feedback, or Comment at once (docs/desk-page.md → The element dialog).
   const notesOnPart = (c, v, e) => (c.threads || []).filter((th) => th.state !== "resolved" && th.anchor?.variant === v.id
     && (e.selector ? th.anchor.selector === e.selector : String(th.anchor.label || "").split(" · ")[0] === e.name));
-  // The anchor a note on the part carries, the same whether it is posted or kept in the feedback.
-  const partAnchor = (v, e) => ({ variant: v.id, ...(e.selector ? { selector: e.selector, text: "", tag: "", view: e.view || null, view_name: e.view_name || null } : {}), label: e.name });
-  const draftsOnPart = (c, v, e) => draftsOf(c).filter((d) => !d.ok && d.anchor?.variant === v.id && (e.selector ? d.anchor.selector === e.selector : String(d.anchor.label || "") === e.name));
-  function elementTalk(c, v, e) {
+  // The anchor a note on the part carries, the same whether it is posted or kept in the feedback:
+  // written while a state is shown in After, it is about that state, and its label names it.
+  const partAnchor = (v, e, st) => ({ variant: v.id, ...(st ? { state: st.id } : {}), ...(e.selector ? { selector: e.selector, text: "", tag: "", view: e.view || null, view_name: e.view_name || null } : {}), label: st ? `${e.name} · ${st.name}` : e.name });
+  // A part with no path is found by its name: the label is the name, or the name and one of its states.
+  const labelOfPart = (e, a) => { const l = String(a?.label || ""); return l === e.name || (Boolean(a?.state) && e.states.some((x) => x.id === a.state && l === `${e.name} · ${x.name}`)); };
+  const draftsOnPart = (c, v, e) => draftsOf(c).filter((d) => !d.ok && d.anchor?.variant === v.id && (e.selector ? d.anchor.selector === e.selector : labelOfPart(e, d.anchor)));
+  // The state a note on the part is about, by its name; none for one about the part as designed.
+  const stateName = (v, a) => a?.state ? (v.states || []).find((x) => x.id === a.state)?.name || "" : "";
+  function elementTalk(c, v, e, st) {
     if (S.el?.look) return "";
     const notes = notesOnPart(c, v, e), mine = draftsOnPart(c, v, e);
+    const about = (a) => { const n = stateName(v, a); return n ? `<span class="chip" title="This comment is about ${esc(e.name)} in this state">${esc(n)}</span> ` : ""; };
     const list = notes.length ? `<ul class="el-said">${notes.map((th) => { const m = th.messages?.[0], more = (th.messages || []).length - 1;
-      return `<li><button class="anchor" data-goto="${esc(th.id)}" title="Open it in the design workspace"><b>${esc((noteBy(m?.by) || "someone").replace(/^./, (x) => x.toUpperCase()))}</b> <span class="tx">${esc(String(m?.text || "").replace(/\s+/g, " "))}</span>${more > 0 ? ` <span class="hint">${plural(more, "reply", "replies")}</span>` : ""}</button></li>`; }).join("")}</ul>` : "";
-    const waiting = mine.length ? `<div class="el-drafts">${mine.map((d) => `<div class="dbub"><div class="db-b"><span class="about">Not sent yet</span>${esc(d.text)}</div><button class="x" data-draft-del="${esc(d.id)}" aria-label="Remove this comment from your feedback" title="Remove from your feedback">✕</button></div>`).join("")}</div>` : "";
-    const box = (can("comment") || can("change")) && !closed(c) ? `<div class="el-box"><textarea id="el-text" rows="2" maxlength="4000" placeholder="What should change here?" aria-label="Comment on ${esc(e.name)}"></textarea>
-        <div class="bar"><span class="grow"></span><button class="btn" data-el-comment>Comment</button><button class="btn" data-el-draft>Add to feedback</button></div></div>` : "";
+      return `<li><button class="anchor" data-goto="${esc(th.id)}" title="Open it in the design workspace">${about(th.anchor)}<b>${esc((noteBy(m?.by) || "someone").replace(/^./, (x) => x.toUpperCase()))}</b> <span class="tx">${esc(String(m?.text || "").replace(/\s+/g, " "))}</span>${more > 0 ? ` <span class="hint">${plural(more, "reply", "replies")}</span>` : ""}</button></li>`; }).join("")}</ul>` : "";
+    const waiting = mine.length ? `<div class="el-drafts">${mine.map((d) => `<div class="dbub"><div class="db-b"><span class="about">Not sent yet${stateName(v, d.anchor) ? ` · ${esc(stateName(v, d.anchor))}` : ""}</span>${esc(d.text)}</div><button class="x" data-draft-del="${esc(d.id)}" aria-label="Remove this comment from your feedback" title="Remove from your feedback">✕</button></div>`).join("")}</div>` : "";
+    const box = (can("comment") || can("change")) && !closed(c) ? `<div class="el-box">${st ? `<p class="hint el-about">Your comment is about <b>${esc(st.name)}</b>.</p>` : ""}<textarea id="el-text" rows="2" maxlength="4000" placeholder="${st ? `What should change in ${esc(st.name)}?` : "What should change here?"}" aria-label="Comment on ${esc(e.name)}${st ? `, ${esc(st.name)}` : ""}"></textarea>
+        <div class="bar"><span class="grow"></span><button class="btn" data-el-comment>Comment</button><button class="btn primary" data-el-draft>Add to feedback</button></div></div>` : "";
     return list || waiting || box ? `<div class="el-talk"><span class="el-lab">Comments${notes.length ? ` · ${notes.length}` : ""}</span>${list}${waiting}${box}</div>` : "";
   }
+  // The states of a part, over its After picture: a stepper round a pick, As designed first, then
+  // each state in the option's order, as the design workspace's State menu (docs/desk-page.md → The element dialog).
+  function elSwitcher(e, st) {
+    if (!e.states.length) return "";
+    return `<span class="pl-step el-sw"><button data-el-step="-1" aria-label="Previous state">‹</button><select id="el-state" aria-label="State of ${esc(e.name)}"><option value="">As designed</option>${e.states.map((x) => `<option value="${esc(x.id)}"${x.id === st?.id ? " selected" : ""}>${esc(x.name)}</option>`).join("")}</select><button data-el-step="1" aria-label="Next state">›</button></span>`;
+  }
+  // Every state at once, folded under the pictures: a click shows one in After, so the fold and the
+  // switcher always agree. Simple mode shows a small tile of each; full mode its card, with the use
+  // case it covers. It starts folded; opened or folded, the choice lasts while the page is open.
+  function elAllStates(c, v, e, look, st) {
+    if (!e.states.length) return "";
+    const open = Boolean(S.elAll), on = (id) => (st?.id || "") === id;
+    const all = [{ id: "", name: "As designed", how: `As ${v.name} draws it, version ${v.version || 1}.`, ...look }, ...e.states.map((x) => ({ ...x, asset: x.shot ? null : x.asset }))];
+    const pic = (x) => x.shot ? `<img alt="" data-asset="${esc(x.shot)}" />` : x.asset ? partFrame(x.asset, x.selector, v.asset) : `<span class="hint">No picture yet</span>`;
+    const body = simple()
+      ? `<div class="el-grid">${all.map((x) => `<button class="el-tile" data-el-pick="${esc(x.id)}" aria-pressed="${on(x.id)}" title="${esc(x.how ? `${x.how} Shows it above.` : "Shows it above")}"><span class="p">${pic(x)}</span><span class="n">${esc(x.name)}</span></button>`).join("")}</div>`
+      : `<div class="catalog"><ol>${all.map((x) => x.id ? catalogItem(c, v, e.states.find((y) => y.id === x.id), on(x.id))
+        : `<li class="el-shown${on("") ? " on" : ""}"><button class="el-cpick" data-el-pick="" aria-pressed="${on("")}" title="Shows it above">${x.shot ? `<figure class="shot">${pic(x)}</figure>` : `<div class="snipbox">${pic(x)}</div>`}</button><div><b>As designed</b><p class="hint">${esc(x.how)}</p></div></li>`).join("")}</ol></div>`;
+    return `<details class="el-all" data-el-all${open ? " open" : ""}><summary><b>All states</b><span class="hint">${plural(e.states.length, "state", "states")}</span></summary>${body}</details>`;
+  }
+  // The option's elements to step through in the dialog's header, in the order of its All elements
+  // tiles, a part it leaves out skipped (docs/desk-page.md → The element dialog).
+  const elSteps = (c, v) => alignedElements(c, v).filter((x) => !x.gap);
+  function elNav(c, v, e) {
+    const els = elSteps(c, v), i = els.findIndex((x) => x.key === e.key);
+    if (els.length < 2 || i < 0) return "";
+    const at = (d) => els[(i + d + els.length) % els.length];
+    return `<span class="pl-step el-nav"><button data-el-nav="-1" aria-label="Previous element" title="Previous: ${esc(at(-1).name)}">‹</button><span class="pl-v">${i + 1} of ${els.length}</span><button data-el-nav="1" aria-label="Next element" title="Next: ${esc(at(1).name)}">›</button></span>`;
+  }
+  // What someone was writing on a part stays with it while the page is open: kept when they step to
+  // another element, given back to its box when they come back to it.
+  const elTypedKey = () => S.el ? `${S.el.card}|${S.el.variant}|${S.el.key}` : "";
   // `look`: only to look through the states drawn (from the design workspace): nothing is drawn or added from it.
-  function openElement(variant, key, { look = false } = {}) { S.el = { card: S.card?.id, variant, key, look }; renderElementDialog(); const d = $("#element-dialog"); if (!d.open) d.showModal(); }
+  function openElement(variant, key, { look = false, state = null } = {}) { S.el = { card: S.card?.id, variant, key, look, st: state }; renderElementDialog(); const d = $("#element-dialog"); if (!d.open) d.showModal(); }
   function renderElementDialog() {
     const dlg = $("#element-dialog");
     if (!S.el) { if (dlg.open) dlg.close(); return; }
@@ -6611,28 +6704,33 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const stale = e.states.filter((x) => (x.of || 1) < (v.version || 1));
     // The part as the design draws it, beside it as it is in the product before the design; a new part alone.
     const look = { shot: e.shot, asset: e.shot ? null : e.derived ? e.asset : v.asset, selector: e.selector };
-    const pair = elementPair(c, v, e, look);
-    // Every state drawn for the option's latest version: nothing is left to draw, so the
-    // card says so and offers no button. A change to the option makes them stale and the
-    // button comes back to redraw them.
-    const more = S.el.look ? "" : busy ? `<li class="addstate"><div class="working"><span class="spin"></span><div>${esc(WORK.states)}</div></div></li>`
-      : statesComplete(v, e) ? `<li class="addstate done"><div><b>✓ Every state is drawn</b><p class="hint">${plural(e.states.length, "state", "states")} of ${esc(e.name)} for version ${esc(v.version || 1)}: there is nothing more to draw. To change one, comment on it in the design workspace.</p></div></li>`
-      : may ? `<li class="addstate"><button data-el-states title="Design Desk draws ${esc(e.name)} in every state it can be in: hovered, disabled, loading, empty, with an error, with a long text…">+ ${e.states.length ? "Draw the states again" : "Draw every state"}<span class="hint">${e.states.length ? "for the option's latest version" : "hovered, disabled, loading, empty, an error, a long text…"}</span></button></li>` : "";
+    // The state shown in After: As designed, or one picked in the switcher or under All states. A
+    // state no longer drawn falls back to As designed.
+    const sts = e.states, st = sts.find((x) => x.id === S.el.st) || null;
+    if (!st) S.el.st = null;
+    const tools = `${elSwitcher(e, st)}${busy ? `<span class="chip info" title="${esc(WORK.states)}">● Drawing its states</span>`
+      // Draw all states where none is drawn, Redraw states where some are of an earlier version, nothing once all are current.
+      : may && !statesComplete(v, e) ? `<button class="btn small" data-el-states title="Design Desk draws ${esc(e.name)} in every state it can be in: hovered, disabled, loading, empty, with an error, with a long text…${sts.length ? " The ones drawn are of an earlier version of the option." : ""}">${sts.length ? "Redraw states" : "Draw all states"}</button>` : ""}`;
+    const pair = elementPair(c, v, e, look, st, tools);
     // The card refreshes while a person writes: what they typed, and where, survives the redraw.
-    const typed = $("#el-text"), keep = typed?.value || "", focused = document.activeElement === typed, caret = focused ? [typed.selectionStart, typed.selectionEnd] : null;
-    const toWs = S.el.look ? "" : `<button class="btn primary small" data-el-ws title="Opens the design at this part, to comment on it or ask for a change">Open in design workspace</button>`;
+    // Only a box drawn for this same part: one left by another part (closed with ✕ or Esc) is not its text.
+    const typed = $("#el-body").dataset.el === elTypedKey() ? $("#el-text") : null, keep = typed?.value || "", focused = Boolean(typed) && document.activeElement === typed, caret = focused ? [typed.selectionStart, typed.selectionEnd] : null;
+    const toWs = S.el.look ? "" : `<button class="btn small ws-way" data-el-ws title="Opens the design at this part, to comment on it or ask for a change">${wsMark()}Open in design workspace</button>`;
     $("#el-body").innerHTML = `<div class="elbar"><div><h2>${esc(e.name)}</h2>
         <div class="sub">${ch ? `<span class="chip ${ch[1]}" title="${esc(ch[2])}">${ch[0]}</span>` : ""}<span class="chip" title="The design option this element is part of"><span class="ono">${vs.indexOf(v) + 1}</span> ${esc(v.name)} · version ${esc(v.version || 1)}</span>${approvedOption(c)?.id === v.id ? `<span class="chip ok" title="The option that was approved">✓ Approved</span>` : ""}</div></div>
-        <div class="el-acts">${toWs}<button class="btn small" data-el-close aria-label="Close">✕ Close</button></div></div>
+        <div class="el-acts">${toWs}${elNav(c, v, e)}<button type="button" class="dlg-x" data-el-close aria-label="Close">✕</button></div></div>
       ${e.how ? `<p style="max-width:var(--measure)">${txt(e.how)}</p>` : ""}
       ${catalogButton(c, v, e) && !S.el.look ? `<div class="actions" style="margin:0 0 8px">${catalogButton(c, v, e)}</div>` : ""}
       ${stale.length ? `<p class="hint"><span class="chip warn" title="These states show the option before its latest change">${plural(stale.length, "state", "states")} drawn for an earlier version</span> Design Desk redraws them when it changes the option.</p>` : ""}
       ${pair}
-      ${elementTalk(c, v, e)}
-      ${e.states.length || more ? `<div class="catalog"><ol>${e.states.map((x) => catalogItem(c, v, x)).join("")}${more}</ol></div>` : ""}`
+      ${elAllStates(c, v, e, look, st)}
+      ${elementTalk(c, v, e, st)}`
       // A lazy frame in a modal dialog never loads: the browser does not see it come into view.
       .replaceAll(' loading="lazy"', "");
-    const box = $("#el-text"); if (box && keep) box.value = keep; if (box && focused) { box.focus(); box.setSelectionRange(caret[0], caret[1]); }
+    $("#el-body").dataset.el = elTypedKey();
+    const back = !keep && S.elTyped?.[elTypedKey()];
+    if (back) delete S.elTyped[elTypedKey()];
+    const box = $("#el-text"); if (box && (keep || back)) box.value = keep || back; if (box && focused) { box.focus(); box.setSelectionRange(caret[0], caret[1]); }
     loadPictures(dlg).catch(() => {});
   }
   // The story's parts, in the order the story goes through them.
@@ -7124,6 +7222,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const busyWhen = (w) => w.state === "claimed" && w.started ? `started ${ago(w.started) === "just now" ? "just now" : `${ago(w.started)} ago`}${w.usual_min ? `, usually about ${w.usual_min} min` : ""}` : "in the queue, starts within 10 minutes";
 
   const ICONS = {
+    workspace: '<path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/>',
     through: '<path d="M9 11.5V5.5a1.5 1.5 0 0 1 3 0v5m0-1a1.5 1.5 0 0 1 3 0v1.5m0-.5a1.5 1.5 0 0 1 3 0V15a6 6 0 0 1-6 6h-.5a6 6 0 0 1-4.8-2.4L3.6 15.4a1.6 1.6 0 0 1 2.5-2L9 16"/>',
     select: '<path d="M14 3.5H4.5a1 1 0 0 0-1 1V14" stroke-dasharray="2.6 2.4"/><path d="M10 10l10 4-4.2 1.6L14 20z" fill="currentColor"/>',
     comment: '<path d="M4 20.5V9a5 5 0 0 1 5-5h6a5 5 0 0 1 5 5v3a5 5 0 0 1-5 5H8z"/>',
@@ -7140,6 +7239,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     close: '<path d="M6 6l12 12M18 6L6 18"/>', done: '<circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.3l2.4 2.4 4.6-5"/>', back: '<path d="M19 12H5m6-6l-6 6 6 6"/>',
   };
   const wsIcon = (k) => `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">${ICONS[k]}</svg>`;
+  // Every button that opens the design workspace carries its mark, so it reads as the same way in.
+  const wsMark = () => `<svg class="ico ws-mark" viewBox="0 0 24 24" aria-hidden="true">${ICONS.workspace}</svg>`;
 
   // The bar on top: the request, what Design Desk does on it now, Figma, and the one way out.
   function wsTop(c, v) {
@@ -7151,7 +7252,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const title = S.ws.check ? `<span class="title">Final check: ${esc(v.name)} goes live</span><span class="chip" title="The version that goes live">version ${esc(v.version || 1)}</span>`
       : `<span class="title" title="${esc(c.title)}">${esc(c.title)}</span><span class="vsep" aria-hidden="true"></span>`;
     const opts = S.ws.check ? "" : `<div class="ws-opts" role="tablist" aria-label="Design options"><span class="k">Option</span><span class="ws-seg">${(c.variants || []).map((x, i) => wsTab(c, x, i, x.id === v.id)).join("")}</span>${wsAddOption(c)}</div>`;
-    return `${title}${opts}<span class="grow"></span>${agent}${figBtn}${!S.ws.check && c.status === "feedback" && slackModes(c).length ? `<button class="btn ws-slack" data-act="slack">Send to Slack…</button>` : ""}<button class="btn ws-close" data-ws-close title="Back to the request" aria-label="Close the design workspace">Close <kbd>Esc</kbd><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`;
+    return `${title}${opts}<span class="grow"></span>${agent}${figBtn}${!S.ws.check && c.status === "feedback" && slackModes(c).length ? `<button class="btn ws-slack" data-act="slack">Send to Slack…</button>` : ""}<button type="button" class="dlg-x" data-ws-close aria-label="Close the design workspace">✕</button>`;
   }
 
   // An option's tab: its number and name, a spinner while Design Desk changes it (a clock while it waits to), its open comments.
@@ -7193,9 +7294,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const open = (id) => notesOf(c).filter((n) => n.anchor.variant === v.id && (n.anchor.state || null) === id && n.state !== "resolved").length;
     const badge = (id) => { const n = open(id); return n ? `<span class="ws-count" title="${plural(n, "open comment", "open comments")}">${n}</span>` : ""; };
     const i = sts.findIndex((x) => x.id === S.ws.state), cur = sts[i], menu = S.ws.menu === "states";
-    const item = (x) => `<button role="menuitemradio" aria-checked="${(S.ws.state || null) === (x?.id || null)}" data-ws-state="${esc(x?.id || "")}" title="${esc(x?.how || "The option as it was drawn")}"><span>${esc(x ? x.name : "As drawn")}</span>${x && (x.version || 1) > 1 ? `<span class="chip" title="This state's version ${x.version}">v${x.version}</span>` : ""}${badge(x?.id || null)}</button>`;
+    const item = (x) => `<button role="menuitemradio" aria-checked="${(S.ws.state || null) === (x?.id || null)}" data-ws-state="${esc(x?.id || "")}" title="${esc(x?.how || "The option as designed, in no particular state")}"><span>${esc(x ? x.name : "As designed")}</span>${x && (x.version || 1) > 1 ? `<span class="chip" title="This state's version ${x.version}">v${x.version}</span>` : ""}${badge(x?.id || null)}</button>`;
     // The arrows stand before the pick, so a longer or shorter name never moves them.
-    return `<div class="ws-pages"><span class="k">State</span><span class="step-by"><button class="ws-ibtn" data-ws-step="-1" title="Previous state">${wsIcon("prev")}</button><span class="hint">${cur ? `${i + 1} of ${sts.length}` : `${sts.length}`}</span><button class="ws-ibtn" data-ws-step="1" title="Next state">${wsIcon("next")}</button></span><span class="ws-menuwrap"><button class="ws-pick" data-ws-menu="states" aria-expanded="${menu}" title="${plural(sts.length, "state", "states")} drawn"><span class="lbl">${cur ? `<span class="hint">${esc(cur.part)} ·</span> ${esc(cur.name)}` : "As drawn"}</span>${wsIcon("chev")}</button>
+    return `<div class="ws-pages"><span class="k">State</span><span class="step-by"><button class="ws-ibtn" data-ws-step="-1" title="Previous state">${wsIcon("prev")}</button><span class="hint">${cur ? `${i + 1} of ${sts.length}` : `${sts.length}`}</span><button class="ws-ibtn" data-ws-step="1" title="Next state">${wsIcon("next")}</button></span><span class="ws-menuwrap"><button class="ws-pick" data-ws-menu="states" aria-expanded="${menu}" title="${plural(sts.length, "state", "states")} drawn"><span class="lbl">${cur ? `<span class="hint">${esc(cur.part)} ·</span> ${esc(cur.name)}` : "As designed"}</span>${wsIcon("chev")}</button>
       ${menu ? `<div class="ws-menu" role="menu">${item(null)}${[...new Set(sts.map((x) => x.part))].map((p) => `<div class="ws-mgroup">${esc(p)}</div>${sts.filter((x) => x.part === p).map(item).join("")}`).join("")}</div>` : ""}</span>
 </div>`;
   }
@@ -7252,7 +7353,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ${againstBox(c, v.id)}
       <div><h4 style="margin:0 0 6px">Click through ${sts.length ? `the option and its ${plural(sts.length, "state", "states")}` : "the option"}</h4>
         <ol class="checklist">${row(null, "The option", "", 1)}${sts.map((x) => row(x.id, x.name, x.part, x.version || 1)).join("")}</ol>
-        <p class="hint">${sts.length ? `You looked at ${seen} of ${sts.length + 1}.` : "No states are drawn for this option. To check a part in every state first, open it under All elements below the option and press Draw every state."}</p></div>
+        <p class="hint">${sts.length ? `You looked at ${seen} of ${sts.length + 1}.` : "No states are drawn for this option. To check a part in every state first, open it under All elements below the option and press Draw all states."}</p></div>
       ${changing ? `<div class="working"><span class="spin"></span><div>Design Desk is changing this option right now. Wait for the new version; it appears here by itself.</div></div>` : ""}
       ${drawing ? `<div class="working"><span class="spin"></span><div>Design Desk is still drawing states of this request; they appear here as they are drawn.</div></div>` : ""}
       ${changes.length && !changing ? `<p><span class="chip warn" title="Design Desk has not changed the design for them yet">${plural(changes.length, "note is", "notes are")} not worked in yet</span> <span class="hint" style="display:inline">Build now and ${changes.length === 1 ? "it is" : "they are"} left out, or wait for Design Desk.</span></p>` : ""}
@@ -7340,7 +7441,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const workIn = all.filter((n) => workable(c, n));
     const talk = !old && (can("comment") || can("change"));
     const sts = v.states || [], drawings = [S.ws.state || null, ...[null, ...sts.map((x) => x.id)].filter((x) => x !== (S.ws.state || null))];
-    const nameOf = (id) => id ? sts.find((x) => x.id === id)?.name || id : "As drawn";
+    const nameOf = (id) => id ? sts.find((x) => x.id === id)?.name || id : "As designed";
     const li = (th) => {
       const [st, label] = noteState(c, th), last = th.messages[th.messages.length - 1];
       const where = (th.anchor.label || th.anchor.text || "the whole option") + (th.anchor.view_name ? ` · ${th.anchor.view_name}` : "");
@@ -8141,7 +8242,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (name === "states") {
       const v = (c.variants || []).find((x) => x.id === S.el?.variant), e = v && elementsOf(v).find((x) => x.key === S.el.key);
       if (!e || statesComplete(v, e)) return;
-      res = await ask({ title: `Draw every state of ${e.name}`, body: `Design Desk draws **${e.name}** of **${v.name}** in every state it can be in — such as hovered, pressed, disabled, loading, empty, with an error or with a long text — each as its own picture, with the use case it covers. You can step through them, comment on and change each in the design workspace. It takes a few minutes.`,
+      res = await ask({ title: `${e.states.length ? "Redraw the states" : "Draw all states"} of ${e.name}`, body: `Design Desk draws **${e.name}** of **${v.name}** in every state it can be in — such as hovered, pressed, disabled, loading, empty, with an error or with a long text — each as its own picture, with the use case it covers.${e.states.length ? ` The ones drawn now are of an earlier version of ${v.name}.` : ""} You can step through them here and in the design workspace, and comment on each. It takes a few minutes.`,
         ok: "Draw the states", note: "Anything to add? e.g. which states matter most (optional)",
         send: (a) => post(a.note || "", { variant: v.id, element: e.key, part: { selector: e.selector || "", text: e.name, label: e.name, view: e.view || null, view_name: e.view_name || null } }) });
       if (!res) return;
@@ -8663,22 +8764,41 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if ("splitEnd" in ds) { endSplit(); return; }
     // An element of the option: its dialog, its states drawn, the product's element it changes.
     if (ds.el) { openElement(S.variant, ds.el); return; }
-    if (ds.wsStatesOf) { const v = wsVariant(S.card); if (v) openElement(v.id, ds.wsStatesOf, { look: true }); return; }
+    if (ds.wsStatesOf) { const v = wsVariant(S.card); if (v) openElement(v.id, ds.wsStatesOf, { look: true, state: S.ws.state || null }); return; }
     if ("elClose" in ds) { $("#element-dialog").close(); return; }
+    // A state of the part in After: stepped to, or picked under All states (docs/desk-page.md → The element dialog).
+    if (ds.elStep && S.el) {
+      const v = (S.card?.variants || []).find((x) => x.id === S.el.variant), e = v && elementsOf(v).find((x) => x.key === S.el.key);
+      if (!e) return;
+      const ids = [null, ...e.states.map((x) => x.id)], k = Math.max(0, ids.indexOf(S.el.st || null));
+      S.el.st = ids[(k + Number(ds.elStep) + ids.length) % ids.length];
+      renderElementDialog(); $(`#el-body [data-el-step="${ds.elStep}"]`)?.focus(); return;
+    }
+    // Another element of the option, from the header: it opens as designed, at the dialog's top.
+    if (ds.elNav && S.el) {
+      const v = (S.card?.variants || []).find((x) => x.id === S.el.variant), els = v ? elSteps(S.card, v) : [], i = els.findIndex((x) => x.key === S.el.key);
+      if (i < 0 || els.length < 2) return;
+      const box = $("#el-text");
+      if (box?.value.trim()) (S.elTyped ||= {})[elTypedKey()] = box.value;
+      if (box) box.value = "";
+      S.el.key = els[(i + Number(ds.elNav) + els.length) % els.length].key; S.el.st = null;
+      renderElementDialog(); $("#element-dialog").scrollTop = 0; $(`#el-body [data-el-nav="${ds.elNav}"]`)?.focus(); return;
+    }
+    if (ds.elPick !== undefined && S.el) { S.el.st = ds.elPick || null; renderElementDialog(); $("#el-body .el-pair")?.scrollIntoView({ block: "nearest", behavior: "smooth" }); return; }
     // A comment on the part, from its dialog: on it at once, the dialog stays on the part.
     if ("elDraft" in ds) {
       const c = S.card, v = (c?.variants || []).find((x) => x.id === S.el?.variant), e = v && elementsOf(v).find((x) => x.key === S.el.key), box = $("#el-text"), text = box?.value.trim();
       if (!e) return;
       if (!text) { box?.focus(); toast("Write your comment first."); return; }
       box.value = "";
-      await addDraft(c, { text, anchor: partAnchor(v, e) });
+      await addDraft(c, { text, anchor: partAnchor(v, e, e.states.find((x) => x.id === S.el.st)) });
       return;
     }
     if ("elComment" in ds) {
       const c = S.card, v = (c?.variants || []).find((x) => x.id === S.el?.variant), e = v && elementsOf(v).find((x) => x.key === S.el.key), box = $("#el-text"), text = box?.value.trim();
       if (!e) return;
       if (!text) { box?.focus(); toast("Write your comment first."); return; }
-      await api("POST", `/api/cards/${c.id}/threads`, { kind: "comment", text, anchor: partAnchor(v, e) });
+      await api("POST", `/api/cards/${c.id}/threads`, { kind: "comment", text, anchor: partAnchor(v, e, e.states.find((x) => x.id === S.el.st)) });
       box.value = "";
       toast("Comment added.");
       await openCard(c.id); return;
@@ -8687,9 +8807,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if ("elWs" in ds) {
       const c = S.card, v = (c?.variants || []).find((x) => x.id === S.el?.variant), e = v && elementsOf(v).find((x) => x.key === S.el.key);
       if (!e) return;
+      // At the state shown in After, As designed for none.
+      const st = e.states.find((x) => x.id === S.el.st)?.id || null;
       $("#element-dialog").close();
       S.variant = v.id;
-      S.ws = { ...S.ws, open: true, check: false, version: null, state: null, alt: null, edit: null, note: null, pop: null, why: false, reason: null,
+      S.ws = { ...S.ws, open: true, check: false, version: null, state: st, alt: null, edit: null, note: null, pop: null, why: false, reason: null,
         view: e.view || e.view_name ? { view: String(e.view || ""), view_name: e.view_name || "" } : null,
         mode: e.selector ? "select" : "off", ...(e.selector ? { panel: "props" } : {}), selected: e.selector ? { selector: e.selector, text: "", tag: "", label: e.name, view: e.view || null, view_name: e.view_name || null } : null };
       renderDetail(); renderWorkspace(); return;
@@ -8994,6 +9116,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // The final check keeps "Ask me first" across its redraws (a step to a state, a new version).
     if ("wsAsk" in e.target.dataset) { S.ws.askFirst = e.target.checked; return; }
     if ("wsNotes" in e.target.dataset) { S.ws.notes = e.target.checked; store.set("desk-notes", S.ws.notes ? "1" : "0"); renderWorkspace(); return; }
+    if (e.target.id === "el-state" && S.el) { S.el.st = e.target.value || null; renderElementDialog(); $("#el-state")?.focus(); return; }
     if (e.target.id === "ws-version") { e.target.blur(); const n = Number(e.target.value); S.ws.version = n === (wsDrawing(wsVariant(S.card)).version || 1) ? null : n; S.ws.selected = null; S.ws.edit = null; renderWorkspace(); frameSay({ type: "desk-select", selector: null }); }
   });
 
@@ -9004,6 +9127,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // Over the element dialog, its own cancel closes the picture (and keeps the dialog).
     if (z && e.key === "Escape" && !z.closest("dialog")) { z.remove(); return; }
     if (z?.list?.length > 1 && ["ArrowRight", "ArrowLeft"].includes(e.key)) { gallery(z.list, z.index + (e.key === "ArrowRight" ? 1 : -1)).catch(fail); return; }
+    // Escape closes the private ask from inside it, or when nothing else on the page is open.
+    if (e.key === "Escape" && S.ask?.open && !document.querySelector("dialog[open], .zoom, #present") && (e.target.closest?.(".ask-panel") || !S.ws?.open)) { S.ask.open = false; renderAsk(); return; }
     const ov = $("#present");
     // While a comment is written, Enter sends it and Escape leaves the box; the arrows are the text's.
     if (ov && e.target.id === "pc-text") {
@@ -9299,7 +9424,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     store.set(`desk-simple:${me}`, on ? "on" : "off"); store.set(`desk-simple-unsaved:${me}`, "1");
     const n = ++simpleSeq;
     simpleSaves = simpleSaves.then(() => api("POST", "/api/prefs", { simple: on })
-      .then((r) => { if (n !== simpleSeq) return; store.del(`desk-simple-unsaved:${me}`); store.del(`desk-simple:${me}`); if (S.me) S.me.simple = r.simple; })
+      // The answer is the person's saved preferences; one without a real value for simple (an older or
+      // stand-in server) keeps the choice just made, never the role's default in its place.
+      .then((r) => { if (n !== simpleSeq) return; store.del(`desk-simple-unsaved:${me}`); store.del(`desk-simple:${me}`); if (S.me) S.me.simple = typeof r?.simple === "boolean" ? r.simple : on; })
       .catch(() => { if (!quiet) toast("Switched here only: the Desk couldn't save it for your other devices yet. It tries again the next time you open the Desk."); }));
   }
   // On load: a choice this browser has not saved yet is sent again.

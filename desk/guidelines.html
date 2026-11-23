@@ -47,7 +47,7 @@
   .gl-fixed { position: relative; transform: translateZ(0); width: 100%; min-height: 72px; }
   .gl-dlg { width: 100%; }
   .gl-palette { width: 340px; max-width: 100%; }
-  .gl-static { position: static; margin: 0; }
+  .gl-static { position: relative; margin: 0; }
   .gl-no { color: var(--bad); }
   @media (max-width: 760px) { .gl-item { grid-template-columns: minmax(0, 1fr); } }
 </style>
@@ -144,10 +144,24 @@
     <div class="gl-rule">
       <h3 class="gl-h3">Stepper</h3>
       <p class="gl-p">Variants of one thing in an order: an element's states, a size, a value one step up or down. The arrows step; the middle names where you are.</p>
-      <p class="gl-where">On the Desk: the design workspace's look panel and its states.</p>
+      <p class="gl-where">On the Desk: the design workspace's look panel and its states; an element's states in its dialog, with a pick in the middle, and the option's elements in its header.</p>
     </div>
     <div class="gl-ex">
       <span class="pl-step"><button aria-label="Less" title="Previous">−</button><span class="pl-v">Hover</span><button aria-label="More" title="Next">+</button></span>
+    </div>
+  </div>
+
+  <div class="gl-item">
+    <div class="gl-rule">
+      <h3 class="gl-h3">Pictures to pick from</h3>
+      <p class="gl-p">Every variant of one thing at once, as small pictures in a fold under the large one: a click shows it in the large picture, and the stepper above it agrees. The one shown is ringed in ink, its name in ink.</p>
+      <p class="gl-where">On the Desk: an element's All states in its dialog, in simple mode; full mode rings the state's card the same way.</p>
+    </div>
+    <div class="gl-ex">
+      <div class="el-grid">
+        <button class="el-tile" aria-pressed="false"><span class="p">Change</span><span class="n">As designed</span></button>
+        <button class="el-tile" aria-pressed="true"><span class="p">Change</span><span class="n">Hovered</span></button>
+      </div>
     </div>
   </div>
 
@@ -200,6 +214,7 @@
       <p class="gl-p">The dark primary is the next step. Green is only what moves an item forward: Approve, Approve for dev, Propose, Send to design, Send to developers, and Looks good. Everything else is neutral. Red only for what deletes.</p>
       <p class="gl-p">An action keeps its name everywhere: “Request changes” in the header, in its dialog, and in the message that follows.</p>
       <p class="gl-p">Small buttons sit inside a row, a card or a toolbar; the full size stands on its own.</p>
+      <p class="gl-p">A way into the design workspace looks the same wherever it stands: its icon, on a very light violet fill (<code>--ws</code> at 7%, a violet edge), the words and the icon in the button's own ink.</p>
     </div>
     <div class="gl-ex">
       <div class="gl-row">
@@ -208,6 +223,7 @@
         <button class="btn">Request changes</button>
       </div>
       <div class="gl-row">
+        <button class="btn small ws-way"><svg class="ico ws-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></svg>Open in design workspace</button>
         <button class="btn small">Open in Figma</button>
         <button class="btn small" disabled>Not now</button>
         <button class="btn small danger">Delete</button>
@@ -369,10 +385,13 @@
     <div class="gl-rule">
       <h3 class="gl-h3">A dialog asks one thing</h3>
       <p class="gl-p">Its name is the action that opened it, and its main button says the action again. A label sits above its field, grey and short. Nothing submits a form: every button is <code>type="button"</code>.</p>
+      <p class="gl-p"><b>Close is ✕, alone, in its top-right corner</b>, named "Close" for a screen reader; never "✕ Close". Esc closes it too, and ✕ does what Esc does: a form with something typed or picked in it asks before it is lost; a dialog that is not a form (an element's) keeps what was being written for the next time it opens. In the markup the ✕ comes last, so the first focus stays the form's. Cancel stays beside a form's main button and closes it at once.</p>
+      <p class="gl-where">On the Desk: every dialog, the design workspace, the enlarged picture and the private ask; a dialog with a header that stays (an element's) holds its ✕ there.</p>
     </div>
     <div class="gl-ex gl-dlg">
       <dialog class="gl-static" open aria-label="Example dialog">
         <form>
+          <button type="button" class="dlg-x" aria-label="Close">✕</button>
           <h2 class="gl-h2">Request changes</h2>
           <label>What should change<textarea>The empty state should say what to do next.</textarea></label>
           <label class="check"><input type="checkbox" checked> Tell the person who asked</label>

@@ -147,6 +147,57 @@ async function launch(t, bridge) {
   return { top, desk, posts, settled, close: async () => { await chrome.close(); server.close(); } };
 }
 
+// Close is ✕, alone, in a dialog's corner, and Esc closes it too; a form with something typed in it
+// asks first, both ways (desk/guidelines.html → Dialogs and forms).
+test("✕ and Esc close a dialog; a form with something typed asks first", async (t) => {
+  const run = await launch(t, BRIDGE);
+  if (!run) return;
+  const { desk, settled } = run;
+  try {
+    const open = (id) => desk.evaluate((i) => document.getElementById(i).open, id);
+    await desk.waitForSelector("#new-request");
+    // Untouched: ✕ and Esc close it at once.
+    await desk.click("#new-request");
+    assert.equal(await desk.getAttribute("#request-dialog .dlg-x", "aria-label"), "Close");
+    // Drawn in the corner but last in the form, it never takes the first focus: typing goes to the form.
+    assert.equal(await desk.evaluate(() => document.activeElement?.matches(".dlg-x")), false, "the first focus is the form's");
+    await desk.click("#request-dialog .dlg-x");
+    assert.equal(await open("request-dialog"), false, "✕ closes it");
+    await desk.click("#new-request");
+    await desk.press("#request-dialog textarea[name=problem]", "Escape");
+    assert.equal(await open("request-dialog"), false, "Esc closes it");
+    // Something typed: ✕ asks, as Esc does; keeping it keeps the text.
+    await desk.click("#new-request");
+    await desk.fill("#request-dialog textarea[name=problem]", "Half a request");
+    await desk.click("#request-dialog .dlg-x");
+    assert.equal(await open("confirm-dialog"), true, "✕ asks first");
+    assert.match(await desk.textContent("#cf-title"), /Close without sending\?/);
+    await desk.click("#confirm-dialog .dlg-x");
+    assert.deepEqual([await open("confirm-dialog"), await open("request-dialog")], [false, true], "✕ on the question keeps the form");
+    assert.equal(await desk.inputValue("#request-dialog textarea[name=problem]"), "Half a request");
+    await desk.click("#request-dialog .dlg-x");
+    await desk.locator("#confirm-dialog .actions button", { hasText: "Close it" }).click();
+    // The form closes once the question has: wait for it rather than look at once (slower on CI).
+    await desk.waitForFunction(() => !document.getElementById("request-dialog").open, null, { timeout: 5000 }).catch(() => {});
+    assert.equal(await open("request-dialog"), false, "and closes it once confirmed");
+    await settled("/api/requests", 0, "nothing is sent");
+    // The confirmation dialog, through Close… on a request just filed (a draft): ✕ and Esc confirm nothing.
+    await desk.click("#new-request");
+    await desk.fill("#request-dialog textarea[name=problem]", "Make the send button bigger");
+    await desk.locator("#request-dialog .actions button", { hasText: "Create draft" }).click();
+    await desk.waitForFunction(() => calls.some((c) => c.path === "/api/cards/r1"));
+    await desk.click('.next [data-act="close"]');
+    await desk.click("#confirm-dialog .dlg-x");
+    assert.equal(await open("confirm-dialog"), false);
+    await desk.click('.next [data-act="close"]');
+    await desk.press("#cf-ok", "Escape");
+    assert.equal(await open("confirm-dialog"), false);
+    await settled("/api/cards/r1/actions", 0, "neither confirms anything");
+  } finally {
+    await run.close();
+  }
+});
+
 test("every dialog acts once from a sandboxed frame, and only on its own button", async (t) => {
   const run = await launch(t, BRIDGE);
   if (!run) return;
@@ -441,6 +492,24 @@ test("a viewer starts in simple mode; the switch in their menu shows it and keep
   assert.ok((await tabs()).includes("product"), "full mode shows them again");
   await desk.waitForFunction(() => posts.some((p) => p.path === "/api/prefs"));
   assert.deepEqual(await desk.evaluate(() => posts.filter((p) => p.path === "/api/prefs").map((p) => JSON.parse(p.body))), [{ simple: false }], "saved for this person");
+}));
+
+// A save whose answer carries no simple (a stand-in server, such as the mock Desk once answered)
+// keeps the choice just made: the next redraw stays in simple mode, not the role's default (#201).
+const DESIGNER_BARE_PREFS = VIEWER.replace('{ theme: null, simple: JSON.parse(body).simple }', '{}').replace('role: "guest", email: "v@example.com", key: "v@example.com"', 'role: "designer", email: "d@example.com", key: "d@example.com"');
+
+test("simple mode switched on stays on after the next redraw, whatever the save answers", (t) => open(t, DESIGNER_BARE_PREFS, async (desk) => {
+  await desk.waitForSelector("#nav [data-tab]");
+  const tabs = () => desk.$$eval("#nav [data-tab]", (xs) => xs.map((x) => x.dataset.tab));
+  assert.ok((await tabs()).includes("product"), "a designer starts in full mode");
+  await desk.click("#me");
+  await desk.click("#simple");
+  await desk.waitForFunction(() => posts.some((p) => p.path === "/api/prefs"));
+  await desk.waitForTimeout(300);
+  // Anything that redraws the page: here the tab the person is on.
+  await desk.click('#nav [data-tab="requests"]');
+  assert.deepEqual((await tabs()).filter((k) => ["issues", "product", "people"].includes(k)), [], "still simple mode");
+  assert.equal(await desk.getAttribute("#simple", "aria-pressed"), "true");
 }));
 
 // LIST, and each of its cards opens.
@@ -930,9 +999,9 @@ test("a change shows its age and gets handled, pictures step through, the form a
     // A tile keeps white space around its picture, inside the same 192 px.
     assert.deepEqual(await desk.$eval('#detail [data-el="part-send-button"] .elpic', (e) => { const c = getComputedStyle(e); return [c.paddingTop, c.paddingLeft, e.getBoundingClientRect().height]; }), ["12px", "12px", 192], "a tile pads its picture");
     await desk.click('#detail [data-el="part-send-button"]');
-    await desk.waitForSelector("#element-dialog[open] .catalog");
+    await desk.waitForSelector("#element-dialog[open] .catalog", { state: "attached" });
     assert.match(await desk.textContent("#element-dialog"), /Send button[\s\S]*Calm · version 1[\s\S]*Failed[\s\S]*The message did not go\.[\s\S]*Use case it covers[\s\S]*Someone sends a message while offline\./);
-    assert.equal(await desk.getAttribute('#element-dialog .catalog [data-zoom] img', "data-asset"), "A-1");
+    assert.equal(await desk.getAttribute('#element-dialog .catalog [data-el-pick="error"] img', "data-asset"), "A-1");
     await desk.click("#element-dialog [data-el-close]");
     await desk.waitForSelector('.vtabs [data-act="workspace"]');
     await desk.click('.vtabs [data-act="workspace"]');
@@ -941,8 +1010,8 @@ test("a change shows its age and gets handled, pictures step through, the form a
     assert.match(await desk.textContent("#ws-sub"), /State[\s\S]*1 of 1[\s\S]*Send button ·[\s\S]*Failed/, "the arrows and the count stand before the state's name");
     assert.match(await desk.textContent("#ws-context"), /Failed[\s\S]*The message did not go\./, "the state's use stands above the design");
     await desk.click('[data-ws-step="1"]');
-    await desk.waitForFunction(() => /As drawn/.test(document.querySelector("#ws-sub")?.textContent || "")).catch(() => {});
-    assert.match(await desk.textContent("#ws-sub"), /As drawn/, "the step goes back round to the option");
+    await desk.waitForFunction(() => /As designed/.test(document.querySelector("#ws-sub")?.textContent || "")).catch(() => {});
+    assert.match(await desk.textContent("#ws-sub"), /As designed/, "the step goes back round to the option");
     await desk.click("[data-ws-close]");
 
     // Build opens the final check of the only option: it builds exactly the version it
@@ -2029,7 +2098,8 @@ test("in Select mode the review bar acts: a hover or a click on it picks nothing
     await desk.click("[data-ws-close]");
     await desk.click('#detail [data-el="save"]');
     await desk.waitForSelector("#element-dialog[open] [data-el-states]");
-    assert.match(await desk.textContent("#element-dialog"), /Save button[\s\S]*New[\s\S]*Tabs · version 2[\s\S]*Open in design workspace[\s\S]*New[\s\S]*As Tabs draws it, version 2[\s\S]*Draw every state/);
+    assert.match(await desk.textContent("#element-dialog"), /Save button[\s\S]*New[\s\S]*Tabs · version 2[\s\S]*Open in design workspace[\s\S]*New[\s\S]*As Tabs draws it, version 2/);
+    assert.equal(await desk.textContent("#element-dialog [data-el-states]"), "Draw all states", "none is drawn yet");
     await desk.click("#element-dialog [data-el-states]");
     await desk.fill("#confirm-form [name=note]", "The error first.");
     await desk.locator("#confirm-dialog .actions button", { hasText: "Draw the states" }).click();
@@ -2047,21 +2117,21 @@ test("in Select mode the review bar acts: a hover or a click on it picks nothing
 const BEFORE_PAGE = `<!doctype html><html><body><div data-view="1" data-view-name="Agents"><div id="card" style="width:300px;height:80px;background:#36c">Agent</div><p id="label">Limit</p><p id="added">New</p></div></body></html>`;
 const NOW_PAGE = `<!doctype html><html><body><div data-view="1"><div id="card" style="width:300px;height:80px;background:#999">Agent today</div><p id="label">Limit today</p></div></body></html>`;
 const SHOT = `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="20"><rect width="40" height="20" fill="#000"/></svg>`;
-const bridgeBefore = ({ me = 'role: "designer", email: "alice@example.com", screens: true, can: { comment: true, change: true, before: true }' } = {}) => `<script>
+const bridgeBefore = ({ me = 'role: "designer", email: "alice@example.com", screens: true, can: { comment: true, change: true, before: true }', states = "[]", threads = "" } = {}) => `<script>
 window.calls = [];
 const at = new Date().toISOString();
 const request = { id: "r7", kind: "request", title: "Agent card", status: "feedback", created: at, triage: { verdict: "design", reasons: [] }, prototype: { state: "none" },
   shared_elements: [{ id: "card", name: "Agent card" }, { id: "label", name: "Limit label" }, { id: "added", name: "Added note" }],
   now: { asset: "A-now", name: "Agents", at, elements: [{ id: "card", selector: "#card", view: 1, view_name: "Agents" }, { id: "label", selector: "#label", view: 1, view_name: "Agents" }] },
   before_shots: [{ id: "card", asset: "A-shot", source: "instance", ref: "main", commit: "4286de5", at }],
-  variants: [{ id: "v1", name: "Calm", asset: "A-1", fidelity: "mockup", version: 2, elements: [
+  variants: [{ id: "v1", name: "Calm", asset: "A-1", fidelity: "mockup", version: 2, states: ${states}, elements: [
     { id: "card", name: "Agent card", change: "changed", how: "Calmer.", selector: "#card", view: "1", view_name: "Agents" },
     { id: "label", name: "Limit label", change: "changed", how: "Shorter.", selector: "#label", view: "1", view_name: "Agents" },
     { id: "added", name: "Added note", change: "new", how: "Says which limit stops first.", selector: "#added", view: "1", view_name: "Agents" }] }],
   threads: [
     { id: "T-1", kind: "comment", state: "open", anchor: { variant: "v1", selector: "#label", label: "Limit label" }, messages: [{ by: { name: "Pat Lee" }, at, text: "Shorter still?" }, { by: { agent: true }, at, text: "Yes." }] },
     { id: "T-2", kind: "comment", state: "open", anchor: { variant: "v1", selector: "#card", label: "Agent card" }, messages: [{ by: { name: "Pat Lee" }, at, text: "On the card." }] },
-    { id: "T-3", kind: "comment", state: "resolved", anchor: { variant: "v1", selector: "#label", label: "Limit label" }, messages: [{ by: { name: "Pat Lee" }, at, text: "Done long ago." }] }],
+    { id: "T-3", kind: "comment", state: "resolved", anchor: { variant: "v1", selector: "#label", label: "Limit label" }, messages: [{ by: { name: "Pat Lee" }, at, text: "Done long ago." }] }${threads}],
   waiting: [] };
 window.platform = { async request({ method, path, body }) {
   calls.push({ method, path, body });
@@ -2106,6 +2176,9 @@ test("an element's dialog shows the part before and after, says where before cam
     if (await desk.locator("#element-dialog[open]").count()) await desk.click("[data-el-close]");
     await desk.click('#detail [data-el="added"]');
     await desk.waitForSelector("#element-dialog[open] .el-pair.one");
+    // Its one picture spans the dialog, so its head ends where a pair's does.
+    const [pairRight, headRight] = await desk.$eval("#element-dialog", (d) => [d.querySelector(".el-pair.one").getBoundingClientRect().right, d.querySelector(".elbar [data-el-close]").getBoundingClientRect().right]);
+    assert.ok(Math.abs(pairRight - headRight) < 2, `it ends where the header does: ${pairRight} and ${headRight}`);
     const added = await desk.textContent("#element-dialog .el-pair");
     assert.match(added, /New/);
     assert.doesNotMatch(added, /Before|Take it/);
@@ -2185,6 +2258,8 @@ test("an element's dialog lists the part's open comments and comments on the par
     const talk = await desk.textContent("#element-dialog .el-talk");
     assert.match(talk, /Comments · 1[\s\S]*Pat Lee[\s\S]*Shorter still\?[\s\S]*1 reply/);
     assert.doesNotMatch(talk, /On the card|Done long ago/, "not another part's, nor one marked done");
+    // One primary action in the dialog (desk/guidelines.html → Buttons): Add to feedback, as in the workspace.
+    assert.deepEqual(await desk.$$eval("#element-dialog .btn.primary", (bs) => bs.map((b) => b.textContent.trim())), ["Add to feedback"]);
     await desk.click("#element-dialog [data-el-comment]");
     assert.equal((await posts("/api/cards/r7/threads")).length, 0, "nothing written, nothing sent");
     await desk.fill("#el-text", "Make the label shorter");
@@ -2204,6 +2279,185 @@ test("an element's dialog lists the part's open comments and comments on the par
     await desk.click('#element-dialog [data-goto="T-1"]');
     await desk.waitForSelector("#ws-frame");
     assert.equal(await desk.locator("#element-dialog[open]").count(), 0, "the dialog closes");
+  } finally {
+    await run.close();
+  }
+});
+
+// An element's states in its dialog (docs/desk-page.md → The element dialog): a switcher over After,
+// All states folded under the pictures, and the button that draws them beside the switcher.
+const CARD_STATES = (hoverOf = 2) => JSON.stringify([
+  { id: "hover", element: "card", part: "Agent card", name: "Hovered", how: "The pointer rests on it.", asset: "A-1", selector: "#card", of: hoverOf },
+  { id: "error", element: "card", part: "Agent card", name: "Failed", how: "It could not load.", shot: "A-shot", of: 2 }]);
+const REVISER = 'role: "designer", email: "alice@example.com", screens: true, can: { comment: true, change: true, before: true, revise: true }';
+
+test("an element's dialog steps through its states over After, and All states shows them all at once", async (t) => {
+  const run = await launch(t, bridgeBefore({ me: REVISER, states: CARD_STATES(1) }));
+  if (!run) return;
+  const { desk } = run;
+  try {
+    await desk.click('[data-card="r7"]');
+    await desk.click('#detail [data-el="card"]');
+    await desk.waitForSelector("#element-dialog[open] #el-state");
+    const after = () => desk.$eval("#element-dialog .el-col:last-child", (x) => ({ note: x.querySelector(".el-from").textContent, frame: x.querySelector("iframe")?.dataset.snipAsset || null, img: x.querySelector("img")?.dataset.asset || null }));
+    assert.equal(await desk.inputValue("#el-state"), "", "it opens as designed");
+    assert.deepEqual(await desk.$$eval("#el-state option", (os) => os.map((o) => o.textContent)), ["As designed", "Hovered", "Failed"], "As designed first, then the option's order");
+    assert.match((await after()).note, /As Calm draws it, version 2/);
+    // The arrows step, and go round; only After changes.
+    await desk.click('#element-dialog [data-el-step="1"]');
+    assert.equal(await desk.inputValue("#el-state"), "hover");
+    assert.deepEqual(await after(), { note: "Hovered · The pointer rests on it. drawn for an earlier version", frame: "A-1", img: null });
+    await desk.click('#element-dialog [data-el-step="1"]');
+    assert.deepEqual(await after(), { note: "Failed · It could not load.", frame: null, img: "A-shot" });
+    assert.equal(await desk.locator("#element-dialog .el-col:first-child img[data-asset='A-shot']").count(), 1, "Before stays the product's");
+    await desk.click('#element-dialog [data-el-step="1"]');
+    assert.equal(await desk.inputValue("#el-state"), "", "past the last state, back to As designed");
+    await desk.click('#element-dialog [data-el-step="-1"]');
+    assert.equal(await desk.inputValue("#el-state"), "error", "and back round the other way");
+    await desk.selectOption("#el-state", "hover");
+    assert.match((await after()).note, /^Hovered/);
+    // All states starts folded; opened, full mode shows a card per state with its use case; the one shown is ringed.
+    assert.equal(await desk.$eval("#element-dialog [data-el-all]", (d) => d.open), false, "it starts folded");
+    await desk.click("#element-dialog .el-all > summary");
+    assert.deepEqual(await desk.$$eval("#element-dialog .el-all [data-el-pick]", (bs) => bs.map((b) => [b.dataset.elPick, b.getAttribute("aria-pressed")])), [["", "false"], ["hover", "true"], ["error", "false"]]);
+    assert.match(await desk.textContent("#element-dialog .el-all"), /As designed[\s\S]*Hovered[\s\S]*Not tied to a use case[\s\S]*Failed/);
+    await desk.click('#element-dialog .el-all [data-el-pick="error"]');
+    assert.equal(await desk.inputValue("#el-state"), "error", "a card picked shows in After, and the switcher agrees");
+    assert.equal(await desk.locator("#element-dialog .el-all .el-shown.on [data-el-pick='error']").count(), 1);
+    // Some states are of an earlier version: Redraw states, beside the switcher.
+    assert.equal(await desk.textContent("#element-dialog .el-head [data-el-states]"), "Redraw states");
+    // Opened, it stays open for the next part opened; folded again, folded.
+    await desk.click("[data-el-close]");
+    await desk.click('#detail [data-el="card"]');
+    await desk.waitForSelector("#element-dialog[open] #el-state");
+    assert.equal(await desk.$eval("#element-dialog [data-el-all]", (d) => d.open), true, "the fold keeps its choice while the page is open");
+    await desk.click("#element-dialog .el-all > summary");
+    await desk.click("[data-el-close]");
+    await desk.click('#detail [data-el="card"]');
+    await desk.waitForSelector("#element-dialog[open] #el-state");
+    assert.equal(await desk.$eval("#element-dialog [data-el-all]", (d) => d.open), false, "and folded again");
+    assert.equal(await desk.inputValue("#el-state"), "", "a dialog opened anew shows the part as designed");
+  } finally {
+    await run.close();
+  }
+});
+
+test("in simple mode All states is tiles; the button draws all states, or is gone once all are current", async (t) => {
+  const run = await launch(t, bridgeBefore({ me: `${REVISER}, simple: true`, states: CARD_STATES(2) }));
+  if (!run) return;
+  const { desk } = run;
+  try {
+    await desk.click('[data-card="r7"]');
+    await desk.click('#detail [data-el="card"]');
+    await desk.waitForSelector("#element-dialog[open] #el-state");
+    assert.equal(await desk.$eval("#element-dialog [data-el-all]", (d) => d.open), false, "it starts folded");
+    assert.equal(await desk.locator("#element-dialog .el-all .catalog").count(), 0, "no catalogue cards");
+    assert.deepEqual(await desk.$$eval("#element-dialog .el-grid .el-tile", (bs) => bs.map((b) => b.textContent.trim())), ["As designed", "Hovered", "Failed"]);
+    assert.equal(await desk.locator("#element-dialog [data-el-states]").count(), 0, "every state is current: nothing to draw");
+    await desk.click("#element-dialog .el-all > summary");
+    await desk.click('#element-dialog .el-tile[data-el-pick="error"]');
+    assert.equal(await desk.inputValue("#el-state"), "error");
+    assert.equal(await desk.getAttribute('#element-dialog .el-tile[data-el-pick="error"]', "aria-pressed"), "true");
+    await desk.click("[data-el-close]");
+    // A part with no state drawn: no switcher, no fold, Draw all states.
+    await desk.click('#detail [data-el="label"]');
+    await desk.waitForSelector("#element-dialog[open] [data-el-states]");
+    assert.equal(await desk.textContent("#element-dialog .el-head [data-el-states]"), "Draw all states");
+    assert.equal(await desk.locator("#element-dialog #el-state, #element-dialog [data-el-all]").count(), 0);
+  } finally {
+    await run.close();
+  }
+});
+
+// The element dialog's header stays while it scrolls, and steps through the option's elements in
+// the order of the All elements tiles, round; another element opens as designed, and what was
+// being written stays with its element (docs/desk-page.md → The element dialog).
+test("an element's dialog keeps its header and steps to the option's other elements", async (t) => {
+  const run = await launch(t, bridgeBefore({ states: CARD_STATES(2) }));
+  if (!run) return;
+  const { desk } = run;
+  try {
+    await desk.click('[data-card="r7"]');
+    await desk.click('#detail [data-el="card"]');
+    await desk.waitForSelector("#element-dialog[open] .el-nav");
+    const head = () => desk.$eval("#element-dialog .elbar", (b) => [b.querySelector("h2").textContent, b.querySelector(".el-nav .pl-v").textContent, b.querySelector('[data-el-nav="-1"]').dataset.tip, b.querySelector('[data-el-nav="1"]').dataset.tip]);
+    assert.equal(await desk.$eval("#element-dialog .elbar", (b) => getComputedStyle(b).position), "sticky", "the header stays while the dialog scrolls");
+    // Its controls are one height; the way into the workspace has its fill and no border there.
+    assert.deepEqual(await desk.$eval("#element-dialog .el-acts", (a) => [...a.children].map((x) => Math.round(x.getBoundingClientRect().height))), [32, 32, 32]);
+    assert.equal(await desk.$eval("#element-dialog .el-acts .ws-way", (x) => getComputedStyle(x).borderTopWidth), "0px");
+    assert.deepEqual(await head(), ["Agent card", "1 of 3", "Previous: Added note", "Next: Limit label"]);
+    await desk.selectOption("#el-state", "hover");
+    await desk.fill("#el-text", "Half a thought");
+    await desk.click('#element-dialog [data-el-nav="1"]');
+    assert.deepEqual(await head(), ["Limit label", "2 of 3", "Previous: Agent card", "Next: Added note"]);
+    assert.equal(await desk.inputValue("#el-text"), "", "another part's box is its own");
+    assert.equal(await desk.locator("#element-dialog #el-state").count(), 0, "it has no states");
+    await desk.click('#element-dialog [data-el-nav="1"]');
+    assert.equal((await head())[0], "Added note");
+    await desk.click('#element-dialog [data-el-nav="1"]');
+    assert.deepEqual((await head()).slice(0, 2), ["Agent card", "1 of 3"], "past the last, the first");
+    assert.equal(await desk.inputValue("#el-state"), "", "it opens as designed");
+    assert.equal(await desk.inputValue("#el-text"), "Half a thought", "what was written on it is back");
+    await desk.click('#element-dialog [data-el-nav="-1"]');
+    assert.equal((await head())[0], "Added note", "and back round the other way");
+    // Close is ✕ alone in the header; Esc closes it too, and a comment half written stays with its part.
+    assert.deepEqual(await desk.$eval("#element-dialog .elbar [data-el-close]", (b) => [b.textContent, b.getAttribute("aria-label")]), ["✕", "Close"]);
+    await desk.fill("#el-text", "Kept on closing");
+    await desk.press("#el-text", "Escape");
+    assert.equal(await desk.locator("#element-dialog[open]").count(), 0, "Esc closes it");
+    await desk.click('#detail [data-el="added"]');
+    await desk.waitForSelector("#element-dialog[open] #el-text");
+    assert.equal(await desk.inputValue("#el-text"), "Kept on closing", "back when it opens on that part again");
+    // Closed with ✕ and another part opened: its box is its own, and the first part's text waits for it.
+    await desk.click("#element-dialog [data-el-close]");
+    await desk.click('#detail [data-el="label"]');
+    await desk.waitForSelector("#element-dialog[open] #el-text");
+    assert.equal(await desk.inputValue("#el-text"), "", "never another part's text");
+    await desk.click("#element-dialog [data-el-close]");
+    await desk.click('#detail [data-el="added"]');
+    await desk.waitForSelector("#element-dialog[open] #el-text");
+    assert.equal(await desk.inputValue("#el-text"), "Kept on closing", "still kept for its own part");
+  } finally {
+    await run.close();
+  }
+});
+
+// A comment written while a state is shown in After is about that state, and says so; the design
+// workspace opens at it, and its Every state opens the dialog at the workspace's (docs/desk-page.md → The element dialog).
+test("an element's dialog comments on the state shown, and the workspace opens at it", async (t) => {
+  const run = await launch(t, bridgeBefore({ states: CARD_STATES(2), threads: ',\n    { id: "T-4", kind: "comment", state: "open", anchor: { variant: "v1", state: "hover", selector: "#card", label: "Agent card · Hovered" }, messages: [{ by: { name: "Pat Lee" }, at, text: "Darker on hover." }] }' }));
+  if (!run) return;
+  const { desk, posts } = run;
+  try {
+    await desk.click('[data-card="r7"]');
+    await desk.click('#detail [data-el="card"]');
+    await desk.waitForSelector("#element-dialog[open] #el-state");
+    assert.match(await desk.textContent("#element-dialog .el-said"), /Hovered\s*Pat Lee[\s\S]*Darker on hover/, "a comment about a state shows its name before its author");
+    assert.equal(await desk.locator("#element-dialog .el-about").count(), 0, "as designed, the box names no state");
+    await desk.selectOption("#el-state", "error");
+    assert.equal(await desk.textContent("#element-dialog .el-about"), "Your comment is about Failed.");
+    assert.deepEqual(await desk.$eval("#el-text", (x) => [x.placeholder, x.getAttribute("aria-label")]), ["What should change in Failed?", "Comment on Agent card, Failed"]);
+    await desk.fill("#el-text", "Say what failed");
+    await desk.click("#element-dialog [data-el-comment]");
+    await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/r7/threads"));
+    const body = JSON.parse((await posts("/api/cards/r7/threads"))[0].body);
+    assert.deepEqual([body.anchor.state, body.anchor.selector, body.anchor.label], ["error", "#card", "Agent card · Failed"]);
+    await desk.fill("#el-text", "And how to retry");
+    await desk.click("#element-dialog [data-el-draft]");
+    await desk.waitForSelector("#element-dialog .el-drafts .dbub");
+    const draft = JSON.parse((await posts("/api/cards/r7/drafts"))[0].body);
+    assert.deepEqual([draft.anchor.state, draft.anchor.label], ["error", "Agent card · Failed"]);
+    assert.match(await desk.textContent("#element-dialog .el-drafts"), /Not sent yet · Failed[\s\S]*And how to retry/);
+    // Open in design workspace: at the state shown.
+    await desk.selectOption("#el-state", "hover");
+    await desk.click("#element-dialog [data-el-ws]");
+    await desk.waitForSelector("#ws-frame");
+    await desk.waitForFunction(() => /Hovered/.test(document.querySelector(".ws-pick")?.textContent || ""));
+    // Every state, from the workspace: the dialog opens on the state the workspace shows.
+    await desk.waitForSelector("[data-ws-states-of]");
+    await desk.click("[data-ws-states-of]");
+    await desk.waitForSelector("#element-dialog[open] #el-state");
+    assert.equal(await desk.inputValue("#el-state"), "hover");
   } finally {
     await run.close();
   }
@@ -2979,6 +3233,21 @@ test("a private ask: a corner chat that names its context, says only you see it,
   await desk.click('[data-brief="T-2"]');
   assert.match(await desk.inputValue("#composer-text"), /fuel gauge/, "the brief lands as text in the page's public comments box");
   assert.equal(await desk.evaluate(() => posted.length), 2, "nothing is sent until the person sends it from the public box");
+}));
+
+// Close is ✕ alone in the private ask's header, and Esc closes it too (desk/guidelines.html → Dialogs and forms).
+test("a private ask closes with its ✕ and with Esc", (t) => open(t, PRIVATE, async (desk) => {
+  await desk.goto(desk.url().replace(/#.*$/, "") + "#C-5");
+  await desk.waitForSelector("[data-ask-open]");
+  await desk.click("[data-ask-open]");
+  await desk.waitForSelector(".ask-panel");
+  assert.equal(await desk.textContent(".ask-panel header .dlg-x"), "✕");
+  await desk.click(".ask-panel header .dlg-x");
+  assert.equal(await desk.locator(".ask-panel").count(), 0, "✕ closes it");
+  await desk.click("[data-ask-open]");
+  await desk.waitForSelector(".ask-panel");
+  await desk.press("#ask-text", "Escape");
+  assert.equal(await desk.locator(".ask-panel").count(), 0, "Esc closes it");
 }));
 
 // The answer once stayed behind the three dots until the person left the box or sent again: the
