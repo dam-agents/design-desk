@@ -44,7 +44,8 @@ function shim() {
     }, 25000);
   };
   // A request before design shows only to whom the server shows it (docs/desk.md → Draft and Proposal).
-  const seen = (c) => !c.stage || role === "admin" || (c.stage === "draft" ? !["designer", "guest"].includes(role) && c.by?.email === me.email : ["developer", "ui-dev-owner"].includes(role));
+  // Only a draft is private: its author's (who files drafts) and an admin's; a proposal is everyone's.
+  const seen = (c) => c.stage !== "draft" || role === "admin" || (!["designer", "guest"].includes(role) && c.by?.email === me.email);
   const list = () => cards.filter(seen).map((c) => ({ ...c, variants: c.variants.length, threads: undefined }));
   const answer = (method, path, body) => {
     const p = path.replace(/\?.*$/, ""), m = (re) => p.match(re);

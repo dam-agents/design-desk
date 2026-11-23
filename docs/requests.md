@@ -717,10 +717,10 @@ one per step, with a PNG of the design or screen whenever the step has one:
 2. on intake: `intake-slack` step 5 (a bug) or Design requests step 3 (a design);
 3. after triage: "<the verdict's title, as on the Desk>: <one sentence>. Next: <the next step>.",
    with each decision in force it goes against by its `D-<n>`;
-4. options on the card (`feedback`) of a request started in Slack: run `send-designs` with the request's thread as its
-   destination (`slack-polls`, `scope: send`): "Options ready: <link>", one line per option (its
-   name and when it wins), then one reply per option with its PNG still (`design shot`). No vote
-   opens by itself: a vote is a person's **Send to Slack… → Ask for a vote** (a proposal's too);
+4. options on the card (`feedback`): "Options ready: <link>", one line per option (its name and
+   when it wins), then one reply per option with its PNG still (`design shot`), all in this
+   thread, by `reply` as above, with no item and no skill. No vote opens by itself: a vote is a
+   person's **Send to Slack… → Ask for a vote** (a proposal's too), worked as `slack_due`;
 5. live (`testing`): "Live prototype ready to try: <link>";
 6. handed off: "Sent to developers: <link>"; closed: one sentence why;
 7. a request that stood still: the reminder of [A request that stands still](#a-request-that-stands-still-stale_due).
