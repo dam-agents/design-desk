@@ -53,6 +53,9 @@ const log = (level, event, msg) => {
 // edit by the operator takes effect at once.
 const roster = () => rosterOf(cfgTable("Desk people"));
 const rowOf = (email) => personOf(roster(), email);
+// A request asked for in Slack, a public channel, goes to the dev team first, as a proposal, unless
+// a designer asked for it (docs/desk.md → Draft and Proposal). The agent never names a stage itself.
+const slackStage = (b) => (b?.origin?.channel === "slack" && rowOf(b.origin.email)?.role !== "designer" ? "proposal" : null);
 function roleOf(caller) {
   if (caller.role === "owner") return "admin";
   if (!caller.email) return "guest";
@@ -465,12 +468,12 @@ async function agentRoute(req, res, url) {
   // of it or a thread of it renews the lease of the items claimed on it (docs/desk.md → Claims).
   if (m === "POST" && ["cards", "assets", "threads"].includes(p[1])) store.renewClaims({ card: p[1] === "cards" ? p[2] || b.id : p[1] === "assets" ? b.card : null, thread: p[1] === "threads" ? p[2] : null });
   if (m === "POST" && p[1] === "cards" && !p[2]) return send(res, 200, store.upsertCard(b));
-  if (m === "POST" && p[1] === "reports") return send(res, 201, store.createRequest({ agent: true }, { ...b, type: "bug" }));
+  if (m === "POST" && p[1] === "reports") return send(res, 201, store.createRequest({ agent: true }, { ...b, type: "bug", stage: slackStage(b) }));
   // The product's kit as `design kit` read it (docs/requests.md → Smart controls).
   if (m === "POST" && p[1] === "kit") return send(res, 200, store.setKit(b));
   // The releases the watch pre-flight found (docs/watch.md → Releases).
   if (m === "POST" && p[1] === "releases") return send(res, 200, store.setReleases(b.releases ?? b));
-  if (m === "POST" && p[1] === "requests") return send(res, 201, store.createRequest({ agent: true }, b));
+  if (m === "POST" && p[1] === "requests") return send(res, 201, store.createRequest({ agent: true }, { ...b, stage: slackStage(b) }));
   // An earlier look of an element drawn from the code's history (docs/catalog.md → History).
   if (m === "POST" && p[1] === "cards" && p[3] === "looks") return send(res, 201, store.addLook(p[2], b));
   // Names a redraw gave notes stored before parts had them (design desk asset --option).

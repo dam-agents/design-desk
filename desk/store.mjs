@@ -1536,8 +1536,9 @@ export class Store {
       // Carried options are changed right after triage, as new ones would be drawn.
       if (auto === true) request.auto = true;
     }
-    // A person's request may start before design; the agent's open as they always did.
-    if (stage && !who?.agent) c.stage = stage;
+    // A person's request may start before design, and so may one the agent files from Slack (the
+    // server says which); every other of the agent's opens as it always did.
+    if (stage) c.stage = stage;
     const id = this.nextOf("request");
     c.id = id;
     this.db.cards[id] = c;

@@ -3935,8 +3935,8 @@ test("simple mode lists requests and changes of the viewer's side in one list, e
   await desk.click("details.sf > summary");
   await desk.click('[data-simf="states:dev"]');
   await desk.click('[data-simf="states:closed"]');
-  assert.deepEqual(await rows(desk), [["r-check", "Open"], ["r-busy", "Open"], ["r-draft", "Open"], ["r-spec", "In dev"], ["r-sent", "In dev"], ["r-built", "Shipped"],
-    ["r-declined", "Closed"], ["r-decided", "Closed"], ["c-open", "Open"], ["c-review", "In dev"], ["c-shipped", "Shipped"], ["c-auto", "No review needed"]],
+  assert.deepEqual(await rows(desk), [["r-check", "In review"], ["r-busy", "In review"], ["r-draft", "In review"], ["r-spec", "In dev"], ["r-sent", "In dev"], ["r-built", "Shipped"],
+    ["r-declined", "Closed"], ["r-decided", "Closed"], ["c-open", "In review"], ["c-review", "In dev"], ["c-shipped", "Shipped"], ["c-auto", "No review needed"]],
     "every item one state; the other side's items and an archived change are not listed");
   assert.equal(await desk.locator("details.sf[open]").count(), 1, "the menu stays open while ticking");
 }));
@@ -3983,13 +3983,13 @@ test("on a phone-wide list a simple mode row keeps its date and number on one li
 
 test("simple mode's filter shows only what narrows the list, keeps one of each group and is kept in the browser", (t) => open(t, DESK(SIMPLE_ME, SIMPLE_CARDS), async (desk) => {
   await desk.waitForSelector('#list [data-card="r-check"]');
-  assert.deepEqual(await desk.$$eval(".sf-chip", (xs) => xs.map((x) => x.textContent.trim())), ["Open"], "the default: one chip, no ×, no kind");
+  assert.deepEqual(await desk.$$eval(".sf-chip", (xs) => xs.map((x) => x.textContent.trim())), ["In review"], "the default: one chip, no ×, no kind");
   await desk.click("details.sf > summary");
   assert.equal(await desk.getAttribute('[data-simf="states:open"]', "disabled"), "", "the last state cannot be unticked");
   assert.match(await desk.textContent('[data-simf="states:closed"]'), /Closed\s*5/, "a count by what the kinds let through");
   await desk.click('[data-simf="states:dev"]');
   await desk.click('[data-simf="kinds:change"]');
-  assert.deepEqual(await desk.$$eval(".sf-chip", (xs) => xs.map((x) => x.textContent.replace("×", "").trim())), ["Open", "In dev", "Requests"], "a kind shows once it narrows");
+  assert.deepEqual(await desk.$$eval(".sf-chip", (xs) => xs.map((x) => x.textContent.replace("×", "").trim())), ["In review", "In dev", "Requests"], "a kind shows once it narrows");
   assert.deepEqual((await rows(desk)).map(([id]) => id), ["r-check", "r-busy", "r-draft", "r-spec", "r-sent"]);
   await desk.keyboard.press("Escape");
   await desk.click('[data-simf-drop="states:open"]');
@@ -4037,7 +4037,7 @@ test("simple mode heads a request with its number, link, state, author and two m
   await desk.waitForSelector("#detail .shead");
   assert.match(await desk.textContent("#detail .shead h2"), /Calmer limits\s*R-5/, "the title with its number");
   assert.equal(await desk.locator("#detail .shead h2 [data-copy-link]").count(), 1, "and the link icon that copies its link");
-  assert.match(await desk.textContent("#detail .sh-line"), /Open[\s\S]*jana\.novak[\s\S]*\d:\d\d [AP]M/, "its state, who (no name: the part before the @) and when");
+  assert.match(await desk.textContent("#detail .sh-line"), /In review[\s\S]*jana\.novak[\s\S]*\d:\d\d [AP]M/, "its state, who (no name: the part before the @) and when");
   assert.doesNotMatch(await desk.textContent("#detail .sh-line"), /@example\.com/, "never a whole address");
   assert.deepEqual(await desk.$$eval("#detail .sh-acts > .btn", (xs) => xs.map((x) => x.textContent.trim())), ["Request changes", "Approve"]);
   assert.equal(await desk.locator("#detail .status.req").count(), 0, "no status box in simple mode");
@@ -4221,7 +4221,7 @@ test("simple mode: a spec draft that cannot go by itself is Open with Send to de
   await desk.waitForSelector('#list [data-card="R-6"]');
   await desk.click('#list [data-card="R-6"]');
   await desk.waitForSelector("#detail .shead");
-  assert.match(await desk.textContent("#detail .sh-line .spill"), /Open/);
+  assert.match(await desk.textContent("#detail .sh-line .spill"), /In review/);
   assert.deepEqual(await desk.$$eval("#detail .sh-acts > .btn", (xs) => xs.map((x) => x.textContent.trim())), ["Send to developers"]);
 }));
 
@@ -4471,13 +4471,13 @@ const DEV_ME = { ...SIMPLE_ME, role: "developer", can: { request: true, "stage-p
 test("simple mode: Draft and Proposal are states of their own, for whom they can hold anything, ticked by default", (t) => open(t, DESK(DEV_ME, [...STAGED, ...SIMPLE_CARDS]), async (desk) => {
   await desk.waitForSelector('#list [data-card="R-20"]');
   assert.deepEqual((await rows(desk)).slice(0, 2), [["R-20", "Draft"], ["R-21", "Proposal"]], "on a developer's list whatever the side, each with its pill");
-  assert.deepEqual(await desk.$$eval(".sf-chip", (xs) => xs.map((x) => x.textContent.replace("×", "").trim())), ["Draft", "Proposal", "Open"], "every state before In dev by default");
+  assert.deepEqual(await desk.$$eval(".sf-chip", (xs) => xs.map((x) => x.textContent.replace("×", "").trim())), ["Draft", "Proposal", "In review"], "every state before In dev by default");
   await desk.click("details.sf > summary");
   assert.deepEqual(await desk.$$eval('[data-simf^="states:"]', (xs) => xs.map((x) => x.dataset.simf.slice(7))), ["draft", "proposal", "open", "dev", "closed"]);
   await desk.keyboard.press("Escape");
   await desk.evaluate(() => { location.hash = ""; });
   await desk.waitForSelector(".sboxes");
-  assert.deepEqual(await desk.$$eval(".sbox b", (xs) => xs.map((x) => x.textContent)), ["Draft", "Proposal", "Open", "In dev", "Closed"], "the boxes, Draft and Proposal while they hold something");
+  assert.deepEqual(await desk.$$eval(".sbox b", (xs) => xs.map((x) => x.textContent)), ["Draft", "Proposal", "In review", "In dev", "Closed"], "the boxes, Draft and Proposal while they hold something");
 }));
 
 test("simple mode: a PM has Draft and no Proposal; a designer's list and filter stay as they were", async (t) => {
@@ -4490,7 +4490,7 @@ test("simple mode: a PM has Draft and no Proposal; a designer's list and filter 
     await desk.evaluate(() => localStorage.setItem("desk-simFilter", JSON.stringify({ states: ["proposal"], kinds: ["request", "change"] })));
     await desk.reload();
     await desk.waitForSelector('#list [data-card="R-22"]');
-    assert.deepEqual(await desk.$$eval(".sf-chip", (xs) => xs.map((x) => x.textContent.trim())), ["Open"], "a kept state they cannot see is left out");
+    assert.deepEqual(await desk.$$eval(".sf-chip", (xs) => xs.map((x) => x.textContent.trim())), ["In review"], "a kept state they cannot see is left out");
   });
 });
 
@@ -4612,4 +4612,14 @@ test("Back to draft closes the page for whoever sent it back, who sees it no mor
   await desk.waitForFunction(() => window.posts.some((p) => p.path.endsWith("/stage")));
   await desk.waitForFunction(() => !document.querySelector("#detail .shead"));
   assert.doesNotMatch(await desk.evaluate(() => location.hash), /R-21/, "no link left to a page they cannot open");
+}));
+
+test("simple mode's filter: Only shows one state at once and keeps the kinds", (t) => open(t, DESK(DEV_ME, [...STAGED, ...SIMPLE_CARDS]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="R-20"]');
+  await desk.click("details.sf > summary");
+  await desk.click('[data-simf="kinds:change"]');
+  await desk.hover('[data-simf="states:proposal"]');
+  await desk.click('.sf-row:has([data-simf="states:proposal"]) .sf-only');
+  assert.deepEqual(await desk.$$eval(".sf-chip", (xs) => xs.map((x) => x.textContent.replace("×", "").trim())), ["Proposal", "Requests"], "one state, the kind as it was");
+  assert.deepEqual((await rows(desk)).map(([id]) => id), ["R-21"]);
 }));

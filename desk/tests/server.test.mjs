@@ -755,3 +755,17 @@ test("a draft or a proposal is not there, through any route, for whom it is not"
   assert.deepEqual(await reach("pat@example.com"), [false, 404, 404, 404, 404], "not a PM's");
   assert.equal((await d.agent(`/agent/cards/${id}`)).body.card.stage, "proposal", "the agent sees it");
 });
+
+test("a request asked for in Slack goes to the dev team first, as a proposal, unless a designer asked", async (t) => {
+  const d = await desk(t);
+  const file = async (path, origin, extra = {}) => (await d.agent(path, { title: "Calmer rows", problem: "Rows are too airy.", origin, ...extra })).body.card;
+  const slack = (email) => ({ channel: "slack", reporter: "Someone", email, chat: "C1", thread_ts: "1.0" });
+  assert.equal((await file("/agent/requests", slack("bob@example.com"))).stage, "proposal", "a developer's ask in Slack");
+  assert.equal((await file("/agent/reports", slack("gita@example.com"))).stage, "proposal", "a bug from someone off the roster");
+  assert.equal((await file("/agent/requests", slack("alice@example.com"))).stage, undefined, "a designer's opens at once");
+  assert.equal((await file("/agent/requests", { channel: "github", reporter: "octo" })).stage, undefined, "from GitHub it opens");
+  assert.equal((await file("/agent/requests", null, { stage: "draft" })).stage, undefined, "the agent names no stage itself");
+  const id = (await file("/agent/requests", slack("bob@example.com"))).id;
+  assert.equal((await d.viewer("bob@example.com", `/api/cards/${id}`)).status, 200, "who asked in Slack sees it");
+  assert.equal((await d.viewer("pat@example.com", `/api/cards/${id}`)).status, 404, "a PM does not, until it goes to design");
+});

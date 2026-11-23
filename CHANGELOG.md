@@ -13,7 +13,8 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 1. Restart the Desk server ([desk.md](docs/desk.md) → Server) and republish the page
    ([desk.md](docs/desk.md) → Publishing the page): a request a person files on the Desk starts as a
    draft, then a proposal, before it goes to design, hidden from who may not see it
-   ([desk.md](docs/desk.md) → Draft and Proposal). No data migration: a request with no `stage` is
+   ([desk.md](docs/desk.md) → Draft and Proposal); one asked for in Slack starts as a proposal, unless
+   a designer asked. No data migration: a request with no `stage` is
    open, and a stored `lead-developer` role reads as `ui-dev-owner` when the store loads.
 2. Re-run `bash scripts/verify-onboarding.sh`: the roster role `lead-developer` is the UI dev owner
    now and passes under either name.

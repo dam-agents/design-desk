@@ -362,7 +362,9 @@ Developers is in Needs a designer only for such a decision.
 A request a person files on the Desk starts before design: a **draft**, then a **proposal**
 (`stage` on the card and the list's row; none: open). The statuses go on underneath as for an open
 request — Design Desk checks it and draws its options — and only a designer's request, and every
-one you file (Slack, GitHub, chat, a run, an agent over MCP), opens at once.
+one you file (GitHub, chat, a run, an agent over MCP), opens at once. One you file from Slack, a
+public channel, is a **proposal** (the server sets it, never you), unless a designer on the roster
+asked for it; who asked is its author.
 
 | Who files it | Moves it on with (`POST /api/cards/<id>/stage {to}`) |
 | --- | --- |
@@ -385,7 +387,9 @@ Design Desk's work go on.
 list, the bell, a decision's items or an MCP peer's reads; its page, its conversations, its
 pictures and every write on it answer as for a card that does not exist. The bell tells of it as
 new when it opens, and nothing from before the first stage each viewer could see it in. Never name, quote or link one where anyone else reads (Slack, another card, the
-digest), and never add a report to one: file a new request.
+digest), and never add a report to one: file a new request. The one exception is the Slack thread a
+proposal came from: answer its author there as usual, with its link, saying it is with the dev
+team for now and only they and its author open it until it goes to design.
 
 ### Deciding straight away
 

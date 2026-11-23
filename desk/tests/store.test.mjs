@@ -3366,7 +3366,7 @@ test("a draft moves on by its author's role; a proposal by the UI dev owner; ope
   const lou = { email: "lou@example.com", role: "ui-dev-owner" }, pat = { email: "pat@example.com", role: "pm" }, lee = { email: "lee@example.com", role: "admin" }, dana = { email: "dana@example.com", role: "developer" };
   const file = (who) => s.createRequest(who, { problem: "Rows are too airy.", options: 0, stage: "draft" }).card.id;
   const move = (id, who, to) => { try { return s.moveStage(id, who, to).card; } catch (e) { return e; } };
-  assert.equal(s.createRequest({ agent: true }, { problem: "From Slack.", stage: "draft" }).card.stage, undefined, "the agent's request opens");
+  assert.equal(s.createRequest({ agent: true }, { problem: "From a run." }).card.stage, undefined, "the agent's request opens unless the server names a stage (Slack: docs/desk.md)");
   assert.throws(() => s.createRequest(bob, { problem: "x", stage: "open" }), /stage must be one of draft, proposal/);
 
   const b = file(bob);
