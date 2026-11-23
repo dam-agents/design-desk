@@ -347,7 +347,7 @@
   .simfilter details.sf > summary.sf-btn { position: relative; width: 32px; height: 32px; padding: 0; }
   /* Its bar takes no more than the button: the list starts right under it. */
   .listhead:has(.simfilter) { padding-top: 8px; margin-bottom: 0; } .filterbar.simfilter { padding: 0; }
-  .simfilter details.sf > summary svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
+  .simfilter details.sf > summary svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
   .simfilter .sf-btn.filtered::after { content: ""; position: absolute; top: -4px; right: -4px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--panel); }
   .simfilter .menu { min-width: 220px; }
   .sf-h { padding: 4px 8px 0; font-size: var(--fs-micro); color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
