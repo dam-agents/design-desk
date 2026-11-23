@@ -162,6 +162,10 @@
   /* People shows at once: its intro on top, beside it on a wide screen. */
   .btn > .ico { width: 15px; height: 15px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .btn.small > .ico { width: 13px; height: 13px; }
+  .ico.ws-mark { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  /* A way into the design workspace: a very light violet fill (--ws), its mark in the button's ink (desk/guidelines.html → Buttons). */
+  .btn.ws-way, .tabs.vtabs button.vws.ws-way { background: color-mix(in srgb, var(--ws) 7%, var(--panel)); border-color: color-mix(in srgb, var(--ws) 18%, var(--line)); }
+  .btn.ws-way:hover, .tabs.vtabs button.vws.ws-way:hover { background: color-mix(in srgb, var(--ws) 13%, var(--panel)); }
   /* What a button or label does, the moment the pointer is on it (docs/desk-page.md → Tooltips). */
   #tip { position: fixed; z-index: 90; max-width: min(320px, calc(100vw - 16px)); padding: 8px 12px; border-radius: var(--r-sm); background: var(--ink); color: var(--bg); font-size: var(--fs-meta); line-height: 1.4; font-weight: 400; text-transform: none; letter-spacing: 0; box-shadow: var(--shadow); pointer-events: none; }
   /* "[Opens a dialog]" in a tooltip: the other theme's green (blue reads as a link), as the box is the page's ink. */
@@ -541,12 +545,14 @@
   .kit-tile .kval { font: var(--fs-meta)/1.4 var(--mono); color: var(--muted); overflow-wrap: anywhere; }
   /* One element of an option: its states and what each covers, in a dialog over the request. */
   dialog.eldlg { width: min(1040px, calc(100% - 32px)); max-height: calc(100vh - 48px); }
-  dialog.eldlg > div { padding: 20px 20px 20px; }
-  .elbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 8px; }
+  dialog.eldlg > div { padding: 0 20px 20px; }
+  /* The element dialog's header stays at its top while the rest scrolls: name, chips, the ways out and to the next element. */
+  .elbar { position: sticky; top: 0; z-index: 4; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin: 0 -20px 8px; padding: 20px 20px 12px; background: var(--panel); border-bottom: 1px solid var(--line); }
   /* An element's dialog: the part before (the product) beside after (the design), or one picture when it is new. */
   .elbar .el-acts { display: flex; gap: 8px; align-items: center; flex: none; }
   .el-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 12px 0 16px; }
-  .el-pair.one { grid-template-columns: minmax(0, 1fr); max-width: 640px; }
+  /* A part the option adds: one picture, the dialog's whole width, so its head (the states' switcher, Draw all states) ends where a pair's does. */
+  .el-pair.one { grid-template-columns: minmax(0, 1fr); }
   .el-col { display: grid; gap: 8px; align-content: start; min-width: 0; }
   .el-lab { font-size: var(--fs-micro); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
   .el-pic { position: relative; height: 260px; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); background: #fff; }
@@ -554,7 +560,25 @@
   .el-pic img { width: 100%; height: 100%; object-fit: contain; display: block; padding: 12px; box-sizing: border-box; }
   .el-pic > iframe { width: 100%; height: 100%; border: 0; display: block; pointer-events: none; }
   .el-pic.el-none { display: grid; place-items: center; text-align: center; padding: 16px; box-sizing: border-box; background: none; border-style: dashed; color: var(--muted); font-size: var(--fs-ui); }
-  .el-from { font-size: var(--fs-meta); color: var(--muted); margin: 0; }
+  .el-from { font-size: var(--fs-meta); color: var(--muted); margin: 0; } .el-from b { color: var(--ink); font-weight: 600; }
+  /* After's head: its label, the states stepper (the guidelines' Stepper, a pick in its middle) and Draw all states. */
+  .el-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 28px; } .el-head .el-lab { margin-right: auto; }
+  /* The header's controls are one height, the ✕'s (32px): the way into the workspace, borderless on its fill, and the element stepper. */
+  .elbar .el-acts .ws-way { border: 0; min-height: 32px; padding: 4px 12px; font-size: var(--fs-ui); }
+  .el-nav { flex: none; } .el-nav button { height: 30px; } .el-nav .pl-v { flex: none; padding: 0 8px; line-height: 30px; }
+  .el-sw { flex: none; max-width: 100%; } .el-sw select { flex: 1; min-width: 0; max-width: 220px; height: 28px; border: 0; border-inline: 1px solid var(--line); border-radius: 0; background: var(--panel); color: inherit; font: inherit; font-size: var(--fs-meta); padding: 0 4px; }
+  /* All states, folded under the pictures: a click shows one in After; the one shown is ringed in ink. */
+  .el-all { margin: 0 0 16px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .el-all > summary { list-style: none; cursor: pointer; display: flex; align-items: baseline; gap: 8px; padding: 12px 0; } .el-all > summary::-webkit-details-marker { display: none; }
+  .el-all > summary::after { content: "+"; margin-left: auto; color: var(--muted); font-size: var(--fs-head); line-height: 1; } .el-all[open] > summary::after { content: "−"; }
+  .el-all .catalog { margin: 0 0 12px; }
+  .el-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); gap: 12px; padding: 0 0 12px; }
+  .el-tile { display: grid; gap: 4px; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+  .el-tile .p { position: relative; display: grid; place-items: center; height: 128px; padding: 8px; box-sizing: border-box; overflow: hidden; border: 1px solid var(--line); border-radius: var(--r-sm); background: #fff; }
+  .el-tile .p img { width: 100%; height: 100%; object-fit: scale-down; display: block; } .el-tile .p iframe { width: 100%; height: 100%; border: 0; display: block; pointer-events: none; }
+  .el-tile .n { font-size: var(--fs-meta); color: var(--muted); } .el-tile:hover .p, .el-cpick:hover { border-color: var(--muted); }
+  .el-tile[aria-pressed="true"] .p, .el-shown.on { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); } .el-tile[aria-pressed="true"] .n { color: var(--ink); font-weight: 600; }
+  .el-cpick { display: block; width: 100%; padding: 0; border: 0; background: none; cursor: pointer; } .el-cpick .snipbox, .el-cpick .shot { pointer-events: none; } .el-cpick .snipbox { position: relative; }
   .el-take { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .el-take .working { margin: 0; }
   @media (max-width: 560px) { .el-pair { grid-template-columns: minmax(0, 1fr); } }
@@ -566,6 +590,7 @@
   .el-drafts { display: grid; gap: 8px; margin: 8px 0; } .el-drafts .dbub { background: var(--warn-soft); }
   .el-box textarea { width: 100%; box-sizing: border-box; }
   .el-box .bar { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+  .el-box .el-about { margin: 0 0 4px; }
   .elbar h2 { margin: 0 0 4px; font-size: var(--fs-head); }
   /* What comes from an approved design, not from the product: a dashed edge and its own ink. */
   .row.item.fromdesign { border-left: 3px dashed var(--waiting); }
@@ -614,6 +639,7 @@
   .zoom { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: grid; place-items: center; padding: 24px; z-index: 80; cursor: zoom-out; }
   .zoom img { max-width: 100%; max-height: 100%; border-radius: var(--r-sm); background: #fff; }
   .zoom .btn { position: absolute; top: 12px; right: 12px; }
+  .zoom .dlg-x { background: var(--panel); color: var(--ink); } .zoom .dlg-x:hover { background: var(--soft); }
   .zoom figure { margin: 0; display: grid; gap: 8px; justify-items: center; }
   .zoom figure img { max-height: calc(100vh - 110px); }
   .zoom .canvas img { max-height: calc(100vh - 110px); max-width: 100%; }
@@ -624,14 +650,6 @@
   .zoom .zoombox { position: relative; overflow: hidden; width: min(1100px, calc(100vw - 48px)); height: calc(100vh - 110px); border-radius: var(--r-sm); background: #fff; }
   .zoom .zoomframe { width: 100%; height: 100%; border: 0; pointer-events: none; display: block; }
   .catalog li[data-zoom], .catalog li[data-zoom-snip] { cursor: zoom-in; }
-  /* The box after an element's states that has more drawn. */
-  .catalog li.addstate { border: 1.5px dashed color-mix(in srgb, var(--accent) 45%, var(--line)); padding: 0; min-height: 200px; display: grid; align-items: stretch; }
-  .catalog li.addstate > button { height: 100%; width: 100%; display: grid; place-content: center; gap: 8px; text-align: center; border: 0; background: none; color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; padding: 16px; border-radius: var(--radius); }
-  .catalog li.addstate > button:hover { background: var(--info-soft); }
-  .catalog li.addstate > button .hint { font-weight: 400; margin: 0; }
-  .catalog li.addstate > .working { margin: 12px; align-self: center; }
-  .catalog li.addstate.done { border-style: solid; border-color: color-mix(in srgb, var(--approved) 35%, var(--line)); background: color-mix(in srgb, var(--approved-soft) 50%, var(--panel)); align-items: center; }
-  .catalog li.addstate.done > div { padding: 16px; text-align: center; } .catalog li.addstate.done b { color: var(--approved); }
   .catalog li[data-zoom]:hover, .catalog li[data-zoom-snip]:hover { border-color: var(--accent); }
   .steps { display: flex; gap: 0; margin: 16px 0 8px; flex-wrap: wrap; }
   .step { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: var(--fs-meta); padding: 4px 12px 4px 0; }
@@ -854,6 +872,11 @@
   dialog::backdrop { background: rgba(0,0,0,.35); }
   .drop.over { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
   dialog form { padding: 20px; display: grid; gap: 12px; }
+  /* Close: ✕ alone, in the dialog's top-right corner (desk/guidelines.html → Dialogs and forms); a heading keeps room for it. */
+  .dlg-x { position: absolute; top: 12px; right: 12px; z-index: 5; width: 32px; height: 32px; padding: 0; display: grid; place-items: center; border: 0; border-radius: var(--r-sm); background: none; color: var(--muted); font: inherit; font-size: var(--fs-head); line-height: 1; cursor: pointer; }
+  .dlg-x:hover { background: var(--soft); color: var(--ink); } .dlg-x:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  dialog form > h2 { padding-right: 32px; }
+  .elbar .dlg-x, .ask-panel header .dlg-x, .ws-top .dlg-x { position: static; flex: none; }
   dialog h2 { font-size: var(--fs-head); } label { font-size: var(--fs-meta); color: var(--muted); display: grid; gap: 4px; }
   .drop { border: 1px dashed var(--line); border-radius: var(--r-sm); padding: 12px; font-size: var(--fs-meta); color: var(--muted); display: grid; gap: 8px; }
   .thumbs { display: flex; gap: 8px; flex-wrap: wrap; } .thumbs img { height: 64px; border-radius: var(--r-sm); border: 1px solid var(--line); }
@@ -1106,6 +1129,8 @@
     --canvas: #edebe7; --dot: #d6d4cd;
     /* A pull request's and an issue's state: open green, merged violet, draft grey, in the Desk's own inks. */
     --gh-open: var(--ok); --gh-draft: var(--muted); --gh-merged: var(--live);
+    /* The design workspace's mark: the icon on every button that opens it, in violet. */
+    --ws: var(--live);
     --fs-title: 26px; --fs-head: 17px; --fs-ui: 14px; --fs-meta: 12.5px; --fs-micro: 11px; }
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --turn: #f28cc6; --turn-soft: #3a1d2e;
     --decided: #9bb8e0; --decided-soft: #1d2633; --canvas: #232321; --dot: #383835; } }
@@ -1484,7 +1509,6 @@
   @keyframes ws-in { from { transform: translateY(40px); opacity: 0; } }
   .ws-top { padding: 12px 12px 12px 20px; }
   .ws-top .title { font-size: var(--fs-ui); }
-  .ws-top [data-ws-close] { font-weight: 600; min-height: 32px; padding: 4px 12px; font-size: var(--fs-ui); }
   .ws-stage { padding: 16px; gap: 12px; }
   .ws-stage .frame { border-radius: var(--radius); }
   .ws-side { padding: 20px; gap: 12px; }
@@ -1504,8 +1528,6 @@
   #workspace .ws-side h3 { font-size: var(--fs-ui); text-transform: none; letter-spacing: 0; color: var(--ink); }
   /* One clear way out, at the top right: Close, its key, a cross. */
   .ws-top .ws-slack { font-size: var(--fs-meta); min-height: 32px; padding: 4px 12px; }
-  .ws-top .ws-close { order: 0; gap: 12px; padding: 8px 12px 8px 16px; font-weight: 600; border-radius: var(--r-sm); }
-  .ws-close svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; }
   kbd { font: var(--fs-meta) var(--font); padding: 0 8px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: var(--r-sm); color: var(--muted); font-weight: 400; }
   /* The design workspace, laid out as a design tool: the request on top, the options as tabs, the pages
      and states of the one shown, the design on a canvas with one tool bar under it, Comments and Properties beside. */

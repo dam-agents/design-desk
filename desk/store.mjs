@@ -1846,7 +1846,7 @@ export class Store {
     // the elements in the design catalog follow it (docs/requests.md → Alternatives of a part).
     let item = null;
     if ((v.states || []).length && !Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === c.id && i.kind === "states")) {
-      item = this.enqueue("states", c.id, null, who, `Draw every state again for version ${v.version}.`);
+      item = this.enqueue("states", c.id, null, who, `Redraw states for version ${v.version}.`);
       Object.assign(item, { variant: v.id, scope: "redraw" });
     }
     if (c.in_catalog?.variant === v.id) this.copyToCatalog(c, v, c.in_catalog.by);
@@ -1893,7 +1893,7 @@ export class Store {
       // version before, its states are drawn again, and the catalog follows it.
       v.alternatives = [];
       if ((v.states || []).length && !Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === c.id && i.kind === "states")) {
-        item = this.enqueue("states", c.id, null, who, `Draw every state again for version ${v.version}: its text changed from “${was}” to “${now}”.`);
+        item = this.enqueue("states", c.id, null, who, `Redraw states for version ${v.version}: its text changed from “${was}” to “${now}”.`);
         Object.assign(item, { variant: v.id, scope: "redraw" });
       }
       if (c.in_catalog?.variant === v.id) this.copyToCatalog(c, v, c.in_catalog.by);

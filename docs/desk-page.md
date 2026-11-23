@@ -111,11 +111,14 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   write the spec: no second Approve, no vote, and its questions are the spec's. Pointing at the state's
   word shows its help: what happens now and every way on from here as branches, each move the
   viewer can make, and each usual one they cannot, greyed, with why not and who can.
-  A dialog with something typed, picked or added in it asks before Escape or a click outside
-  closes it (its Cancel closes it at once); a picture dropped on it is added as if chosen.
+  Every dialog, the enlarged picture and the private ask close with a lone **✕** in the top-right
+  corner and with Escape (desk/guidelines.html → Dialogs and forms). A form dialog with something
+  typed, picked or added in it asks before ✕, Escape or a click outside closes it (its Cancel
+  closes it at once); the element dialog, not a form, keeps a comment being written for its part
+  instead ([The element dialog](#the-element-dialog)); a picture dropped on a dialog is added as if chosen.
   The browser's Back leaves the Desk: every view keeps the menu or its own way back on
   screen while it scrolls (the list beside an open item, or its back bar where the list hides
-  on a narrow screen; the presentation's Exit, a picture's Close).
+  on a narrow screen; the presentation's Exit, a picture's ✕).
   `desk/tests/page.test.mjs` drives every dialog in such a frame. It reports itself skipped
   only when it finds no Chromium or the toolkit's `playwright-core` is not installed.
 - **Pages and filters.** A tab's pages are tabs at the top of its list: **For Designers**, **For
@@ -280,7 +283,8 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   it follows them to every device; with no choice (null) a viewer starts in simple mode and
   every other role in full mode. A choice the server has not taken yet stays in the browser,
   named for them (`desk-simple:<email>`, marked `desk-simple-unsaved:<email>`), and is sent
-  again on the next load. Turned on over a hidden tab (an open decision aside) or the
+  again on the next load. The server's answer is what it saved; one with no `simple` keeps the
+  choice just made, never the role's default. Turned on over a hidden tab (an open decision aside) or the
   presentation, the Desk goes to the requests.
   **Figma**, a switch under simple mode in the same style, shows only on a Desk with `figma:
   enabled`: off, that person sees no Differences page and no box of differences from Figma
@@ -380,12 +384,38 @@ A part under **All elements** opens in one dialog, the same in simple and full m
   border or shadow of its own is fitted by what it holds. A part on another view than the first
   opens that view first, once the design's review bar has made its view buttons. The tiles under
   All elements are drawn the same way; an enlarged part opens its view and is laid out wide too.
-- **Open in design workspace** opens the option with the part selected, on its Properties.
+- **Its header stays** at the top while the dialog scrolls: the part's name and chips, **Open in
+  design workspace**, the way to the option's other elements and Close. **‹ n of m ›** steps
+  through the option's elements in the order of its All elements tiles (a part it leaves out is
+  skipped), round from the last to the first; each arrow names the element it opens. Another
+  element opens as designed, at the top; what someone was writing on a part stays with it, and is
+  back in its box when they come back to it, while the page is open: on stepping away, and on
+  closing the dialog (✕, Esc).
+- **Open in design workspace** (a very light violet fill, as on every way into it: the
+  guidelines' Buttons) opens the option with the part selected, on its Properties, at the
+  state shown in After. From the workspace, **Every state (n)** opens the dialog on the state the
+  workspace shows, when it is one of the part's.
 - **Comments**: the part's open comments (a click opens one in the design workspace), the
   viewer's notes on it waiting in their feedback ("Not sent yet", ✕), and a box: **Add to
-  feedback** keeps a note on the part ([desk.md](desk.md) → Reviews), **Comment** posts one for the
-  team at once. Not on a closed request.
-- Its states follow, with the button that draws them.
+  feedback** (the dialog's one primary button, as in the design workspace) keeps a note on the part
+  ([desk.md](desk.md) → Reviews), **Comment** posts one for the team at once. Not on a closed request.
+  Written while a state is shown in After, a comment or a note is about that state: the box says
+  so ("Your comment is about <state>."), the note carries it, as one made in the workspace on that
+  state does, and a listed comment shows the state's name before its author, a note waiting
+  "Not sent yet · <state>".
+- **Its states**, seen without leaving Before and After:
+  - A **switcher** over After: ‹ and › round a pick, **As designed** first, then each state in the
+    option's order, as the design workspace's State menu names and orders them. Only After
+    changes; under it, the state's name and its one-line note, and "drawn for an earlier
+    version" when it shows the option before its latest change. The step goes round.
+  - **All states**, a fold under the pictures: As designed and each state; a click on one shows
+    it in After, ringed in ink, so the fold and the switcher always agree. Simple mode shows a
+    small tile of each; full mode each state's card with its number and the use case it covers.
+    It starts folded; opened or folded, it stays so while the page is open.
+  - Beside the switcher, for those who may draw: **Draw all states** while none is drawn,
+    **Redraw states** while some are of an earlier version of the option, nothing once all are
+    current; while Design Desk draws them, a chip says so. Never from the dialog the workspace
+    opens to look through its states ([requests.md](requests.md) → Every state of a part).
 
 ## Product → Kit
 

@@ -125,6 +125,7 @@ const PRESSED = [
   [/^\.ws-seg button/, "Segmented control"],
   [/^\.(?:pl-seg|pl-chips) button|^\.pl-sw(?![\w-])/, "A property's value"],
   [/^\.spec-versions button/, "Version links"],
+  [/^\.el-tile\[aria-pressed/, "Pictures to pick from"],
   [/^#hits \.hit/, null, "a search result picked by the keys, not a switch"],
   [/^#(?:simple|figma)\b/, null, "an on/off switch in a menu, not a pick-one"],
   [/^\.stories ol button/, null, "a user story that plays in the design, not a switch"],
@@ -143,6 +144,32 @@ test("every pressed or selected control the Desk styles has a look the guideline
     assert.ok(hit, `a pressed or selected control with no look on the guidelines: ${s}`);
     if (hit[1]) assert.ok(hit[1].split("|").some((look) => body.includes(`<h3 class="gl-h3">${look}</h3>`)), `the guidelines show ${hit[1]}`);
   }
+});
+
+// Close is ✕, alone, in a dialog's corner (desk/guidelines.html → Dialogs and forms): every dialog
+// of the page carries one (the element dialog's is drawn with its header), and no "✕ Close" is left.
+test("every dialog closes with a lone ✕, as the guidelines show", () => {
+  assert.ok(body.includes('class="dlg-x"'), "the guidelines show the ✕");
+  assert.doesNotMatch(page, /✕ Close/, "Close is ✕ alone");
+  assert.match(page, /<button type="button" class="dlg-x" data-ws-close aria-label="Close the design workspace">✕<\/button>/, "the design workspace's too");
+  const dialogs = page.match(/<dialog id="[^"]+"[\s\S]*?<\/dialog>/g) || [];
+  assert.ok(dialogs.length >= 9, "the page has its dialogs");
+  for (const d of dialogs) {
+    const id = d.match(/id="([^"]+)"/)[1];
+    if (id === "element-dialog") assert.match(page, /class="dlg-x" data-el-close aria-label="Close">✕</, id);
+    else assert.match(d, /<button type="button" class="dlg-x" data-dlg-x aria-label="Close">✕<\/button>/, id);
+  }
+});
+
+// A way into the design workspace looks the same wherever it stands (desk/guidelines.html →
+// Buttons): its icon on a very light violet fill, on every button that opens it.
+test("every button into the design workspace has its light violet fill, as the guidelines show", () => {
+  assert.ok(body.includes('class="btn small ws-way"><svg class="ico ws-mark"'), "the guidelines show it");
+  assert.match(css, /\.btn\.ws-way, \.tabs\.vtabs button\.vws\.ws-way \{ background: color-mix\(in srgb, var\(--ws\) 7%, var\(--panel\)\);/, "a very light violet fill");
+  assert.doesNotMatch(css, /\.ico\.ws-mark \{[^}]*color: var\(--ws\)/, "the icon stays in the button's ink");
+  const ways = page.match(/<button [^>]*(?:data-act="workspace"|data-el-ws)[^>]*>[^<]*(?:<|\$\{)[^`]{0,40}/g) || [];
+  assert.ok(ways.length >= 3, "the page has its ways into the workspace");
+  for (const w of ways) { assert.match(w, />\$\{wsMark\(\)\}/, w.slice(0, 80)); assert.match(w, /class="[^"]*\bws-way\b/, w.slice(0, 80)); }
 });
 
 // Two corners, no more (desk/guidelines.html → Corners): the Desk declares --r-sm and --radius

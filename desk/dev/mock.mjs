@@ -5,6 +5,7 @@
 //   open "http://localhost:5610/?role=designer#R-1"        (designer; also admin, pm, developer, ui-dev-owner, guest)
 //   open "http://localhost:5610/?role=designer&ws=1#R-1"   (opens the design workspace at once)
 // The Desk shows light by default; &theme=dark shows it dark; &simple=1 starts in simple mode (a guest does anyway).
+// The person menu's switches (simple mode, Figma, day or night) are kept while the mock runs, as the server keeps them.
 // What a person sends changes the made-up Desk until the page reloads; a change note is
 // claimed after 4 s and worked in after 25 s, so Design Desk's work shows as it happens.
 import { createServer } from "node:http";
@@ -50,6 +51,14 @@ function shim() {
   const answer = (method, path, body) => {
     const p = path.replace(/\?.*$/, ""), m = (re) => p.match(re);
     if (p === "/api/me") return me;
+    // A person's preferences, kept while the mock runs and answered as the server answers them.
+    if (p === "/api/prefs" && method === "POST") {
+      // /api/me's figma says whether Figma is on for the Desk; the person's own choice is figma_pref.
+      if (body && "theme" in body) me.theme = body.theme;
+      if (body && "simple" in body) me.simple = body.simple;
+      if (body && "figma" in body) me.figma_pref = body.figma;
+      return { theme: me.theme || null, simple: typeof me.simple === "boolean" ? me.simple : null, figma: typeof me.figma_pref === "boolean" ? me.figma_pref : null };
+    }
     if (p === "/api/cards" && method === "GET") return { cards: list() };
     if (p.startsWith("/api/assets/")) return ASSETS[decodeURIComponent(p.slice(12))] || {};
     if (p === "/api/agenda") return { agenda: [] };

@@ -27,7 +27,7 @@ its `SKILL.md` is; read it before doing the action.
 | `impact` | where else the same thing shows up, what a change touches | every change card; every request, unless its New request switched `impact` off; chat "what would this affect?" | `impact` |
 | `options` | the request's number of design options (one to five), each with how it meets the issue's user stories and the decisions its parts rest on; one more option from a person's description | Draw design options; + New option; right after triage when its New request asked; chat "show me options for…" | `variants` |
 | `revise` | apply notes on elements as a new version; three ways of one part to pick from | notes in the design workspace; Redraw; Try 3 ways; chat "make the button secondary in option 1" | `variants` |
-| `states` | one element of an option in every state it can be in, one picture per state: the part alone in each state with the use case it covers | Draw every state (an element under All elements on the request); chat "show every state of the upload button in option 1" | `variants` |
+| `states` | one element of an option in every state it can be in, one picture per state: the part alone in each state with the use case it covers | Draw all states, Redraw states (an element under All elements on the request); chat "show every state of the upload button in option 1" | `variants` |
 | `prototype` | a live prototype in an Environment | Build a live prototype; chat | [prototype.md](prototype.md) |
 | `spec` | the developer spec of an approved design | Approve; chat | [handoff.md](handoff.md) |
 | `deliver` | send the spec to the issue, a coding agent, an issue or a draft pull request | after the spec | `handoff-github` |
