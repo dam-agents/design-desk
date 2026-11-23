@@ -4471,7 +4471,8 @@ test("sent feedback shows its Looks good; the mark holds on this version; a conv
 // Simple mode with nothing open: how many items are in each state, each box filtering the list.
 test("simple mode's overview counts the items in each state, and a box filters the list to its state", (t) => open(t, DESK(SIMPLE_ME, SIMPLE_CARDS), async (desk) => {
   await desk.waitForSelector("#detail .sboxes");
-  assert.deepEqual(await desk.$$eval("#detail .sbox .n", (xs) => xs.map((x) => x.textContent)), ["4", "3", "5"]);
+  assert.deepEqual(await desk.$$eval("#detail .sbox .n", (xs) => xs.map((x) => x.textContent)), ["2", "4", "3", "5"], "Dev review, Design review, In dev, Closed");
+  assert.match(await desk.textContent('#detail .sbox[data-s="proposal"]'), /1 request, 1 PR change/, "the other side's items count too");
   assert.match(await desk.textContent('#detail .sbox[data-s="open"]'), /3 requests, 1 PR change/);
   await desk.click('#detail .sbox[data-s="dev"]');
   assert.deepEqual((await rows(desk)).map(([id]) => id), ["r-spec", "r-sent", "c-review"], "In dev only");
@@ -4723,7 +4724,7 @@ test("simple mode's filter: Only shows one state at once and keeps the kinds", (
   await desk.hover('[data-simf="states:proposal"]');
   await desk.click('.sf-row:has([data-simf="states:proposal"]) .sf-only');
   assert.deepEqual(await desk.$$eval(".sf-chip", (xs) => xs.map((x) => x.textContent.replace("×", "").trim())), ["Dev review", "Requests"], "one state, the kind as it was");
-  assert.deepEqual((await rows(desk)).map(([id]) => id), ["R-21"]);
+  assert.deepEqual((await rows(desk)).map(([id]) => id), ["R-21", "r-small"], "a proposal and an open For Developers request");
 }));
 
 test("Approve for dev asks as an approval does, then sends it For Developers", (t) => open(t, HEAD_DESK({ ...HEAD_ME, role: "ui-dev-owner", can: { ...HEAD_ME.can, request: true, "stage-propose": true, "stage-design": true, "stage-own": true } }, [{ ...drawn, ...STAGED[1] }]), async (desk) => {
