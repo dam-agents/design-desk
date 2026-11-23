@@ -4019,7 +4019,7 @@ test("a simple mode row says when it last changed, then its number: a change its
 // phone's: at 280 px the date breaks without the row's own style, at 320 px it still fits.
 const NARROW_CARDS = [
   { id: "c-nopr", kind: "change", title: "A change with a long enough title to wrap", status: "new", attention: { level: "designer", reasons: ["New"] }, source: { kind: "commit" }, updated: "2025-10-15T14:11:00Z" },
-  { id: "r-long", kind: "request", title: "A request", status: "triage", updated: "2025-10-14T14:11:00Z" },
+  { id: "r-long", kind: "request", title: "A request", status: "triage", updated: "2025-10-14T14:11:00Z", origin: { channel: "slack", email: "a.very.long.person.name.here@example.com" } },
 ];
 test("on a phone-wide list a simple mode row keeps its date and number on one line, its pill in a column of its own; a change with no pull request shows its Desk number", (t) => open(t, DESK(SIMPLE_ME, NARROW_CARDS), async (desk) => {
   await desk.setViewportSize({ width: 280, height: 640 });
@@ -4037,6 +4037,9 @@ test("on a phone-wide list a simple mode row keeps its date and number on one li
   assert.equal(change.num, "c-nopr", "no pull request: its number on the Desk");
   assert.ok(change.oneLine && request.oneLine, "the date and the number stay on one line");
   assert.ok(change.pill && request.pill, "the pill keeps its column on the right, beside the title and its line, never on a line of its own");
+  const by = await desk.$eval('#list [data-card="r-long"]', (b) => { const s = b.querySelector(".sby"), l = b.querySelector(".sline"), list = document.querySelector("#list");
+    return { inside: s.getBoundingClientRect().right <= l.getBoundingClientRect().right + 1, cut: getComputedStyle(s).textOverflow === "ellipsis", flat: list.scrollWidth <= list.clientWidth }; });
+  assert.ok(by.inside && by.cut && by.flat, "a long name is cut with an ellipsis inside its line; the list never scrolls sideways");
 }));
 
 test("simple mode's filter shows only what narrows the list, keeps one of each group and is kept in the browser", (t) => open(t, DESK(SIMPLE_ME, SIMPLE_CARDS), async (desk) => {

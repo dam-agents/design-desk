@@ -231,7 +231,7 @@
   .srow .sline { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: var(--fs-meta); color: var(--muted); min-height: 20px; }
   .srow .open > .spill { grid-column: 3; grid-row: 1 / span 2; align-self: center; margin-left: 8px; }
   .srow .sline .sdate { display: inline-flex; gap: 4px; white-space: nowrap; } .srow .sline .snum { color: var(--muted); }
-  .srow .sline .sby { white-space: nowrap; } .srow .sline .sby::before { content: "·"; margin-right: 4px; }
+  .srow .sline .sby { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .srow .sline .sby::before { content: "·"; margin-right: 4px; }
   .spill { --p: var(--muted); display: inline-flex; align-items: center; gap: 4px; padding: 0 8px; border-radius: 999px; font-size: var(--fs-micro); font-weight: 500; line-height: 20px; white-space: nowrap;
     color: var(--p); background: color-mix(in srgb, var(--p) 14%, transparent); }
   .spill[data-s="open"] { --p: var(--ok); } .spill[data-s="dev"] { --p: var(--accent); } .spill[data-s="shipped"] { --p: var(--live); }
