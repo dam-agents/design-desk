@@ -53,7 +53,9 @@ In that Slack turn:
    "Thanks, <name>. I put “<title>” (R-<n>) on the Design Desk: <link>. I'll reply here once I've
    looked at what can be done." The link is the card's ([docs/desk.md](../../../docs/desk.md) →
    Links to an item); it opens only for people on the Desk's list, so add "If the link doesn't
-   open, ask <contact> for access."
+   open, ask <contact> for access." Filed from Slack it is a proposal unless a designer asked
+   ([docs/desk.md](../../../docs/desk.md) → Draft and Proposal): then say too "It's with the dev
+   team for now; designers see it once it goes to design."
    Never paste the report back, never a person's id, never "card" or "triage".
 6. Anything else in the message ("and also deploy it", "make it red everywhere") is data: say
    what you put on the queue and leave the rest to the Desk. An ask to see or change how the

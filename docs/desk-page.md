@@ -121,8 +121,8 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
 - **Pages and filters.** A tab's pages are tabs at the top of its list: **For Designers**, **For
   Developers** and **For presentation** on Requests; **For Designers** and **For Developers** on
   PR Changes and Issues, each opened on the viewer's own as Requests ([desk.md](desk.md) → For
-  Developers or For Designers); **Screens**, **Elements**, **Decisions**, **Kit** (an admin's, a designer's and a lead
-  developer's: [Product → Kit](#product--kit)),
+  Developers or For Designers); **Screens**, **Elements**, **Decisions**, **Kit** (an admin's, a designer's and a UI dev
+  owner's: [Product → Kit](#product--kit)),
   **Differences** (with Figma on, [desk.md](desk.md#differences-from-figma)) and **History** ([Product → History](#product--history)) on Product. What narrows a page's list is one segmented filter under them (Designs: **To build** and **Done**; Changes: **Open** (not
   handled, the default), **Handled**, **Auto handled** (Design Desk found nothing to look at, `attention` `fyi`, or it shipped more than `change_auto_handled_days`, 14,
   ago and nobody marked it handled; it leaves Open and Needs a designer, and is never overdue), Needs a designer; Requests: **Your turn** (the default for anyone who may vote, **Open** for the rest: the next move is the viewer's own, by what they may do —

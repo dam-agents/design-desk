@@ -771,3 +771,14 @@ test("a request asked for in Slack goes to the dev team first, as a proposal, un
   assert.equal((await d.viewer("bob@example.com", `/api/cards/${id}`)).status, 200, "who asked in Slack sees it");
   assert.equal((await d.viewer("pat@example.com", `/api/cards/${id}`)).status, 404, "a PM does not, until it goes to design");
 });
+
+test("a private ask stays its owner's once its request is hidden from them", async (t) => {
+  const d = await desk(t);
+  const id = (await d.viewer("bob@example.com", "/api/requests", { problem: "Rows are too airy.", options: 0 })).body.card.id;
+  assert.equal((await d.viewer("bob@example.com", `/api/cards/${id}/stage`, { to: "proposal" })).status, 200);
+  const ask = (await d.viewer("dana@example.com", "/api/private", { text: "Why two columns?", context: { card: id } })).body.thread.id;
+  assert.equal((await d.viewer("lou@example.com", `/api/cards/${id}/stage`, { to: "draft" })).status, 200, "back to its author: dana sees it no more");
+  assert.equal((await d.viewer("dana@example.com", `/api/cards/${id}`)).status, 404);
+  assert.equal((await d.viewer("dana@example.com", `/api/threads/${ask}/messages`, { text: "Still there?" })).status, 201, "but her own ask is still hers");
+  assert.equal((await d.viewer("alice@example.com", `/api/threads/${ask}/messages`, { text: "Me too?" })).status, 404, "and no one else's");
+});

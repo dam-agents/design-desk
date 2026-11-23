@@ -351,8 +351,8 @@ worked like any other ([handoff.md](handoff.md)); the approver is `approved.by`.
 
 **PR Changes** and **Issues** have the same two tabs, opened the same way. A change or an issue
 starts where you judged it (`attention.level`: `developer` → For Developers, else For
-Designers; [watch.md](watch.md) step 7, [issues.md](issues.md) → Read an issue) until a lead
-developer or an admin moves it (**For Developers** / **For Designers** on the card, the same
+Designers; [watch.md](watch.md) step 7, [issues.md](issues.md) → Read an issue) until a UI dev
+owner or an admin moves it (**For Developers** / **For Designers** on the card, the same
 `size`, any one not handled). One For Developers is marked handled by a UI dev owner or a
 designer, one that goes against a decision in force by a designer only; a change For
 Developers is in Needs a designer only for such a decision.

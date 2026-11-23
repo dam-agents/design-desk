@@ -3531,3 +3531,16 @@ test("a proposal takes the dev team's votes and Slack, and Approve for dev sends
   assert.deepEqual([r.card.stage, r.card.size.small, Boolean(r.card.approved), r.card.approved.small, r.inbox.kind], [undefined, true, true, true, "handoff"], "For Developers, approved, its spec queued");
   assert.deepEqual(r.card.staged.at(-1).to, "developers");
 });
+
+test("a request born a proposal keeps its proposal news for the dev team once it opens", () => {
+  const s = fresh();
+  const lou = { email: "lou@example.com", role: "ui-dev-owner" }, dana = { email: "dana@example.com", role: "developer" };
+  s.clock = () => "2030-01-01T09:00:00Z";
+  const id = s.createRequest({ agent: true }, { problem: "From Slack.", origin: { channel: "slack", reporter: "Bob", email: "bob@example.com", chat: "C1", thread_ts: "1.0" }, stage: "proposal" }).card.id;
+  s.upsertCard({ id, status: "feedback", triage: { verdict: "design", reasons: ["Spacing only."] }, variants: [{ id: "v1", name: "Calm", asset: s.addAsset({ kind: "variant", name: "v", contentType: "text/html", data: "<p>v</p>", encoding: "utf8" }).asset.id, drawn: "2030-01-01T10:00:00Z" }] });
+  s.clock = () => "2030-01-02T09:00:00Z";
+  s.moveStage(id, lou, "design");
+  const events = (who) => s.notifications(who, { days: 100000 }).items.filter((n) => n.item === id).map((n) => n.event);
+  assert.ok(events(dana).includes("options-drawn"), "the dev team saw it as a proposal from the start");
+  assert.equal(events(alice).includes("options-drawn"), false, "a designer did not");
+});

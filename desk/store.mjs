@@ -447,7 +447,8 @@ export class Store {
     if (!c?.staged?.length) return null;
     const dev = DEVELOPERS.includes(who?.role), sees = (st) => st === "open" || (dev && st === "proposal");
     const spans = [], blind = (from, to) => { const last = spans[spans.length - 1]; if (last && last[1] === from) last[1] = to; else spans.push([from, to]); };
-    let st = "draft", since = c.created;
+    // It began in the stage its first move left (a Slack request is born a proposal).
+    let st = c.staged[0].from || "draft", since = c.created;
     for (const x of c.staged) {
       if (!sees(st)) blind(since, x.at);
       st = ["design", "developers"].includes(x.to) ? "open" : x.to; since = x.at;

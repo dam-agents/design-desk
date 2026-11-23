@@ -225,7 +225,8 @@ async function viewerRoute(req, res, url, who) {
   // A request before design is not there for whom it is not (docs/desk.md → Draft and Proposal):
   // reading it, writing on it, its conversations — the same 404 as a card that does not exist.
   if (p[1] === "cards" && p[2]) store.cardFor(p[2], actor);
-  if (p[1] === "threads" && p[2]) { const t = store.thread(p[2]); if (t.card && !store.visibleTo(store.card(t.card), actor)) throw new DeskError(404, `no thread ${p[2]}`); }
+  // A private ask stays its owner's to read and answer, even once its card is hidden from them.
+  if (p[1] === "threads" && p[2]) { const t = store.thread(p[2]); if (t.card && !(t.kind === "private" && t.owner === (who.email || who.sub)) && !store.visibleTo(store.card(t.card), actor)) throw new DeskError(404, `no thread ${p[2]}`); }
   if (m === "GET" && p[1] === "me") {
     // The page asks who it is once, when it loads: that is the sign-in People reads (docs/desk.md → People).
     // A read never fails for it: a full store keeps no record, and a failed write is dropped.
