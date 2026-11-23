@@ -377,7 +377,8 @@ A part under **All elements** opens in one dialog, the same in simple and full m
   skipped), round from the last to the first; each arrow names the element it opens. Another
   element opens as designed, at the top; what someone was writing on a part stays with it, and is
   back in its box when they come back to it, while the page is open.
-- **Open in design workspace** opens the option with the part selected, on its Properties, at the
+- **Open in design workspace** (the workspace's violet mark, as on every way into it: the
+  guidelines' Buttons) opens the option with the part selected, on its Properties, at the
   state shown in After. From the workspace, **Every state (n)** opens the dialog on the state the
   workspace shows, when it is one of the part's.
 - **Comments**: the part's open comments (a click opens one in the design workspace), the

@@ -160,6 +160,16 @@ test("every dialog closes with a lone ✕, as the guidelines show", () => {
   }
 });
 
+// A way into the design workspace looks the same wherever it stands (desk/guidelines.html →
+// Buttons): the workspace's mark, the one icon in violet, on every button that opens it.
+test("every button into the design workspace carries its violet mark, as the guidelines show", () => {
+  assert.ok(body.includes('class="ico ws-mark"'), "the guidelines show the mark");
+  assert.match(css, /\.ico\.ws-mark \{ color: var\(--ws\);/, "the mark is in the workspace's violet");
+  const ways = page.match(/<button [^>]*(?:data-act="workspace"|data-el-ws)[^>]*>[^<]*(?:<|\$\{)[^`]{0,40}/g) || [];
+  assert.ok(ways.length >= 3, "the page has its ways into the workspace");
+  for (const w of ways) assert.match(w, />\$\{wsMark\(\)\}/, w.slice(0, 80));
+});
+
 // Two corners, no more (desk/guidelines.html → Corners): the Desk declares --r-sm and --radius
 // and no other radius token, and the page shows both.
 test("the Desk has two corners", () => {

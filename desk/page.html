@@ -171,6 +171,7 @@
   /* People shows at once: its intro on top, beside it on a wide screen. */
   .btn > .ico { width: 15px; height: 15px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .btn.small > .ico { width: 13px; height: 13px; }
+  .ico.ws-mark { color: var(--ws); fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   /* What a button or label does, the moment the pointer is on it (docs/desk-page.md → Tooltips). */
   #tip { position: fixed; z-index: 90; max-width: min(320px, calc(100vw - 16px)); padding: 8px 12px; border-radius: var(--r-sm); background: var(--ink); color: var(--bg); font-size: var(--fs-meta); line-height: 1.4; font-weight: 400; text-transform: none; letter-spacing: 0; box-shadow: var(--shadow); pointer-events: none; }
   /* "[Opens a dialog]" in a tooltip: the other theme's green (blue reads as a link), as the box is the page's ink. */
@@ -1105,6 +1106,8 @@
     --canvas: #edebe7; --dot: #d6d4cd;
     /* A pull request's and an issue's state: open green, merged violet, draft grey, in the Desk's own inks. */
     --gh-open: var(--ok); --gh-draft: var(--muted); --gh-merged: var(--live);
+    /* The design workspace's mark: the icon on every button that opens it, in violet. */
+    --ws: var(--live);
     --fs-title: 26px; --fs-head: 17px; --fs-ui: 14px; --fs-meta: 12.5px; --fs-micro: 11px; }
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --turn: #f28cc6; --turn-soft: #3a1d2e;
     --decided: #9bb8e0; --decided-soft: #1d2633; --canvas: #232321; --dot: #383835; } }
@@ -5743,7 +5746,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const who = !busy.length && nx.who ? `<span class="way still hint">${esc(nx.who)}</span>` : "";
     // The design workspace is never a way on: its button sits by the options' tabs. With a live
     // prototype the options fold away, so the button stands at the row's right end instead.
-    const ws = live(c) && (c.variants || []).length ? `<button class="btn small ws" data-act="workspace">${can("revise") && !locked(c) ? "Design workspace" : "Comment on the design"}</button>` : "";
+    const ws = live(c) && (c.variants || []).length ? `<button class="btn small ws" data-act="workspace">${wsMark()}${can("revise") && !locked(c) ? "Design workspace" : "Comment on the design"}</button>` : "";
     const moves = row.length || who || ws ? `<div class="moves">${row.length ? `<span class="mv-k">${busy.length && !asks.length ? "Now:" : "Next:"}</span>${row.join(`<span class="mv-or">or</span>`)}` : ""}${who}${ws}</div>` : "";
     // The state's help hangs under its word: what is happening now and every way on from here.
     const own = STATUS_TIP[tone(c) === "decided" ? "decided" : held(c) ? "held" : checked(c) ? "checked" : emptied(c) ? "emptied" : protoDown(c) ? "down" : asking(c) ? "asking" : c.status === "spec" && S.me?.spec_review && !c.approved?.auto_send ? "spec-review" : c.status];
@@ -5859,7 +5862,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // The last tab adds one more option from what a person writes (docs/requests.md → One more option).
   // The one way into the design workspace: at the right end of the options' tabs, beside the design it opens.
   // With a live prototype the options fold away and the state row holds the button instead.
-  const wsTab0 = (c) => (c.variants || []).length && !live(c) ? `<button class="vws" data-act="workspace"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></svg>${can("revise") && !locked(c) ? "Design workspace" : "Comment on the design"}</button>` : "";
+  const wsTab0 = (c) => (c.variants || []).length && !live(c) ? `<button class="vws" data-act="workspace">${wsMark()}${can("revise") && !locked(c) ? "Design workspace" : "Comment on the design"}</button>` : "";
   function addOptionTab(c) {
     if (closed(c) || locked(c) || !can("explore")) return "";
     if (working(c).includes("explore")) return `<button class="vadd" disabled title="Design Desk is drawing; the new tab appears by itself"><span class="spin"></span> Drawing…</button>`;
@@ -6612,7 +6615,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const pair = elementPair(c, v, e, look, st, tools);
     // The card refreshes while a person writes: what they typed, and where, survives the redraw.
     const typed = $("#el-text"), keep = typed?.value || "", focused = document.activeElement === typed, caret = focused ? [typed.selectionStart, typed.selectionEnd] : null;
-    const toWs = S.el.look ? "" : `<button class="btn small" data-el-ws title="Opens the design at this part, to comment on it or ask for a change">Open in design workspace</button>`;
+    const toWs = S.el.look ? "" : `<button class="btn small" data-el-ws title="Opens the design at this part, to comment on it or ask for a change">${wsMark()}Open in design workspace</button>`;
     $("#el-body").innerHTML = `<div class="elbar"><div><h2>${esc(e.name)}</h2>
         <div class="sub">${ch ? `<span class="chip ${ch[1]}" title="${esc(ch[2])}">${ch[0]}</span>` : ""}<span class="chip" title="The design option this element is part of"><span class="ono">${vs.indexOf(v) + 1}</span> ${esc(v.name)} · version ${esc(v.version || 1)}</span>${approvedOption(c)?.id === v.id ? `<span class="chip ok" title="The option that was approved">✓ Approved</span>` : ""}</div></div>
         <div class="el-acts">${toWs}${elNav(c, v, e)}<button type="button" class="dlg-x" data-el-close aria-label="Close">✕</button></div></div>
@@ -7118,6 +7121,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const busyWhen = (w) => w.state === "claimed" && w.started ? `started ${ago(w.started) === "just now" ? "just now" : `${ago(w.started)} ago`}${w.usual_min ? `, usually about ${w.usual_min} min` : ""}` : "in the queue, starts within 10 minutes";
 
   const ICONS = {
+    workspace: '<path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/>',
     through: '<path d="M9 11.5V5.5a1.5 1.5 0 0 1 3 0v5m0-1a1.5 1.5 0 0 1 3 0v1.5m0-.5a1.5 1.5 0 0 1 3 0V15a6 6 0 0 1-6 6h-.5a6 6 0 0 1-4.8-2.4L3.6 15.4a1.6 1.6 0 0 1 2.5-2L9 16"/>',
     select: '<path d="M14 3.5H4.5a1 1 0 0 0-1 1V14" stroke-dasharray="2.6 2.4"/><path d="M10 10l10 4-4.2 1.6L14 20z" fill="currentColor"/>',
     comment: '<path d="M4 20.5V9a5 5 0 0 1 5-5h6a5 5 0 0 1 5 5v3a5 5 0 0 1-5 5H8z"/>',
@@ -7134,6 +7138,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     close: '<path d="M6 6l12 12M18 6L6 18"/>', done: '<circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.3l2.4 2.4 4.6-5"/>', back: '<path d="M19 12H5m6-6l-6 6 6 6"/>',
   };
   const wsIcon = (k) => `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">${ICONS[k]}</svg>`;
+  // Every button that opens the design workspace carries its mark, so it reads as the same way in.
+  const wsMark = () => `<svg class="ico ws-mark" viewBox="0 0 24 24" aria-hidden="true">${ICONS.workspace}</svg>`;
 
   // The bar on top: the request, what Design Desk does on it now, Figma, and the one way out.
   function wsTop(c, v) {

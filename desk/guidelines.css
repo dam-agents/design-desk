@@ -159,6 +159,7 @@
   /* People shows at once: its intro on top, beside it on a wide screen. */
   .btn > .ico { width: 15px; height: 15px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .btn.small > .ico { width: 13px; height: 13px; }
+  .ico.ws-mark { color: var(--ws); fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   /* What a button or label does, the moment the pointer is on it (docs/desk-page.md → Tooltips). */
   #tip { position: fixed; z-index: 90; max-width: min(320px, calc(100vw - 16px)); padding: 8px 12px; border-radius: var(--r-sm); background: var(--ink); color: var(--bg); font-size: var(--fs-meta); line-height: 1.4; font-weight: 400; text-transform: none; letter-spacing: 0; box-shadow: var(--shadow); pointer-events: none; }
   /* "[Opens a dialog]" in a tooltip: the other theme's green (blue reads as a link), as the box is the page's ink. */
@@ -1093,6 +1094,8 @@
     --canvas: #edebe7; --dot: #d6d4cd;
     /* A pull request's and an issue's state: open green, merged violet, draft grey, in the Desk's own inks. */
     --gh-open: var(--ok); --gh-draft: var(--muted); --gh-merged: var(--live);
+    /* The design workspace's mark: the icon on every button that opens it, in violet. */
+    --ws: var(--live);
     --fs-title: 26px; --fs-head: 17px; --fs-ui: 14px; --fs-meta: 12.5px; --fs-micro: 11px; }
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --turn: #f28cc6; --turn-soft: #3a1d2e;
     --decided: #9bb8e0; --decided-soft: #1d2633; --canvas: #232321; --dot: #383835; } }
