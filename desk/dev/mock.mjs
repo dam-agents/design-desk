@@ -60,18 +60,26 @@ function shim() {
     // A review (docs/desk.md → Reviews): drafts kept for this person, sent as one review whose comments are threads.
     if ((x = m(/^\/api\/cards\/([^/]+)\/drafts$/))) {
       const c = card(decodeURIComponent(x[1]));
-      if (method === "POST") (c.drafts ||= []).push({ id: `d${++n}`, text: body.text, anchor: body.anchor || null, ...(body.change ? { change: body.change } : {}), at: now() });
+      // Looks good: a mark with no words on one change, once; a note on the change takes it back.
+      if (method === "POST" && body.work_in) { if (!(c.drafts || []).some((d) => d.work_in === body.work_in)) (c.drafts ||= []).push({ id: `d${++n}`, work_in: body.work_in, at: now() }); }
+      else if (method === "POST" && body.ok === true) { if (!(c.drafts || []).some((d) => d.ok && d.change === body.change)) (c.drafts ||= []).push({ id: `d${++n}`, ok: true, change: body.change, at: now() }); }
+      else if (method === "POST") { if (body.change) c.drafts = (c.drafts || []).filter((d) => !(d.ok && d.change === body.change)); (c.drafts ||= []).push({ id: `d${++n}`, text: body.text, anchor: body.anchor || null, ...(body.change ? { change: body.change } : {}), at: now() }); }
       return { drafts: c.drafts || [] };
     }
     if ((x = m(/^\/api\/cards\/([^/]+)\/drafts\/([^/]+)$/))) { const c = card(decodeURIComponent(x[1])); c.drafts = (c.drafts || []).filter((d) => d.id !== x[2]); return { drafts: c.drafts }; }
     if ((x = m(/^\/api\/cards\/([^/]+)\/reviews$/))) {
-      const c = card(decodeURIComponent(x[1])), ds = c.drafts || [], id = `U-${++n}`;
-      if (!ds.length && !body.note) return { error: "Write a comment or a note first." };
+      const c = card(decodeURIComponent(x[1])), all = c.drafts || [], ds = all.filter((d) => !d.ok && !d.work_in), oks = all.filter((d) => d.ok), wis = all.filter((d) => d.work_in), id = `U-${++n}`;
+      if (!all.length && !body.note) return { error: "Write a comment or a note first." };
       const request = c.kind === "request", changes = body.verdict === "request-changes", first = body.variant || c.variants[0]?.id;
       const notes = ds.length ? ds : request && changes ? [{ text: body.note, anchor: null }] : [];
       const ts = notes.map((d) => ({ id: `T-${++n}`, kind: request && changes ? "change" : "comment", state: "open", review: id, may: { reply: true, resolve: true }, anchor: request && changes && !d.anchor?.variant ? { ...(d.anchor || {}), variant: first } : d.anchor, ...(d.change ? { change: d.change } : {}), messages: [{ by: { name: me.name, email: me.email, role }, at: now(), text: d.text }] }));
       c.threads.push(...ts); c.drafts = [];
-      (c.reviews ||= []).push({ id, by: { name: me.name, email: me.email, role }, at: now(), verdict: body.verdict, note: body.note || "", threads: ts.map((t) => t.id) });
+      // Comments to work in: only with Request changes on a request, the same conversation turned into a change note.
+      if (request && changes) for (const d of wis) { const t = c.threads.find((x) => x.id === d.work_in); if (t) { t.was = t.kind; t.kind = "change"; t.state = "open"; t.review = id; t.needs_agent = true; ts.push(t); } }
+      // The mock has no head commit: a Looks good holds until the page reloads.
+      const named = (k) => { const sh = (c.screens || []).find((x) => x.pair === k || x.asset === k); return sh?.pair || sh?.caption || k; };
+      (c.reviews ||= []).push({ id, by: { name: me.name, email: me.email, role }, at: now(), verdict: body.verdict, note: body.note || "", threads: ts.map((t) => t.id), ...(oks.length ? { looks_good: oks.map((d) => ({ key: d.change, name: named(d.change) })) } : {}) });
+      if (oks.length) c.looks_good = [...new Set([...(c.looks_good || []), ...oks.map((d) => d.change)])];
       if (request && changes) work(c, ts);
       if (!request && body.verdict === "approve") c.handled = { by: { email: me.email }, at: now() };
       if (changes) c.responsible = { who: request ? "design-desk" : "developer", review: id, since: now() };

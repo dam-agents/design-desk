@@ -110,7 +110,7 @@
       <h3 class="gl-h3">Underline tabs with a number chip</h3>
       <p class="gl-p">Things reviewed one at a time: a request's design options, a pull request's changes. The chip carries the review:</p>
       <ul class="gl-ul"><li>ink for the one shown,</li><li>green for the approved one, even when shown,</li><li>amber while changes asked for on it wait for its next version; never on an approved or closed request, which draws none,</li><li>grey for the rest.</li></ul>
-      <p class="gl-where">On the Desk: a request's design options, in both modes, and the design workspace's.</p>
+      <p class="gl-where">On the Desk: a request's design options, in both modes, and the design workspace's; a pull request's changes, green for one marked Looks good, amber for one with notes.</p>
     </div>
     <div class="gl-ex gl-wide">
       <div class="tabs vtabs vrow utabs" role="group" aria-label="Example options">
@@ -331,17 +331,17 @@
   </div>
   <div class="gl-item">
     <div class="gl-rule">
-      <h3 class="gl-h3">A review, and a draft not sent yet</h3>
-      <p class="gl-p">Comments written while reviewing wait as drafts, in amber, seen by their writer alone, until <b>Send review…</b> sends them together with one verdict. The review then shows as one block: who, the verdict in its colour on the block's edge (amber for changes asked for, green for approved), its note, then its comments.</p>
+      <h3 class="gl-h3">Feedback, and a draft not sent yet</h3>
+      <p class="gl-p">Comments added to feedback wait as drafts, in amber, seen by their writer alone, until <b>Send feedback…</b> sends them together with one verdict. The feedback then shows as one block: who, the verdict in its colour on the block's edge (amber for changes asked for, green for approved), its note, then its comments.</p>
       <p class="gl-where">On the Desk: a request's and a pull request's comments.</p>
     </div>
     <div class="gl-ex gl-wide">
-      <section class="yreview" aria-label="Example review in the making"><div class="yr-h"><b>Your review · 2</b><button class="btn small" type="button">Send review…</button></div>
-        <div class="dbub"><div class="db-b"><span class="about">Option 2 · Compact · Send button</span>The button should say what it sends.</div><button class="x" type="button" aria-label="Remove this comment from your review">✕</button></div>
-        <div class="dbub"><div class="db-b"><span class="about">Option 2 · Compact</span>The empty state needs a next step.</div><button class="x" type="button" aria-label="Remove this comment from your review">✕</button></div>
+      <section class="yreview" aria-label="Example feedback in the making"><div class="yr-h"><b>Your feedback · 2</b><button class="btn small" type="button">Send feedback…</button></div>
+        <div class="dbub"><div class="db-b"><span class="about">Option 2 · Compact · Send button</span>The button should say what it sends.</div><button class="x" type="button" aria-label="Remove this comment from your feedback">✕</button></div>
+        <div class="dbub"><div class="db-b"><span class="about">Option 2 · Compact</span>The empty state needs a next step.</div><button class="x" type="button" aria-label="Remove this comment from your feedback">✕</button></div>
       </section>
       <article class="rvw" data-v="request-changes"><div class="rv-h"><b>Alice Novak</b><span class="hint">Designer</span><span class="rv-v">Changes requested</span><span class="hint">Today, 10:02 AM</span></div>
-        <div class="rv-note"><p>Close, two things to fix before it goes on.</p></div>
+        <div class="rv-note"><p>Close, two things to fix before it goes on.</p></div><p class="rv-ok">✓ Looks good: Agents list</p>
         <article class="sthread"><div class="smsg"><span class="sav" data-r="designer">AN</span><div class="sm-b"><div class="who"><b>Alice Novak</b><span class="role">Designer</span><span class="at">Today, 10:02 AM</span></div><p>The button should say what it sends.</p></div></div></article>
       </article>
     </div>

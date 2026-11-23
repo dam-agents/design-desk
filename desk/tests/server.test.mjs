@@ -659,6 +659,16 @@ test("drafts: a person adds, reads and removes their own draft comments; nobody 
   assert.deepEqual((await d.viewer("guest@example.com", `/api/cards/${card.id}/drafts`)).body.drafts, []);
 });
 
+test("drafts: Looks good is a draft with no words on one change of a pull request", async (t) => {
+  const d = await desk(t);
+  const { body: { asset } } = await d.agent("/agent/assets", { kind: "screen", name: "s", contentType: "image/svg+xml", data: "<svg xmlns='http://www.w3.org/2000/svg'/>", encoding: "utf8" });
+  const chg = (await d.agent("/agent/cards", { kind: "change", title: "Spend", source: { repo: "acme/widgets", pr: 7 }, screens: [{ asset: asset.id, caption: "The list" }] })).body.card.id;
+  const ok = await d.viewer("alice@example.com", `/api/cards/${chg}/drafts`, { ok: true, change: asset.id });
+  assert.equal(ok.status, 201);
+  assert.deepEqual([ok.body.draft.ok, ok.body.draft.change, ok.body.draft.text], [true, asset.id, undefined]);
+  assert.equal((await d.viewer("alice@example.com", `/api/cards/${chg}/drafts`, { ok: true, change: "Elsewhere" })).status, 400, "a change the pull request does not have");
+});
+
 test("reviews: a guest sends Comment only; asking changes of a request takes the change ability, of a change who may mark it handled", async (t) => {
   const d = await desk(t);
   const { body: { card } } = await d.viewer("alice@example.com", "/api/requests", { problem: "People miss the upload button." });
