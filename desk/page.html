@@ -752,6 +752,8 @@
   #request-dialog.simple textarea[name=problem] { min-height: 160px; font-size: var(--fs-ui); line-height: 1.5; }
   #request-dialog.simple #rq-problem-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   #request-dialog.simple .count-pick { grid-template-columns: max-content minmax(0, 1fr); align-items: center; column-gap: 16px; } #request-dialog.simple #rq-count-q { font-size: var(--fs-ui); color: var(--ink); } #request-dialog.simple #rq-count-hint { grid-column: 1 / -1; }
+  /* On a phone the label goes above the row and its six buttons share the dialog's width. */
+  @media (max-width: 560px) { #request-dialog.simple .count-pick { grid-template-columns: minmax(0, 1fr); row-gap: 8px; } .seg { display: flex; width: 100%; } .seg button { flex: 1 1 0; min-width: 0; padding: 4px 8px; } .seg button:first-child { flex: 2 1 0; } }
   /* Where a request came from, and the requests a card started. */
   .linked { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--soft); font-size: var(--fs-meta); max-width: var(--measure); margin: 8px 0; }
   .linked .k { color: var(--muted); }

@@ -565,9 +565,9 @@ sent to developers too: the states document the approved design and change nothi
 ## UI bugs
 
 A UI bug is a request of type `bug`: something on a screen looks or behaves wrong. People
-file one on the Desk (**New request → Report something broken** in full mode; in simple mode a bug
-report comes as an idea) or tell you in Slack; either way it
-waits in the same queue and gets the same triage.
+file one on the Desk (**New request → Report something broken**, in full mode) or tell you in Slack;
+either way it waits in the same queue and gets the bug triage below. Simple mode's New request has no
+type: a bug reported there is filed as an idea and gets an idea's triage, not a bug's.
 
 ### From a channel
 

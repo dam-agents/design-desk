@@ -194,13 +194,23 @@
     <div class="gl-rule">
       <h3 class="gl-h3">Choice in a form</h3>
       <p class="gl-p">Picking one value a form needs, when the choice changes what the form asks next. Every option is a whole button with its words; the picked one is ringed in ink.</p>
-      <p class="gl-where">On the Desk: a new request's kind, an issue's kind, a live prototype's mode, Send to Slack's mode.</p>
+      <p class="gl-where">On the Desk: a new request's kind (full mode), an issue's kind, a live prototype's mode, Send to Slack's mode.</p>
     </div>
     <div class="gl-ex">
       <div class="tabs" role="radiogroup" aria-label="Example choice">
         <button type="button" aria-pressed="true">Suggest a change</button>
         <button type="button" aria-pressed="false">Report something broken</button>
       </div>
+    </div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-rule">
+      <h3 class="gl-h3">A small number to pick</h3>
+      <p class="gl-p">A count from a short range, as one row of whole buttons: the picked one filled in ink. Zero gets words that say what it does, never "None"; its line under the row says the rest. On a phone the row takes the form's width and its label goes above it.</p>
+      <p class="gl-where">On the Desk: simple mode's New request, its Design options.</p>
+    </div>
+    <div class="gl-ex">
+      <div class="seg" role="radiogroup" aria-label="Example count"><button type="button" role="radio" aria-checked="false">Just check</button><button type="button" role="radio" aria-checked="true">1</button><button type="button" role="radio" aria-checked="false">2</button><button type="button" role="radio" aria-checked="false">3</button></div>
     </div>
   </div>
 
@@ -227,6 +237,21 @@
         <button class="btn small">Open in Figma</button>
         <button class="btn small" disabled>Not now</button>
         <button class="btn small danger">Delete</button>
+      </div>
+    </div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-rule">
+      <h3 class="gl-h3">One action, more than one way</h3>
+      <p class="gl-p">When the main action of a form can go two ways, it is one split button: the action on its face, an arrow beside it that lists the ways, each a bold name and a muted line on what follows. The face keeps the last way picked; the ways are only those the person may take. With one way it is a plain button.</p>
+      <p class="gl-p">A form's main buttons stand large (40 px high) when the form is the whole task.</p>
+      <p class="gl-where">On the Desk: New request's Create draft / Create proposal or Send to design.</p>
+    </div>
+    <div class="gl-ex">
+      <div class="gl-row"><span class="splitbtn many"><button type="button" class="btn primary lg">Create draft</button><details class="more"><summary class="btn primary lg" aria-label="More ways to send"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary></details></span><button type="button" class="btn lg">Cancel</button></div>
+      <div class="gl-row" role="menu" aria-label="Example ways">
+        <button type="button" class="split-way" role="menuitemradio" aria-checked="true"><span class="tick" aria-hidden="true">✓</span><b>Create draft</b><small>Private: only you see it until you send it on.</small></button>
+        <button type="button" class="split-way" role="menuitemradio" aria-checked="false"><span class="tick" aria-hidden="true">✓</span><b>Create proposal</b><small>Goes straight to the dev team for feedback; everyone on the Desk can read it.</small></button>
       </div>
     </div>
   </div>

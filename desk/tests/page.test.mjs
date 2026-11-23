@@ -5361,3 +5361,16 @@ test("New request's ways are the author's: Send to design for a PM, one Send for
     assert.deepEqual((await ways(desk)).map(([w]) => w), ["Create draft", "Create proposal"]);
   });
 });
+
+test("on a phone, simple mode's New request keeps every Design options button inside the dialog", (t) => open(t, NEW_REQUEST(ASKER("developer", true, { "stage-propose": true })), async (desk) => {
+  for (const width of [320, 375, 420]) {
+    await desk.setViewportSize({ width, height: 740 });
+    await desk.click("#new-request");
+    const box = await desk.evaluate(() => {
+      const f = document.querySelector("#request-form"), r = f.getBoundingClientRect(), bs = [...document.querySelectorAll("#rq-count-seg button")].map((b) => b.getBoundingClientRect());
+      return { sideways: f.scrollWidth > f.clientWidth, out: bs.filter((b) => b.right > r.right + 0.5 || b.left < r.left - 0.5).length };
+    });
+    assert.deepEqual(box, { sideways: false, out: 0 }, `${width} px`);
+    await desk.click("#request-dialog [data-close=cancel]");
+  }
+}));
