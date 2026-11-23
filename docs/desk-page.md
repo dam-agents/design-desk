@@ -187,9 +187,10 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   filter shows), and **+ New request**; its one list holds every request and pull request change,
   whatever its side — For Developers or For Designers only decides which review it is in — each in
   one state ([A request's state in the list](#a-requests-state-in-the-list)), the newest change
-  first; only someone else's draft and an archived change are not listed. A row is the kind's icon, the title (two lines at most), when it last changed (Today, Yesterday or the
+  first; only someone else's draft and an archived change are not listed. A row is the kind's icon (with a red dot on its upper right corner while an unread notification
+  for the viewer is about the item, [Notifications](#notifications)), the title (two lines at most), when it last changed (Today, Yesterday or the
   day, with the time; the year only when it is not this year), then its number in the same grey
-  words, never broken across lines (a change its pull request's, `PR#812`; a request, or a change
+  words, never broken across lines (a change its pull request's, `PR#812`, once merged a small purple pill, `#812 Merged`; a request, or a change
   with no pull request, its own on the Desk, `R-12` or `P-3`), who asked and where from in the same
   words (`by Pat Lee, from Slack`: the person behind a Slack message or an issue, never the Desk; a
   change's pull request author), the Desk's spinner while Design Desk works on it, and its state's
@@ -197,20 +198,21 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   it (on a screen under 400 px, where a long date has no room beside it, on a line of its own under
   the date, at the right); a long name is cut with an ellipsis. A title is in English, here and in the head: Design Desk's translation, unless a person
   renamed it. The
-  filter is one **Filter** button: its menu ticks any of State (**Draft** for anyone whose request
+  filter is one button at the list's right, its funnel icon alone (32 px, a dot on its border's corner while the
+  filter hides anything — not every state and kind ticked; its tooltip says what the list shows):
+  its menu, opening inside the list, ticks any of State (**Draft** for anyone whose request
   starts as one, then **Dev review**, **Design review**, **In dev**, **Closed**) and Kind (**Requests**,
   **PR changes**), each with its count, at least one of each ticked, a state's row offering
   **Only** under the pointer (that state alone, the kinds kept), and **Reset to default** (Design review
   for a designer, Draft and Dev review for a developer or a UI dev owner, every state before In dev
   for anyone else; both kinds; a kept state they do not have is left out; the keys stay `proposal`
-  for Dev review and `open` for Design review, so a kept filter keeps working); beside the button only what narrows the
-  list, a chip each, × dropping it (a kind's chip only while one kind is ticked). This browser
+  for Dev review and `open` for Design review, so a kept filter keeps working); nothing shows beside the button. This browser
   keeps it (`desk-simFilter`). There is no Your turn, Unread or Needs a designer filter, and no
   For Designers / For Developers switch. An opened request or change starts with one head that
   stays in view while the page scrolls: the kind's icon, the title on one line (cut with an
   ellipsis, its full words on hover) with its number and the link icon close after it, the buttons
   beside it alone; under them, across the whole width, its state's pill a size larger than a row's, Design Desk's work in words beside the spinner, a change's pull request
-  as a pill in GitHub's inks, as full mode's dot (`#812 Draft` grey, `#812 Open` green, `#812 Merged`
+  as a pill in GitHub's inks as tall as the state's, as full mode's dot (`#812 Draft` grey, `#812 Open` green, `#812 Merged`
   purple), a link to GitHub, a reported bug's **Bug** chip (with
   its severity), who asked and where from in the row's words, and when (a person by their name on
   the roster, else the name the item keeps, else the part of their address before the @), and once approved one muted
@@ -533,7 +535,9 @@ without marking anything.
 The bell at the far right of the header, right of the person's name, lists what happened on the Desk in the
 last 30 days, newest first, at most 50 (`GET /api/notifications`). Nothing new is logged: each
 event is read from what the store keeps anyway. A person never sees their own doings, and a
-private ask only its owner: Design Desk's answers to it are theirs alone, and for them. The events:
+private ask only its owner: Design Desk's answers to it are theirs alone, and for them. In simple
+mode a row of the list whose item an unread notification For you is about has a red dot on its
+icon's upper right corner, gone once the notification is read. The events:
 
 | Event | When |
 | --- | --- |
