@@ -7,7 +7,7 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
-## 1.106.0 — 2026-11-23
+## 1.107.0 — 2026-11-23
 
 **Upgrade:**
 1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): simple mode lists every
@@ -15,6 +15,16 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
    For Developers item), **Design review** (was In review), In dev or Closed
    ([desk-page.md](docs/desk-page.md) → Simple mode). No data migration: a filter a browser kept
    keeps its keys.
+
+## 1.106.0 — 2026-11-23
+
+**Upgrade:**
+1. Restart the Desk server ([desk.md](docs/desk.md) → Server) and republish the page
+   ([desk.md](docs/desk.md) → Publishing the page): simple mode says who asked and where from,
+   shows every row's state, titles in English, and leads a request with Design Desk's short summary
+   (`gist`), its own words folded under it ([desk-page.md](docs/desk-page.md) → Simple mode). Triage
+   writes `gist` from now on ([requests.md](docs/requests.md) → Triage), a few sentences more per
+   request. No data migration: a request triaged before has none and shows its words in full.
 
 ## 1.105.0 — 2026-11-23
 

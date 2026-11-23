@@ -3021,6 +3021,21 @@ test("a request in another language keeps its English beside the asker's words",
   assert.equal(s.card(card.id).translation, null);
 });
 
+test("a request keeps Design Desk's short summary in plain English; only a request has one, and it is short", () => {
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { needsApproval: everyCounts });
+  const { card } = s.createRequest({ agent: true }, { title: "Přetéká", problem: "Tabulka přetéká na mobilu." });
+  const before = s.db.cards[card.id].updated;
+  s.upsertCard({ id: card.id, gist: "  The table is too wide for a phone. The design makes it fit.  " });
+  assert.equal(s.card(card.id).gist, "The table is too wide for a phone. The design makes it fit.");
+  assert.equal(s.db.cards[card.id].updated, before, "a summary alone is no change on the card");
+  assert.throws(() => s.upsertCard({ id: card.id, gist: "x".repeat(601) }), /gist is longer than 600/);
+  assert.throws(() => s.upsertCard({ id: card.id, gist: " " }), /gist is empty/);
+  const chg = s.upsertCard({ kind: "change", title: "Spend", source: { repo: "acme/widgets", pr: 7 } }).card;
+  assert.throws(() => s.upsertCard({ id: chg.id, gist: "A change." }), /gist belongs to a request/);
+  s.upsertCard({ id: card.id, gist: null });
+  assert.equal(s.card(card.id).gist, null);
+});
+
 test("drafts: a person's comments not sent yet are theirs alone, on every device, and in no read", () => {
   const s = fresh();
   const a = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: "<p>v</p>", encoding: "utf8" }).asset;
