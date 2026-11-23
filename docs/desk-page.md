@@ -190,9 +190,12 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   first. A row is the kind's icon, the title, when it last changed (Today, Yesterday or the
   day, with the time; the year only when it is not this year), then its number in the same grey
   words, never broken across lines (a change its pull request's, `PR#812`; a request, or a change
-  with no pull request, its own on the Desk, `R-12` or `P-3`), the Desk's spinner
-  while Design Desk works on it, and its state's pill, left out while the filter shows one state
-  only. The
+  with no pull request, its own on the Desk, `R-12` or `P-3`), who asked and where from in the same
+  words (`by Pat Lee, from Slack`: the person behind a Slack message or an issue, never the Desk; a
+  change's pull request author), the Desk's spinner while Design Desk works on it, and its state's
+  pill on every row, in a column of its own on the right as high as the row, the rest narrowing for
+  it. A title is in English, here and in the head: Design Desk's translation, unless a person
+  renamed it. The
   filter is one **Filter** button: its menu ticks any of State (**Draft** for anyone whose request
   starts as one, then **Proposal**, **In review**, **In dev**, **Closed**) and Kind (**Requests**,
   **PR changes**), each with its count, at least one of each ticked, a state's row offering
@@ -202,12 +205,13 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   list, a chip each, × dropping it (a kind's chip only while one kind is ticked). This browser
   keeps it (`desk-simFilter`). There is no Your turn, Unread or Needs a designer filter, and no
   For Designers / For Developers switch. An opened request or change starts with one head that
-  stays in view while the page scrolls: the kind's icon, the title with its number and the link
-  icon, its state's pill, Design Desk's work in words beside the spinner, a change's pull request
+  stays in view while the page scrolls: the kind's icon, the title on one line (cut with an
+  ellipsis, its full words on hover) with its number and the link icon close after it, the buttons
+  beside it alone; under them, across the whole width, its state's pill a size larger than a row's, Design Desk's work in words beside the spinner, a change's pull request
   as a pill in GitHub's inks, as full mode's dot (`#812 Draft` grey, `#812 Open` green, `#812 Merged`
   purple), a link to GitHub, a reported bug's **Bug** chip (with
-  its severity), who filed it or wrote it and when (a person by their name on the roster, else the
-  name the item keeps, else the part of their address before the @), and once approved one muted
+  its severity), who asked and where from in the row's words, and when (a person by their name on
+  the roster, else the name the item keeps, else the part of their address before the @), and once approved one muted
   line — who approved it and when, the issue or pull request it was sent to, when it shipped —
   then at most two buttons and ⋯. Before design a request offers its stage's moves
   ([desk.md](desk.md) → Draft and Proposal), each only for who may: on a draft, to its author,
@@ -236,8 +240,14 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   offers no Approve. A request that went to design folds the conversations and feedback begun
   before it opened (`opened_at`) into **Before design · n**, after the rest, in both modes. ⋯ holds **Close…** or **Reopen** on a request, **Turn into a design request** on a
   change (and **Undo approval** on one approved), and **Open on GitHub** where there is a link. No vote buttons, rename or For Developers
-  move. Under the head the page reads one way for both kinds: a short lead (a request's first
-  paragraph, a change's summary), **The request in full** folded, the designs (a request's
+  move. Under the head the page reads one way for both kinds: a short lead — a request's `gist`,
+  Design Desk's few plain sentences on the problem and what will be done ([requests.md](requests.md)
+  → Triage), a change's summary — then a request's **Original request** folded: where it came from
+  and when (no name: the head has it), its words, and for one in another language `Written in
+  <language>` beside a small **Show in English** button (**Show original** and `Translated from …
+  by Design Desk` back); a request with no `gist` shows its words in full instead, open. Its words
+  keep a readable width (680 px) however wide the screen; the designs and pictures take it all.
+  Then the designs (a request's
   options, votes as counts only) or **Changes** (below), **What Design Desk
   found** (the decisions in force it goes against, a change's reasons to look at it, how it
   differs from the approved design, Figma when on, its check holding the pull request; else
