@@ -123,6 +123,7 @@ const PRESSED = [
   [/^:is\(\.tabs\.vtabs\.utabs|^\.ws-opts \.ws-seg \.ws-opt/, "Underline tabs with a number chip"],
   [/^\.(?:pl-tabs|ws-ptabs) button/, "Plain underline tabs"],
   [/^\.ws-seg button/, "Segmented control"],
+  [/^\.seg button/, "A small number to pick"],
   [/^\.(?:pl-seg|pl-chips) button|^\.pl-sw(?![\w-])/, "A property's value"],
   [/^\.spec-versions button/, "Version links"],
   [/^\.el-tile\[aria-pressed/, "Pictures to pick from"],

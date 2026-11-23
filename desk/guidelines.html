@@ -206,11 +206,11 @@
   <div class="gl-item">
     <div class="gl-rule">
       <h3 class="gl-h3">A small number to pick</h3>
-      <p class="gl-p">A count from a short range, as one row of whole buttons: the picked one filled in ink. Zero gets words that say what it does, never "None"; its line under the row says the rest. On a phone the row takes the form's width and its label goes above it.</p>
+      <p class="gl-p">A count from a short range, as one row of whole buttons that are pressed (<code>aria-pressed</code>), as a segmented control: the picked one filled in ink. Zero gets words that say what it does, never "None"; its line under the row says the rest. On a phone the row takes the form's width and its label goes above it.</p>
       <p class="gl-where">On the Desk: simple mode's New request, its Design options.</p>
     </div>
     <div class="gl-ex">
-      <div class="seg" role="radiogroup" aria-label="Example count"><button type="button" role="radio" aria-checked="false">Just check</button><button type="button" role="radio" aria-checked="true">1</button><button type="button" role="radio" aria-checked="false">2</button><button type="button" role="radio" aria-checked="false">3</button></div>
+      <div class="seg" role="group" aria-label="Example count"><button type="button" aria-pressed="false">Just check</button><button type="button" aria-pressed="true">1</button><button type="button" aria-pressed="false">2</button><button type="button" aria-pressed="false">3</button></div>
     </div>
   </div>
 

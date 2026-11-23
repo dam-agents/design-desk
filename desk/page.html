@@ -729,7 +729,7 @@
   .seg { display: inline-flex; width: fit-content; white-space: nowrap; border: 1px solid var(--line); border-radius: var(--r-sm); overflow: hidden; }
   .seg button { font: inherit; font-size: var(--fs-ui); min-width: 44px; min-height: 36px; padding: 4px 12px; border: 0; border-left: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; }
   .seg button:first-child { border-left: 0; } .seg button:hover { background: var(--soft); }
-  .seg button[aria-checked="true"] { background: var(--ink); color: var(--panel); font-weight: 600; }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--panel); font-weight: 600; }
   .seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
   #request-dialog:not(.simple) .seg { display: none; }
   /* New request's moves: bigger buttons, the main one split with its ways under the arrow. */
@@ -753,7 +753,7 @@
   #request-dialog.simple #rq-problem-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   #request-dialog.simple .count-pick { grid-template-columns: max-content minmax(0, 1fr); align-items: center; column-gap: 16px; } #request-dialog.simple #rq-count-q { font-size: var(--fs-ui); color: var(--ink); } #request-dialog.simple #rq-count-hint { grid-column: 1 / -1; }
   /* On a phone the label goes above the row and its six buttons share the dialog's width. */
-  @media (max-width: 560px) { #request-dialog.simple .count-pick { grid-template-columns: minmax(0, 1fr); row-gap: 8px; } .seg { display: flex; width: 100%; } .seg button { flex: 1 1 0; min-width: 0; padding: 4px 8px; } .seg button:first-child { flex: 2 1 0; } }
+  @media (max-width: 560px) { #request-dialog.simple .count-pick { grid-template-columns: minmax(0, 1fr); row-gap: 8px; } .seg { display: flex; width: 100%; } .seg button { flex: 1 1 0; min-width: 0; padding: 4px 8px; } .seg button:first-child { flex: 0 0 auto; } }
   /* Where a request came from, and the requests a card started. */
   .linked { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--soft); font-size: var(--fs-meta); max-width: var(--measure); margin: 8px 0; }
   .linked .k { color: var(--muted); }
@@ -1835,7 +1835,7 @@
     <div id="rq-carry" hidden><span class="hint" style="margin:0">Carry over</span><div class="choices" id="rq-carry-list"></div></div>
     <div class="count-pick" id="rq-count"><span class="hint" style="margin:0" id="rq-count-q">How many design options should Design Desk draw?</span>
       <div class="row2"><input type="range" name="options" min="0" max="5" step="1" value="3" aria-label="How many design options to draw" /><output id="rq-count-say">3 options</output></div>
-      <div class="seg" id="rq-count-seg" role="radiogroup" aria-label="How many design options to draw"><button type="button" role="radio" data-n="0">Just check</button><button type="button" role="radio" data-n="1">1</button><button type="button" role="radio" data-n="2">2</button><button type="button" role="radio" data-n="3">3</button><button type="button" role="radio" data-n="4">4</button><button type="button" role="radio" data-n="5">5</button></div>
+      <div class="seg" id="rq-count-seg" role="group" aria-label="How many design options to draw"><button type="button" aria-pressed="false" data-n="0">Just check</button><button type="button" aria-pressed="false" data-n="1">1</button><button type="button" aria-pressed="false" data-n="2">2</button><button type="button" aria-pressed="false" data-n="3">3</button><button type="button" aria-pressed="false" data-n="4">4</button><button type="button" aria-pressed="false" data-n="5">5</button></div>
       <span class="hint" style="margin:0" id="rq-count-hint"></span></div>
     <label class="switch" id="rq-grill"><input type="checkbox" role="switch" name="grill" /><span>Ask me questions first<small>One question at a time, each with a suggested answer.</small></span></label>
     <details class="skills" id="rq-skills" hidden><summary>What Design Desk uses for the options</summary><div id="rq-skill-list"></div></details>
@@ -8386,7 +8386,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     $("#of-draw").hidden = mode !== "draw"; $("#of-own").hidden = mode !== "own";
     $("#of-ok").textContent = mode === "own" ? "Add the option" : "Draw the option";
   };
-  const ofShowPictures = () => { $("#of-thumbs").innerHTML = ownPictures.map((p) => `<img alt="" src="${p.preview}" />`).join(""); };
+  const ofShowPictures = () => showThumbs(ownPictures, "#of-thumbs");
   const ofAdd = (file) => { if (ownPictures.length < 4 && /^image\//.test(file.type)) { ownPictures.push({ file, preview: URL.createObjectURL(file) }); ofShowPictures(); } };
   $("#of-file").addEventListener("change", guard(async (e) => { for (const f of e.target.files) ofAdd(f); e.target.value = ""; }));
   $("#option-dialog").addEventListener("paste", (e) => { if ($("#of-own").hidden) return; for (const it of e.clipboardData?.items || []) if (it.type.startsWith("image/")) { e.preventDefault(); ofAdd(it.getAsFile()); } });
@@ -9270,7 +9270,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   function sayCount() {
     const n = Number($("#request-form").options.value);
     $("#rq-count-say").textContent = optionsSay(n);
-    for (const b of document.querySelectorAll("#rq-count-seg button")) b.setAttribute("aria-checked", String(Number(b.dataset.n) === n));
+    for (const b of document.querySelectorAll("#rq-count-seg button")) b.setAttribute("aria-pressed", String(Number(b.dataset.n) === n));
     const carried = !$("#rq-carry").hidden && $("#request-form").querySelector("input[name=carry]:checked");
     $("#rq-count-hint").textContent = carried ? ""
       : !n ? (simple() ? "Design Desk only checks what can be done; options can be drawn later." : "Design Desk only checks what can be done as a design change; a designer, PM or developer can still have options drawn later.")

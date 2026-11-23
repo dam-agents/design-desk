@@ -5311,7 +5311,7 @@ test("simple mode's New request asks for the words, the pictures and Design opti
   for (const id of ["#type-choice", "#rq-vision", "#rq-screen", "#rq-grill", "#rq-figma", "#request-dialog input[type=range]"]) assert.equal(await desk.isVisible(id), false, id);
   assert.equal(await desk.isVisible("#rq-count-seg"), true);
   assert.deepEqual(await desk.$$eval("#rq-count-seg button", (bs) => bs.map((b) => b.textContent)), ["Just check", "1", "2", "3", "4", "5"]);
-  assert.equal(await desk.textContent('#rq-count-seg [aria-checked="true"]'), "1");
+  assert.equal(await desk.textContent('#rq-count-seg [aria-pressed="true"]'), "1");
   await desk.click('#rq-count-seg [data-n="0"]');
   assert.equal(await desk.textContent("#rq-count-hint"), "Design Desk only checks what can be done; options can be drawn later.");
   await desk.click('#rq-count-seg [data-n="2"]');
@@ -5363,14 +5363,27 @@ test("New request's ways are the author's: Send to design for a PM, one Send for
 });
 
 test("on a phone, simple mode's New request keeps every Design options button inside the dialog", (t) => open(t, NEW_REQUEST(ASKER("developer", true, { "stage-propose": true })), async (desk) => {
-  for (const width of [320, 375, 420]) {
+  for (const width of [320, 360, 375, 420, 560]) {
     await desk.setViewportSize({ width, height: 740 });
     await desk.click("#new-request");
     const box = await desk.evaluate(() => {
       const f = document.querySelector("#request-form"), r = f.getBoundingClientRect(), bs = [...document.querySelectorAll("#rq-count-seg button")].map((b) => b.getBoundingClientRect());
-      return { sideways: f.scrollWidth > f.clientWidth, out: bs.filter((b) => b.right > r.right + 0.5 || b.left < r.left - 0.5).length };
+      // A button's words stay inside it too: Just check never runs over 1.
+      const spill = [...document.querySelectorAll("#rq-count-seg button")].filter((x) => x.scrollWidth > x.clientWidth + 0.5).length;
+      return { sideways: f.scrollWidth > f.clientWidth, out: bs.filter((b) => b.right > r.right + 0.5 || b.left < r.left - 0.5).length, spill };
     });
-    assert.deepEqual(box, { sideways: false, out: 0 }, `${width} px`);
+    assert.deepEqual(box, { sideways: false, out: 0, spill: 0 }, `${width} px`);
     await desk.click("#request-dialog [data-close=cancel]");
   }
+}));
+
+test("Add a design option's own pictures each come with a ✕ that takes it out", (t) => open(t, NEW_REQUEST(ASKER("designer", false)), async (desk) => {
+  await desk.waitForSelector("#new-request");
+  await desk.evaluate(() => document.getElementById("option-dialog").showModal());
+  await desk.click('#option-dialog [data-of-mode="own"]');
+  const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==", "base64");
+  await desk.setInputFiles("#of-file", [{ name: "a.png", mimeType: "image/png", buffer: png }, { name: "b.png", mimeType: "image/png", buffer: png }]);
+  await desk.waitForFunction(() => document.querySelectorAll("#of-thumbs .thumb").length === 2);
+  await desk.click("#of-thumbs .thumb:first-child [data-unpic]");
+  assert.equal(await desk.$$eval("#of-thumbs .thumb", (x) => x.length), 1, "one taken out, one left");
 }));
