@@ -4,7 +4,8 @@
 //   node desk/dev/mock.mjs 5610
 //   open "http://localhost:5610/?role=designer#R-1"        (designer; also admin, pm, developer, ui-dev-owner, guest)
 //   open "http://localhost:5610/?role=designer&ws=1#R-1"   (opens the design workspace at once)
-// The Desk shows light by default; &theme=dark shows it dark; &simple=1 starts in simple mode (a guest does anyway).
+// The Desk shows light by default; &theme=dark shows it dark; every role starts in simple mode, &simple=0 in full mode.
+// &github=<username> is this person's GitHub username, as an admin sets it on People: their pull requests are theirs.
 // The person menu's switches (simple mode, Figma, day or night) are kept while the mock runs, as the server keeps them.
 // What a person sends changes the made-up Desk until the page reloads; a change note is
 // claimed after 4 s and worked in after 25 s, so Design Desk's work shows as it happens.
@@ -26,6 +27,11 @@ function shim() {
   const me = { role, email: "alice@example.com", emails: ["alice@example.com", "alice@slack.example.com"], names: { "alice@example.com": "Alice Novak", "alice@slack.example.com": "Alice Novak", "pat@example.com": "Pat Lee" }, name: "Alice Novak", my_name: "Alice Novak", can: CAN[role] || CAN.designer, figma: true, screens: q.get("screens") !== "0", theme: q.get("theme") || "light", due_days: 21, auto_days: 14 };
   me.link = "https://desk.example.com/a/mock"; // the Desk's own link: the title's link icon copies an item's link from it
   if (q.get("simple")) me.simple = q.get("simple") === "1";
+  me.github = q.get("github") || null;
+  // People (docs/desk.md → People): the roster, and each person's GitHub username while the mock runs.
+  const logins = me.github ? { [me.email]: me.github } : {};
+  const people = () => ({ people: [{ email: me.email, also: me.emails.slice(1), role, name: me.name }, { email: "pat@example.com", also: [], role: "pm", name: "Pat Lee" }, { email: "dana@example.com", also: [], role: "developer", name: "Dana Kim" }],
+    activity: {}, roles: CAN, asks: [], addable: ["designer", "pm", "ui-dev-owner", "developer"], github: { ...logins } });
   const cards = structuredClone(CARDS), notes = structuredClone(NOTES);
   const now = () => new Date().toISOString();
   const card = (id) => cards.find((c) => c.id === id);
@@ -47,7 +53,14 @@ function shim() {
   // A request before design shows only to whom the server shows it (docs/desk.md → Draft and Proposal).
   // Only a draft is private: its author's (who files drafts) and an admin's; a proposal is everyone's.
   const seen = (c) => c.stage !== "draft" || role === "admin" || (!["designer", "guest"].includes(role) && c.by?.email === me.email);
-  const list = () => cards.filter(seen).map((c) => ({ ...c, variants: c.variants.length, threads: undefined }));
+  // Whether a card is this person's, as the server's list says (docs/desk-page.md → Simple mode): filed,
+  // written in, reviewed, voted on, or their pull request's, by their GitHub username.
+  const isMe = (by) => Boolean(by?.email) && !by.agent && me.emails.includes(String(by.email).toLowerCase());
+  const mineOf = (c) => isMe(c.by) || isMe(c.created_by) || isMe(c.origin)
+    || (Boolean(me.github) && c.kind === "change" && String(c.source?.author || "").toLowerCase() === me.github.toLowerCase())
+    || Object.values(c.votes || {}).some((x) => Object.keys(x || {}).some((e) => me.emails.includes(e.toLowerCase())))
+    || (c.reviews || []).some((r) => isMe(r.by)) || (c.threads || []).some((t) => t.kind !== "private" && (t.messages || []).some((m) => isMe(m.by)));
+  const list = () => cards.filter(seen).map((c) => ({ ...c, variants: c.variants.length, threads: undefined, mine: mineOf(c) }));
   const answer = (method, path, body) => {
     const p = path.replace(/\?.*$/, ""), m = (re) => p.match(re);
     if (p === "/api/me") return me;
@@ -59,6 +72,14 @@ function shim() {
       if (body && "figma" in body) me.figma_pref = body.figma;
       return { theme: me.theme || null, simple: typeof me.simple === "boolean" ? me.simple : null, figma: typeof me.figma_pref === "boolean" ? me.figma_pref : null };
     }
+    // An admin's GitHub username for a person (docs/desk.md → People): kept while the mock runs.
+    if (p === "/api/people/github" && method === "POST") {
+      const login = String(body.login || "").trim().replace(/^@/, "") || null;
+      if (login) logins[body.email] = login; else delete logins[body.email];
+      if (body.email === me.email) me.github = login;
+      return { email: body.email, login };
+    }
+    if (p === "/api/people" && method === "GET") return people();
     if (p === "/api/cards" && method === "GET") return { cards: list() };
     if (p.startsWith("/api/assets/")) return ASSETS[decodeURIComponent(p.slice(12))] || {};
     if (p === "/api/agenda") return { agenda: [] };

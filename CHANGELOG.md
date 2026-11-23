@@ -7,6 +7,20 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.109.0 — 2026-11-23
+
+**Upgrade:**
+1. Restart the Desk server ([desk.md](docs/desk.md) → Server) and republish the page
+   ([desk.md](docs/desk.md) → Publishing the page): every role starts in simple mode until the
+   person picks a mode (a choice already made stays); an admin keeps every page in simple mode's
+   menu; simple mode's filter has Whose (**Everyone**, **Mine**) and a PM's starts on every state; a
+   request In dev offers **Mark as shipped** under ⋯; an admin sets each person's GitHub username on
+   People (`POST /api/people/github`), which makes a pull request its author's, for Mine and
+   **Changes requested · you** ([desk-page.md](docs/desk-page.md) → Simple mode, [desk.md](docs/desk.md)
+   → People). No data migration: the store starts `logins` empty.
+2. Tell the operator once, in the run's report: an admin can now enter each person's GitHub
+   username on People, so the Desk knows whose pull request is whose.
+
 ## 1.108.0 — 2026-11-23
 
 **Upgrade:**

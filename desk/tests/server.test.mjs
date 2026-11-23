@@ -64,6 +64,23 @@ test("only an admin asks for a new person; the owner's ask says so; the agent ca
   assert.match(enqueue.body.error, /only from an admin/);
 });
 
+// A person's GitHub username (docs/desk.md → People): an admin's to set, everyone's to read.
+test("only an admin sets a person's GitHub username; /api/me and People carry it", async (t) => {
+  const d = await desk(t);
+  const set = (email, body) => d.viewer(email, "/api/people/github", body);
+  const designer = await set("alice@example.com", { email: "bob@example.com", login: "bob-dev" });
+  assert.equal(designer.status, 403);
+  assert.match(designer.body.error, /Only an admin/);
+  const admin = await set("lee@example.com", { email: "bob@example.com", login: "bob-dev" });
+  assert.equal(admin.status, 200);
+  assert.deepEqual(admin.body, { email: "bob@example.com", login: "bob-dev" });
+  assert.equal(admin.body.inbox, undefined, "no ask for Design Desk: it applies at once");
+  assert.equal((await set("lee@example.com", { email: "nobody@example.com", login: "nobody" })).status, 400);
+  assert.equal((await d.viewer("bob@example.com", "/api/me")).body.github, "bob-dev");
+  assert.equal((await d.viewer("alice@example.com", "/api/me")).body.github, null);
+  assert.deepEqual((await d.viewer("alice@example.com", "/api/people")).body.github, { "bob@example.com": "bob-dev" });
+});
+
 test("a request's options start after triage only for someone who may start them; a bug asks for none", async (t) => {
   const d = await desk(t);
   const file = (email, body) => d.viewer(email, "/api/requests", { problem: "The list is busy.", ...body });

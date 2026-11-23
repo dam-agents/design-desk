@@ -231,10 +231,10 @@ async function viewerRoute(req, res, url, who) {
     // The page asks who it is once, when it loads: that is the sign-in People reads (docs/desk.md → People).
     // A read never fails for it: a full store keeps no record, and a failed write is dropped.
     try { if (!store.full()) store.markOpened(actor); } catch {}
-    return send(res, 200, { email: who.email, emails: who.emails, my_name: rowOf(who.email)?.name || null, names: namesOf(roster()), key: who.email || who.sub, role: who.deskRole, theme: store.prefsOf(actor).theme, simple: store.prefsOf(actor).simple, figma_pref: store.prefsOf(actor).figma, platformRole: who.role, can: canAll(who.deskRole, s), pings: s.ping && who.deskRole !== "guest", name: s.name, repo: s.repo, contact: s.contact, figma: s.figma, slack: s.slack, slack_send: s.slackSend, review_post: s.reviewPost, screens: s.screens, handoff: s.handoff, spec_review: s.specReview, due_days: s.dueDays, auto_days: s.autoDays, env_days: s.envDays, link: s.link, skills: offerSkills(s.figma), mcp: s.mcp });
+    return send(res, 200, { email: who.email, emails: who.emails, my_name: rowOf(who.email)?.name || null, names: namesOf(roster()), key: who.email || who.sub, role: who.deskRole, theme: store.prefsOf(actor).theme, simple: store.prefsOf(actor).simple, figma_pref: store.prefsOf(actor).figma, github: store.loginOf(actor), platformRole: who.role, can: canAll(who.deskRole, s), pings: s.ping && who.deskRole !== "guest", name: s.name, repo: s.repo, contact: s.contact, figma: s.figma, slack: s.slack, slack_send: s.slackSend, review_post: s.reviewPost, screens: s.screens, handoff: s.handoff, spec_review: s.specReview, due_days: s.dueDays, auto_days: s.autoDays, env_days: s.envDays, link: s.link, skills: offerSkills(s.figma), mcp: s.mcp });
   }
   // Who is on the Desk and what each role may do; only people the owner shared the Desk with get here.
-  if (m === "GET" && p[1] === "people") { const ppl = roster(); return send(res, 200, { people: ppl, activity: store.peopleActivity(ppl), roles: Object.fromEntries(ROLES.map((r) => [r, canAll(r, s)])), asks: store.peopleAsks(), addable: ADDABLE_ROLES }); }
+  if (m === "GET" && p[1] === "people") { const ppl = roster(); return send(res, 200, { people: ppl, activity: store.peopleActivity(ppl), roles: Object.fromEntries(ROLES.map((r) => [r, canAll(r, s)])), asks: store.peopleAsks(), addable: ADDABLE_ROLES, github: store.logins(ppl) }); }
   if (m === "GET" && p[1] === "cards" && !p[2]) return send(res, 200, { cards: store.listCards({ kind: url.searchParams.get("kind") || undefined, status: url.searchParams.get("status") || undefined, viewer: who.email || who.sub, who: actor }) });
   // A person's own draft comments on an item, for them alone (docs/desk.md → Reviews).
   if (m === "GET" && p[1] === "cards" && p[2] && p[3] === "drafts" && !p[4]) return send(res, 200, store.drafts(p[2], actor));
@@ -276,7 +276,7 @@ async function viewerRoute(req, res, url, who) {
   if (m !== "GET") {
     if (store.full()) throw new DeskError(507, `The Desk is full and can't save anything new. Tell ${s.contact}; they can archive old changes.`);
     spend(who.email || who.sub, "write");
-    if ((p[1] === "cards" && p[3] === "threads" && ["question", "change"].includes(b.kind)) || p[1] === "private" || (p[1] === "threads" && ["messages", "answers", "decision"].includes(p[3])) || p[1] === "requests" || p[1] === "product" || p[1] === "people" || (p[1] === "cards" && ["actions", "screens", "work-in", "decide", "spec", "text"].includes(p[3])) || (p[1] === "cards" && p[3] === "reviews" && b.verdict !== "comment")) spend(who.email || who.sub, "item");
+    if ((p[1] === "cards" && p[3] === "threads" && ["question", "change"].includes(b.kind)) || p[1] === "private" || (p[1] === "threads" && ["messages", "answers", "decision"].includes(p[3])) || p[1] === "requests" || p[1] === "product" || (p[1] === "people" && !p[2]) || (p[1] === "cards" && ["actions", "screens", "work-in", "decide", "spec", "text"].includes(p[3])) || (p[1] === "cards" && p[3] === "reviews" && b.verdict !== "comment")) spend(who.email || who.sub, "item");
   }
   // A person's own day or night mode and simple mode, kept for them on every device
   // (docs/desk-page.md → The menu); only the keys sent change.
@@ -382,6 +382,8 @@ async function viewerRoute(req, res, url, who) {
     return send(res, 201, withPing(store.createRequest(actor, { title, problem, goal, screen, steps, type, from, screens, figma, vision, skills, options, grill, auto, audience, carry, stage }), s, who));
   }
   // An admin asks for a new person on the list; the agent writes the row (docs/desk.md → People).
+  // A person's GitHub username, an admin's to set on People (docs/desk.md → People).
+  if (m === "POST" && p[1] === "people" && p[2] === "github") { need("people"); return send(res, 200, store.setLogin(actor, b.email, b.login, roster())); }
   if (m === "POST" && p[1] === "people") { need("people"); return send(res, 201, withPing(store.askForPerson(actor, { email: b.email, role: b.role }, roster(), { owner: who.role === "owner" }), s, who)); }
   if (m === "POST" && p[1] === "product") {
     need("add");
