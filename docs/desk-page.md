@@ -353,7 +353,7 @@ A part under **All elements** opens in one dialog, the same in simple and full m
   are taken) and scaled into its box, so a narrow box never squeezes it; a part with no fill,
   border or shadow of its own is fitted by what it holds. A part on another view than the first
   opens that view first, once the design's review bar has made its view buttons. The tiles under
-  All elements, and an enlarged part, are drawn the same way.
+  All elements are drawn the same way; an enlarged part opens its view and is laid out wide too.
 - **Open in design workspace** opens the option with the part selected, on its Properties.
 - **Comments**: the part's open comments (a click opens one in the design workspace), the
   viewer's notes on it waiting in their feedback ("Not sent yet", ✕), and a box: **Add to
