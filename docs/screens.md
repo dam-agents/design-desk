@@ -84,7 +84,11 @@ minutes, then takes the pull request's own pictures instead.
    changed**, and draws none on a "before" picture whose size differs from its "after". At
    most 20 marks, the first from the top: when `partial` is true, the caption says only part
    of the changed areas is outlined.
-   `changed_pct` 0: say the screen looks the same and keep only "after".
+   `changed_pct` 0: say the screen looks the same, keep only "after", and mark it
+   `unchanged: true`: the page shows it apart from the changes to look at, which nobody marks
+   ([desk-page.md](desk-page.md) → Changes). A screen with no "before" because the change adds it
+   (its page or its dialog is new in the diff) gets `new: true`, else none: an "after" alone is
+   not new by itself. Only `true` is kept, and `unchanged` wins over `new`.
 4. Every picture of a pair carries the same `pair` (the shot's name). The screen's card on
    the product map gets the "after" pictures and the change in its `changes` ([map.md](map.md)).
 

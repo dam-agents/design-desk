@@ -204,6 +204,8 @@ const REVIEW_VERDICTS = ["request-changes", "approve", "comment"];
 // A pull request's changes, as the page's change view shows them (desk/page.html → changesOf):
 // one per `pair` among the screens with a `stage`, then one per screen without one. `key` is
 // what a draft or a Looks good names: the pair, or a lone screen's asset (docs/desk.md → Reviews).
+// One that looks the same as before (`unchanged`) stays here, so a note on it still names it; the
+// page shows it apart from the changes to look at.
 export function changesOf(c) {
   const list = (c?.screens || []).filter((x) => x && typeof x === "object");
   const pairs = [...new Set(list.filter((x) => x.stage && x.stage !== "diff" && x.pair).map((x) => String(x.pair)))];
@@ -3554,6 +3556,9 @@ function cleanRefs(list, assets, name) {
       ...(SCREEN_SOURCES.includes(s?.source) ? { source: s.source } : {}),
       ...(["before", "after", "diff"].includes(s?.stage) ? { stage: s.stage, pair: optText(s.pair, 120, "pair") || "screen" } : {}),
       ...(Array.isArray(s?.marks) && s.marks.length ? { marks: cleanMarks(s.marks) } : {}),
+      // Design Desk's word on the screen (docs/screens.md → What changed): it looks the same as
+      // before (`unchanged`), or the change adds it (`new`). Only `true` is kept.
+      ...(s?.unchanged === true ? { unchanged: true } : {}), ...(s?.new === true && s?.unchanged !== true ? { new: true } : {}),
       ...(s?.by && typeof s.by === "object" ? { by: { email: optText(s.by.email, 200, "email") || null, role: optText(s.by.role, 20, "role") || null } } : {}),
     };
   });

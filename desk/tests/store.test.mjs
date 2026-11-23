@@ -1202,6 +1202,21 @@ test("a picture keeps where the change is, and a place links only a screen or a 
   assert.throws(() => s.upsertCard({ id: card.id, screens: [{ asset: shot, marks: Array(21).fill({ x: 0, y: 0, w: 0.1, h: 0.1 }) }] }), /at most 20/, "more marks than design diff gives are refused, not cut");
 });
 
+// docs/screens.md → What changed: Design Desk's word on a screen, only `true` kept, unchanged winning.
+test("a screen keeps that it looks the same as before, or that the change adds it; a note on an unchanged one still names it", () => {
+  const s = fresh();
+  const shot = () => s.addAsset({ kind: "screen", name: "x", contentType: "image/png", data: "iVBORw0KGgo=" }).asset.id;
+  const [a, b, c, d] = [shot(), shot(), shot(), shot()];
+  const { card } = s.upsertCard({ kind: "change", title: "Spend in the list", source: { repo: "acme/widgets", pr: 9 },
+    screens: [{ asset: a, caption: "Weekly limit", new: true }, { asset: b, caption: "Settings", unchanged: true }, { asset: c, caption: "Both", unchanged: true, new: true }, { asset: d, caption: "Said in words", unchanged: "yes", new: 1 }] });
+  assert.deepEqual(card.screens.map(({ unchanged, new: added }) => ({ unchanged, new: added })),
+    [{ unchanged: undefined, new: true }, { unchanged: true, new: undefined }, { unchanged: true, new: undefined }, { unchanged: undefined, new: undefined }]);
+  assert.deepEqual(changesOf(card).map((x) => x.key), [a, b, c, d], "an unchanged screen is still a change a note may name");
+  const alice = { email: "alice@example.com", role: "designer" };
+  s.addDraft(card.id, alice, { text: "Is this really the same?", change: b });
+  assert.equal(s.drafts(card.id, alice).drafts[0].change, b);
+});
+
 test("a picture keeps where it came from: an issue's own and an AI sketch too; an unknown source is dropped", () => {
   const s = fresh();
   const shot = () => s.addAsset({ kind: "screen", name: "x", contentType: "image/png", data: "iVBORw0KGgo=" }).asset.id;
