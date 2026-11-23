@@ -2408,6 +2408,15 @@ test("an element's dialog keeps its header and steps to the option's other eleme
     await desk.click('#detail [data-el="added"]');
     await desk.waitForSelector("#element-dialog[open] #el-text");
     assert.equal(await desk.inputValue("#el-text"), "Kept on closing", "back when it opens on that part again");
+    // Closed with ✕ and another part opened: its box is its own, and the first part's text waits for it.
+    await desk.click("#element-dialog [data-el-close]");
+    await desk.click('#detail [data-el="label"]');
+    await desk.waitForSelector("#element-dialog[open] #el-text");
+    assert.equal(await desk.inputValue("#el-text"), "", "never another part's text");
+    await desk.click("#element-dialog [data-el-close]");
+    await desk.click('#detail [data-el="added"]');
+    await desk.waitForSelector("#element-dialog[open] #el-text");
+    assert.equal(await desk.inputValue("#el-text"), "Kept on closing", "still kept for its own part");
   } finally {
     await run.close();
   }

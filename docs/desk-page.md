@@ -112,9 +112,10 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   word shows its help: what happens now and every way on from here as branches, each move the
   viewer can make, and each usual one they cannot, greyed, with why not and who can.
   Every dialog, the enlarged picture and the private ask close with a lone **✕** in the top-right
-  corner and with Escape (desk/guidelines.html → Dialogs and forms). A dialog with something
+  corner and with Escape (desk/guidelines.html → Dialogs and forms). A form dialog with something
   typed, picked or added in it asks before ✕, Escape or a click outside closes it (its Cancel
-  closes it at once); a picture dropped on it is added as if chosen.
+  closes it at once); the element dialog, not a form, keeps a comment being written for its part
+  instead ([The element dialog](#the-element-dialog)); a picture dropped on a dialog is added as if chosen.
   The browser's Back leaves the Desk: every view keeps the menu or its own way back on
   screen while it scrolls (the list beside an open item, or its back bar where the list hides
   on a narrow screen; the presentation's Exit, a picture's ✕).

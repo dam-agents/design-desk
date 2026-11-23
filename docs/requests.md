@@ -495,7 +495,8 @@ mode:
 ## Every state of a part (`variants_due`: `states`)
 
 A designer, PM or developer opens an element of an option under **All elements** and presses
-**Draw all states** beside its switcher ([desk-page.md](desk-page.md) → The element dialog);
+**Draw all states** in the head of its After picture, beside the states' switcher once some are
+drawn ([desk-page.md](desk-page.md) → The element dialog);
 the design workspace has no such button. Once every state is drawn for the option's latest
 version the button goes: nothing is left to draw until the option changes, and then it comes
 back as **Redraw states**. A chat request names the part

@@ -3213,7 +3213,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         { tone: "", text: "Someone opens a request's design workspace.", acts: [["<b>Design workspace</b>", "revise"]] },
         { tone: "", text: "They click a part of an option and say what should change, or type the new words in it.", acts: [["<b>Edit text</b>", "revise"]] },
         { tone: "checking", text: "Design Desk draws the next version in a few minutes; the earlier ones stay." },
-        { tone: "", text: "Unsure how a part should look? Three ways to pick from, or every state it can be in.", acts: [["<b>Try 3 ways</b>", "revise"], ["<b>Draw every state</b>", "revise"]] },
+        { tone: "", text: "Unsure how a part should look? Three ways to pick from, or every state it can be in.", acts: [["<b>Try 3 ways</b>", "revise"], ["<b>Draw all states</b>", "revise"]] },
         { tone: "waiting", text: "The team comments on any part; a comment can change the design.", acts: [["<b>Request changes</b>", "change"]] }] },
     product: { about: "the product's screens, parts and decisions, kept up to date",
       steps: [
@@ -6551,7 +6551,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // states, the button that has them drawn. It follows the card as it refreshes.
   // Closed (✕, Esc) with a comment half written, the text stays with its part, back in the box
   // when the dialog opens on it again, as a step to another element keeps it.
-  $("#element-dialog").addEventListener("close", () => { const t = $("#el-text")?.value; if (S.el && t?.trim()) (S.elTyped ||= {})[elTypedKey()] = t; S.el = null; });
+  $("#element-dialog").addEventListener("close", () => { const box = $("#el-text"), t = box?.value; if (S.el && t?.trim()) (S.elTyped ||= {})[elTypedKey()] = t; if (box) box.value = ""; delete $("#el-body").dataset.el; S.el = null; });
   // All states open or folded: kept while the page is open, for every part. Read from the press on
   // its summary (a click, or Enter or Space on it), before the fold opens or closes: a redraw
   // between the press and the fold's own toggle event would lose it.
@@ -6681,7 +6681,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       : may && !statesComplete(v, e) ? `<button class="btn small" data-el-states title="Design Desk draws ${esc(e.name)} in every state it can be in: hovered, disabled, loading, empty, with an error, with a long text…${sts.length ? " The ones drawn are of an earlier version of the option." : ""}">${sts.length ? "Redraw states" : "Draw all states"}</button>` : ""}`;
     const pair = elementPair(c, v, e, look, st, tools);
     // The card refreshes while a person writes: what they typed, and where, survives the redraw.
-    const typed = $("#el-text"), keep = typed?.value || "", focused = document.activeElement === typed, caret = focused ? [typed.selectionStart, typed.selectionEnd] : null;
+    // Only a box drawn for this same part: one left by another part (closed with ✕ or Esc) is not its text.
+    const typed = $("#el-body").dataset.el === elTypedKey() ? $("#el-text") : null, keep = typed?.value || "", focused = Boolean(typed) && document.activeElement === typed, caret = focused ? [typed.selectionStart, typed.selectionEnd] : null;
     const toWs = S.el.look ? "" : `<button class="btn small ws-way" data-el-ws title="Opens the design at this part, to comment on it or ask for a change">${wsMark()}Open in design workspace</button>`;
     $("#el-body").innerHTML = `<div class="elbar"><div><h2>${esc(e.name)}</h2>
         <div class="sub">${ch ? `<span class="chip ${ch[1]}" title="${esc(ch[2])}">${ch[0]}</span>` : ""}<span class="chip" title="The design option this element is part of"><span class="ono">${vs.indexOf(v) + 1}</span> ${esc(v.name)} · version ${esc(v.version || 1)}</span>${approvedOption(c)?.id === v.id ? `<span class="chip ok" title="The option that was approved">✓ Approved</span>` : ""}</div></div>
@@ -6694,6 +6695,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ${elementTalk(c, v, e, st)}`
       // A lazy frame in a modal dialog never loads: the browser does not see it come into view.
       .replaceAll(' loading="lazy"', "");
+    $("#el-body").dataset.el = elTypedKey();
     const back = !keep && S.elTyped?.[elTypedKey()];
     if (back) delete S.elTyped[elTypedKey()];
     const box = $("#el-text"); if (box && (keep || back)) box.value = keep || back; if (box && focused) { box.focus(); box.setSelectionRange(caret[0], caret[1]); }
@@ -7319,7 +7321,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ${againstBox(c, v.id)}
       <div><h4 style="margin:0 0 6px">Click through ${sts.length ? `the option and its ${plural(sts.length, "state", "states")}` : "the option"}</h4>
         <ol class="checklist">${row(null, "The option", "", 1)}${sts.map((x) => row(x.id, x.name, x.part, x.version || 1)).join("")}</ol>
-        <p class="hint">${sts.length ? `You looked at ${seen} of ${sts.length + 1}.` : "No states are drawn for this option. To check a part in every state first, open it under All elements below the option and press Draw every state."}</p></div>
+        <p class="hint">${sts.length ? `You looked at ${seen} of ${sts.length + 1}.` : "No states are drawn for this option. To check a part in every state first, open it under All elements below the option and press Draw all states."}</p></div>
       ${changing ? `<div class="working"><span class="spin"></span><div>Design Desk is changing this option right now. Wait for the new version; it appears here by itself.</div></div>` : ""}
       ${drawing ? `<div class="working"><span class="spin"></span><div>Design Desk is still drawing states of this request; they appear here as they are drawn.</div></div>` : ""}
       ${changes.length && !changing ? `<p><span class="chip warn" title="Design Desk has not changed the design for them yet">${plural(changes.length, "note is", "notes are")} not worked in yet</span> <span class="hint" style="display:inline">Build now and ${changes.length === 1 ? "it is" : "they are"} left out, or wait for Design Desk.</span></p>` : ""}
