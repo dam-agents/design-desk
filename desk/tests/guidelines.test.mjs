@@ -151,6 +151,7 @@ test("every pressed or selected control the Desk styles has a look the guideline
 test("every dialog closes with a lone ✕, as the guidelines show", () => {
   assert.ok(body.includes('class="dlg-x"'), "the guidelines show the ✕");
   assert.doesNotMatch(page, /✕ Close/, "Close is ✕ alone");
+  assert.match(page, /<button type="button" class="dlg-x" data-ws-close aria-label="Close the design workspace">✕<\/button>/, "the design workspace's too");
   const dialogs = page.match(/<dialog id="[^"]+"[\s\S]*?<\/dialog>/g) || [];
   assert.ok(dialogs.length >= 9, "the page has its dialogs");
   for (const d of dialogs) {
@@ -161,13 +162,14 @@ test("every dialog closes with a lone ✕, as the guidelines show", () => {
 });
 
 // A way into the design workspace looks the same wherever it stands (desk/guidelines.html →
-// Buttons): the workspace's mark, the one icon in violet, on every button that opens it.
-test("every button into the design workspace carries its violet mark, as the guidelines show", () => {
-  assert.ok(body.includes('class="ico ws-mark"'), "the guidelines show the mark");
-  assert.match(css, /\.ico\.ws-mark \{ color: var\(--ws\);/, "the mark is in the workspace's violet");
+// Buttons): its icon on a very light violet fill, on every button that opens it.
+test("every button into the design workspace has its light violet fill, as the guidelines show", () => {
+  assert.ok(body.includes('class="btn small ws-way"><svg class="ico ws-mark"'), "the guidelines show it");
+  assert.match(css, /\.btn\.ws-way, \.tabs\.vtabs button\.vws\.ws-way \{ background: color-mix\(in srgb, var\(--ws\) 7%, var\(--panel\)\);/, "a very light violet fill");
+  assert.doesNotMatch(css, /\.ico\.ws-mark \{[^}]*color: var\(--ws\)/, "the icon stays in the button's ink");
   const ways = page.match(/<button [^>]*(?:data-act="workspace"|data-el-ws)[^>]*>[^<]*(?:<|\$\{)[^`]{0,40}/g) || [];
   assert.ok(ways.length >= 3, "the page has its ways into the workspace");
-  for (const w of ways) assert.match(w, />\$\{wsMark\(\)\}/, w.slice(0, 80));
+  for (const w of ways) { assert.match(w, />\$\{wsMark\(\)\}/, w.slice(0, 80)); assert.match(w, /class="[^"]*\bws-way\b/, w.slice(0, 80)); }
 });
 
 // Two corners, no more (desk/guidelines.html → Corners): the Desk declares --r-sm and --radius

@@ -2174,6 +2174,9 @@ test("an element's dialog shows the part before and after, says where before cam
     if (await desk.locator("#element-dialog[open]").count()) await desk.click("[data-el-close]");
     await desk.click('#detail [data-el="added"]');
     await desk.waitForSelector("#element-dialog[open] .el-pair.one");
+    // Its one picture spans the dialog, so its head ends where a pair's does.
+    const [pairRight, headRight] = await desk.$eval("#element-dialog", (d) => [d.querySelector(".el-pair.one").getBoundingClientRect().right, d.querySelector(".elbar [data-el-close]").getBoundingClientRect().right]);
+    assert.ok(Math.abs(pairRight - headRight) < 2, `it ends where the header does: ${pairRight} and ${headRight}`);
     const added = await desk.textContent("#element-dialog .el-pair");
     assert.match(added, /New/);
     assert.doesNotMatch(added, /Before|Take it/);

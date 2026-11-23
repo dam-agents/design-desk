@@ -214,7 +214,7 @@
       <p class="gl-p">The dark primary is the next step. Green is only what moves an item forward: Approve, Approve for dev, Propose, Send to design, Send to developers, and Looks good. Everything else is neutral. Red only for what deletes.</p>
       <p class="gl-p">An action keeps its name everywhere: “Request changes” in the header, in its dialog, and in the message that follows.</p>
       <p class="gl-p">Small buttons sit inside a row, a card or a toolbar; the full size stands on its own.</p>
-      <p class="gl-p">A way into the design workspace carries its mark wherever it stands: the same icon, in violet (<code>--ws</code>), on a plain button. Only the icon is coloured.</p>
+      <p class="gl-p">A way into the design workspace looks the same wherever it stands: its icon, on a very light violet fill (<code>--ws</code> at 7%, a violet edge), the words and the icon in the button's own ink.</p>
     </div>
     <div class="gl-ex">
       <div class="gl-row">
@@ -223,7 +223,7 @@
         <button class="btn">Request changes</button>
       </div>
       <div class="gl-row">
-        <button class="btn small"><svg class="ico ws-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></svg>Open in design workspace</button>
+        <button class="btn small ws-way"><svg class="ico ws-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></svg>Open in design workspace</button>
         <button class="btn small">Open in Figma</button>
         <button class="btn small" disabled>Not now</button>
         <button class="btn small danger">Delete</button>
@@ -373,7 +373,7 @@
       <h3 class="gl-h3">A dialog asks one thing</h3>
       <p class="gl-p">Its name is the action that opened it, and its main button says the action again. A label sits above its field, grey and short. Nothing submits a form: every button is <code>type="button"</code>.</p>
       <p class="gl-p"><b>Close is ✕, alone, in its top-right corner</b>, named "Close" for a screen reader; never "✕ Close". Esc closes it too, and ✕ does what Esc does: a form with something typed or picked in it asks before it is lost. Cancel stays beside a form's main button and closes it at once.</p>
-      <p class="gl-where">On the Desk: every dialog, the enlarged picture and the private ask; a dialog with a header that stays (an element's) holds its ✕ there.</p>
+      <p class="gl-where">On the Desk: every dialog, the design workspace, the enlarged picture and the private ask; a dialog with a header that stays (an element's) holds its ✕ there.</p>
     </div>
     <div class="gl-ex gl-dlg">
       <dialog class="gl-static" open aria-label="Example dialog">

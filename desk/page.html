@@ -171,7 +171,10 @@
   /* People shows at once: its intro on top, beside it on a wide screen. */
   .btn > .ico { width: 15px; height: 15px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .btn.small > .ico { width: 13px; height: 13px; }
-  .ico.ws-mark { color: var(--ws); fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .ico.ws-mark { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  /* A way into the design workspace: a very light violet fill (--ws), its mark in the button's ink (desk/guidelines.html → Buttons). */
+  .btn.ws-way, .tabs.vtabs button.vws.ws-way { background: color-mix(in srgb, var(--ws) 7%, var(--panel)); border-color: color-mix(in srgb, var(--ws) 18%, var(--line)); }
+  .btn.ws-way:hover, .tabs.vtabs button.vws.ws-way:hover { background: color-mix(in srgb, var(--ws) 13%, var(--panel)); }
   /* What a button or label does, the moment the pointer is on it (docs/desk-page.md → Tooltips). */
   #tip { position: fixed; z-index: 90; max-width: min(320px, calc(100vw - 16px)); padding: 8px 12px; border-radius: var(--r-sm); background: var(--ink); color: var(--bg); font-size: var(--fs-meta); line-height: 1.4; font-weight: 400; text-transform: none; letter-spacing: 0; box-shadow: var(--shadow); pointer-events: none; }
   /* "[Opens a dialog]" in a tooltip: the other theme's green (blue reads as a link), as the box is the page's ink. */
@@ -531,7 +534,8 @@
   /* An element's dialog: the part before (the product) beside after (the design), or one picture when it is new. */
   .elbar .el-acts { display: flex; gap: 8px; align-items: center; flex: none; }
   .el-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 12px 0 16px; }
-  .el-pair.one { grid-template-columns: minmax(0, 1fr); max-width: 640px; }
+  /* A part the option adds: one picture, the dialog's whole width, so its head (the states' switcher, Draw all states) ends where a pair's does. */
+  .el-pair.one { grid-template-columns: minmax(0, 1fr); }
   .el-col { display: grid; gap: 8px; align-content: start; min-width: 0; }
   .el-lab { font-size: var(--fs-micro); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
   .el-pic { position: relative; height: 260px; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); background: #fff; }
@@ -853,7 +857,7 @@
   .dlg-x { position: absolute; top: 12px; right: 12px; z-index: 5; width: 32px; height: 32px; padding: 0; display: grid; place-items: center; border: 0; border-radius: var(--r-sm); background: none; color: var(--muted); font: inherit; font-size: var(--fs-head); line-height: 1; cursor: pointer; }
   .dlg-x:hover { background: var(--soft); color: var(--ink); } .dlg-x:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   dialog form > h2 { padding-right: 32px; }
-  .elbar .dlg-x, .ask-panel header .dlg-x { position: static; flex: none; }
+  .elbar .dlg-x, .ask-panel header .dlg-x, .ws-top .dlg-x { position: static; flex: none; }
   dialog h2 { font-size: var(--fs-head); } label { font-size: var(--fs-meta); color: var(--muted); display: grid; gap: 4px; }
   .drop { border: 1px dashed var(--line); border-radius: var(--r-sm); padding: 12px; font-size: var(--fs-meta); color: var(--muted); display: grid; gap: 8px; }
   .thumbs { display: flex; gap: 8px; flex-wrap: wrap; } .thumbs img { height: 64px; border-radius: var(--r-sm); border: 1px solid var(--line); }
@@ -1486,7 +1490,6 @@
   @keyframes ws-in { from { transform: translateY(40px); opacity: 0; } }
   .ws-top { padding: 12px 12px 12px 20px; }
   .ws-top .title { font-size: var(--fs-ui); }
-  .ws-top [data-ws-close] { font-weight: 600; min-height: 32px; padding: 4px 12px; font-size: var(--fs-ui); }
   .ws-stage { padding: 16px; gap: 12px; }
   .ws-stage .frame { border-radius: var(--radius); }
   .ws-side { padding: 20px; gap: 12px; }
@@ -1506,8 +1509,6 @@
   #workspace .ws-side h3 { font-size: var(--fs-ui); text-transform: none; letter-spacing: 0; color: var(--ink); }
   /* One clear way out, at the top right: Close, its key, a cross. */
   .ws-top .ws-slack { font-size: var(--fs-meta); min-height: 32px; padding: 4px 12px; }
-  .ws-top .ws-close { order: 0; gap: 12px; padding: 8px 12px 8px 16px; font-weight: 600; border-radius: var(--r-sm); }
-  .ws-close svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; }
   kbd { font: var(--fs-meta) var(--font); padding: 0 8px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: var(--r-sm); color: var(--muted); font-weight: 400; }
   /* The design workspace, laid out as a design tool: the request on top, the options as tabs, the pages
      and states of the one shown, the design on a canvas with one tool bar under it, Comments and Properties beside. */
@@ -2241,7 +2242,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     restore: "Puts this decision in force again",
     gal: (v) => v === "1" ? "Next picture (→)" : "Previous picture (←)",
     zoom: "Click to see it large",
-    wsClose: "Back to the request (Esc)",
+    wsClose: "Close (Esc)",
     wsMode: (v) => ({ select: "Click a part of the design to select it", edit: "Click a text and type the new words", off: "Use the design as it is: switch views, open menus" }[v]),
     wsState: (v) => v ? "Shows the option in this state" : "Shows the option as designed, in no particular state",
     elStep: (v) => v === "1" ? "Next state" : "Previous state",
@@ -5746,7 +5747,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const who = !busy.length && nx.who ? `<span class="way still hint">${esc(nx.who)}</span>` : "";
     // The design workspace is never a way on: its button sits by the options' tabs. With a live
     // prototype the options fold away, so the button stands at the row's right end instead.
-    const ws = live(c) && (c.variants || []).length ? `<button class="btn small ws" data-act="workspace">${wsMark()}${can("revise") && !locked(c) ? "Design workspace" : "Comment on the design"}</button>` : "";
+    const ws = live(c) && (c.variants || []).length ? `<button class="btn small ws ws-way" data-act="workspace">${wsMark()}${can("revise") && !locked(c) ? "Design workspace" : "Comment on the design"}</button>` : "";
     const moves = row.length || who || ws ? `<div class="moves">${row.length ? `<span class="mv-k">${busy.length && !asks.length ? "Now:" : "Next:"}</span>${row.join(`<span class="mv-or">or</span>`)}` : ""}${who}${ws}</div>` : "";
     // The state's help hangs under its word: what is happening now and every way on from here.
     const own = STATUS_TIP[tone(c) === "decided" ? "decided" : held(c) ? "held" : checked(c) ? "checked" : emptied(c) ? "emptied" : protoDown(c) ? "down" : asking(c) ? "asking" : c.status === "spec" && S.me?.spec_review && !c.approved?.auto_send ? "spec-review" : c.status];
@@ -5862,7 +5863,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // The last tab adds one more option from what a person writes (docs/requests.md → One more option).
   // The one way into the design workspace: at the right end of the options' tabs, beside the design it opens.
   // With a live prototype the options fold away and the state row holds the button instead.
-  const wsTab0 = (c) => (c.variants || []).length && !live(c) ? `<button class="vws" data-act="workspace">${wsMark()}${can("revise") && !locked(c) ? "Design workspace" : "Comment on the design"}</button>` : "";
+  const wsTab0 = (c) => (c.variants || []).length && !live(c) ? `<button class="vws ws-way" data-act="workspace">${wsMark()}${can("revise") && !locked(c) ? "Design workspace" : "Comment on the design"}</button>` : "";
   function addOptionTab(c) {
     if (closed(c) || locked(c) || !can("explore")) return "";
     if (working(c).includes("explore")) return `<button class="vadd" disabled title="Design Desk is drawing; the new tab appears by itself"><span class="spin"></span> Drawing…</button>`;
@@ -6615,7 +6616,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const pair = elementPair(c, v, e, look, st, tools);
     // The card refreshes while a person writes: what they typed, and where, survives the redraw.
     const typed = $("#el-text"), keep = typed?.value || "", focused = document.activeElement === typed, caret = focused ? [typed.selectionStart, typed.selectionEnd] : null;
-    const toWs = S.el.look ? "" : `<button class="btn small" data-el-ws title="Opens the design at this part, to comment on it or ask for a change">${wsMark()}Open in design workspace</button>`;
+    const toWs = S.el.look ? "" : `<button class="btn small ws-way" data-el-ws title="Opens the design at this part, to comment on it or ask for a change">${wsMark()}Open in design workspace</button>`;
     $("#el-body").innerHTML = `<div class="elbar"><div><h2>${esc(e.name)}</h2>
         <div class="sub">${ch ? `<span class="chip ${ch[1]}" title="${esc(ch[2])}">${ch[0]}</span>` : ""}<span class="chip" title="The design option this element is part of"><span class="ono">${vs.indexOf(v) + 1}</span> ${esc(v.name)} · version ${esc(v.version || 1)}</span>${approvedOption(c)?.id === v.id ? `<span class="chip ok" title="The option that was approved">✓ Approved</span>` : ""}</div></div>
         <div class="el-acts">${toWs}${elNav(c, v, e)}<button type="button" class="dlg-x" data-el-close aria-label="Close">✕</button></div></div>
@@ -7151,7 +7152,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const title = S.ws.check ? `<span class="title">Final check: ${esc(v.name)} goes live</span><span class="chip" title="The version that goes live">version ${esc(v.version || 1)}</span>`
       : `<span class="title" title="${esc(c.title)}">${esc(c.title)}</span><span class="vsep" aria-hidden="true"></span>`;
     const opts = S.ws.check ? "" : `<div class="ws-opts" role="tablist" aria-label="Design options"><span class="k">Option</span><span class="ws-seg">${(c.variants || []).map((x, i) => wsTab(c, x, i, x.id === v.id)).join("")}</span>${wsAddOption(c)}</div>`;
-    return `${title}${opts}<span class="grow"></span>${agent}${figBtn}${!S.ws.check && c.status === "feedback" && slackModes(c).length ? `<button class="btn ws-slack" data-act="slack">Send to Slack…</button>` : ""}<button class="btn ws-close" data-ws-close title="Back to the request" aria-label="Close the design workspace">Close <kbd>Esc</kbd><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`;
+    return `${title}${opts}<span class="grow"></span>${agent}${figBtn}${!S.ws.check && c.status === "feedback" && slackModes(c).length ? `<button class="btn ws-slack" data-act="slack">Send to Slack…</button>` : ""}<button type="button" class="dlg-x" data-ws-close aria-label="Close the design workspace">✕</button>`;
   }
 
   // An option's tab: its number and name, a spinner while Design Desk changes it (a clock while it waits to), its open comments.
