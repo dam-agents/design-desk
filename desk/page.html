@@ -242,6 +242,9 @@
   .srow .kic { grid-row: span 2; color: var(--muted); padding-top: 2px; } .kic svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; display: block; }
   .srow .sline { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: var(--fs-meta); color: var(--muted); min-height: 20px; }
   .srow .open > .spill { grid-column: 3; grid-row: 1 / span 2; align-self: center; margin-left: 8px; }
+  /* A phone narrower than 400 px has no room for a long date beside the pill (it never breaks):
+     there the pill takes a line of its own under the date, at the row's right end. */
+  @media (max-width: 399px) { .row.item.srow > .open { grid-template-columns: 20px minmax(0, 1fr); } .srow .kic { grid-row: span 3; } .srow .open > .spill { grid-column: 2; grid-row: 3; justify-self: end; margin-left: 0; } }
   .srow .sline .sdate { display: inline-flex; gap: 4px; white-space: nowrap; } .srow .sline .snum { color: var(--muted); }
   .srow .sline .sby { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .srow .sline .sby::before { content: "·"; margin-right: 4px; }
   .spill { --p: var(--muted); display: inline-flex; align-items: center; gap: 4px; padding: 0 8px; border-radius: 999px; font-size: var(--fs-micro); font-weight: 500; line-height: 20px; white-space: nowrap;

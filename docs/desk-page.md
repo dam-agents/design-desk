@@ -194,7 +194,8 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   words (`by Pat Lee, from Slack`: the person behind a Slack message or an issue, never the Desk; a
   change's pull request author), the Desk's spinner while Design Desk works on it, and its state's
   pill on every row, in a column of its own on the right as high as the row, the rest narrowing for
-  it. A title is in English, here and in the head: Design Desk's translation, unless a person
+  it (on a screen under 400 px, where a long date has no room beside it, on a line of its own under
+  the date, at the right); a long name is cut with an ellipsis. A title is in English, here and in the head: Design Desk's translation, unless a person
   renamed it. The
   filter is one **Filter** button: its menu ticks any of State (**Draft** for anyone whose request
   starts as one, then **Proposal**, **In review**, **In dev**, **Closed**) and Kind (**Requests**,

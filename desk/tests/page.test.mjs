@@ -4021,7 +4021,7 @@ const NARROW_CARDS = [
   { id: "c-nopr", kind: "change", title: "A change with a long enough title to wrap", status: "new", attention: { level: "designer", reasons: ["New"] }, source: { kind: "commit" }, updated: "2025-10-15T14:11:00Z" },
   { id: "r-long", kind: "request", title: "A request", status: "triage", updated: "2025-10-14T14:11:00Z", origin: { channel: "slack", email: "a.very.long.person.name.here@example.com" } },
 ];
-test("on a phone-wide list a simple mode row keeps its date and number on one line, its pill in a column of its own; a change with no pull request shows its Desk number", (t) => open(t, DESK(SIMPLE_ME, NARROW_CARDS), async (desk) => {
+test("on a phone-wide list a simple mode row keeps its date and number on one line, its pill on a line of its own under them; a change with no pull request shows its Desk number", (t) => open(t, DESK(SIMPLE_ME, NARROW_CARDS), async (desk) => {
   await desk.setViewportSize({ width: 280, height: 640 });
   await desk.waitForSelector('#list [data-card="c-nopr"]');
   await desk.click("details.sf > summary");
@@ -4031,15 +4031,15 @@ test("on a phone-wide list a simple mode row keeps its date and number on one li
     const r = (x) => x.getBoundingClientRect(), w = l.querySelector(".when"), n = l.querySelector(".snum");
     const row = l.closest(".open"), p = row.querySelector(":scope > .spill"), title = row.querySelector(".t");
     return { num: n.textContent, oneLine: r(w).height <= parseFloat(getComputedStyle(w).lineHeight) + 1 && Math.abs(r(n).top - r(w).top) < 2,
-      pill: Boolean(p) && !l.contains(p) && r(p).left >= Math.max(r(l).right, r(title).right) - 1 && r(p).right <= r(row).right + 1 && r(p).top >= r(title).top - 1 && r(p).bottom <= r(l).bottom + 1 };
+      pill: Boolean(p) && !l.contains(p) && r(p).top >= r(l).bottom - 1 && Math.abs(r(p).right - r(l).right) < 2 };
   });
   const change = await box("c-nopr"), request = await box("r-long");
   assert.equal(change.num, "c-nopr", "no pull request: its number on the Desk");
   assert.ok(change.oneLine && request.oneLine, "the date and the number stay on one line");
-  assert.ok(change.pill && request.pill, "the pill keeps its column on the right, beside the title and its line, never on a line of its own");
-  const by = await desk.$eval('#list [data-card="r-long"]', (b) => { const s = b.querySelector(".sby"), l = b.querySelector(".sline"), list = document.querySelector("#list");
-    return { inside: s.getBoundingClientRect().right <= l.getBoundingClientRect().right + 1, cut: getComputedStyle(s).textOverflow === "ellipsis", flat: list.scrollWidth <= list.clientWidth }; });
-  assert.ok(by.inside && by.cut && by.flat, "a long name is cut with an ellipsis inside its line; the list never scrolls sideways");
+  assert.ok(change.pill && request.pill, "under 400 px the pill takes a line of its own under the date, at the row's right end");
+  const by = await desk.$eval('#list [data-card="r-long"]', (b) => { const s = b.querySelector(".sby"), l = b.querySelector(".sline");
+    return { inside: s.getBoundingClientRect().right <= l.getBoundingClientRect().right + 1, cut: getComputedStyle(s).textOverflow === "ellipsis" && s.scrollWidth > s.clientWidth }; });
+  assert.ok(by.inside && by.cut, "a long name is cut with an ellipsis inside its line");
 }));
 
 test("simple mode's filter shows only what narrows the list, keeps one of each group and is kept in the browser", (t) => open(t, DESK(SIMPLE_ME, SIMPLE_CARDS), async (desk) => {
@@ -4351,6 +4351,9 @@ test("a simple mode row says who asked and where from, in the date's words, and 
   assert.equal(change.by, "by dana-dev", "a change: its pull request's author");
   assert.ok(slack.same && here.same && change.same, "in the date's font, size and grey");
   assert.equal(slack.links + here.links + change.links, 0, "only words: no link, no icon");
+  const column = await desk.$$eval("#list .srow .open", (os) => os.every((o) => { const r = (x) => x.getBoundingClientRect(), p = o.querySelector(":scope > .spill"), l = o.querySelector(".sline"), t = o.querySelector(".t");
+    return p && r(p).left >= Math.max(r(l).right, r(t).right) - 1 && r(p).top >= r(t).top - 1 && r(p).bottom <= r(l).bottom + 1; }));
+  assert.ok(column, "the pill keeps a column of its own on the right, beside the title and its line");
 }));
 
 test("simple mode's head keeps the English title on one line with an ellipsis and a bigger pill; the page leads with the gist, the request as asked folded with its language", (t) => open(t, HEAD_DESK(HEAD_ME, [czech, drawn]), async (desk) => {
