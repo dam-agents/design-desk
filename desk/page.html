@@ -9320,7 +9320,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     store.set(`desk-simple:${me}`, on ? "on" : "off"); store.set(`desk-simple-unsaved:${me}`, "1");
     const n = ++simpleSeq;
     simpleSaves = simpleSaves.then(() => api("POST", "/api/prefs", { simple: on })
-      .then((r) => { if (n !== simpleSeq) return; store.del(`desk-simple-unsaved:${me}`); store.del(`desk-simple:${me}`); if (S.me) S.me.simple = r.simple; })
+      // The answer is the person's saved preferences; one without a real value for simple (an older or
+      // stand-in server) keeps the choice just made, never the role's default in its place.
+      .then((r) => { if (n !== simpleSeq) return; store.del(`desk-simple-unsaved:${me}`); store.del(`desk-simple:${me}`); if (S.me) S.me.simple = typeof r?.simple === "boolean" ? r.simple : on; })
       .catch(() => { if (!quiet) toast("Switched here only: the Desk couldn't save it for your other devices yet. It tries again the next time you open the Desk."); }));
   }
   // On load: a choice this browser has not saved yet is sent again.

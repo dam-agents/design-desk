@@ -271,7 +271,8 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   it follows them to every device; with no choice (null) a viewer starts in simple mode and
   every other role in full mode. A choice the server has not taken yet stays in the browser,
   named for them (`desk-simple:<email>`, marked `desk-simple-unsaved:<email>`), and is sent
-  again on the next load. Turned on over a hidden tab (an open decision aside) or the
+  again on the next load. The server's answer is what it saved; one with no `simple` keeps the
+  choice just made, never the role's default. Turned on over a hidden tab (an open decision aside) or the
   presentation, the Desk goes to the requests.
   **Figma**, a switch under simple mode in the same style, shows only on a Desk with `figma:
   enabled`: off, that person sees no Differences page and no box of differences from Figma

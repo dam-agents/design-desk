@@ -492,6 +492,24 @@ test("a viewer starts in simple mode; the switch in their menu shows it and keep
   assert.deepEqual(await desk.evaluate(() => posts.filter((p) => p.path === "/api/prefs").map((p) => JSON.parse(p.body))), [{ simple: false }], "saved for this person");
 }));
 
+// A save whose answer carries no simple (a stand-in server, such as the mock Desk once answered)
+// keeps the choice just made: the next redraw stays in simple mode, not the role's default (#201).
+const DESIGNER_BARE_PREFS = VIEWER.replace('{ theme: null, simple: JSON.parse(body).simple }', '{}').replace('role: "guest", email: "v@example.com", key: "v@example.com"', 'role: "designer", email: "d@example.com", key: "d@example.com"');
+
+test("simple mode switched on stays on after the next redraw, whatever the save answers", (t) => open(t, DESIGNER_BARE_PREFS, async (desk) => {
+  await desk.waitForSelector("#nav [data-tab]");
+  const tabs = () => desk.$$eval("#nav [data-tab]", (xs) => xs.map((x) => x.dataset.tab));
+  assert.ok((await tabs()).includes("product"), "a designer starts in full mode");
+  await desk.click("#me");
+  await desk.click("#simple");
+  await desk.waitForFunction(() => posts.some((p) => p.path === "/api/prefs"));
+  await desk.waitForTimeout(300);
+  // Anything that redraws the page: here the tab the person is on.
+  await desk.click('#nav [data-tab="requests"]');
+  assert.deepEqual((await tabs()).filter((k) => ["issues", "product", "people"].includes(k)), [], "still simple mode");
+  assert.equal(await desk.getAttribute("#simple", "aria-pressed"), "true");
+}));
+
 // LIST, and each of its cards opens.
 const OPENS = LIST.replace('path === "/api/cards" ? { cards }', 'path === "/api/cards" ? { cards } : path.startsWith("/api/cards/") ? { card: cards.find((c) => c.id === path.split("/")[3]) }');
 

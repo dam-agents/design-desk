@@ -16,7 +16,9 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
    stays while it scrolls and steps to the option's other elements; a comment written while a
    state is shown is about that state, and Open in design workspace opens at it. The design
    workspace's State menu says "As designed" for none. Every dialog closes with a lone ✕ and with
-   Esc. No data migration.
+   Esc. Every way into the design workspace carries its violet mark. Simple mode switched on stays
+   on when the server's answer to the save leaves `simple` out (the mock Desk now keeps a person's
+   preferences). No data migration.
 
 ## 1.105.0 — 2026-11-23
 
