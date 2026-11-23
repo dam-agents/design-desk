@@ -377,7 +377,8 @@ A part under **All elements** opens in one dialog, the same in simple and full m
   through the option's elements in the order of its All elements tiles (a part it leaves out is
   skipped), round from the last to the first; each arrow names the element it opens. Another
   element opens as designed, at the top; what someone was writing on a part stays with it, and is
-  back in its box when they come back to it, while the page is open.
+  back in its box when they come back to it, while the page is open: on stepping away, and on
+  closing the dialog (✕, Esc).
 - **Open in design workspace** (a very light violet fill, as on every way into it: the
   guidelines' Buttons) opens the option with the part selected, on its Properties, at the
   state shown in After. From the workspace, **Every state (n)** opens the dialog on the state the

@@ -42,7 +42,6 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
    another view than the first is drawn under All elements, in the element dialog and enlarged;
    before, its picture was empty. No data migration.
 
-
 ## 1.104.0 — 2026-11-23
 
 **Upgrade:**

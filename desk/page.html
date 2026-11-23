@@ -1750,7 +1750,7 @@
 <div id="workspace" hidden></div>
 
 <dialog id="request-dialog">
-  <form method="dialog" id="request-form"><button type="button" class="dlg-x" data-dlg-x aria-label="Close">✕</button>
+  <form method="dialog" id="request-form">
     <h2 id="rq-title">New request</h2>
     <p class="sub" id="rq-hint"></p>
     <div class="tabs" role="radiogroup" id="type-choice">
@@ -1774,11 +1774,12 @@
     </div>
     <input type="hidden" name="from" />
     <div class="actions"><button type="button" class="btn primary" data-close="send">Send</button><button type="button" class="btn" data-close="cancel">Cancel</button></div>
+    <button type="button" class="dlg-x" data-dlg-x aria-label="Close">✕</button>
   </form>
 </dialog>
 
 <dialog id="product-dialog">
-  <form method="dialog" id="product-form"><button type="button" class="dlg-x" data-dlg-x aria-label="Close">✕</button>
+  <form method="dialog" id="product-form">
     <h2>Add to Product</h2>
     <p class="sub" id="pd-hint"></p>
     <div class="tabs" role="radiogroup" id="kind-choice">
@@ -1795,11 +1796,12 @@
       <div class="thumbs" id="pd-thumbs"></div>
     </div>
     <div class="actions"><button type="button" class="btn primary" data-close="send" id="pd-send">Add</button><button type="button" class="btn" data-close="cancel">Cancel</button></div>
+    <button type="button" class="dlg-x" data-dlg-x aria-label="Close">✕</button>
   </form>
 </dialog>
 
 <dialog id="shots-dialog">
-  <form method="dialog" id="shots-form"><button type="button" class="dlg-x" data-dlg-x aria-label="Close">✕</button>
+  <form method="dialog" id="shots-form">
     <h2>Add screenshots</h2>
     <p class="sub" id="sh-hint">Take them in the product and paste them here. Design Desk checks that each one shows the change, and writes its caption.</p>
     <div class="drop">
@@ -1807,11 +1809,12 @@
       <div class="thumbs" id="sh-thumbs"></div>
     </div>
     <div class="actions"><button type="button" class="btn primary" data-close="send">Add</button><button type="button" class="btn" data-close="cancel">Cancel</button></div>
+    <button type="button" class="dlg-x" data-dlg-x aria-label="Close">✕</button>
   </form>
 </dialog>
 
 <dialog id="decision-dialog">
-  <form method="dialog" id="decision-form"><button type="button" class="dlg-x" data-dlg-x aria-label="Close">✕</button>
+  <form method="dialog" id="decision-form">
     <h2>Add a decision</h2>
     <p class="sub">It is recorded in your name, as decided on the Desk. Design Desk then warns when a change or an option goes against it.</p>
     <label><span>What was decided</span><textarea name="text" maxlength="600" required placeholder="e.g. The send button is always on the right."></textarea></label>
@@ -1822,21 +1825,23 @@
       <div class="thumbs" id="dc-thumbs"></div>
     </div>
     <div class="actions"><button type="button" class="btn primary" data-close="send">Add</button><button type="button" class="btn" data-close="cancel">Cancel</button></div>
+    <button type="button" class="dlg-x" data-dlg-x aria-label="Close">✕</button>
   </form>
 </dialog>
 
 <dialog id="person-dialog">
-  <form method="dialog" id="person-form"><button type="button" class="dlg-x" data-dlg-x aria-label="Close">✕</button>
+  <form method="dialog" id="person-form">
     <h2>Add a person</h2>
     <p class="sub">Design Desk puts them on the list with the role you pick. The Desk's owner still shares the Desk with them in the app, so they can open it.</p>
     <label><span>Their email — the one they sign in with</span><input name="email" type="email" maxlength="254" required placeholder="e.g. alex@example.com" /></label>
     <div id="pe-roles" class="choices"></div>
     <div class="actions"><button type="button" class="btn primary" data-close="send">Ask Design Desk</button><button type="button" class="btn" data-close="cancel">Cancel</button></div>
+    <button type="button" class="dlg-x" data-dlg-x aria-label="Close">✕</button>
   </form>
 </dialog>
 
 <dialog id="option-dialog">
-  <form method="dialog" id="option-form"><button type="button" class="dlg-x" data-dlg-x aria-label="Close">✕</button>
+  <form method="dialog" id="option-form">
     <h2>Add a design option</h2>
     <div class="tabs" role="radiogroup" id="of-mode">
       <button type="button" data-of-mode="draw" aria-pressed="true">Design Desk draws it</button>
@@ -1858,11 +1863,12 @@
     </div>
     <p class="hint" id="of-error" style="color:var(--bad);margin:0" hidden></p>
     <div class="actions"><button type="button" class="btn primary" data-close="ok" id="of-ok">Draw the option</button><button type="button" class="btn" data-close="cancel">Cancel</button></div>
+    <button type="button" class="dlg-x" data-dlg-x aria-label="Close">✕</button>
   </form>
 </dialog>
 
 <dialog id="slack-dialog">
-  <form method="dialog" id="slack-form"><button type="button" class="dlg-x" data-dlg-x aria-label="Close">✕</button>
+  <form method="dialog" id="slack-form">
     <h2>Send to Slack</h2>
     <div class="tabs" role="radiogroup" id="sl-mode">
       <button type="button" data-sl-mode="vote" aria-pressed="true">Ask for a vote</button>
@@ -1878,13 +1884,14 @@
     </div>
     <label><span id="sl-note-label">A line for Slack (optional)</span><textarea name="note" maxlength="500"></textarea></label>
     <div class="actions"><button type="button" class="btn primary" data-close="ok" id="sl-ok">Send</button><button type="button" class="btn" data-close="cancel">Cancel</button></div>
+    <button type="button" class="dlg-x" data-dlg-x aria-label="Close">✕</button>
   </form>
 </dialog>
 
 <dialog id="element-dialog" class="eldlg" aria-label="An element of a design option"><div id="el-body"></div></dialog>
 
 <dialog id="confirm-dialog">
-  <form method="dialog" id="confirm-form"><button type="button" class="dlg-x" data-dlg-x aria-label="Close">✕</button>
+  <form method="dialog" id="confirm-form">
     <h2 id="cf-title"></h2>
     <div id="cf-body" class="md"></div>
     <div id="cf-choices" class="choices"></div>
@@ -1894,6 +1901,7 @@
     <label id="cf-check2-wrap" class="check" hidden><input type="checkbox" name="check2" /> <span id="cf-check2-label"></span></label>
     <label id="cf-check3-wrap" class="check" hidden><input type="checkbox" name="check3" /> <span id="cf-check3-label"></span></label>
     <div class="actions"><button type="button" class="btn primary" data-close="ok" id="cf-ok"></button><button type="button" class="btn" data-close="cancel">Cancel</button></div>
+    <button type="button" class="dlg-x" data-dlg-x aria-label="Close">✕</button>
   </form>
 </dialog>
 
@@ -6489,7 +6497,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
 
   // The element dialog: which design it is of, what it is, and every state drawn of it; without
   // states, the button that has them drawn. It follows the card as it refreshes.
-  $("#element-dialog").addEventListener("close", () => { S.el = null; });
+  // Closed (✕, Esc) with a comment half written, the text stays with its part, back in the box
+  // when the dialog opens on it again, as a step to another element keeps it.
+  $("#element-dialog").addEventListener("close", () => { const t = $("#el-text")?.value; if (S.el && t?.trim()) (S.elTyped ||= {})[elTypedKey()] = t; S.el = null; });
   // All states open or folded: kept while the page is open, for every part. Read from the press on
   // its summary (a click, or Enter or Space on it), before the fold opens or closes: a redraw
   // between the press and the fold's own toggle event would lose it.
@@ -6549,7 +6559,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // The anchor a note on the part carries, the same whether it is posted or kept in the feedback:
   // written while a state is shown in After, it is about that state, and its label names it.
   const partAnchor = (v, e, st) => ({ variant: v.id, ...(st ? { state: st.id } : {}), ...(e.selector ? { selector: e.selector, text: "", tag: "", view: e.view || null, view_name: e.view_name || null } : {}), label: st ? `${e.name} · ${st.name}` : e.name });
-  const draftsOnPart = (c, v, e) => draftsOf(c).filter((d) => !d.ok && d.anchor?.variant === v.id && (e.selector ? d.anchor.selector === e.selector : String(d.anchor.label || "").split(" · ")[0] === e.name));
+  // A part with no path is found by its name: the label is the name, or the name and one of its states.
+  const labelOfPart = (e, a) => { const l = String(a?.label || ""); return l === e.name || (Boolean(a?.state) && e.states.some((x) => x.id === a.state && l === `${e.name} · ${x.name}`)); };
+  const draftsOnPart = (c, v, e) => draftsOf(c).filter((d) => !d.ok && d.anchor?.variant === v.id && (e.selector ? d.anchor.selector === e.selector : labelOfPart(e, d.anchor)));
   // The state a note on the part is about, by its name; none for one about the part as designed.
   const stateName = (v, a) => a?.state ? (v.states || []).find((x) => x.id === a.state)?.name || "" : "";
   function elementTalk(c, v, e, st) {

@@ -159,6 +159,8 @@ test("✕ and Esc close a dialog; a form with something typed asks first", async
     // Untouched: ✕ and Esc close it at once.
     await desk.click("#new-request");
     assert.equal(await desk.getAttribute("#request-dialog .dlg-x", "aria-label"), "Close");
+    // Drawn in the corner but last in the form, it never takes the first focus: typing goes to the form.
+    assert.equal(await desk.evaluate(() => document.activeElement?.matches(".dlg-x")), false, "the first focus is the form's");
     await desk.click("#request-dialog .dlg-x");
     assert.equal(await open("request-dialog"), false, "✕ closes it");
     await desk.click("#new-request");
@@ -2398,10 +2400,14 @@ test("an element's dialog keeps its header and steps to the option's other eleme
     assert.equal(await desk.inputValue("#el-text"), "Half a thought", "what was written on it is back");
     await desk.click('#element-dialog [data-el-nav="-1"]');
     assert.equal((await head())[0], "Added note", "and back round the other way");
-    // Close is ✕ alone in the header; Esc closes it too.
+    // Close is ✕ alone in the header; Esc closes it too, and a comment half written stays with its part.
     assert.deepEqual(await desk.$eval("#element-dialog .elbar [data-el-close]", (b) => [b.textContent, b.getAttribute("aria-label")]), ["✕", "Close"]);
-    await desk.press("#element-dialog [data-el-close]", "Escape");
+    await desk.fill("#el-text", "Kept on closing");
+    await desk.press("#el-text", "Escape");
     assert.equal(await desk.locator("#element-dialog[open]").count(), 0, "Esc closes it");
+    await desk.click('#detail [data-el="added"]');
+    await desk.waitForSelector("#element-dialog[open] #el-text");
+    assert.equal(await desk.inputValue("#el-text"), "Kept on closing", "back when it opens on that part again");
   } finally {
     await run.close();
   }
