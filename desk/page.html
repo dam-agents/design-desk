@@ -232,11 +232,13 @@
   .row.item > .open { display: block; width: 100%; padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
   .row.item > .open::after { content: ""; position: absolute; inset: 0; border-radius: var(--radius); }
   .row.item:has(> .open:focus-visible) { outline: 2px solid var(--accent); outline-offset: 1px; } .row.item > .open:focus-visible { outline: 0; }
-  /* Simple mode's row: the kind's icon, the title, then when it last changed and its state. */
+  /* Simple mode's row: the kind's icon, the title, then when it last changed with its number, and
+     its state. The date and number never break; on a narrow list the pill takes its own line. */
   .row.item.srow > .open { display: grid; grid-template-columns: 20px 1fr; column-gap: 8px; row-gap: 4px; align-items: start; }
   .srow .kic { grid-row: span 2; color: var(--muted); padding-top: 2px; } .kic svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; display: block; }
-  .srow .sline { display: flex; align-items: center; gap: 8px; font-size: var(--fs-meta); color: var(--muted); min-height: 20px; }
+  .srow .sline { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: var(--fs-meta); color: var(--muted); min-height: 20px; }
   .srow .sline .spill { margin-left: auto; }
+  .srow .sline .sdate { display: inline-flex; gap: 4px; white-space: nowrap; } .srow .sline .snum { color: var(--muted); }
   .spill { --p: var(--muted); display: inline-flex; align-items: center; gap: 4px; padding: 0 8px; border-radius: 999px; font-size: var(--fs-micro); font-weight: 500; line-height: 20px; white-space: nowrap;
     color: var(--p); background: color-mix(in srgb, var(--p) 14%, transparent); }
   .spill[data-s="open"] { --p: var(--ok); } .spill[data-s="dev"] { --p: var(--accent); } .spill[data-s="shipped"] { --p: var(--live); }
@@ -3794,12 +3796,18 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (at >= S.listLimit) S.listLimit = Math.ceil((at + 1) / LIST_PAGE) * LIST_PAGE;
     const all = S.pf && S.pf.view === pfView();
     const drawn = all ? cards : cards.slice(0, S.listLimit);
-    // Simple mode's row: its kind, its title, when it last changed, and its state; the pill only
-    // when the filter shows more than one state, the spinner while Design Desk works on it.
+    // Simple mode's row: its kind, its title, when it last changed and its number, and its state;
+    // the pill only when the filter shows more than one state, the spinner while Design Desk works
+    // on it. A change's number is its pull request's (PR#812); a request's, or a change's with no
+    // pull request, its own on the Desk (R-12, P-3).
     const pills = S.simFilter.states.length > 1;
+    const sNum = (c) => {
+      const pr = c.kind === "change" && c.source?.pr, n = pr ? `PR#${pr}` : c.base || c.id;
+      return n ? `<span class="ssep" aria-hidden="true">·</span><span class="snum" title="${pr ? "Its pull request on GitHub" : "Its number on the Desk: search finds it"}">${esc(String(n))}</span>` : "";
+    };
     const simpleRow = (c) => `<div class="row item srow${c.read === false ? " unread" : ""}">
       <button class="open" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}">${kindIcon(c)}<span class="t"><span>${esc(c.title)}</span></span>
-      <span class="sline"><span class="when">${esc(sWhen(lastChange(c)))}</span>${atWork(c) ? `<span class="dd-spin" title="Design Desk is working on it"></span>` : ""}${pills ? simplePill(c) : ""}</span></button></div>`;
+      <span class="sline"><span class="sdate"><span class="when">${esc(sWhen(lastChange(c)))}</span>${sNum(c)}</span>${atWork(c) ? `<span class="dd-spin" title="Design Desk is working on it"></span>` : ""}${pills ? simplePill(c) : ""}</span></button></div>`;
     if (simpleList()) list.innerHTML = filters + drawn.map(simpleRow).join("") + (drawn.length < cards.length ? `<div class="list-more" data-list-more>Loading more…</div>` : "");
     else list.innerHTML = filters + drawn.map((c) => `<div class="row item${overdue(c) ? " overdue" : ""}${c.design ? " fromdesign" : ""}${c.read === false ? " unread" : ""}">
       <button class="open" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}"><div class="t"><span>${esc(c.title)}</span>${onDiffs() ? figNum(c) : S.tab === "designs" ? designNum(c) : num(c)}${S.tab === "designs" ? "" : rowDot(c)}</div>${againstDot(c)}</button>
