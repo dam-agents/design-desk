@@ -680,8 +680,8 @@ Every change to the page keeps to one scale; `desk/tests/page.test.mjs` fails on
 - **Text:** only the `--fs-*` tokens: `title` 26, `head` 17, `ui` 14, `meta` 12.5, `micro` 11.
   Weights 400, 500, 600; nothing bolder. One family: `--font`, `--mono` for code. Which size and
   weight a thing takes: the guidelines (Type).
-- **Moving on:** every button that approves an item — Approve, Approve for dev, Keep for developers,
-  Send to developers, a change's Approve, Looks good — is Approved's green, outside a ⋯ menu.
+- **Moving on:** every button that approves an item — Approve, Approve for dev, Send to developers,
+  a change's Approve, Looks good — is Approved's green, outside a ⋯ menu.
   **Propose** and **Send to design** only send it on to the next review: outlined, with a paper plane.
   **Submit feedback** wears the colour of the verdict it sends ([Submit feedback](#submit-feedback)).
 - **Corners:** two, `--r-sm` 6 and `--radius` 12, and two shapes, `999px` and `50%`; nothing
