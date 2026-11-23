@@ -8544,7 +8544,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         if (!next.length) return;
         setSimFilter({ ...f, [g]: all[g].map(([x]) => x).filter((x) => next.includes(x)) });
       }
-      renderList(); renderNav(); return;
+      // With nothing open, the overview's counts follow Mine: it is drawn again.
+      renderList(); renderNav(); if (!S.card && !S.decision) renderDetail(); return;
     }
     if (ds.filter) {
       // Presentation sits beside For Designers and For Developers; either of those leaves it.

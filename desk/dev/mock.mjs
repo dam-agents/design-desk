@@ -28,6 +28,10 @@ function shim() {
   me.link = "https://desk.example.com/a/mock"; // the Desk's own link: the title's link icon copies an item's link from it
   if (q.get("simple")) me.simple = q.get("simple") === "1";
   me.github = q.get("github") || null;
+  // People (docs/desk.md → People): the roster, and each person's GitHub username while the mock runs.
+  const logins = me.github ? { [me.email]: me.github } : {};
+  const people = () => ({ people: [{ email: me.email, also: me.emails.slice(1), role, name: me.name }, { email: "pat@example.com", also: [], role: "pm", name: "Pat Lee" }, { email: "dana@example.com", also: [], role: "developer", name: "Dana Kim" }],
+    activity: {}, roles: CAN, asks: [], addable: ["designer", "pm", "ui-dev-owner", "developer"], github: { ...logins } });
   const cards = structuredClone(CARDS), notes = structuredClone(NOTES);
   const now = () => new Date().toISOString();
   const card = (id) => cards.find((c) => c.id === id);
@@ -62,7 +66,13 @@ function shim() {
       return { theme: me.theme || null, simple: typeof me.simple === "boolean" ? me.simple : null, figma: typeof me.figma_pref === "boolean" ? me.figma_pref : null };
     }
     // An admin's GitHub username for a person (docs/desk.md → People): kept while the mock runs.
-    if (p === "/api/people/github" && method === "POST") { if (body.email === me.email) me.github = body.login || null; return { email: body.email, login: body.login || null }; }
+    if (p === "/api/people/github" && method === "POST") {
+      const login = String(body.login || "").trim().replace(/^@/, "") || null;
+      if (login) logins[body.email] = login; else delete logins[body.email];
+      if (body.email === me.email) me.github = login;
+      return { email: body.email, login };
+    }
+    if (p === "/api/people" && method === "GET") return people();
     if (p === "/api/cards" && method === "GET") return { cards: list() };
     if (p.startsWith("/api/assets/")) return ASSETS[decodeURIComponent(p.slice(12))] || {};
     if (p === "/api/agenda") return { agenda: [] };

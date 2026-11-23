@@ -5224,8 +5224,11 @@ test("Mine narrows simple mode's list to the viewer's own items, and the browser
   await desk.click("details.sf > summary");
   assert.equal(await desk.getAttribute('[data-simf="who:all"]', "aria-checked"), "true", "Everyone, by default");
   assert.match(await desk.textContent('[data-simf="who:mine"]'), /Mine\s*2/, "its count, in the states shown");
+  const box = (k) => desk.textContent(`#detail .sbox[data-s="${k}"] .n`);
+  assert.equal(await box("open"), "4", "the overview counts everyone's");
   await desk.click('[data-simf="who:mine"]');
   assert.deepEqual((await rows(desk)).map(([id]) => id), ["r-check", "c-open"]);
+  assert.equal(await box("open"), "2", "and follows Mine at once");
   assert.equal(await desk.locator(".sf-btn.filtered").count(), 1, "the filter's dot says it hides something");
   assert.equal(JSON.parse(await desk.evaluate(() => localStorage.getItem("desk-simFilter"))).who, "mine");
   await desk.click('[data-simf="states:dev"]');
