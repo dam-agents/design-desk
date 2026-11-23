@@ -194,16 +194,18 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   while Design Desk works on it, and its state's pill, left out while the filter shows one state
   only. The
   filter is one **Filter** button: its menu ticks any of State (**Draft** for anyone whose request
-  starts as one, **Proposal** for a `developer`, a `ui-dev-owner` and an `admin`, then **Open**, **In dev**,
-  **Closed**) and Kind (**Requests**, **PR changes**), each with its count, at least one of each
-  ticked, and **Reset to default** (every state before In dev the viewer has, both kinds; a kept state
+  starts as one, **Proposal** for a `developer`, a `ui-dev-owner` and an `admin`, and for anyone
+  the Desk gave an open one, then **In review**, **In dev**, **Closed**) and Kind (**Requests**,
+  **PR changes**), each with its count, at least one of each ticked, a state's row offering
+  **Only** under the pointer (that state alone, the kinds kept), and **Reset to default** (every state before In dev the viewer has, both kinds; a kept state
   they do not have is left out); beside the button only what narrows the
   list, a chip each, × dropping it (a kind's chip only while one kind is ticked). This browser
   keeps it (`desk-simFilter`). There is no Your turn, Unread or Needs a designer filter, and no
   For Designers / For Developers switch. An opened request or change starts with one head that
   stays in view while the page scrolls: the kind's icon, the title with its number and the link
   icon, its state's pill, Design Desk's work in words beside the spinner, a change's pull request
-  (`#812`, with **Draft** or **Merged**) as a link to GitHub, a reported bug's **Bug** chip (with
+  as a pill in GitHub's inks, as full mode's dot (`#812 Draft` grey, `#812 Open` green, `#812 Merged`
+  purple), a link to GitHub, a reported bug's **Bug** chip (with
   its severity), who filed it or wrote it and when (a person by their name on the roster, else the
   name the item keeps, else the part of their address before the @), and once approved one muted
   line — who approved it and when, the issue or pull request it was sent to, when it shipped —
@@ -246,7 +248,7 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   done folds to one line (who wrote it and how it starts, who resolved it and when) that opens on
   a click. Reply, Mark done, Add to my feedback and Reopen work as in full mode. With nothing open, the pane shows
   instead of the Requests intro a box per state, **Draft** and **Proposal** only while they hold
-  something, then **Open**, **In dev** and **Closed**: how many items of
+  something, then **In review**, **In dev** and **Closed**: how many items of
   the viewer's side are in each (Open and In dev with their kinds, Closed with how many of them
   shipped in the last 7 days); a click on one filters the list to that state. Otherwise it hides: **Designs**, **Issues**, **Product** and **People** leave the menu (a sent
   request offers no **Show the design**), Product's pages their bar, the presentation leaves Requests (its page, its buttons on a card and in an intro), a
@@ -471,14 +473,14 @@ an issue **Open** (green) or **Designed** (purple, once its design went to devel
 person has seen an item is its bold title alone ([Read and unread](#read-and-unread)).
 **In simple mode** an item has one of three states, by who works on it, and no dot; a request before
 design has its stage instead, on the list of whoever sees it whatever its side: **Draft** (grey,
-dashed) and **Proposal** (amber; [desk.md](desk.md) → Draft and Proposal). **Open**
-(green): it needs a design decision — an open request at any step before it is approved (Design Desk
+dashed) and **Proposal** (amber; [desk.md](desk.md) → Draft and Proposal). **In review**
+(green; its key `open`): it needs a design decision — an open request at any step before it is approved (Design Desk
 at work on it included: the spinner says so), one approved whose spec draft waits for a person to send
 it, a change nobody marked handled that is not auto handled. **In dev** (the accent): it is
 approved and developers build it — a request writing its spec or sent to developers and not yet
 built, a change handled or auto handled whose pull request is not merged, and a change a review asked
 changes of until new commits arrive (its head says **Changes requested · developer**; a request a
-review asked changes of stays Open, its head saying **Changes requested · Design Desk**,
+review asked changes of stays In review, its head saying **Changes requested · Design Desk**,
 [desk.md](desk.md) → Reviews). **Closed**: nobody
 works on it, and its pill says how it ended — **Shipped** (purple) a request built or a handled
 change merged, **No review needed** (grey) an auto handled change merged, **Closed** (red) a
@@ -576,6 +578,8 @@ Every change to the page keeps to one scale; `desk/tests/page.test.mjs` fails on
 - **Text:** only the `--fs-*` tokens: `title` 26, `head` 17, `ui` 14, `meta` 12.5, `micro` 11.
   Weights 400, 500, 600; nothing bolder. One family: `--font`, `--mono` for code. Which size and
   weight a thing takes: the guidelines (Type).
+- **Moving on:** every button that moves an item forward — Approve, Propose, Send to design, Keep
+  for developers, Send to developers, a change's Approve — is Approved's green, outside a ⋯ menu.
 - **Corners:** two, `--r-sm` 6 and `--radius` 12, and two shapes, `999px` and `50%`; nothing
   else. Which a thing takes: the guidelines (Corners).
 - **Space:** multiples of 4 (4, 8, 12, 16, 24, 32); 1 or 2px only as a hairline or a nudge. Which

@@ -251,7 +251,9 @@
   .sh-line { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; font-size: var(--fs-meta); color: var(--muted); }
   .sh-facts { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; } .sh-facts .sep { color: var(--line); }
   .sh-work { display: inline-flex; align-items: center; gap: 4px; color: var(--ink); } .sh-resp { color: var(--warn); font-weight: 500; }
-  .sh-pr { color: var(--ink); text-decoration: none; font-weight: 500; } .sh-pr:hover { text-decoration: underline; }
+  .sh-pr { --t: var(--gh-open); display: inline-flex; align-items: center; gap: 4px; padding: 0 8px; border-radius: 999px; font-size: var(--fs-micro); font-weight: 500; line-height: 20px; white-space: nowrap;
+    color: var(--t); background: color-mix(in srgb, var(--t) 14%, transparent); text-decoration: none; } .sh-pr:hover { text-decoration: underline; }
+  .sh-pr[data-s="pr-draft"] { --t: var(--gh-draft); } .sh-pr[data-s="pr-merged"] { --t: var(--gh-merged); }
   .sh-acts { display: flex; gap: 8px; align-items: center; flex: none; } details.more.sh-more .menu { left: auto; right: 0; }
   @media (max-width: 860px) { .shead { top: 28px; margin: 0 -16px 12px; padding: 12px 16px; flex-wrap: wrap; } }
   /* Simple mode's page: a short lead, what Design Desk found, the folds, the comments. */
@@ -318,6 +320,10 @@
   .sf-h { padding: 4px 8px 0; font-size: var(--fs-micro); color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
   .sf-opt { display: flex; align-items: center; gap: 8px; width: 100%; padding: 4px 8px; border: 0; border-radius: var(--r-sm); background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
   .sf-opt:hover:not(:disabled) { background: var(--soft); } .sf-opt:disabled { cursor: default; }
+  /* Only sits just before the count, which keeps to the right edge (3 digits wide). */
+  .sf-row { position: relative; } .sf-row .sf-opt { padding-right: 8px; } .sf-row .sf-opt .n { min-width: 3ch; text-align: right; }
+  .sf-only { position: absolute; top: 50%; right: calc(8px + 3ch + 4px); transform: translateY(-50%); visibility: hidden; padding: 2px 8px; border: 0; border-radius: var(--r-sm); background: none; color: var(--accent); font: inherit; font-size: var(--fs-meta); cursor: pointer; }
+  .sf-row:hover .sf-only, .sf-only:focus-visible { visibility: visible; } .sf-only:hover { background: var(--soft); }
   .sf-opt .box { width: 14px; height: 14px; border: 1px solid var(--muted); border-radius: var(--r-sm); flex: none; display: grid; place-items: center; }
   .sf-opt[aria-checked="true"] .box { background: var(--accent); border-color: var(--accent); }
   .sf-opt[aria-checked="true"] .box::after { content: ""; width: 6px; height: 3px; border: solid var(--accent-ink); border-width: 0 0 2px 2px; transform: rotate(-45deg) translate(1px, -1px); }
@@ -1168,8 +1174,9 @@
   .step.done .n { background: var(--ink); color: var(--panel); box-shadow: none; }
   .step.now .n { background: none; color: var(--ink); box-shadow: inset 0 0 0 2px var(--ink); }
   /* Approve is the one green button. */
-  .btn[data-act="approve"] { background: var(--approved); border-color: var(--approved); color: var(--panel); }
-  .btn[data-act="approve"]:hover { opacity: .88; background: var(--approved); }
+  /* What moves an item forward wears Approve's green: approving, sending it on, proposing it (docs/desk-page.md → The look). */
+  :is(.btn[data-act="approve"], .btn[data-review="approve"], .btn[data-handle="1"], .btn[data-spec-send], .btn[data-stage="proposal"], .btn[data-stage="design"], .btn[data-stage="developers"]):not(.menu .btn) { background: var(--approved); border-color: var(--approved); color: var(--panel); }
+  :is(.btn[data-act="approve"], .btn[data-review="approve"], .btn[data-handle="1"], .btn[data-spec-send], .btn[data-stage="proposal"], .btn[data-stage="design"], .btn[data-stage="developers"]):not(.menu .btn):hover { opacity: .88; background: var(--approved); }
   /* Design options: the tabs stay; each carries a square number, so "option 2" is easy to say. */
   .ono { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 8px; margin-right: 8px; border-radius: var(--r-sm); background: var(--muted); color: var(--panel); font-size: var(--fs-meta); font-weight: 600; vertical-align: 1px; }
   .tabs button[aria-pressed="true"] .ono { background: var(--ink); }
@@ -2001,9 +2008,9 @@
   const ROLE_ABOUT = {
     admin: "The Desk's owner is always an admin. The first admin on the list is who people ask for access or help.",
     designer: "Shapes the designs: starts options, changes and approves them.",
-    pm: "Brings problems and ideas, and moves a request along: starts and changes options, builds live prototypes, approves, decides or closes a request straight away. A design that goes against a decision is still a designer's to approve.",
-    "ui-dev-owner": "A developer who also approves designs or decides a request straight away, marks a change or an issue For Developers handled, and moves a request, a change or an issue between For Developers, which a developer handles instead of a designer, and For Designers.",
-    developer: "Brings problems and bug reports, and starts and changes design options; a designer decides, or another developer on a request For Developers.",
+    pm: "Brings problems and ideas, and moves a request along: starts and changes options, builds live prototypes, approves, decides or closes a request straight away. A design that goes against a decision is still a designer's to approve. Their request starts as a draft they send to design.",
+    "ui-dev-owner": "A developer who also approves designs or decides a request straight away, marks a change or an issue For Developers handled, and moves a request, a change or an issue between For Developers, which a developer handles instead of a designer, and For Designers. Sends a proposal to design, keeps it for developers, or sends it back to its author.",
+    developer: "Brings problems and bug reports, and starts and changes design options; a designer decides, or another developer on a request For Developers. Their request starts as a draft they propose to the dev team.",
     guest: "Follows along. Anyone the Desk is shared with who has no role on the list.",
   };
   const ABILITIES = [
@@ -2024,8 +2031,6 @@
     [["size"], "Move a request, a change or an issue to For Developers, which a developer handles, or to For Designers"],
     [["skip"], "Approve or decide a request straight away, without a vote or a live prototype"],
     // Before design (docs/desk.md → Draft and Proposal).
-    [["stage-propose"], "Propose their own draft to the dev team"],
-    [["stage-design"], "Send their own draft to design"],
     [["stage-own"], "Move a proposal on: send it to design, keep it for developers, or send it back to its author"],
     [["build"], "Build live prototypes"],
     [["figma"], "Work with Figma", "figma"],
@@ -3321,12 +3326,12 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   }
   // Draft and Proposal come first, for whom they can hold anything (docs/desk-page.md → Simple mode):
   // Draft for whoever files a request that starts as one, Proposal for the dev team.
-  const SIM_ALL = [["draft", "Draft"], ["proposal", "Proposal"], ["open", "Open"], ["dev", "In dev"], ["closed", "Closed"]];
+  const SIM_ALL = [["draft", "Draft"], ["proposal", "Proposal"], ["open", "In review"], ["dev", "In dev"], ["closed", "Closed"]];
   const seesStage = (k) => (k === "draft" ? startsDraft() && can("request") : k === "proposal" ? ["developer", "ui-dev-owner", "admin"].includes(S.me?.role) : true)
     || S.cards.some((c) => !closed(c) && preDesign(c) === k);
   const simStates = () => SIM_ALL.filter(([k]) => seesStage(k));
   const SIM_KINDS = [["request", "Requests"], ["change", "PR changes"]];
-  const SIM_PILL = { draft: "Draft", proposal: "Proposal", open: "Open", dev: "In dev", shipped: "Shipped", none: "No review needed", closed: "Closed" };
+  const SIM_PILL = { draft: "Draft", proposal: "Proposal", open: "In review", dev: "In dev", shipped: "Shipped", none: "No review needed", closed: "Closed" };
   const SIM_TIP = { draft: "A draft: only its author sees it until they send it on", proposal: "A proposal: the dev team talks it over before it goes to design",
     open: "It needs a design decision", dev: "Approved: developers are building it", shipped: "Approved by a person and shipped",
     none: "Merged; Design Desk found nothing to review", closed: "Closed without being built" };
@@ -3366,7 +3371,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // other group lets through; beside it only what narrows the list, each a chip that drops it.
   function simpleFilterBar() {
     const f = simFilter(), n = (states, kinds) => simpleCards({ states, kinds }).length;
-    const opt = (group, k, label, on, count) => `<button class="sf-opt" data-keep data-simf="${group}:${k}" role="menuitemcheckbox" aria-checked="${on}"${on && f[group].length === 1 ? ` disabled title="Keep at least one"` : ""}><span class="box" aria-hidden="true"></span><span>${label}</span><span class="n">${count}</span></button>`;
+    // A state's row also has Only: that state alone, the kinds as they are.
+    const only = (group, k, label) => group === "states" ? `<button class="sf-only" data-simf-only="${k}" data-simf-keep title="Show only ${esc(label)}">Only</button>` : "";
+    const opt = (group, k, label, on, count) => `<div class="sf-row"><button class="sf-opt" data-keep data-simf="${group}:${k}" role="menuitemcheckbox" aria-checked="${on}"${on && f[group].length === 1 ? ` disabled title="Keep at least one"` : ""}><span class="box" aria-hidden="true"></span><span>${label}</span><span class="n">${count}</span></button>${only(group, k, label)}</div>`;
     const states = simStates().map(([k, l]) => opt("states", k, l, f.states.includes(k), n([k], f.kinds))).join("");
     const kinds = SIM_KINDS.map(([k, l]) => opt("kinds", k, l, f.kinds.includes(k), n(f.states, [k]))).join("");
     const narrowed = JSON.stringify(f) !== JSON.stringify(SIM_DEFAULT());
@@ -3389,14 +3396,14 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const first = design ? b("design", "Send to design", true) : can("stage-propose") ? b("proposal", "Propose", true) : "";
     return [first, (design && can("stage-propose") ? b("proposal", "Propose") : "") + (lead ? b("developers", "Keep for developers") : "")];
   }
-  const STAGE_DONE = { proposal: "Proposed: the dev team sees it now, and the UI dev owner sends it to design.", design: "Sent to design: designers see it as Open now.",
-    developers: "Kept for developers: it is Open For Developers now, and a developer approves it.", draft: "Back to draft: only its author sees it now." };
+  const STAGE_DONE = { proposal: "Proposed: the dev team sees it now, and the UI dev owner sends it to design.", design: "Sent to design: designers see it In review now.",
+    developers: "Kept for developers: it is In review For Developers now, and a developer approves it.", draft: "Back to draft: only its author sees it now." };
   // Moving a request on before design; opening it, which cannot be taken back, asks first.
   async function moveStage(c, to) {
     const go = () => api("POST", `/api/cards/${encodeURIComponent(c.id)}/stage`, { to });
     if (to === "design" || to === "developers") {
       const r = await ask({ title: to === "design" ? "Send it to design?" : "Keep it for developers?", ok: to === "design" ? "Send to design" : "Keep for developers", send: go,
-        body: to === "design" ? "Designers see it as Open from now on, with what was said about it so far. It does not come back to a draft." : "It opens For Developers: a developer approves it, without a designer. It does not come back to a draft." });
+        body: to === "design" ? "Designers see it In review from now on, with what was said about it so far. It does not come back to a draft." : "It opens For Developers: a developer approves it, without a designer. It does not come back to a draft." });
       if (!r) return;
     } else await go();
     toast(STAGE_DONE[to]);
@@ -3409,7 +3416,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   function simpleHead(c) {
     const s = simpleState(c, true), k = s.pill || s.state, src = c.source || {}, change = c.kind === "change";
     const work = atWork(c) ? `<span class="sh-work"><span class="dd-spin"></span>${esc(working(c).map((w) => WORK_SHORT[w] || "Working on it").join(", ") || "Design Desk is working on it")}</span>` : "";
-    const pr = change && src.pr ? `<a class="sh-pr" href="${safeUrl(src.url || "")}" target="_blank" rel="noopener noreferrer" title="Open the pull request on GitHub">#${esc(src.pr)}${src.merged_at ? " Merged" : src.draft ? " Draft" : ""} ↗</a>` : "";
+    const pr = change && src.pr ? `<a class="sh-pr" data-s="${src.merged_at ? "pr-merged" : src.draft ? "pr-draft" : "pr-open"}" href="${safeUrl(src.url || "")}" target="_blank" rel="noopener noreferrer" title="Open the pull request on GitHub">#${esc(src.pr)} ${src.merged_at ? "Merged" : src.draft ? "Draft" : "Open"} ↗</a>` : "";
     const o = c.origin || {}, by = c.by || c.created_by || {};
     const who = change ? src.author || "" : by.agent ? "Design Desk" : shortName(o.email || by.email, by.name || o.reporter);
     const at = change ? src.merged_at || c.created : c.created;
@@ -3625,7 +3632,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const box = (st, word, line) => `<button class="sbox" data-simf-only="${st}" data-s="${st}" title="Show only what is ${esc(word)}"><span class="n">${n(st)}</span><b>${word}</b><span class="hint">${esc(line)}</span></button>`;
     // Draft and Proposal only while they hold something, before Open.
     const early = [["draft", "Draft", "Yours to send on"], ["proposal", "Proposal", "For the dev team to talk over"]].filter(([st]) => seesStage(st) && n(st)).map(([st, word, line]) => box(st, word, `${line}: ${of(st)}`)).join("");
-    return `<div class="sboxes">${early}${box("open", "Open", n("open") ? `Need a design decision: ${of("open")}` : "Nothing needs a design decision")}${box("dev", "In dev", n("dev") ? `Approved, being built: ${of("dev")}` : "Nothing is being built")}${box("closed", "Closed", `${plural(shipped, "item", "items")} shipped in the last 7 days`)}</div>`;
+    return `<div class="sboxes">${early}${box("open", "In review", n("open") ? `Need a design decision: ${of("open")}` : "Nothing needs a design decision")}${box("dev", "In dev", n("dev") ? `Approved, being built: ${of("dev")}` : "Nothing is being built")}${box("closed", "Closed", `${plural(shipped, "item", "items")} shipped in the last 7 days`)}</div>`;
   }
   const setSimFilter = (f) => { S.simFilter = f; store.set("desk-simFilter", JSON.stringify(f)); };
   // Your turn: an open request whose next move is the viewer's own, by what they may do — answer
@@ -8297,7 +8304,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (ds.simf || ds.simfDrop || ds.simfOnly || "simfReset" in ds) {
       const f = simFilter(), all = { states: simStates(), kinds: SIM_KINDS };
       if ("simfReset" in ds) { setSimFilter(SIM_DEFAULT()); S.simMenu = false; }
-      else if (ds.simfOnly) setSimFilter({ states: [ds.simfOnly], kinds: SIM_KINDS.map(([k]) => k) });
+      else if (ds.simfOnly) { setSimFilter({ states: [ds.simfOnly], kinds: "simfKeep" in ds ? f.kinds : SIM_KINDS.map(([k]) => k) }); S.simMenu = false; }
       else {
         const [g, k] = (ds.simf || ds.simfDrop).split(":"), on = f[g].includes(k);
         const next = ds.simfDrop || on ? f[g].filter((x) => x !== k) : [...f[g], k];
