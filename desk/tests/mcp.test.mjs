@@ -116,10 +116,11 @@ test("a long tool result stays valid JSON and names what was shortened", async (
   assert.equal(fit({ a: 1 }, 6000).a, 1, "a short result is untouched");
 });
 
-test("a peer sees a request before design as its mcp_role would, and none of a draft", async (t) => {
+test("a peer reads a proposal, as anyone does, and none of a draft", async (t) => {
   const d = await desk(t, "- mcp_satellite: always\n- mcp_role: pm\n");
   const id = (await d.viewer("bob@example.com", "/api/requests", { problem: "Rows are too airy.", options: 0 })).body.card.id;
-  assert.equal((await d.viewer("bob@example.com", `/api/cards/${id}/stage`, { to: "proposal" })).status, 200);
-  assert.equal((await d.peer("GET", `/peer/cards/${id}`)).status, 404, "a PM sees no proposal");
+  assert.equal((await d.peer("GET", `/peer/cards/${id}`)).status, 404, "no draft of someone else's");
   assert.equal((await d.peer("GET", "/peer/cards")).body.cards.some((c) => c.id === id), false);
+  assert.equal((await d.viewer("bob@example.com", `/api/cards/${id}/stage`, { to: "proposal" })).status, 200);
+  assert.equal((await d.peer("GET", `/peer/cards/${id}`)).status, 200, "a proposal is everyone's");
 });

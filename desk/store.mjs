@@ -433,19 +433,17 @@ export class Store {
   // A card by its number; a comparison's number (F-n) names the card it compares.
   card(id) { const c = own(this.db.cards, id) || numberOwner(this.db.cards, id); if (!c) throw missing(`no card ${id}`); return c; }
   thread(id) { const t = own(this.db.threads, id); if (!t) throw missing(`no thread ${id}`); return t; }
-  // Who sees a request before it goes to design (docs/desk.md → Draft and Proposal): the agent
-  // (no `who`, or `who.agent`), its author, an admin, and on a proposal the developers and the UI
-  // dev owner. Every other card, and an open request, is everyone's.
+  // Who sees a draft (docs/desk.md → Draft and Proposal): its author, an admin and the agent (no
+  // `who`, or `who.agent`). Every other card, a proposal and an open request, is everyone's.
   visibleTo(c, who) {
-    if (!c?.stage || !who || who.agent || who.role === "admin") return true;
-    if (c.stage === "proposal" && DEVELOPERS.includes(who.role)) return true;
+    if (c?.stage !== "draft" || !who || who.agent || who.role === "admin") return true;
     return [c.created_by?.email, c.origin?.email].some((x) => x && addressesOf(who).includes(String(x).toLowerCase()));
   }
-  // When a person could not see a request, from its stages' history: [from, to) spans, or null.
-  // A developer or the UI dev owner saw its proposals; anyone else nothing before it opened.
+  // When a person could not see a request, from its stages' history: [from, to) spans, or null:
+  // its drafts, which only its author and admins saw.
   blindSpans(c, who) {
     if (!c?.staged?.length) return null;
-    const dev = DEVELOPERS.includes(who?.role), sees = (st) => st === "open" || (dev && st === "proposal");
+    const sees = (st) => st !== "draft";
     const spans = [], blind = (from, to) => { const last = spans[spans.length - 1]; if (last && last[1] === from) last[1] = to; else spans.push([from, to]); };
     // It began in the stage its first move left (a Slack request is born a proposal).
     let st = c.staged[0].from || "draft", since = c.created;
@@ -1575,7 +1573,7 @@ export class Store {
     return who?.role === "admin" || (c.stage === "draft" ? this.filedBy(c.id, who) : can(who?.role, "stage-own"));
   }
 
-  // Propose, Send to design, Keep for developers or Back to draft: `to` is `proposal`, `design`,
+  // Propose, Send to design or Back to draft: `to` is `proposal`, `design`
   // `developers` or `draft`. Leaving its last stage opens it, on the side the move names.
   moveStage(cardId, who, to) {
     const c = this.card(cardId);
@@ -2290,7 +2288,7 @@ export class Store {
     const c = this.card(cardId);
     if (!["request", "change", "issue"].includes(c.kind)) throw bad("only a design request, a change or an issue is For Developers or For Designers");
     // A request before design takes its side when it opens (docs/desk.md → Draft and Proposal).
-    if (c.stage) throw bad("This request takes its side when it goes to design: Send to design or Keep for developers.");
+    if (c.stage) throw bad("This request takes its side when it opens: Send to design, or Approve for dev.");
     if (c.kind !== "request" && c.handled) throw bad(`This ${c.kind} is already handled. Mark it not handled to change who looks at it.`);
     if (c.kind !== "request" && c.status === "archived") throw bad(`This ${c.kind} is archived.`);
     if (c.status === "declined" || c.status === "handed-off") throw bad("This request is closed.");

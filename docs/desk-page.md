@@ -194,11 +194,11 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   while Design Desk works on it, and its state's pill, left out while the filter shows one state
   only. The
   filter is one **Filter** button: its menu ticks any of State (**Draft** for anyone whose request
-  starts as one, **Proposal** for a `developer`, a `ui-dev-owner` and an `admin`, and for anyone
-  the Desk gave an open one, then **In review**, **In dev**, **Closed**) and Kind (**Requests**,
+  starts as one, then **Proposal**, **In review**, **In dev**, **Closed**) and Kind (**Requests**,
   **PR changes**), each with its count, at least one of each ticked, a state's row offering
-  **Only** under the pointer (that state alone, the kinds kept), and **Reset to default** (every state before In dev the viewer has, both kinds; a kept state
-  they do not have is left out); beside the button only what narrows the
+  **Only** under the pointer (that state alone, the kinds kept), and **Reset to default** (In review
+  for a designer, every state before In dev for anyone else; both kinds; a kept state they do not
+  have is left out); beside the button only what narrows the
   list, a chip each, × dropping it (a kind's chip only while one kind is ticked). This browser
   keeps it (`desk-simFilter`). There is no Your turn, Unread or Needs a designer filter, and no
   For Designers / For Developers switch. An opened request or change starts with one head that

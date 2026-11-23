@@ -342,7 +342,7 @@ async function viewerRoute(req, res, url, who) {
   if (m === "POST" && p[1] === "cards" && p[3] === "end-vote") return send(res, 200, store.endVote(p[2], actor));
   // The developer spec, read before it goes: edit it, ask for changes, or send it (docs/handoff.md).
   if (m === "POST" && p[1] === "cards" && p[3] === "spec") { const r = store.specAction(p[2], actor, { action: b.action, text: b.text, note: b.note, implement: typeof b.implement === "boolean" ? b.implement : null, closeEarlier: b.close_earlier === true, comment: b.comment === true }); return send(res, 200, r.inbox ? withPing(r, s, who) : r); }
-  // A request before design moves on: Propose, Send to design, Keep for developers, Back to draft (docs/desk.md → Draft and Proposal).
+  // A request before design moves on: Propose, Send to design, Back to draft; Approve for dev is an approval (docs/desk.md → Draft and Proposal).
   if (m === "POST" && p[1] === "cards" && p[3] === "stage" && !p[4]) return send(res, 200, store.moveStage(p[2], actor, String(b.to || "")));
   if (m === "POST" && p[1] === "cards" && p[3] === "size") { need("size"); return send(res, 200, store.setSize(p[2], actor, b.small)); }
   // An approved design's elements into Product → Elements (docs/catalog.md → From approved designs).

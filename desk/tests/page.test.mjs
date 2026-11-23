@@ -4480,14 +4480,14 @@ test("simple mode: Draft and Proposal are states of their own, for whom they can
   assert.deepEqual(await desk.$$eval(".sbox b", (xs) => xs.map((x) => x.textContent)), ["Draft", "Proposal", "In review", "In dev", "Closed"], "the boxes, Draft and Proposal while they hold something");
 }));
 
-test("simple mode: a PM has Draft and no Proposal; a designer's list and filter stay as they were", async (t) => {
+test("simple mode: a PM has every state; a designer has no Draft and starts at In review", async (t) => {
   await open(t, DESK({ ...SIMPLE_ME, role: "pm", can: { request: true, "stage-design": true } }, [STAGED[0], STAGED[2]]), async (desk) => {
     await desk.waitForSelector('#list [data-card="R-20"]');
     await desk.click("details.sf > summary");
-    assert.deepEqual(await desk.$$eval('[data-simf^="states:"]', (xs) => xs.map((x) => x.dataset.simf.slice(7))), ["draft", "open", "dev", "closed"]);
+    assert.deepEqual(await desk.$$eval('[data-simf^="states:"]', (xs) => xs.map((x) => x.dataset.simf.slice(7))), ["draft", "proposal", "open", "dev", "closed"]);
   });
   await open(t, DESK(SIMPLE_ME, [STAGED[2]]), async (desk) => {
-    await desk.evaluate(() => localStorage.setItem("desk-simFilter", JSON.stringify({ states: ["proposal"], kinds: ["request", "change"] })));
+    await desk.evaluate(() => localStorage.setItem("desk-simFilter", JSON.stringify({ states: ["draft"], kinds: ["request", "change"] })));
     await desk.reload();
     await desk.waitForSelector('#list [data-card="R-22"]');
     assert.deepEqual(await desk.$$eval(".sf-chip", (xs) => xs.map((x) => x.textContent.trim())), ["In review"], "a kept state they cannot see is left out");
@@ -4646,5 +4646,30 @@ test("full mode: a proposal's options go to the dev team's vote with Ask for fee
     await desk.click(`#list [data-card="${card.id}"]`);
     await desk.waitForSelector("#detail .status");
     assert.equal(await desk.locator("#detail .status [data-team-feedback]").count(), want, card.stage);
+  });
+});
+
+test("simple mode: a designer reads proposals, from a filter that starts at In review", (t) => open(t, DESK(SIMPLE_ME, [STAGED[1], STAGED[2]]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="R-22"]');
+  assert.deepEqual(await desk.$$eval(".sf-chip", (xs) => xs.map((x) => x.textContent.trim())), ["In review"], "In review alone by default");
+  assert.equal(await desk.locator('#list [data-card="R-21"]').count(), 0, "a proposal waits under its own state");
+  await desk.click("details.sf > summary");
+  assert.deepEqual(await desk.$$eval('[data-simf^="states:"]', (xs) => xs.map((x) => x.dataset.simf.slice(7))), ["proposal", "open", "dev", "closed"], "Proposal to tick, no Draft");
+  await desk.click('[data-simf="states:proposal"]');
+  assert.equal(await desk.locator('#list [data-card="R-21"]').count(), 1);
+}));
+
+test("full mode: a proposal's vote ends with End the vote; one with no options, or still being drawn, offers no vote", async (t) => {
+  const me = { ...DESIGNER, role: "ui-dev-owner", can: { request: true, revise: true, "stage-propose": true, "stage-design": true, "stage-own": true, vote: true } };
+  const opts = { triage: { verdict: "design", reasons: [] }, variants: [{ id: "v1", name: "Calm", asset: "A-1" }], votes: {} };
+  for (const [card, sel, want] of [
+    [{ ...STAGED[1], ...opts, status: "feedback" }, "[data-end-vote]", 1],
+    [{ ...STAGED[1], ...opts, variants: [], status: "variants", team_feedback: { state: "waiting" } }, "[data-team-feedback]", 0],
+    [{ ...STAGED[1], ...opts, status: "variants", team_feedback: { state: "waiting" }, busy: true, waiting: [{ kind: "revise", state: "claimed", created: "2026-11-01T00:00:00Z" }] }, "[data-team-feedback]", 0],
+  ]) await open(t, DESK(me, [card]), async (desk) => {
+    await desk.click('[data-filter="reqFilter:open"]');
+    await desk.click(`#list [data-card="${card.id}"]`);
+    await desk.waitForSelector("#detail .status");
+    assert.equal(await desk.locator(`#detail .status ${sel}`).count(), want, `${card.status} ${sel}`);
   });
 });

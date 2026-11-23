@@ -3408,7 +3408,7 @@ test("before design a request is worked on, commented and closed by its own, but
   assert.throws(() => s.endVote(id, bob), draft);
   assert.throws(() => s.decideAndClose(id, pat, { text: "No." }), still);
   assert.throws(() => s.queueForCall(id, alice), still);
-  assert.throws(() => s.setSize(id, lou, true), /takes its side when it goes to design/);
+  assert.throws(() => s.setSize(id, lou, true), /takes its side when it opens/);
   assert.throws(() => s.openPoll(id, { chat: "C1", root_ts: "1.0", posts: [{ variant: "v1", ts: "1.1" }], closes: "2030-01-01T00:00:00Z" }), draft);
   // Design Desk's work and the author's feedback go on.
   assert.equal(s.act(id, bob, "revise", "Softer rows.", { variant: "v1" }).inbox.kind, "revise");
@@ -3425,7 +3425,7 @@ test("before design a request is worked on, commented and closed by its own, but
   assert.equal(s.listCards({}).find((c) => c.id === id).stage, "proposal", "the list carries the stage");
 });
 
-test("before design a request is there only for its author, an admin, and on a proposal the developers and the UI dev owner", () => {
+test("a draft is there only for its author and an admin; a proposal is everyone's", () => {
   const s = fresh();
   const lou = { email: "lou@example.com", role: "ui-dev-owner" }, pat = { email: "pat@example.com", role: "pm" }, lee = { email: "lee@example.com", role: "admin" }, dana = { email: "dana@example.com", role: "developer" };
   const asset = s.addAsset({ kind: "variant", name: "v", contentType: "text/html", data: "<p>v</p>", encoding: "utf8" }).asset.id;
@@ -3446,7 +3446,8 @@ test("before design a request is there only for its author, an admin, and on a p
   s.moveStage(id, bob, "proposal");
   assert.deepEqual(sees(dana).slice(0, 4), [true, true, true, true], "a proposal is every developer's");
   assert.deepEqual(sees(lou).slice(0, 4), [true, true, true, true]);
-  assert.deepEqual(sees(pat), [false, false, false, false, false], "not a PM's");
+  assert.deepEqual(sees(pat).slice(0, 4), [true, true, true, true], "and a PM's");
+  assert.deepEqual(sees(alice).slice(0, 4), [true, true, true, true], "and a designer's");
   // An option carried over to a request they see stays theirs to read.
   const other = s.createRequest(alice, { problem: "Same rows." }).card.id;
   s.upsertCard({ id: other, variants: [{ id: "v1", name: "Calm", asset }] });
@@ -3488,8 +3489,9 @@ test("the bell shows each viewer a request's history from the first stage they c
   // A picture only a hidden request's conversation holds is not served to whom the request is hidden from.
   const shot = s.addAsset({ kind: "image", name: "s", contentType: "image/png", data: "iVBORw0KGgo=" }).asset.id;
   s.db.threads[s.card(id).threads[0]].messages[0].shots = [shot];
-  assert.throws(() => s.getAsset(shot, alice), /no asset/);
-  assert.equal(s.getAsset(shot, dana).id, shot);
+  s.moveStage(id, lou, "draft");
+  assert.throws(() => s.getAsset(shot, dana), /no asset/, "back to a draft: not its author's, so not theirs");
+  assert.equal(s.getAsset(shot, bob).id, shot);
 });
 
 test("a request back to draft is out of the dev team's bell again until it is proposed anew", () => {
@@ -3505,7 +3507,7 @@ test("a request back to draft is out of the dev team's bell again until it is pr
   const events = (who) => s.notifications(who, { days: 100000 }).items.filter((n) => n.item === id).map((n) => n.event);
   assert.equal(events(dana).includes("options-drawn"), false, "drawn while it was a draft again");
   assert.deepEqual(s.blindSpans(s.card(id), dana), [["2030-01-01T09:00:00Z", "2030-01-02T09:00:00Z"], ["2030-01-03T09:00:00Z", "2030-01-04T09:00:00Z"]]);
-  assert.deepEqual(s.blindSpans(s.card(id), alice), [["2030-01-01T09:00:00Z", "9999"]], "a designer saw none of it yet");
+  assert.deepEqual(s.blindSpans(s.card(id), alice), s.blindSpans(s.card(id), dana), "a designer, as anyone, missed only its drafts");
 });
 
 test("a private ask about a request before design is only for whom it is there", () => {
@@ -3532,7 +3534,7 @@ test("a proposal takes the dev team's votes and Slack, and Approve for dev sends
   assert.deepEqual(r.card.staged.at(-1).to, "developers");
 });
 
-test("a request born a proposal keeps its proposal news for the dev team once it opens", () => {
+test("a request born a proposal keeps its proposal news for everyone once it opens", () => {
   const s = fresh();
   const lou = { email: "lou@example.com", role: "ui-dev-owner" }, dana = { email: "dana@example.com", role: "developer" };
   s.clock = () => "2030-01-01T09:00:00Z";
@@ -3541,6 +3543,6 @@ test("a request born a proposal keeps its proposal news for the dev team once it
   s.clock = () => "2030-01-02T09:00:00Z";
   s.moveStage(id, lou, "design");
   const events = (who) => s.notifications(who, { days: 100000 }).items.filter((n) => n.item === id).map((n) => n.event);
-  assert.ok(events(dana).includes("options-drawn"), "the dev team saw it as a proposal from the start");
-  assert.equal(events(alice).includes("options-drawn"), false, "a designer did not");
+  assert.ok(events(dana).includes("options-drawn"), "everyone saw it as a proposal from the start");
+  assert.ok(events(alice).includes("options-drawn"), "a designer too");
 });

@@ -43,7 +43,7 @@ assert "feedback leaves out questions for the designer" '[.feedback[].text] == [
 # A request before design is no news (docs/desk.md → Draft and Proposal): a draft, its conversation, and
 # one opened this week that was filed before it, counted from when it opened.
 jq '.cards["R-1"] = {"id":"R-1","kind":"request","title":"A draft","stage":"draft","status":"variants","created":"2026-11-02T10:00:00Z","request":{"type":"idea"}}
-  | .cards["R-2"] = {"id":"R-2","kind":"request","title":"Sent to design","status":"variants","created":"2026-10-20T10:00:00Z","opened_at":"2026-11-03T10:00:00Z","request":{"type":"idea"}}
+  | .cards["R-2"] = {"id":"R-2","kind":"request","title":"Sent to design","status":"variants","created":"2026-10-20T10:00:00Z","opened_at":"2026-11-03T10:00:00Z","staged":[{"from":"draft","to":"design","at":"2026-11-03T10:00:00Z"}],"request":{"type":"idea"}}
   | .threads["T-3"] = {"id":"T-3","card":"R-1","kind":"comment","created":"2026-11-03T12:00:00Z","messages":[{"by":{"email":"c@example.com"},"text":"Only the author sees this."}]}' "$DESK_DIR/db.json" > "$STUB_DIR/db" && mv "$STUB_DIR/db" "$DESK_DIR/db.json"
 out3="$(bash "$ROOT/scripts/preflight.sh" digest)"
 assert "a draft is not new this week; one sent to design this week is" '[.requests_new[].id] == ["R-2"]' "$out3"

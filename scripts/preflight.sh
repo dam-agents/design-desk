@@ -978,14 +978,14 @@ digest_mode() {
     def day($e): ($e | strftime("%d %b %Y") | ltrimstr("0"));
     # Named by its days: "29 Oct – 4 Nov 2026", the year once when both days share it.
     [day($start), day($end - 86400)] as [$from, $to]
-    # A request before design is no news yet (docs/desk.md → Draft and Proposal): it counts from when it opens.
-    | [.cards[] | select(.stage == null)] as $cards | [.cards[] | select(.stage != null) | .id] as $hidden
+    # A draft is no news yet (docs/desk.md → Draft and Proposal): a request counts from when it left its draft.
+    | [.cards[] | select(.stage != "draft")] as $cards | [.cards[] | select(.stage == "draft") | .id] as $hidden
     | {
       done: any($cards[]; .kind == "digest" and .period == $period),
       dates: ((if $from[-4:] == $to[-4:] then $from[:-5] else $from end) + " – " + $to),
       changes: [ $cards[] | select(.kind == "change" and ((.source.merged_at // .created) | inweek))
                  | {id, title, merged_at: .source.merged_at, in_progress: (.source.merged_at == null), screen: ([.screens[]? | select(.stage == "after" or .stage == null) | .asset][0])} ],
-      requests_new: [ $cards[] | select(.kind == "request" and ((.opened_at // .created) | inweek)) | {id, title, type: .request.type, status} ],
+      requests_new: [ $cards[] | select(.kind == "request" and (((.staged // []) | map(select(.from == "draft")) | .[0].at) // .created | inweek)) | {id, title, type: .request.type, status} ],
       handed_off: [ $cards[] | select(.kind == "request" and .status == "handed-off" and (.updated | inweek)) | {id, title} ],
       waiting: [ $cards[] | select(.agenda.status == "queued") | {id, title, note: .agenda.note} ],
       polls: [ $cards[] | . as $c | (.polls // [])[] | select(.state == "open" or (.closed | inweek)) | {card: $c.id, title: $c.title, state, closes, result} ],

@@ -736,7 +736,7 @@ test("a designer's request opens; anyone else's is a draft that its author moves
   assert.deepEqual([approve.status, approve.body.error], [400, "This request is still a draft. That waits until it goes to design."]);
 });
 
-test("a draft or a proposal is not there, through any route, for whom it is not", async (t) => {
+test("a draft is not there, through any route, for whom it is not; a proposal is everyone's", async (t) => {
   const d = await desk(t);
   const id = (await d.viewer("bob@example.com", "/api/requests", { problem: "Rows are too airy.", options: 0 })).body.card.id;
   const tid = (await d.viewer("bob@example.com", `/api/cards/${id}/threads`, { kind: "comment", text: "Mine for now." })).body.thread.id;
@@ -753,12 +753,11 @@ test("a draft or a proposal is not there, through any route, for whom it is not"
   assert.deepEqual(await reach("lee@example.com"), [true, 200, 201, 201, 201], "an admin");
   assert.equal((await d.viewer("lou@example.com", `/api/cards/${id}/stage`, { to: "design" })).status, 404, "the UI dev owner moves no draft they cannot see");
   assert.equal((await d.viewer("bob@example.com", `/api/cards/${id}/stage`, { to: "proposal" })).status, 200);
-  assert.deepEqual(await reach("dana@example.com"), [true, 200, 201, 201, 201], "a proposal is every developer's");
-  assert.deepEqual(await reach("pat@example.com"), [false, 404, 404, 404, 404], "not a PM's");
+  for (const email of ["dana@example.com", "pat@example.com", "alice@example.com"]) assert.deepEqual(await reach(email), [true, 200, 201, 201, 201], `a proposal is ${email}'s to read too`);
   assert.equal((await d.agent(`/agent/cards/${id}`)).body.card.stage, "proposal", "the agent sees it");
 });
 
-test("a request asked for in Slack goes to the dev team first, as a proposal, unless a designer asked", async (t) => {
+test("a request asked for in Slack goes to the dev team first, as a proposal everyone reads, unless a designer asked", async (t) => {
   const d = await desk(t);
   const file = async (path, origin, extra = {}) => (await d.agent(path, { title: "Calmer rows", problem: "Rows are too airy.", origin, ...extra })).body.card;
   const slack = (email) => ({ channel: "slack", reporter: "Someone", email, chat: "C1", thread_ts: "1.0" });
@@ -769,7 +768,7 @@ test("a request asked for in Slack goes to the dev team first, as a proposal, un
   assert.equal((await file("/agent/requests", null, { stage: "draft" })).stage, undefined, "the agent names no stage itself");
   const id = (await file("/agent/requests", slack("bob@example.com"))).id;
   assert.equal((await d.viewer("bob@example.com", `/api/cards/${id}`)).status, 200, "who asked in Slack sees it");
-  assert.equal((await d.viewer("pat@example.com", `/api/cards/${id}`)).status, 404, "a PM does not, until it goes to design");
+  assert.equal((await d.viewer("pat@example.com", `/api/cards/${id}`)).status, 200, "and so does a PM: only a draft is private");
 });
 
 test("a private ask stays its owner's once its request is hidden from them", async (t) => {

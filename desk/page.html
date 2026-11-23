@@ -3326,17 +3326,18 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // Draft and Proposal come first, for whom they can hold anything (docs/desk-page.md → Simple mode):
   // Draft for whoever files a request that starts as one, Proposal for the dev team.
   const SIM_ALL = [["draft", "Draft"], ["proposal", "Proposal"], ["open", "In review"], ["dev", "In dev"], ["closed", "Closed"]];
-  const seesStage = (k) => (k === "draft" ? startsDraft() && can("request") : k === "proposal" ? ["developer", "ui-dev-owner", "admin"].includes(S.me?.role) : true)
-    || S.cards.some((c) => !closed(c) && preDesign(c) === k);
+  // A proposal is everyone's to read; a draft only its author's, so Draft shows for who files one.
+  const seesStage = (k) => (k === "draft" ? startsDraft() && can("request") : true) || S.cards.some((c) => !closed(c) && preDesign(c) === k);
   const simStates = () => SIM_ALL.filter(([k]) => seesStage(k));
   const SIM_KINDS = [["request", "Requests"], ["change", "PR changes"]];
   const SIM_PILL = { draft: "Draft", proposal: "Proposal", open: "In review", dev: "In dev", shipped: "Shipped", none: "No review needed", closed: "Closed" };
-  const SIM_TIP = { draft: "A draft: only its author sees it until they send it on", proposal: "A proposal: the dev team talks it over before it goes to design",
+  const SIM_TIP = { draft: "A draft: only its author sees it until they send it on", proposal: "A proposal: the dev team talks it over and moves it on; everyone may read it",
     open: "It needs a design decision", dev: "Approved: developers are building it", shipped: "Approved by a person and shipped",
     none: "Merged; Design Desk found nothing to review", closed: "Closed without being built" };
   // The filter: states and kinds, any of each; kept in this browser (desk-simFilter). By default
   // every state before In dev the viewer can see; a kept state they cannot see is left out.
-  const SIM_DEFAULT = () => ({ states: simStates().map(([k]) => k).filter((k) => !["dev", "closed"].includes(k)), kinds: ["request", "change"] });
+  // A designer's starts at In review alone: a proposal is the dev team's to move on.
+  const SIM_DEFAULT = () => ({ states: S.me?.role === "designer" ? ["open"] : simStates().map(([k]) => k).filter((k) => !["dev", "closed"].includes(k)), kinds: ["request", "change"] });
   S.simFilter = (() => {
     try {
       const v = JSON.parse(store.get("desk-simFilter") || "null"), ok = (xs, all) => Array.isArray(xs) && xs.filter((x) => all.some(([k]) => k === x));
@@ -5458,11 +5459,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       const first = stageMoves(c)[0].match(/data-stage="(\w+)">([^<]+)</);
       // A proposal is the dev team's to vote on: Ask for feedback, then End the vote, as in Team feedback.
       const team = preDesign(c) !== "proposal" || !hasOptions ? []
-        : c.status === "variants" && (can("revise") || filedIt(c)) && c.team_feedback?.state !== "open" ? [way("data-team-feedback", "Ask for feedback", "The dev team votes and comments on the options from now on")]
+        : c.status === "variants" && !working(c).length && (can("revise") || filedIt(c)) && c.team_feedback?.state !== "open" ? [way("data-team-feedback", "Ask for feedback", "The dev team votes and comments on the options from now on")]
         : mayEndVote(c) ? [way("data-end-vote", "End the vote", "Nobody votes on the options after this; a vote in Slack closes there with its result")] : [];
       return { ways: [...(first ? [way(`data-stage="${first[1]}"`, first[2])] : []), ...team], buttons: stageMoves(c)[2] + stageMoves(c)[1], wait: preDesign(c) === "draft" ? "its author" : "the UI dev owner",
         text: preDesign(c) === "draft" ? "A draft: only its author and admins see it. Design Desk works on it as on any request; its author sends it on when it is ready."
-          : "A proposal: the dev team talks it over and may vote. The UI dev owner sends it to design, approves it for developers, or sends it back to its author." };
+          : "A proposal: everyone may read it; the dev team talks it over and may vote. The UI dev owner sends it to design, approves it for developers, or sends it back to its author." };
     }
     // A draft's author, or the UI dev owner on a proposal, reopens it whatever their role (docs/desk.md → Draft and Proposal).
     const reopens = can("reopen") || closesStaged(c);
