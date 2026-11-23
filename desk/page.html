@@ -3076,9 +3076,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const sep = `<span class="sep" aria-hidden="true"></span>`;
     // Designs only for developers and admins; a designer reaches one from a notification (docs/desk-page.md → Designs).
     const designs = can("designs") ? [[["designs", designCards("todo").length]]] : [];
-    // Simple mode: one entry for requests and pull request changes, current on either tab.
-    const opens = simple() ? simpleCards({ states: ["open"], kinds: SIM_KINDS.map(([k]) => k) }).length : 0;
-    const one = `<button data-tab="requests" aria-current="${S.tab === "requests" || S.tab === "new"}" class="main">Requests &amp; PRs${opens ? `<span class="count" title="${opens} need a design decision">${opens}</span>` : ""}</button>`;
+    // Simple mode: one entry for requests and pull request changes, current on either tab; its count
+    // the items in the reviews the viewer's default filter shows (Design review, Dev review or both).
+    const reviews = simple() ? SIM_DEFAULT().states.filter((k) => ["proposal", "open"].includes(k)) : [];
+    const opens = reviews.length ? simpleCards({ states: reviews, kinds: SIM_KINDS.map(([k]) => k) }).length : 0;
+    const one = `<button data-tab="requests" aria-current="${S.tab === "requests" || S.tab === "new"}" class="main">Requests &amp; PRs${opens ? `<span class="count" title="${opens} in ${esc(reviews.map((k) => SIM_PILL[k]).join(" or "))}">${opens}</span>` : ""}</button>`;
     const html = simple() ? one : [[["requests", open.length, asks && plural(asks, "request waits", "requests wait") + " for an answer"]], ...designs, [["new", unseen], ["issues", openIssues]], [["product"], ["people"]]]
       .map((group) => group.map(tab).join("")).join(sep);
     // The poll redraws the menu every few seconds: an unchanged menu is left as it is, so a
@@ -3302,46 +3304,48 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     && !(Array.isArray(c.conflicts) ? c.conflicts.some((x) => x.status === "active") : (c.against || []).length));
   const requestCards = (filter, aud = reqFor()) => newestFirst(S.cards.filter((c) => c.kind === "request" && (preDesign(c) ? aud === mySide() : forOf(c) === aud)
     && (filter === "all" ? true : filter === "unread" ? c.read === false || S.justRead.has(c.id) : filter === "turn" ? myTurn(c) : filter === "open" ? !closed(c) : closed(c))));
-  // Simple mode (docs/desk-page.md → A request's state in the list): requests and changes in one
-  // list, each on the viewer's side in one of three states, by who works on it — Open (it needs a
-  // design decision), In dev (approved and being built, or reviewed and not merged), Closed (nobody
-  // works on it) — and a closed one says how it ended. Design Desk at work is no state: Open, with a spinner.
+  // Simple mode (docs/desk-page.md → A request's state in the list): every request and change in
+  // one list, whatever its side, each in one state by who works on it — Dev review (the dev team
+  // decides: a proposal, or anything For Developers not yet approved), Design review (the same For
+  // Designers), In dev (approved and being built, or reviewed and not merged), Closed (nobody works
+  // on it) — and a closed one says how it ended. Design Desk at work is no state: its review, with a spinner.
   const mySide = () => (DEVELOPERS.includes(S.me?.role) ? "developers" : "designers");
-  // An approved request whose spec draft waits for a person to send it is theirs to move: Open.
+  // An approved request whose spec draft waits for a person to send it is theirs to move: in its review.
   // As full mode reads it: a spec draft waits until a person sends it, unless its approver asked it to go by itself.
   const specWaits = (c) => c.status === "spec" && c.spec?.review === "draft" && !c.approved?.auto_send;
-  function simpleState(c, anySide = false) {
-    // A request before design is on everyone's side who sees it: it takes one when it opens.
-    if (!c || !["request", "change"].includes(c.kind) || (!anySide && !preDesign(c) && forOf(c) !== mySide())) return null;
+  // Its review, by its side: Dev review (key `proposal`) For Developers, Design review (key `open`) For Designers.
+  const reviewOf = (c) => ({ state: forOf(c) === "developers" ? "proposal" : "open", pill: null });
+  function simpleState(c, onPage = false) {
+    if (!c || !["request", "change"].includes(c.kind)) return null;
     if (c.kind === "request") {
       if (c.status === "declined") return { state: "closed", pill: "closed" };
       if (preDesign(c)) return { state: c.stage, pill: null };
       if (c.status === "handed-off") return c.built ? { state: "closed", pill: "shipped" } : { state: "dev", pill: null };
-      return c.status === "spec" && !specWaits(c) ? { state: "dev", pill: null } : { state: "open", pill: null };
+      return c.status === "spec" && !specWaits(c) ? { state: "dev", pill: null } : reviewOf(c);
     }
     // An archived change is never listed, but its link still opens it: nobody works on it.
-    if (c.status === "archived") return anySide ? { state: "closed", pill: c.source?.merged_at ? (c.handled ? "shipped" : "none") : "closed" } : null;
+    if (c.status === "archived") return onPage ? { state: "closed", pill: c.source?.merged_at ? (c.handled ? "shipped" : "none") : "closed" } : null;
     // A review asked the developer for changes: theirs until new commits arrive (docs/desk.md → Reviews).
     if (c.responsible?.who === "developer" && !c.source?.merged_at) return { state: "dev", pill: null };
-    if (!c.handled && !autoHandled(c)) return { state: "open", pill: null };
+    if (!c.handled && !autoHandled(c)) return reviewOf(c);
     if (!c.source?.merged_at) return { state: "dev", pill: null };
     return { state: "closed", pill: c.handled ? "shipped" : "none" };
   }
-  // Draft and Proposal come first, for whom they can hold anything (docs/desk-page.md → Simple mode):
-  // Draft for whoever files a request that starts as one, Proposal for the dev team.
-  const SIM_ALL = [["draft", "Draft"], ["proposal", "Proposal"], ["open", "In review"], ["dev", "In dev"], ["closed", "Closed"]];
+  // A state's key stays what a browser kept in its filter: `proposal` is Dev review, `open` Design review.
+  // Draft comes first, for whom it can hold anything (docs/desk-page.md → Simple mode).
+  const SIM_ALL = [["draft", "Draft"], ["proposal", "Dev review"], ["open", "Design review"], ["dev", "In dev"], ["closed", "Closed"]];
   // A proposal is everyone's to read; a draft only its author's, so Draft shows for who files one.
   const seesStage = (k) => (k === "draft" ? startsDraft() && can("request") : true) || S.cards.some((c) => !closed(c) && preDesign(c) === k);
   const simStates = () => SIM_ALL.filter(([k]) => seesStage(k));
   const SIM_KINDS = [["request", "Requests"], ["change", "PR changes"]];
-  const SIM_PILL = { draft: "Draft", proposal: "Proposal", open: "In review", dev: "In dev", shipped: "Shipped", none: "No review needed", closed: "Closed" };
-  const SIM_TIP = { draft: "A draft: only its author sees it until they send it on", proposal: "A proposal: the dev team talks it over and moves it on; everyone may read it",
-    open: "It needs a design decision", dev: "Approved: developers are building it", shipped: "Approved by a person and shipped",
+  const SIM_PILL = { draft: "Draft", proposal: "Dev review", open: "Design review", dev: "In dev", shipped: "Shipped", none: "No review needed", closed: "Closed" };
+  const SIM_TIP = { draft: "A draft: only its author sees it until they send it on", proposal: "Dev review: the dev team approves it for dev or sends it to design; everyone may read it",
+    open: "Design review: it needs a design decision", dev: "Approved: developers are building it", shipped: "Approved by a person and shipped",
     none: "Merged; Design Desk found nothing to review", closed: "Closed without being built" };
   // The filter: states and kinds, any of each; kept in this browser (desk-simFilter). By default
-  // every state before In dev the viewer can see; a kept state they cannot see is left out.
-  // A designer's starts at In review alone: a proposal is the dev team's to move on.
-  const SIM_DEFAULT = () => ({ states: S.me?.role === "designer" ? ["open"] : simStates().map(([k]) => k).filter((k) => !["dev", "closed"].includes(k)), kinds: ["request", "change"] });
+  // Design review for a designer, Draft and Dev review for a developer or a UI dev owner, every
+  // state before In dev for anyone else; a kept state they cannot see is left out.
+  const SIM_DEFAULT = () => ({ states: S.me?.role === "designer" ? ["open"] : simStates().map(([k]) => k).filter((k) => !["dev", "closed", ...(DEVELOPERS.includes(S.me?.role) ? ["open"] : [])].includes(k)), kinds: ["request", "change"] });
   S.simFilter = (() => {
     try {
       const v = JSON.parse(store.get("desk-simFilter") || "null"), ok = (xs, all) => Array.isArray(xs) && xs.filter((x) => all.some(([k]) => k === x));
@@ -3403,14 +3407,14 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const first = design ? b("design", "Send to design", true) : can("stage-propose") ? b("proposal", "Propose", true) : "";
     return [first, design && can("stage-propose") ? b("proposal", "Propose") : "", dev];
   }
-  const STAGE_DONE = { proposal: "Proposed: the dev team sees it now, and the UI dev owner sends it to design.", design: "Sent to design: designers see it In review now.",
+  const STAGE_DONE = { proposal: "Proposed: the dev team sees it now, and the UI dev owner sends it to design.", design: "Sent to design: designers see it in Design review now.",
     draft: "Back to draft: only its author sees it now." };
   // Moving a request on before design; opening it, which cannot be taken back, asks first.
   async function moveStage(c, to) {
     const go = () => api("POST", `/api/cards/${encodeURIComponent(c.id)}/stage`, { to });
     if (to === "design") {
       const r = await ask({ title: "Send it to design?", ok: "Send to design", send: go,
-        body: "Designers see it In review from now on, with what was said about it so far. It does not come back to a draft." });
+        body: "Designers see it in Design review from now on, with what was said about it so far. It does not come back to a draft." });
       if (!r) return;
     } else await go();
     toast(STAGE_DONE[to]);
@@ -3435,24 +3439,34 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const after = [ap ? `Approved by ${esc(ap.agent ? "Design Desk" : shortName(ap.email, ap.name))}${(change ? c.handled?.at : c.approved?.at) ? `, ${esc(sWhen(change ? c.handled.at : c.approved.at))}` : ""}` : "",
       sent ? `Sent to <a href="${safeUrl(sent)}" target="_blank" rel="noopener noreferrer">#${esc(String(sent).match(/\/(?:issues|pull)\/(\d+)/)?.[1] || "")} ↗</a>` : "",
       built ? `Shipped ${esc(sWhen(built))}` : ""].filter(Boolean).join(" · ");
-    // At most two moves, only while it needs a design decision and only the viewer's own.
+    // At most two moves, only while it is in review (Dev or Design) and only the viewer's own.
     const btn = (attr, label, primary = false) => `<button class="btn${primary ? " primary" : ""}" ${attr}>${label}</button>`;
-    const open = s.state === "open";
+    const open = s.state === "open" || s.state === "proposal";
     // With drafts waiting, Request changes counts them and is the next step; either verdict opens
     // the review dialog with it picked (docs/desk.md → Reviews).
     const n = draftsOf(c).filter((d) => !d.ok).length + lookFeedback(c).length, verdicts = verdictsFor(c).map((x) => x.id);
     const changes = verdicts.includes("request-changes") ? btn('data-review="request-changes"', n ? `Request changes · ${n}` : "Request changes", n > 0) : "";
-    const approve = (attr) => (n ? btn('data-review="approve"', "Approve") : btn(attr, "Approve", true));
+    const approve = (attr, label = "Approve") => (n ? btn('data-review="approve"', label) : btn(attr, label, true));
     // Before design the head's moves are the stage's (docs/desk.md → Draft and Proposal): Send to design or
     // Propose first, Request changes beside it; the rest of the stage's moves go under ⋯.
     const stage = !change && !closed(c) && preDesign(c), [stageFirst, stageMore, stageDev] = stage ? stageMoves(c) : ["", "", ""], stageMain = stageFirst + stageDev;
-    const moves = change ? ((open || c.responsible?.who === "developer") && mayHandle(c) ? changes + (c.handled ? "" : approve('data-handle="1"')) : "")
+    const sendSpec = () => (canApprove(c) && !(c.threads || []).some((th) => th.kind === "asks" && th.state === "open") ? btn("data-spec-send", "Send to developers", true) : "");
+    const approveReq = (label) => (canApprove(c) && (c.triage || (c.variants || []).length) ? approve('data-act="approve"', label) : "");
+    // Dev review after design opened (docs/desk-page.md → Simple mode): the same two moves as a
+    // proposal's, Approve for dev and Send to design (the move to For Designers); with feedback
+    // drafted, Request changes and Approve first. What does not fit goes under ⋯.
+    const devReview = s.state === "proposal" && !stage;
+    const toDesign = devReview && can("size") && !(change ? handledAt(c) : c.approved || c.status === "spec") ? btn('data-size="designer"', "Send to design") : "";
+    const devApprove = !devReview ? "" : change ? (mayHandle(c) && !c.handled ? approve('data-handle="1"') : "") : specWaits(c) ? sendSpec() : approveReq("Approve for dev");
+    const devMoves = !devReview ? [] : (n ? [changes, devApprove, toDesign] : [devApprove, toDesign, changes]).filter(Boolean);
+    const moves = devReview ? devMoves.slice(0, 2).join("")
+      : change ? ((open || c.responsible?.who === "developer") && mayHandle(c) ? changes + (c.handled ? "" : approve('data-handle="1"')) : "")
       : stage ? stageMain + (stageMain.includes("approve-dev") ? "" : changes)
       : !open ? ""
-      : specWaits(c) ? (canApprove(c) && !(c.threads || []).some((th) => th.kind === "asks" && th.state === "open") ? btn("data-spec-send", "Send to developers", true) : "")
-      : changes + (canApprove(c) && (c.triage || (c.variants || []).length) ? approve('data-act="approve"') : "");
+      : specWaits(c) ? sendSpec()
+      : changes + approveReq();
     const url = change ? src.url : c.spec?.issue_url || c.spec?.pr_url || "";
-    const items = [change ? (can("follow-up") && !hasRequest(c) ? btn("data-adjust", "Turn into a design request") : "") + (handledAt(c) && mayHandle(c) ? btn('data-handle="0"', "Undo approval") : "")
+    const items = [devMoves.slice(2).join(""), change ? (can("follow-up") && !hasRequest(c) ? btn("data-adjust", "Turn into a design request") : "") + (handledAt(c) && mayHandle(c) ? btn('data-handle="0"', "Undo approval") : "")
         : closed(c) ? ((c.status === "handed-off" ? S.me?.role === "admin" : can("reopen") || closesStaged(c)) ? btn('data-act="reopen"', "Reopen") : "")
         : (stage && stageMain.includes("approve-dev") ? changes : "") + stageMore + ((preDesign(c) ? closesStaged(c) : can("close") || can("skip")) ? btn('data-act="close"', "Close…") : ""),
       url ? `<a class="btn" href="${safeUrl(url)}" target="_blank" rel="noopener noreferrer">Open on GitHub ↗</a>` : ""].join("");
@@ -3548,7 +3562,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const optionBox = (c) => { const v = (c.variants || []).find((x) => x.id === S.variant) || (c.variants || [])[0]; return v ? reviewBox(c, { anchor: { variant: v.id }, what: `Option ${(c.variants || []).indexOf(v) + 1} · ${v.name}` }) : ""; };
   // The verdicts a viewer may send on an item (docs/desk.md → Reviews).
   function verdictsFor(c) {
-    const open = simpleState(c, true)?.state === "open" || Boolean(c.responsible);
+    const open = ["open", "proposal"].includes(simpleState(c, true)?.state) || Boolean(c.responsible);
     const out = [];
     if (c.kind === "request") {
       if (can("change") && (c.variants || []).length && !locked(c) && !closed(c)) out.push({ id: "request-changes", name: "Request changes", hint: "Design Desk draws the next version from your comments." });
@@ -3637,9 +3651,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const shipped = simpleCards({ states: ["closed"], kinds }).filter((c) => simpleState(c).pill === "shipped" && Date.now() - Date.parse(lastChange(c)) < 7 * 864e5).length;
     const of = (st) => [[n(st, ["request"]), "request", "requests"], [n(st, ["change"]), "PR change", "PR changes"]].filter(([x]) => x).map(([x, one, many]) => plural(x, one, many)).join(", ");
     const box = (st, word, line) => `<button class="sbox" data-simf-only="${st}" data-s="${st}" title="Show only what is ${esc(word)}"><span class="n">${n(st)}</span><b>${word}</b><span class="hint">${esc(line)}</span></button>`;
-    // Draft and Proposal only while they hold something, before Open.
-    const early = [["draft", "Draft", "Yours to send on"], ["proposal", "Proposal", "For the dev team to talk over"]].filter(([st]) => seesStage(st) && n(st)).map(([st, word, line]) => box(st, word, `${line}: ${of(st)}`)).join("");
-    return `<div class="sboxes">${early}${box("open", "In review", n("open") ? `Need a design decision: ${of("open")}` : "Nothing needs a design decision")}${box("dev", "In dev", n("dev") ? `Approved, being built: ${of("dev")}` : "Nothing is being built")}${box("closed", "Closed", `${plural(shipped, "item", "items")} shipped in the last 7 days`)}</div>`;
+    // Draft only while it holds something, before the reviews.
+    const early = seesStage("draft") && n("draft") ? box("draft", "Draft", `Yours to send on: ${of("draft")}`) : "";
+    return `<div class="sboxes">${early}${box("proposal", "Dev review", n("proposal") ? `For the dev team to approve or send to design: ${of("proposal")}` : "Nothing waits for the dev team")}${box("open", "Design review", n("open") ? `Need a design decision: ${of("open")}` : "Nothing needs a design decision")}${box("dev", "In dev", n("dev") ? `Approved, being built: ${of("dev")}` : "Nothing is being built")}${box("closed", "Closed", `${plural(shipped, "item", "items")} shipped in the last 7 days`)}</div>`;
   }
   const setSimFilter = (f) => { S.simFilter = f; store.set("desk-simFilter", JSON.stringify(f)); };
   // Your turn: an open request whose next move is the viewer's own, by what they may do — answer
@@ -3852,7 +3866,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         : (S.productFilter === "elements" ? "No elements yet. Design Desk draws the product's main parts after it is set up; they appear here within a day."
         : "No screens yet. Design Desk maps the product's screens on its own copy of the product; they appear here once it runs.") + (can("add") ? " Missing one? Press + Add." : ""),
     }[S.tab];
-    const simpleEmpty = () => { const f = simFilter().states; return f.length === 1 && f[0] === "draft" ? "You have no drafts." : f.length === 1 && f[0] === "proposal" ? "No proposal waits for the dev team." :  f.length === 1 && f[0] === "open" ? "Nothing needs a design decision right now." : f.length === 1 && f[0] === "dev" ? "Nothing is being built right now." : f.length === 1 && f[0] === "closed" ? "Nothing is closed yet." : "Nothing here."; };
+    const simpleEmpty = () => { const f = simFilter().states; return f.length === 1 && f[0] === "draft" ? "You have no drafts." : f.length === 1 && f[0] === "proposal" ? "Nothing waits for the dev team." :  f.length === 1 && f[0] === "open" ? "Nothing needs a design decision right now." : f.length === 1 && f[0] === "dev" ? "Nothing is being built right now." : f.length === 1 && f[0] === "closed" ? "Nothing is closed yet." : "Nothing here."; };
     if (!cards.length) { list.innerHTML = filters + `<div class="empty">${esc(simpleList() ? simpleEmpty() : empty)}</div>`; return; }
     // Every list says where each item came from, without a description, Product included.
     const sourced = S.tab === "new" || S.tab === "requests" || S.tab === "designs" || S.tab === "issues" || S.tab === "product";
@@ -8549,7 +8563,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     }
     if (ds.size) {
       const small = ds.size === "small";
-      const r = await ask({ title: small ? "Move to For Developers" : "Move to For Designers",
+      // In simple mode the move to For Designers is Send to design: from Dev review to Design review.
+      const r = simple() && !small ? await ask({ title: "Send it to design?", ok: "Send to design", send: () => api("POST", `/api/cards/${S.card.id}/size`, { small }),
+        body: S.card.kind !== "request" ? "It goes to Design review: a designer marks it handled." : "It goes to Design review: a designer, a PM or a UI dev owner approves it. The request shows that you chose this." })
+        : await ask({ title: small ? "Move to For Developers" : "Move to For Designers",
         body: S.card.kind !== "request" ? (small ? "A UI dev owner can then mark it handled, without a designer." : "A designer marks it handled.")
           : small ? "Any developer but the person who filed it can then approve it, without a designer. The request shows that you chose this." : "A designer, a PM or a UI dev owner approves it again. The request shows that you chose this.",
         ok: small ? "For Developers" : "For Designers", send: () => api("POST", `/api/cards/${S.card.id}/size`, { small }) });
