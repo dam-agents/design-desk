@@ -544,7 +544,8 @@ draft (the server sends it only to its author and an admin, [desk.md](desk.md) â
 simple state: simple mode lists none of them, and a link to one opens its full page.
 
 A list row's title, in both modes, takes two lines at most and ends with an ellipsis; its tooltip
-and its page have it in full.
+has it in full, and so does full mode's page (simple mode's head cuts it to one line, its words on
+hover).
 
 On a wide window the list folds away with an arrow halfway down its edge and comes back with
 it; each browser remembers it (`desk-list-folded` in local storage). Dragging the edge makes
