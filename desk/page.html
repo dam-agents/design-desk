@@ -604,7 +604,8 @@
   .zoom .gal { top: 50%; transform: translateY(-50%); font-size: 22px; line-height: 1; padding: 12px 16px; }
   .zoom .gal.prev { left: 12px; right: auto; }
   /* A state of an element, enlarged: the part cut from its page, as large as the screen allows. */
-  .zoom .zoomframe { width: min(1100px, calc(100vw - 48px)); height: calc(100vh - 110px); border: 0; border-radius: var(--r-sm); background: #fff; pointer-events: none; display: block; }
+  .zoom .zoombox { position: relative; overflow: hidden; width: min(1100px, calc(100vw - 48px)); height: calc(100vh - 110px); border-radius: var(--r-sm); background: #fff; }
+  .zoom .zoomframe { width: 100%; height: 100%; border: 0; pointer-events: none; display: block; }
   .catalog li[data-zoom], .catalog li[data-zoom-snip] { cursor: zoom-in; }
   /* The box after an element's states that has more drawn. */
   .catalog li.addstate { border: 1.5px dashed color-mix(in srgb, var(--accent) 45%, var(--line)); padding: 0; min-height: 200px; display: grid; align-items: stretch; }
@@ -2725,12 +2726,15 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // grow: a part found by comparing pages may be one word; show it with enough around it to read.
   // `tight`: a part with no box of its own (no fill, border or shadow) is fitted by what it holds, so a
   // short line in a wide block is not drawn tiny (a wide frame lays blocks out at a desktop width).
+  // Inside a part's frame: the view its part (e) is on opens. The design's review bar makes its view
+  // buttons, and shows view 1, only once the page is parsed: \`view()\` runs again then, and on load.
+  const OPEN_VIEW = `const vw=e&&e.closest("[data-view]"),view=()=>{if(!vw||vw.classList.contains("review-shown"))return;const t=document.querySelector('[data-review-view="'+vw.dataset.view+'"]');t&&t.click()};view();`;
   const SNIP_SCRIPT = (sel, text, grow, cap = 2.5, tight = false) => `<script>(()=>{const S=${js(sel)},T=${js(text)},G=${grow ? 1 : 0},C=${Number(cap) || 2.5},X=${tight ? 1 : 0},b=document.body,d=document.documentElement;
     let e=null;try{e=S&&document.querySelector(S)}catch{}
     if(!e&&T){const w=document.createTreeWalker(b,1);for(let n;(n=w.nextNode());)if(n.children.length===0&&n.textContent.trim()===T){e=n;break}}
     // A preview never shows the review bar, nor the outline its Show hotspots switch draws; a part on another view opens that view first.
     const rv=document.getElementById("review");if(rv){rv.style.display="none";const h=rv.querySelector("[data-hot]");if(h)h.setAttribute("aria-checked","false")}d.classList.remove("review-hot");
-    const vw=e&&e.closest("[data-view]");if(vw){const t=document.querySelector('[data-review-view="'+vw.dataset.view+'"]');t&&t.click()}
+    ${OPEN_VIEW}
     d.style.overflow="hidden";b.style.transformOrigin="0 0";
     // Nothing named: the whole page, scaled to the frame's width from the top.
     if(!S&&!T){const whole=()=>{if(!innerWidth)return;b.style.transform="none";const k=Math.min(1,innerWidth/Math.max(d.scrollWidth,1200));b.style.width=(innerWidth/k)+"px";b.style.transform="scale("+k+")"};whole();addEventListener("load",whole);addEventListener("resize",whole);return}
@@ -2742,7 +2746,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       let r=e.getBoundingClientRect();const p=12;if(!r.width&&!r.height)return;
       if(X){const cs=getComputedStyle(e),bare=cs.backgroundColor==="rgba(0, 0, 0, 0)"&&cs.backgroundImage==="none"&&cs.boxShadow==="none"&&!["Top","Right","Bottom","Left"].some((k)=>parseFloat(cs["border"+k+"Width"]));if(bare){const q=document.createRange();q.selectNodeContents(e);const c=q.getBoundingClientRect();if(c.width&&c.height)r=c}}const k=Math.min(W/(r.width+2*p),H/(r.height+2*p),C);
       const x=r.left-(W/k-r.width)/2,y=r.top-(H/k-r.height)/2;b.style.transform="scale("+k+") translate("+(-x)+"px,"+(-y)+"px)"};
-    fit();addEventListener("load",fit);addEventListener("resize",fit);document.fonts&&document.fonts.ready.then(fit)})();<\/script>`;
+    const go=()=>{view();fit()};fit();addEventListener("DOMContentLoaded",go);addEventListener("load",go);addEventListener("resize",fit);document.fonts&&document.fonts.ready.then(fit)})();<\/script>`;
   // Where a state's page differs from its option's: the smallest element holding every change, as a
   // path from <body>. The review bar (it names the state) and scripts do not count; "" = no one place.
   function diffPath(base, page) {
@@ -6366,31 +6370,33 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const sel = el.dataset.zoomSel || (base ? diffPath(decode(await asset(base)), html) : "");
     $(".zoom")?.remove();
     const z = document.createElement("div"); z.className = "zoom"; z.onclick = () => z.remove();
-    z.innerHTML = `<button class="btn small" aria-label="Close the picture">✕ Close</button><figure><iframe class="zoomframe" sandbox="allow-scripts" title="${esc(el.dataset.zoomLabel || "")}"></iframe><figcaption>${esc(el.dataset.zoomLabel || "")}</figcaption></figure>`;
+    z.innerHTML = `<button class="btn small" aria-label="Close the picture">✕ Close</button><figure><div class="zoombox"><iframe class="zoomframe" sandbox="allow-scripts" title="${esc(el.dataset.zoomLabel || "")}"></iframe></div><figcaption>${esc(el.dataset.zoomLabel || "")}</figcaption></figure>`;
     ($("#element-dialog[open]") || document.body).append(z);
     const f = z.querySelector("iframe");
     // The frame takes the part's own shape, enlarged to fit the screen, the part centred in it:
     // the page tells its size. A part it cannot name (no path) shows the whole page in a large frame.
-    if (sel) { f.style.visibility = "hidden"; setTimeout(() => { f.style.visibility = ""; }, 1500); }
-    f.srcdoc = sel ? (html.includes("</body>") ? html.replace("</body>", `${ZOOM_SCRIPT(sel)}</body>`) : html + ZOOM_SCRIPT(sel)) : snipDoc(html, "", "", false);
+    // The part is laid out wide, as under All elements (widen): its box, sized to the part, already
+    // holds it at most 2.5 times its size, so the part fills the frame inside.
+    if (sel) { f.style.visibility = "hidden"; setTimeout(() => { f.style.visibility = ""; }, 1500); widen(f); }
+    f.srcdoc = sel ? (html.includes("</body>") ? html.replace("</body>", `${ZOOM_SCRIPT(sel, Infinity)}</body>`) : html + ZOOM_SCRIPT(sel, Infinity)) : snipDoc(html, "", "", false);
   }
   // Inside an enlarged part's frame: only the part shows, centred and scaled to the frame, again on
   // every resize; its own size goes to the page, which gives the frame its shape.
-  const ZOOM_SCRIPT = (sel) => `<script>(()=>{const S=${js(sel)},b=document.body,d=document.documentElement;
+  const ZOOM_SCRIPT = (sel, cap = 2.5) => `<script>(()=>{const S=${js(sel)},C=${Number(cap) || 2.5},b=document.body,d=document.documentElement;
     const rv=document.getElementById("review");if(rv){rv.style.display="none";const h=rv.querySelector("[data-hot]");if(h)h.setAttribute("aria-checked","false")}d.classList.remove("review-hot");
     let e=null;try{e=document.querySelector(S)}catch{}if(!e)return;
-    const vw=e.closest("[data-view]");if(vw){const t=document.querySelector('[data-review-view="'+vw.dataset.view+'"]');t&&t.click()}
+    ${OPEN_VIEW}
     d.style.overflow="hidden";b.style.visibility="hidden";e.style.visibility="visible";b.style.transformOrigin="0 0";let told=0;
     const fit=()=>{b.style.transform="none";scrollTo(0,0);const r=e.getBoundingClientRect(),o=b.getBoundingClientRect(),W=innerWidth,H=innerHeight,p=12;if(!r.width||!r.height||!W||!H)return;
       if(!told){told=1;parent.postMessage({type:"desk-snip-size",w:r.width,h:r.height},"*")}
-      const k=Math.min((W-2*p)/r.width,(H-2*p)/r.height,2.5),tx=(W-r.width*k)/2-o.left-k*(r.left-o.left),ty=(H-r.height*k)/2-o.top-k*(r.top-o.top);
+      const k=Math.min((W-2*p)/r.width,(H-2*p)/r.height,C),tx=(W-r.width*k)/2-o.left-k*(r.left-o.left),ty=(H-r.height*k)/2-o.top-k*(r.top-o.top);
       b.style.transform="translate("+tx+"px,"+ty+"px) scale("+k+")"};
-    fit();addEventListener("load",fit);addEventListener("resize",fit);document.fonts&&document.fonts.ready.then(fit)})();<\/script>`;
+    const go=()=>{view();fit()};fit();addEventListener("DOMContentLoaded",go);addEventListener("load",go);addEventListener("resize",fit);document.fonts&&document.fonts.ready.then(fit)})();<\/script>`;
   addEventListener("message", (e) => {
     const f = document.querySelector(".zoom .zoomframe");
     if (!f || e.source !== f.contentWindow || e.data?.type !== "desk-snip-size") return;
     const w = Number(e.data.w) + 24, h = Number(e.data.h) + 24;
-    if (w > 24 && h > 24) { const k = Math.min(2.5, (innerWidth - 96) / w, (innerHeight - 140) / h); Object.assign(f.style, { width: `${Math.round(w * k)}px`, height: `${Math.round(h * k)}px` }); }
+    if (w > 24 && h > 24) { const k = Math.min(2.5, (innerWidth - 96) / w, (innerHeight - 140) / h); Object.assign(f.parentElement.style, { width: `${Math.round(w * k)}px`, height: `${Math.round(h * k)}px` }); widen(f); }
     f.style.visibility = "";
   });
   function catalogItem(c, v, x) {

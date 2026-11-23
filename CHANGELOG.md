@@ -22,6 +22,13 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
    `mcp_role` to `UI dev owner` (`design config write`); the old name keeps working. The step is
    the offer, never the rename.
 
+## 1.104.1 — 2026-11-23
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): a part of an option on
+   another view than the first is drawn under All elements, in the element dialog and enlarged;
+   before, its picture was empty. No data migration.
+
 ## 1.104.0 — 2026-11-23
 
 **Upgrade:**
