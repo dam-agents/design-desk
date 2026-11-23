@@ -12,7 +12,7 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 **Upgrade:**
 1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): a list row's title stops at two
    lines with an ellipsis, in both modes; simple mode's filter is its icon alone, on the right, a dot on
-   it while it hides anything; a merged pull request is a purple pill in the list; an unread notification
+   it while it hides anything; a pull request is a pill in GitHub's inks in the list; an unread notification
    puts a red dot on its row's icon; simple mode lists every
    request and pull request change whatever its side, in **Dev review** (was Proposal; also an open
    For Developers item), **Design review** (was In review), In dev or Closed

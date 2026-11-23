@@ -249,7 +249,8 @@
      there the pill takes a line of its own under the date, at the row's right end. */
   @media (max-width: 399px) { .row.item.srow > .open { grid-template-columns: 20px minmax(0, 1fr); } .srow .kic { grid-row: span 3; } .srow .open > .spill { grid-column: 2; grid-row: 3; justify-self: end; margin-left: 0; } }
   .srow .sline .sdate { display: inline-flex; gap: 4px; white-space: nowrap; } .srow .sline .snum { color: var(--muted); }
-  .srow .sline .snum.spr { --t: var(--gh-merged); color: var(--t); background: color-mix(in srgb, var(--t) 10%, transparent); border-radius: 999px; padding: 0 6px; font-size: var(--fs-micro); line-height: 16px; align-self: center; }
+  .srow .sline .snum.spr[data-s="pr-draft"] { --t: var(--gh-draft); } .srow .sline .snum.spr[data-s="pr-merged"] { --t: var(--gh-merged); }
+  .srow .sline .snum.spr { --t: var(--gh-open); color: var(--t); background: color-mix(in srgb, var(--t) 10%, transparent); border-radius: 999px; padding: 0 6px; font-size: var(--fs-micro); line-height: 16px; align-self: center; }
   .srow .sline .sby { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .srow .sline .sby::before { content: "·"; margin-right: 4px; }
   .spill { --p: var(--muted); display: inline-flex; align-items: center; gap: 4px; padding: 0 8px; border-radius: 999px; font-size: var(--fs-micro); font-weight: 500; line-height: 20px; white-space: nowrap;
     color: var(--p); background: color-mix(in srgb, var(--p) 14%, transparent); }
@@ -3943,8 +3944,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // change's with no pull request, its own on the Desk (R-12, P-3).
     const sNum = (c) => {
       const pr = c.kind === "change" && c.source?.pr, n = pr ? `PR#${pr}` : c.base || c.id;
-      // A merged pull request: a small purple pill, as in the head (#812 Merged).
-      if (pr && c.source.merged_at) return `<span class="ssep" aria-hidden="true">·</span><span class="snum spr" data-s="pr-merged" title="Its pull request on GitHub, merged">#${esc(String(pr))} Merged</span>`;
+      // A pull request: a small pill in GitHub's inks, as in the head (#812 Draft, Open or Merged).
+      if (pr) { const [k, w] = c.source.merged_at ? ["pr-merged", "Merged"] : c.source.draft ? ["pr-draft", "Draft"] : ["pr-open", "Open"];
+        return `<span class="ssep" aria-hidden="true">·</span><span class="snum spr" data-s="${k}" title="Its pull request on GitHub: ${w.toLowerCase()}">#${esc(String(pr))} ${w}</span>`; }
       return n ? `<span class="ssep" aria-hidden="true">·</span><span class="snum" title="${pr ? "Its pull request on GitHub" : "Its number on the Desk: search finds it"}">${esc(String(n))}</span>` : "";
     };
     const simpleRow = (c) => `<div class="row item srow${c.read === false ? " unread" : ""}">

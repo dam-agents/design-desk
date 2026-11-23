@@ -4010,13 +4010,13 @@ test("a simple mode row says when it last changed, then its number: a change its
     return { order: [...l.children].map((x) => x.className), num: n.textContent, title: n.title || n.dataset.tip, same: font(n) === font(w) };
   });
   const change = await line("c-open"), request = await line("r-check");
-  assert.equal(change.num, "#7 Merged", "a change: its pull request's number, merged: a small purple pill");
+  assert.equal(change.num, "#7 Merged", "a change: its pull request's number and state, a small pill in GitHub's inks");
   assert.match(change.title, /pull request/);
   assert.equal(await desk.$eval('#list [data-card="c-open"] .snum', (n) => n.dataset.s), "pr-merged");
   await desk.click("details.sf > summary");
   await desk.click('[data-simf="states:dev"]');
   await desk.keyboard.press("Escape");
-  assert.equal(await desk.$eval('#list [data-card="c-review"] .snum', (n) => n.textContent), "PR#7", "not merged: PR and its number, in plain words");
+  assert.deepEqual(await desk.$eval('#list [data-card="c-review"] .snum', (n) => [n.textContent, n.dataset.s]), ["#7 Open", "pr-open"], "an open one says Open, in green");
   assert.equal(request.num, "r-check", "a request: its number on the Desk");
   assert.match(request.title, /number on the Desk/);
   assert.doesNotMatch(request.title, /pull request/);
