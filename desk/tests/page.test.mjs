@@ -4016,6 +4016,20 @@ test("a simple mode row says when it last changed, then its number: a change its
   assert.ok(change.same && request.same, "in the date's font, size and grey");
 }));
 
+// A list row's title: two lines at most, then an ellipsis, in both modes; its tooltip has it all.
+const LONG_TITLE = { id: "r-long-title", kind: "request", title: "A request whose title goes on and on about the limits banner on the agents page, the spend panel, the bell and every other place it shows up", status: "triage", updated: at(21) };
+for (const [mode, me] of [["simple", SIMPLE_ME], ["full", { ...SIMPLE_ME, simple: false }]])
+  test(`${mode} mode: a list row's title stops at two lines with an ellipsis, and its tooltip has it all`, (t) => open(t, DESK(me, [LONG_TITLE]), async (desk) => {
+    await desk.setViewportSize({ width: 1024, height: 700 });
+    await desk.waitForSelector('#list [data-card="r-long-title"]');
+    const box = await desk.$eval('#list [data-card="r-long-title"] .t > span', (x) => {
+      const s = getComputedStyle(x); return { lines: Math.round(x.getBoundingClientRect().height / parseFloat(s.lineHeight)), cut: x.scrollHeight > x.clientHeight + 1, title: x.title || x.dataset.tip };
+    });
+    assert.equal(box.lines, 2, "two lines");
+    assert.ok(box.cut, "the rest is cut");
+    assert.equal(box.title, LONG_TITLE.title);
+  }));
+
 // A change with no pull request, and a date as long as they get, in a list as narrow as a small
 // phone's: at 280 px the date breaks without the row's own style, at 320 px it still fits.
 const NARROW_CARDS = [

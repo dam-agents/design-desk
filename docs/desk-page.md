@@ -187,7 +187,7 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   filter shows), and **+ New request**; its one list holds every request and pull request change,
   whatever its side — For Developers or For Designers only decides which review it is in — each in
   one state ([A request's state in the list](#a-requests-state-in-the-list)), the newest change
-  first; only someone else's draft and an archived change are not listed. A row is the kind's icon, the title, when it last changed (Today, Yesterday or the
+  first; only someone else's draft and an archived change are not listed. A row is the kind's icon, the title (two lines at most), when it last changed (Today, Yesterday or the
   day, with the time; the year only when it is not this year), then its number in the same grey
   words, never broken across lines (a change its pull request's, `PR#812`; a request, or a change
   with no pull request, its own on the Desk, `R-12` or `P-3`), who asked and where from in the same
@@ -509,6 +509,9 @@ change merged, **No review needed** (grey) an auto handled change merged, **Clos
 request closed, with a decision or without. An archived change is not listed, nor someone else's
 draft (the server sends none). Issues, screens, elements and decisions have no
 simple state: simple mode lists none of them, and a link to one opens its full page.
+
+A list row's title, in both modes, takes two lines at most and ends with an ellipsis; its tooltip
+and its page have it in full.
 
 On a wide window the list folds away with an arrow halfway down its edge and comes back with
 it; each browser remembers it (`desk-list-folded` in local storage). Dragging the edge makes

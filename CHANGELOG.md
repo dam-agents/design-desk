@@ -10,7 +10,8 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 ## 1.107.0 — 2026-11-23
 
 **Upgrade:**
-1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): simple mode lists every
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): a list row's title stops at two
+   lines with an ellipsis, in both modes; simple mode lists every
    request and pull request change whatever its side, in **Dev review** (was Proposal; also an open
    For Developers item), **Design review** (was In review), In dev or Closed
    ([desk-page.md](docs/desk-page.md) → Simple mode). No data migration: a filter a browser kept
