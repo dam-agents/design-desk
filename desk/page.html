@@ -17,7 +17,7 @@
     --bad: #b3261e; --bad-soft: #fbe5e3; --info-soft: #e7edfc; --live: #6b3fc4; --live-soft: #efe8fb; --why: #0d7d78; --why-soft: #e0f3f1; --r-sm: 6px; --radius: 12px; --shadow: 0 1px 2px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.04);
     /* What floats over the page (the private ask): a near shadow for the edge, a far one for the lift. */
     --float: 0 2px 6px rgba(0,0,0,.10), 0 14px 32px rgba(0,0,0,.18), 0 36px 84px rgba(0,0,0,.24);
-    --font: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font: "Desk Ellipsis", "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
     --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
     /* The page grows with the window: text runs wider, the list and pictures get room. */
     --measure: 96ch; --pad-x: 32px; --list-w: 380px; --side-w: 380px; --shot-w: 260px; --shot-h: 260px;
@@ -37,6 +37,9 @@
   :root[data-theme="light"] { color-scheme: light; }
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
+  /* The ellipsis sits on the baseline whatever fonts a viewer has: U+2026 alone comes from a font
+     whose dots sit low, Plex first where it is installed (a fallback font may centre them). */
+  @font-face { font-family: "Desk Ellipsis"; src: local("IBM Plex Sans"), local("Helvetica"), local("Arial"), local("Liberation Sans"), local("DejaVu Sans"), local("FreeSans"); unicode-range: U+2026; }
   html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font: 14px/1.5 var(--font); }
   button { font: inherit; color: inherit; }
   /* Links read in ink with a faint underline; under the pointer only the underline darkens, the ink stays. */
@@ -233,21 +236,32 @@
   .row.item > .open::after { content: ""; position: absolute; inset: 0; border-radius: var(--radius); }
   .row.item:has(> .open:focus-visible) { outline: 2px solid var(--accent); outline-offset: 1px; } .row.item > .open:focus-visible { outline: 0; }
   /* Simple mode's row: the kind's icon, the title, then when it last changed with its number, and
-     its state. The date and number never break; on a narrow list the pill takes its own line. */
-  .row.item.srow > .open { display: grid; grid-template-columns: 20px 1fr; column-gap: 8px; row-gap: 4px; align-items: start; }
+     who asked, then its state. The date and number never break; the pill keeps its own column on the
+     right, as high as both lines, and the title and its line narrow instead. */
+  .row.item.srow > .open { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; column-gap: 8px; row-gap: 4px; align-items: start; }
   .srow .kic { grid-row: span 2; color: var(--muted); padding-top: 2px; } .kic svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; display: block; }
   .srow .sline { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: var(--fs-meta); color: var(--muted); min-height: 20px; }
-  .srow .sline .spill { margin-left: auto; }
+  .srow .open > .spill { grid-column: 3; grid-row: 1 / span 2; align-self: center; margin-left: 8px; }
+  /* A phone narrower than 400 px has no room for a long date beside the pill (it never breaks):
+     there the pill takes a line of its own under the date, at the row's right end. */
+  @media (max-width: 399px) { .row.item.srow > .open { grid-template-columns: 20px minmax(0, 1fr); } .srow .kic { grid-row: span 3; } .srow .open > .spill { grid-column: 2; grid-row: 3; justify-self: end; margin-left: 0; } }
   .srow .sline .sdate { display: inline-flex; gap: 4px; white-space: nowrap; } .srow .sline .snum { color: var(--muted); }
+  .srow .sline .sby { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .srow .sline .sby::before { content: "·"; margin-right: 4px; }
   .spill { --p: var(--muted); display: inline-flex; align-items: center; gap: 4px; padding: 0 8px; border-radius: 999px; font-size: var(--fs-micro); font-weight: 500; line-height: 20px; white-space: nowrap;
     color: var(--p); background: color-mix(in srgb, var(--p) 14%, transparent); }
   .spill[data-s="open"] { --p: var(--ok); } .spill[data-s="dev"] { --p: var(--accent); } .spill[data-s="shipped"] { --p: var(--live); }
   .spill[data-s="none"] { --p: var(--muted); } .spill[data-s="closed"] { --p: var(--bad); }
   .spill[data-s="draft"] { --p: var(--muted); background: transparent; border: 1px dashed color-mix(in srgb, var(--p) 70%, transparent); line-height: 18px; } .spill[data-s="proposal"] { --p: var(--warn); }
-  /* Simple mode's head of an item: kept in view while the page scrolls. */
-  .shead { position: sticky; top: -24px; z-index: 6; display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; margin: -24px calc(-1 * var(--pad-x)) 16px; padding: 16px var(--pad-x); background: var(--bg); border-bottom: 1px solid var(--line); }
-  .sh-main { min-width: 0; } .shead h2 { margin: 0; } .shead h2 > span:not(.kic) { margin-right: 8px; }
-  .shead h2 .kic { display: inline-block; color: var(--muted); margin-right: 8px; vertical-align: -2px; } .shead h2 .kic svg { width: 20px; height: 20px; }
+  /* Simple mode's head of an item: kept in view while the page scrolls. Its moves sit beside the
+     title alone; the line of its state and facts takes the whole width under both. The title keeps
+     to one line, cut with an ellipsis (its full words on hover), the number and the link close by. */
+  .shead { position: sticky; top: -24px; z-index: 6; display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 16px; align-items: center; margin: -24px calc(-1 * var(--pad-x)) 16px; padding: 16px var(--pad-x); background: var(--bg); border-bottom: 1px solid var(--line); }
+  .sh-main { display: contents; } .sh-acts { grid-column: 2; grid-row: 1; } .sh-line, .sh-after { grid-column: 1 / -1; }
+  .shead h2 { grid-column: 1; grid-row: 1; display: flex; align-items: center; min-width: 0; margin: 0; white-space: nowrap; }
+  .shead h2 > * { flex: none; } .shead h2 > .sh-t { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .shead h2 > .num { margin-left: 4px; } .shead h2 > .linkbtn { margin-left: 4px; }
+  .shead h2 .kic { color: var(--muted); margin-right: 8px; } .shead h2 .kic svg { width: 20px; height: 20px; }
+  .shead .spill { font-size: var(--fs-meta); font-weight: 600; line-height: 24px; padding: 0 12px; }
   .sh-line { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; font-size: var(--fs-meta); color: var(--muted); }
   .sh-facts { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; } .sh-facts .sep { color: var(--line); }
   .sh-work { display: inline-flex; align-items: center; gap: 4px; color: var(--ink); } .sh-resp { color: var(--warn); font-weight: 500; }
@@ -255,10 +269,25 @@
     color: var(--t); background: color-mix(in srgb, var(--t) 14%, transparent); text-decoration: none; } .sh-pr:hover { text-decoration: underline; }
   .sh-pr[data-s="pr-draft"] { --t: var(--gh-draft); } .sh-pr[data-s="pr-merged"] { --t: var(--gh-merged); }
   .sh-acts { display: flex; gap: 8px; align-items: center; flex: none; } details.more.sh-more .menu { left: auto; right: 0; }
-  @media (max-width: 860px) { .shead { top: 28px; margin: 0 -16px 12px; padding: 12px 16px; flex-wrap: wrap; } }
-  /* Simple mode's page: a short lead, what Design Desk found, the folds, the comments. */
-  .slead { max-width: var(--measure); font-size: var(--fs-head); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
-  .slead p { margin: 0; }
+  @media (max-width: 860px) { .shead { top: 28px; margin: 0 -16px 12px; padding: 12px 16px; } }
+  @media (max-width: 560px) { .sh-acts { grid-column: 1 / -1; grid-row: auto; margin-top: 8px; } }
+  /* Simple mode's page: Design Desk's short summary, the request as it was asked, what Design Desk
+     found, the folds, the comments. Its words keep a readable width however wide the page is; the
+     designs and the pictures take the whole width. */
+  :root { --read: 680px; }
+  .slead { max-width: var(--read); font-size: var(--fs-head); line-height: 1.55; margin: 4px 0 8px; }
+  .slead p { margin: 0; } .slead p + p { margin-top: 8px; }
+  #detail details.fold.big.sfold, #detail .sfound, #detail .sthreads, #detail .yreview, #detail .rvw, #detail .slead + .hint, #detail .sfull { max-width: var(--read); }
+  /* A request with no summary yet (filed before Design Desk wrote one) shows its words in full, open. */
+  #detail .sfull { font-size: var(--fs-head); line-height: 1.55; } #detail .sfull p { margin: 0 0 8px; } #detail .sfull h4 { margin: 12px 0 4px; }
+  /* The request as it was asked, folded under the summary: where it came from and when, no name. */
+  details.sorig > summary { flex-wrap: wrap; row-gap: 4px; }
+  details.sorig > summary .so-who { font-size: var(--fs-meta); color: var(--muted); } details.sorig > summary .so-who a { color: inherit; }
+  details.sorig .so-body { padding: 0 0 16px; }
+  /* Its language, and a small button to read it in English and back. */
+  .tr-bar { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font-size: var(--fs-meta); color: var(--muted); }
+  .tr-btn { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); color: var(--ink); font: inherit; font-size: var(--fs-meta); cursor: pointer; }
+  .tr-btn:hover { background: var(--soft); } .tr-btn svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
   .sfound { max-width: var(--measure); margin-top: 24px; padding: 16px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--panel); }
   .sfound h3 { margin-top: 0; } .sfound h4 { margin: 12px 0 4px; } .sfound ul { margin: 4px 0 0; padding-left: 20px; }
   details.sfold { max-width: var(--measure); border-top: 1px solid var(--line); }
@@ -3185,6 +3214,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // request in this browser, and folded every time after; folded, each keeps three lines and a
   // link to the rest. A click folds or unfolds it while the request stays open.
   const SEEN_KEY = "desk-seen-requests";
+  // The request as asked stays open once opened, for this card: a redraw or its language button leaves it so.
+  document.addEventListener("toggle", (e) => { if (e.target.matches?.("details.sorig")) S.folds.orig = e.target.open; }, true);
   function foldsFor(c) {
     if (S.folds.card === c.id) return;
     let seen = [];
@@ -3389,6 +3420,18 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   }
   // A person by their name on the roster, else the part of their address before the @, never the whole address.
   const shortName = (e, name = "") => !e ? name : isMe(e) ? "you" : S.me?.names?.[String(e).toLowerCase()] || name || (String(e).includes("@") ? String(e).split("@")[0] : String(e));
+  // Simple mode's title, in English only: Design Desk's translation, unless a person renamed it.
+  const sTitle = (c) => (!c.renamed && c.translation?.title) || c.title;
+  // Who asked for an item and where it came from, in plain words for simple mode's row and head:
+  // the person behind a Slack message or an issue, never the Desk; a change's pull request author.
+  // No links, no icons: `by Pat Lee, from Slack`.
+  function simpleWho(c) {
+    const p = origin(c, { parts: true }), o = c.origin || {}, by = c.by || c.created_by || {};
+    const person = c.kind === "change" ? c.source?.author : !by.agent && (o.email || by.email || by.name || o.reporter) ? shortName(o.email || by.email, by.name || o.reporter) : p.author;
+    const who = person ? esc(person === "you" ? "you" : shortName(person)) : "";
+    const from = c.kind === "change" || p.kind === "desk" ? "" : String(p.src || "").replace(/<[^>]+>/g, "").replace(/(&nbsp;|\s)*↗/g, "").trim();
+    return [who && `by ${who}`, from && `from ${from}`].filter(Boolean).join(", ");
+  }
   // Who closes a request before design: its author or an admin a draft, the UI dev owner a proposal.
   const closesStaged = (c) => (preDesign(c) === "draft" ? filedIt(c) || S.me?.role === "admin" : preDesign(c) === "proposal" && can("stage-own"));
   // A request's moves before design, by its stage and the viewer: [the head's first button, the ones under ⋯].
@@ -3427,7 +3470,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const o = c.origin || {}, by = c.by || c.created_by || {};
     const who = change ? src.author || "" : by.agent ? "Design Desk" : shortName(o.email || by.email, by.name || o.reporter);
     const at = change ? src.merged_at || c.created : c.created;
-    const facts = [pr, who ? `<span>${esc(who)}</span>` : "", at ? `<span title="${esc(when(at))}">${esc(sWhen(at))}</span>` : ""].filter(Boolean).join(`<span class="sep">·</span>`);
+    const byLine = simpleWho(c) || (who ? `by ${esc(who)}` : "");
+    const facts = [pr, byLine ? `<span>${byLine}</span>` : "", at ? `<span title="${esc(when(at))}">${esc(sWhen(at))}</span>` : ""].filter(Boolean).join(`<span class="sep">·</span>`);
     const bug = !change && (c.request?.type || c.type) === "bug" ? `<span class="chip bad" title="Someone reported something broken on a screen">Bug${c.origin?.severity ? ` · ${esc(c.origin.severity)}` : ""}</span>` : "";
     // Who approved it, where it went and when it shipped: one muted line once it is approved.
     const ap = change ? c.handled?.by : c.approved?.by, sent = !change && (c.spec?.issue_url || c.spec?.pr_url);
@@ -3457,7 +3501,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         : (stage && stageMain.includes("approve-dev") ? changes : "") + stageMore + ((preDesign(c) ? closesStaged(c) : can("close") || can("skip")) ? btn('data-act="close"', "Close…") : ""),
       url ? `<a class="btn" href="${safeUrl(url)}" target="_blank" rel="noopener noreferrer">Open on GitHub ↗</a>` : ""].join("");
     const more = items ? `<details class="more sh-more"><summary class="btn" aria-label="More" title="More">⋯</summary><div class="menu">${items}</div></details>` : "";
-    return `<div class="shead"><div class="sh-main"><h2>${kindIcon(c)}<span>${txt(c.title)}</span>${num(c)}${titleLink(c)}</h2>
+    return `<div class="shead"><div class="sh-main"><h2>${kindIcon(c)}<span class="sh-t" title="${esc(sTitle(c))}">${txt(sTitle(c))}</span>${num(c)}${titleLink(c)}</h2>
       <div class="sh-line"><span class="spill" data-s="${k}" title="${esc(simTip(c, k))}">${SIM_PILL[k]}</span>${bug}${c.responsible && RESP[c.responsible.who] ? `<span class="sh-resp" title="${esc(RESP[c.responsible.who][1])}">Changes requested · ${esc(RESP[c.responsible.who][0])}</span>` : ""}${work}${facts ? `<span class="sh-facts">${facts}</span>` : ""}</div>${after ? `<div class="sh-after">${after}</div>` : ""}</div>
       <div class="sh-acts">${moves}${more}</div></div>`;
   }
@@ -3863,18 +3907,17 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (at >= S.listLimit) S.listLimit = Math.ceil((at + 1) / LIST_PAGE) * LIST_PAGE;
     const all = S.pf && S.pf.view === pfView();
     const drawn = all ? cards : cards.slice(0, S.listLimit);
-    // Simple mode's row: its kind, its title, when it last changed and its number, and its state;
-    // the pill only when the filter shows more than one state, the spinner while Design Desk works
-    // on it. A change's number is its pull request's (PR#812); a request's, or a change's with no
-    // pull request, its own on the Desk (R-12, P-3).
-    const pills = simFilter().states.length > 1;
+    // Simple mode's row: its kind, its title in English, when it last changed, its number and who
+    // asked, the spinner while Design Desk works on it, and its state's pill on every row, however
+    // the list is filtered. A change's number is its pull request's (PR#812); a request's, or a
+    // change's with no pull request, its own on the Desk (R-12, P-3).
     const sNum = (c) => {
       const pr = c.kind === "change" && c.source?.pr, n = pr ? `PR#${pr}` : c.base || c.id;
       return n ? `<span class="ssep" aria-hidden="true">·</span><span class="snum" title="${pr ? "Its pull request on GitHub" : "Its number on the Desk: search finds it"}">${esc(String(n))}</span>` : "";
     };
     const simpleRow = (c) => `<div class="row item srow${c.read === false ? " unread" : ""}">
-      <button class="open" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}">${kindIcon(c)}<span class="t"><span>${esc(c.title)}</span></span>
-      <span class="sline"><span class="sdate"><span class="when">${esc(sWhen(lastChange(c)))}</span>${sNum(c)}</span>${atWork(c) ? `<span class="dd-spin" title="Design Desk is working on it"></span>` : ""}${pills ? simplePill(c) : ""}</span></button></div>`;
+      <button class="open" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}">${kindIcon(c)}<span class="t"><span>${esc(sTitle(c))}</span></span>
+      <span class="sline"><span class="sdate"><span class="when">${esc(sWhen(lastChange(c)))}</span>${sNum(c)}</span>${simpleWho(c) ? `<span class="sby">${simpleWho(c)}</span>` : ""}${atWork(c) ? `<span class="dd-spin" title="Design Desk is working on it"></span>` : ""}</span>${simplePill(c)}</button></div>`;
     if (simpleList()) list.innerHTML = filters + drawn.map(simpleRow).join("") + (drawn.length < cards.length ? `<div class="list-more" data-list-more>Loading more…</div>` : "");
     else list.innerHTML = filters + drawn.map((c) => `<div class="row item${overdue(c) ? " overdue" : ""}${c.design ? " fromdesign" : ""}${c.read === false ? " unread" : ""}">
       <button class="open" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}"><div class="t"><span>${esc(c.title)}</span>${onDiffs() ? figNum(c) : S.tab === "designs" ? designNum(c) : num(c)}${S.tab === "designs" ? "" : rowDot(c)}</div>${againstDot(c)}</button>
@@ -6021,10 +6064,19 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // Simple mode's page under the head: a short lead, the designs, what Design Desk found, the
     // long reads folded, then the comments (docs/desk-page.md → Simple mode).
     function simpleBody() {
-      const lead = String(r.problem || "").split(/\n\s*\n/)[0];
+      // Design Desk's short summary (`gist`, ASD-STE100) leads, the request as asked folded under it.
+      // Where it came from and when, without the asker's name: the head says who.
+      const a = origin(c, { parts: true });
+      const asked = `<span class="so-who">${a.kind === "desk" ? "On the Desk" : `From ${a.src}`}${c.created ? ` · ${esc(sWhen(c.created))}` : ""}</span>`;
+      // Its language in words beside a small button, in place of the full mode's EN link.
+      let lname = tr?.lang?.toUpperCase() || ""; try { lname = new Intl.DisplayNames(["en"], { type: "language" }).of(tr.lang) || lname; } catch {}
+      const trBar = tr ? `<div class="tr-bar">${en ? `Translated from ${esc(lname)} by Design Desk` : `Written in ${esc(lname)}`}<button class="tr-btn" data-lang-toggle aria-pressed="${en}" title="${en ? "Show the words as they were written" : "Show it in English, as Design Desk translated it"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h9M8.5 3v2M6 5c0 4 3 7 6 8M11 5c0 4-3 7-6 8"/><path d="m13 21 4-9 4 9M14.5 18h5"/></svg>${en ? "Show original" : "Show in English"}</button></div>` : "";
       const known = [renderResearch(c.research), renderIssueBrief(c), renderGrill(c), followsLine(c), shots(found)].join("").trim();
-      return `${yourReview(c)}<div class="slead">${md(lead)}${tr ? langLink(tr, en) : ""}</div>
-      <details class="fold big sfold"><summary><h3>The request in full</h3></summary><div class="section">${renderLinked(c)}${bug ? `<h4>What happens</h4>` : ""}${md(r.problem)}${r.vision ? `<h4>How they picture it</h4>${md(r.vision)}` : ""}${more}${shots(given)}</div></details>
+      const words = `${renderLinked(c)}${bug ? `<h4>What happens</h4>` : ""}${md(r.problem)}${r.vision ? `<h4>How they picture it</h4>${md(r.vision)}` : ""}${more}${shots(given)}`;
+      // With no summary (a request filed before there were any), the request in full leads, open.
+      return `${yourReview(c)}${c.gist ? `<div class="slead">${md(c.gist)}</div>
+      <details class="fold big sfold sorig"${S.folds.orig ? " open" : ""}><summary><h3>Original request</h3>${asked}</summary><div class="section so-body">${trBar}${words}</div></details>`
+        : `<div class="section sfull">${trBar}${words}</div>`}
       ${live(c) ? `<details class="fold"><summary>The design options</summary>${renderOptions(c)}</details>` : `${renderOptions(c)}${renderPrototype(c)}`}
       ${optionBox(c)}
       ${simpleFound(c)}
