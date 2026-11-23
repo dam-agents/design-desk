@@ -3440,10 +3440,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // state before In dev for anyone else; a kept state they cannot see is left out.
   // A PM follows what they filed through to shipped: every state. Whose: everyone's, for every role.
   const SIM_DEFAULT = () => ({ states: S.me?.role === "designer" ? ["open"] : simStates().map(([k]) => k).filter((k) => S.me?.role === "pm" || !["dev", "closed", ...(DEVELOPERS.includes(S.me?.role) ? ["open"] : [])].includes(k)), kinds: ["request", "change"], who: "all" });
-  // Whose items the list shows: everyone's, or the viewer's own (the list row's `mine`: filed, written
-  // in, reviewed, voted on, or their pull request's, by the GitHub username People keeps).
+  // Whose items the list shows: everyone's, or the viewer's own. The server alone says which are
+  // theirs (the list row's `mine`: filed, written in, reviewed, voted on, or their pull request's, by
+  // the GitHub username People keeps); the page has no rule of its own.
   const SIM_WHO = [["all", "Everyone"], ["mine", "Mine"]];
-  const mineIs = (c) => c.mine ?? (filedIt(c) || (c.kind === "change" && Boolean(S.me?.github) && String(c.source?.author || "").toLowerCase() === S.me.github.toLowerCase()));
+  const mineIs = (c) => c.mine === true;
   S.simFilter = (() => {
     try {
       const v = JSON.parse(store.get("desk-simFilter") || "null"), ok = (xs, all) => Array.isArray(xs) && xs.filter((x) => all.some(([k]) => k === x));
@@ -9575,7 +9576,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // elements and decisions (docs/desk-page.md → Notifications); the count counts what is left.
   const NOTE_HIDDEN = ["issue", "screen", "element", "decision"];
   const noteShown = (x) => !(tabsHidden().length && NOTE_HIDDEN.includes(x.kind));
-  const noteUnread = () => simple() ? S.notes.items.filter((x) => noteShown(x) && x.for_you && !x.read).length : S.notes.unread;
+  // Only while simple mode hides some notifications does the count come from the list fetched; an
+  // admin's, who sees them all, is the server's, as in full mode.
+  const noteUnread = () => tabsHidden().length ? S.notes.items.filter((x) => noteShown(x) && x.for_you && !x.read).length : S.notes.unread;
   // For you leads: the bell counts only what is for you (docs/desk-page.md → Notifications).
   // `clicked`: the rows this person clicked here, read at once, whatever a poll sent before the
   // server had their click.

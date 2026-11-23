@@ -53,7 +53,14 @@ function shim() {
   // A request before design shows only to whom the server shows it (docs/desk.md → Draft and Proposal).
   // Only a draft is private: its author's (who files drafts) and an admin's; a proposal is everyone's.
   const seen = (c) => c.stage !== "draft" || role === "admin" || (!["designer", "guest"].includes(role) && c.by?.email === me.email);
-  const list = () => cards.filter(seen).map((c) => ({ ...c, variants: c.variants.length, threads: undefined }));
+  // Whether a card is this person's, as the server's list says (docs/desk-page.md → Simple mode): filed,
+  // written in, reviewed, voted on, or their pull request's, by their GitHub username.
+  const isMe = (by) => Boolean(by?.email) && !by.agent && me.emails.includes(String(by.email).toLowerCase());
+  const mineOf = (c) => isMe(c.by) || isMe(c.created_by) || isMe(c.origin)
+    || (Boolean(me.github) && c.kind === "change" && String(c.source?.author || "").toLowerCase() === me.github.toLowerCase())
+    || Object.values(c.votes || {}).some((x) => Object.keys(x || {}).some((e) => me.emails.includes(e.toLowerCase())))
+    || (c.reviews || []).some((r) => isMe(r.by)) || (c.threads || []).some((t) => t.kind !== "private" && (t.messages || []).some((m) => isMe(m.by)));
+  const list = () => cards.filter(seen).map((c) => ({ ...c, variants: c.variants.length, threads: undefined, mine: mineOf(c) }));
   const answer = (method, path, body) => {
     const p = path.replace(/\?.*$/, ""), m = (re) => p.match(re);
     if (p === "/api/me") return me;

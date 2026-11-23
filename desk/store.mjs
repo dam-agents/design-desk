@@ -1219,8 +1219,20 @@ export class Store {
 
   // Each person's GitHub username, set by an admin on People (docs/desk.md → People): it ties a
   // pull request's author to a person on the roster, for simple mode's Mine and "Changes requested
-  // · you". Kept by the roster row's first address; it grants nothing, so it applies at once.
-  logins() { return Object.fromEntries(Object.entries(this.db.logins || {}).map(([e, x]) => [e, x.login])); }
+  // · you". Kept by an address of theirs, the row's first when set; it grants nothing, so it applies at once.
+  // People's map: one username per roster row, by its first address, found by any of its addresses;
+  // an entry no row owns (someone who left the roster) is not shown.
+  logins(roster) {
+    const out = {};
+    for (const r of roster) { const x = this.loginEntry(r); if (x) out[r.email] = x[1].login; }
+    return out;
+  }
+
+  // A roster row's entry, by any of its addresses: [the address it is kept by, the entry].
+  loginEntry(row) {
+    for (const e of [row.email, ...(row.also || [])]) { const x = own(this.db.logins, e); if (x?.login) return [e, x]; }
+    return null;
+  }
 
   // The username of whoever this is, by any of their addresses; null with none set.
   loginOf(who) {
@@ -1229,16 +1241,19 @@ export class Store {
   }
 
   // An admin sets a person's username, or clears it with an empty one. The person is a roster row
-  // by any of their addresses; one username belongs to one person.
+  // by any of their addresses; one username belongs to one person on the roster. An entry no row
+  // owns any longer is dropped first, so a departed person's username is free again.
   setLogin(who, email, login, roster) {
     const row = personOf(roster, email);
     if (!row) throw bad(`${String(email || "").slice(0, 120) || "that address"} is not on the Desk's people`);
     const name = String(login ?? "").trim().replace(/^@/, "");
     if (name && !GITHUB_LOGIN.test(name)) throw bad("a GitHub username is letters, digits and single hyphens, at most 39, not starting or ending with a hyphen");
-    const other = name && Object.entries(this.db.logins).find(([e, x]) => e !== row.email && String(x.login).toLowerCase() === name.toLowerCase());
-    if (other) throw bad(`${name} is already the GitHub username of ${other[0]}`);
-    if (!name) delete this.db.logins[row.email];
-    else Object.defineProperty(this.db.logins, row.email, { value: { login: name, by: person(who), at: this.clock() }, enumerable: true, writable: true, configurable: true });
+    for (const e of Object.keys(this.db.logins)) if (!personOf(roster, e)) delete this.db.logins[e];
+    const mine = new Set([row.email, ...(row.also || [])]);
+    const other = name && Object.entries(this.db.logins).find(([e, x]) => !mine.has(e) && String(x.login).toLowerCase() === name.toLowerCase());
+    if (other) throw bad(`${name} is already the GitHub username of ${personOf(roster, other[0]).email}`);
+    for (const e of mine) delete this.db.logins[e];
+    if (name) Object.defineProperty(this.db.logins, row.email, { value: { login: name, by: person(who), at: this.clock() }, enumerable: true, writable: true, configurable: true });
     this.save();
     return { email: row.email, login: name || null };
   }

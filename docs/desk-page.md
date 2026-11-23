@@ -210,7 +210,7 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   **Only** under the pointer (that state alone, the kinds and Whose kept), picks one of Whose
   (**Everyone**, **Mine**: what the viewer filed, wrote in, sent a review on or voted on, and the
   changes of the pull requests they authored, by the GitHub username People keeps, [desk.md](desk.md)
-  → People; the list row's `mine`), each with its count, and offers **Reset to default** (Design review
+  → People; the list row's `mine`, which the server alone decides: a row without it is not the viewer's), each with its count, and offers **Reset to default** (Design review
   for a designer, every state for a PM, Draft and Dev review for a developer or a UI dev owner, every state before In dev
   for anyone else; both kinds; Everyone; a kept state they do not have is left out; the keys stay `proposal`
   for Dev review and `open` for Design review, so a kept filter keeps working); nothing shows beside the button. This browser
@@ -280,7 +280,7 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   a click. Reply, Mark done, Add to my feedback and Reopen work as in full mode. With nothing open, the pane shows
   instead of the Requests intro a box per state, **Draft** only while it holds
   something, then **Dev review**, **Design review**, **In dev** and **Closed**: how many items are
-  in each (the reviews and In dev with their kinds, Closed with how many of them
+  in each — the viewer's alone while Whose is Mine, redrawn as the filter changes — (the reviews and In dev with their kinds, Closed with how many of them
   shipped in the last 7 days); a click on one filters the list to that state. Otherwise it hides: **Designs**, **Issues**, **Product** and **People** leave the menu — for
   every role but an admin, who keeps them all, for now, after **Requests & PRs**, with Product's pages, their
   intros' lines and their notifications as in full mode — (a sent
@@ -543,7 +543,7 @@ three For Designers. Design Desk at work on an item leaves it in its review: the
 approved and developers build it — a request writing its spec or sent to developers and not yet
 built, a change handled or auto handled whose pull request is not merged, and a change a review asked
 changes of until new commits arrive (its head says **Changes requested · developer**, and **Changes
-requested · you** to its pull request's author, by the GitHub username People keeps; a request a
+requested · you** to its pull request's author, by the GitHub username People keeps, in both modes; a request a
 review asked changes of stays in its review, its head saying **Changes requested · Design Desk**,
 [desk.md](desk.md) → Reviews). **Closed**: nobody
 works on it, and its pill says how it ended — **Shipped** (purple) a request built or a handled
@@ -607,7 +607,7 @@ in all, and the glow keeps its place when the page draws again. A public notific
 cover it. The bell opens on **For you**: what the person
 filed, voted on, approved or wrote in; **All** shows the rest too. In simple mode both leave out
 an issue, a screen, an element and a decision, the pages it hides (Simple mode above). The red
-count is the unread rows For you, in simple mode only what it shows. Opening the bell reads
+count is the unread rows For you, in simple mode only what it shows (an admin's, who sees them all, the server's count, as in full mode). Opening the bell reads
 nothing: a row is read, for that person alone, once they click it (`POST
 /api/notifications/read?id=<row id>`; the store keeps `noted: {<person>: [ids]}`, only rows still
 unread), and **Mark as read** in the bell's header, shown while a row is unread, reads every one

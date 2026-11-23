@@ -656,7 +656,10 @@ with a role; it has no card. This is the one roster change that comes from the D
 **A GitHub username** per person, in People's **GitHub** column: an admin types it there and it is
 saved when the field is left (`POST /api/people/github {email, login}`; empty clears it, a leading
 `@` is dropped). It is no roster change and needs no run of yours: the store keeps it (`logins`, by
-the row's first address, with who set it and when), it grants nothing, and it applies at once.
+the row's first address, with who set it and when; any of the row's addresses finds it), it grants
+nothing, and it applies at once. Someone who leaves `## Desk people` takes theirs with them: People
+no longer shows it, and the next username an admin sets drops every entry no row owns, so the name is
+free to give again.
 `GET /api/people` carries every one (`github: {email: login}`), `GET /api/me` the caller's
 (`github`). It ties a pull request's author (`source.author`) to a person: simple mode's **Mine** and
 **Changes requested · you** read it ([desk-page.md](desk-page.md) → Simple mode). A username is

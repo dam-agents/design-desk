@@ -3570,7 +3570,7 @@ test("an admin sets a person's GitHub username; Mine follows it, and what they f
   assert.deepEqual(s.setLogin(admin, "BOB@home.example.com", "@bob-dev", roster), { email: "bob@example.com", login: "bob-dev" }, "any of a row's addresses, kept by its first; a leading @ is dropped");
   assert.equal(s.loginOf(bob), "bob-dev");
   assert.equal(s.loginOf({ email: "bob@home.example.com", emails: ["bob@example.com", "bob@home.example.com"], role: "developer" }), "bob-dev", "by any address the person signs in with: the server gives their row's");
-  assert.deepEqual(s.logins(), { "bob@example.com": "bob-dev" });
+  assert.deepEqual(s.logins(roster), { "bob@example.com": "bob-dev" });
   assert.equal(s.db.logins["bob@example.com"].by.email, "lead@example.com", "who set it is kept");
   assert.throws(() => s.setLogin(admin, "carol@example.com", "carol", roster), /not on the Desk's people/);
   assert.throws(() => s.setLogin(admin, "alice@example.com", "-alice", roster), /GitHub username/);
@@ -3590,7 +3590,22 @@ test("an admin sets a person's GitHub username; Mine follows it, and what they f
   assert.deepEqual(mine(alice), [filed.id, talked.id].sort(), "what they filed and wrote in; a private ask is not on the list's Mine");
   assert.equal(s.listCards({ viewer: bob.email, who: bob }).find((c) => c.id === other.id).mine, false);
 
+  // A row whose first address changed still finds its entry, and setting it again keeps one entry.
+  const moved = rosterOf([{ email: "lead@example.com", role: "admin" }, { email: "bob@home.example.com, bob@example.com", role: "developer" }, { email: "alice@example.com", role: "designer" }]);
+  assert.deepEqual(s.logins(moved), { "bob@home.example.com": "bob-dev" }, "by any of the row's addresses");
+  assert.throws(() => s.setLogin(admin, "alice@example.com", "bob-dev", moved), /already the GitHub username of bob@home\.example\.com/);
+  s.setLogin(admin, "bob@home.example.com", "bob-dev", moved);
+  assert.deepEqual(Object.keys(s.db.logins), ["bob@home.example.com"], "one entry per person");
+  s.setLogin(admin, "bob@home.example.com", "bob-dev", roster);
+
   assert.deepEqual(s.setLogin(admin, "bob@example.com", "", roster), { email: "bob@example.com", login: null }, "an empty one clears it");
   assert.equal(s.loginOf(bob), null);
   assert.deepEqual(mine(bob), []);
+
+  // Someone who leaves the roster frees their username: People no longer shows it, and it can be given again.
+  s.setLogin(admin, "bob@example.com", "bob-dev", roster);
+  const left = rosterOf([{ email: "lead@example.com", role: "admin" }, { email: "alice@example.com", role: "designer" }]);
+  assert.deepEqual(s.logins(left), {});
+  assert.deepEqual(s.setLogin(admin, "alice@example.com", "bob-dev", left), { email: "alice@example.com", login: "bob-dev" });
+  assert.deepEqual(Object.keys(s.db.logins), ["alice@example.com"], "the departed entry is dropped");
 });
