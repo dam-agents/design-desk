@@ -2569,7 +2569,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // (docs/desk-page.md → Simple mode).
   const tabsHidden = () => (simple() && S.me?.role !== "admin" ? SIMPLE_HIDES : []);
   // A choice this browser has not saved yet wins (desk-simple-unsaved:<email>), then the person's
-  // saved one; with neither, a viewer starts in simple mode and every other role in full mode.
+  // saved one; with neither, simple mode, for every role.
   const simple = () => {
     const me = myKey();
     if (me && store.get(`desk-simple-unsaved:${me}`)) return store.get(`desk-simple:${me}`) === "on";

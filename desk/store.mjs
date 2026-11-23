@@ -345,6 +345,7 @@ export class Store {
   }
 
   load() {
+    this.rev = (this.rev || 0) + 1;
     // A role stored before 1.59.0 as `lead` (a vote, a decision's author, who approved) reads as `admin`.
     this.db = existsSync(this.dbPath) ? JSON.parse(readFileSync(this.dbPath, "utf8"), (k, v) => (k === "role" && typeof v === "string" ? newRole(v) : v)) : emptyDb();
     // A store from before `opened` (who loaded the Desk, docs/desk.md → People) starts it from
@@ -392,6 +393,8 @@ export class Store {
     renameSync(tmp, this.dbPath);
     this.mtime = statSync(this.dbPath).mtimeMs;
     this.bytes = text.length;
+    // What was read from the store before this write is stale now (wroteIndex).
+    this.rev = (this.rev || 0) + 1;
     this.writeInbox();
   }
 
@@ -542,7 +545,7 @@ export class Store {
   // ---------- reads ----------
 
   listCards({ kind, status, viewer, who = null } = {}) {
-    const me = addressesOf(who), login = this.loginOf(who);
+    const me = addressesOf(who), login = this.loginOf(who), wrote = this.wroteIndex(me);
     // One index of the pull requests sent requests are built by, for the whole list.
     let index = null;
     const builds = (c) => (c.kind === "change" ? this.buildsOf(c, (index ||= this.buildsIndex())) : null);
@@ -572,7 +575,7 @@ export class Store {
         // Whether the viewer voted on it: Your turn reads it on a row (docs/desk-page.md → Pages and filters).
         voted_mine: c.kind === "request" && Object.values(c.votes || {}).some((x) => Object.keys(x || {}).some((e) => me.includes(e.toLowerCase()))),
         // Whether it is the viewer's: simple mode's Mine (docs/desk-page.md → Simple mode).
-        mine: this.mineOf(c, me, login),
+        mine: this.mineOf(c, me, login, wrote),
         group: c.group || null, thumb: c.screens?.[0]?.asset || c.design_part?.shot || null, state_count: (c.states || []).length, looks: (c.history || []).length,
         busy: Object.values(this.db.inbox).some((i) => i.card === c.id && i.state !== "done" && i.kind !== "question"),
         asks: (c.threads || []).some((t) => this.db.threads[t]?.kind === "asks" && this.db.threads[t]?.state === "open"),
@@ -1261,14 +1264,32 @@ export class Store {
   // Whether an item is the viewer's for simple mode's Mine (docs/desk-page.md → Simple mode): they
   // filed it, wrote in one of its conversations they can read, sent a review or voted on it, or
   // authored its pull request (their GitHub username, from People).
-  mineOf(c, me, login) {
+  mineOf(c, me, login, wrote = this.wroteIndex(me)) {
     if (!me.length && !login) return false;
     const is = (by) => Boolean(by?.email) && !by.agent && me.includes(String(by.email).toLowerCase());
     if (is(c.created_by) || is(c.origin)) return true;
     if (login && c.kind === "change" && String(c.source?.author || "").toLowerCase() === login.toLowerCase()) return true;
     if (Object.values(c.votes || {}).some((x) => Object.keys(x || {}).some((e) => me.includes(e.toLowerCase())))) return true;
-    if ((c.reviews || []).some((id) => is(own(this.db.reviews, id)?.by))) return true;
-    return (c.threads || []).some((id) => { const t = own(this.db.threads, id); return Boolean(t) && t.kind !== "private" && (t.messages || []).some((m) => is(m.by)); });
+    return wrote.has(c.id);
+  }
+
+  // The items a person wrote in (a message in a conversation they can read; a private ask is not
+  // one) or sent a review on: one pass over the store, kept until its next write, so a list read
+  // and the poll after it do not read every message of every item again.
+  wroteIndex(me) {
+    if (!me.length) return new Set();
+    const key = [...me].sort().join(",");
+    if (this.wrote?.rev !== this.rev) this.wrote = { rev: this.rev, by: new Map() };
+    const kept = this.wrote.by.get(key);
+    if (kept) return kept;
+    const is = (by) => Boolean(by?.email) && !by.agent && me.includes(String(by.email).toLowerCase());
+    const out = new Set();
+    for (const t of Object.values(this.db.threads)) if (t?.card && t.kind !== "private" && !out.has(t.card) && (t.messages || []).some((m) => is(m.by))) out.add(t.card);
+    for (const r of Object.values(this.db.reviews)) if (r?.card && is(r.by)) out.add(r.card);
+    // A handful of people use one Desk; past 200 at once, start again rather than grow.
+    if (this.wrote.by.size >= 200) this.wrote.by.clear();
+    this.wrote.by.set(key, out);
+    return out;
   }
 
   // A person opened an item: from now on its title is not bold in their list, and only theirs

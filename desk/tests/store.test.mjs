@@ -3589,6 +3589,16 @@ test("an admin sets a person's GitHub username; Mine follows it, and what they f
   assert.deepEqual(mine(bob), [theirs.id], "their pull request, by the username, in any case");
   assert.deepEqual(mine(alice), [filed.id, talked.id].sort(), "what they filed and wrote in; a private ask is not on the list's Mine");
   assert.equal(s.listCards({ viewer: bob.email, who: bob }).find((c) => c.id === other.id).mine, false);
+  // A review alone makes it theirs, and so does a vote alone; each shows on the next list read.
+  const reviewed = s.upsertCard({ kind: "change", title: "Reviewed only", source: { repo: "acme/widgets", pr: 15, author: "zed" } }).card;
+  assert.equal(mine(bob).includes(reviewed.id), false);
+  s.sendReview(reviewed.id, bob, { verdict: "comment", note: "Fine by me." });
+  assert.ok(mine(bob).includes(reviewed.id), "a review sent");
+  const voted = s.createRequest(alice, { title: "Voted only", problem: "P." }).card;
+  assert.equal(mine(bob).includes(voted.id), false);
+  s.db.cards[voted.id].votes = { v1: { "bob@example.com": { vote: "prefer", at: "2026-11-23T10:00:00Z" } } };
+  s.save();
+  assert.ok(mine(bob).includes(voted.id), "a vote given");
 
   // A row whose first address changed still finds its entry, and setting it again keeps one entry.
   const moved = rosterOf([{ email: "lead@example.com", role: "admin" }, { email: "bob@home.example.com, bob@example.com", role: "developer" }, { email: "alice@example.com", role: "designer" }]);
@@ -3600,7 +3610,7 @@ test("an admin sets a person's GitHub username; Mine follows it, and what they f
 
   assert.deepEqual(s.setLogin(admin, "bob@example.com", "", roster), { email: "bob@example.com", login: null }, "an empty one clears it");
   assert.equal(s.loginOf(bob), null);
-  assert.deepEqual(mine(bob), []);
+  assert.equal(mine(bob).includes(theirs.id), false, "without the username, their pull request is no longer theirs");
 
   // Someone who leaves the roster frees their username: People no longer shows it, and it can be given again.
   s.setLogin(admin, "bob@example.com", "bob-dev", roster);

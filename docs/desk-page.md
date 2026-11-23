@@ -208,7 +208,7 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   starts as one, then **Dev review**, **Design review**, **In dev**, **Closed**) and Kind (**Requests**,
   **PR changes**), each with its count, at least one of each ticked, a state's row offering
   **Only** under the pointer (that state alone, the kinds and Whose kept), picks one of Whose
-  (**Everyone**, **Mine**: what the viewer filed, wrote in, sent a review on or voted on, and the
+  (**Everyone**, **Mine**: what the viewer filed, wrote in (a private ask is not writing in it: no one else sees it), sent a review on or voted on, and the
   changes of the pull requests they authored, by the GitHub username People keeps, [desk.md](desk.md)
   → People; the list row's `mine`, which the server alone decides: a row without it is not the viewer's), each with its count, and offers **Reset to default** (Design review
   for a designer, every state for a PM, Draft and Dev review for a developer or a UI dev owner, every state before In dev
