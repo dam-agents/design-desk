@@ -203,13 +203,16 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   the date, at the right); a long name is cut with an ellipsis. A title is in English, here and in the head: Design Desk's translation, unless a person
   renamed it. The
   filter is one button at the list's right, its funnel icon alone (32 px, a dot on its border's corner while the
-  filter hides anything — not every state and kind ticked; its tooltip says what the list shows):
+  filter hides anything — not every state and kind ticked, or Mine; its tooltip says what the list shows):
   its menu, opening inside the list, ticks any of State (**Draft** for anyone whose request
   starts as one, then **Dev review**, **Design review**, **In dev**, **Closed**) and Kind (**Requests**,
   **PR changes**), each with its count, at least one of each ticked, a state's row offering
-  **Only** under the pointer (that state alone, the kinds kept), and **Reset to default** (Design review
-  for a designer, Draft and Dev review for a developer or a UI dev owner, every state before In dev
-  for anyone else; both kinds; a kept state they do not have is left out; the keys stay `proposal`
+  **Only** under the pointer (that state alone, the kinds and Whose kept), picks one of Whose
+  (**Everyone**, **Mine**: what the viewer filed, wrote in, sent a review on or voted on, and the
+  changes of the pull requests they authored, by the GitHub username People keeps, [desk.md](desk.md)
+  → People; the list row's `mine`), each with its count, and offers **Reset to default** (Design review
+  for a designer, every state for a PM, Draft and Dev review for a developer or a UI dev owner, every state before In dev
+  for anyone else; both kinds; Everyone; a kept state they do not have is left out; the keys stay `proposal`
   for Dev review and `open` for Design review, so a kept filter keeps working); nothing shows beside the button. This browser
   keeps it (`desk-simFilter`). There is no Your turn, Unread or Needs a designer filter, and no
   For Designers / For Developers switch. An opened request or change starts with one head that
@@ -251,7 +254,11 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   the same **Changes requested** line under the title, the same boxes, the same **Changes** of a change, and **Your feedback** at the top
   of Questions and comments, whose **Send feedback…** opens the same dialog; before design it
   offers no Approve. A request that went to design folds the conversations and feedback begun
-  before it opened (`opened_at`) into **Before design · n**, after the rest, in both modes. ⋯ holds **Close…** or **Reopen** on a request, **Turn into a design request** on a
+  before it opened (`opened_at`) into **Before design · n**, after the rest, in both modes. ⋯ holds **Close…** or **Reopen** on a request
+  — on one sent to developers, first **Mark as shipped** while it is In dev and **Not shipped yet** once
+  it is Shipped, for whoever marks a design done (`built`: a developer, a UI dev owner, an admin;
+  `POST /api/cards/R-<n>/built`): the store marks it built by itself when a merged change that builds it
+  arrives ([Designs](#designs)), so this is the fallback when nothing links the two —, **Turn into a design request** on a
   change (and **Undo approval** on one approved), and **Open on GitHub** where there is a link. No vote buttons, rename or For Developers
   move (Send to design is the one move to For Designers). Under the head the page reads one way for both kinds: a short lead — a request's `gist`,
   Design Desk's few plain sentences on the problem and what will be done ([requests.md](requests.md)
@@ -274,7 +281,9 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   instead of the Requests intro a box per state, **Draft** only while it holds
   something, then **Dev review**, **Design review**, **In dev** and **Closed**: how many items are
   in each (the reviews and In dev with their kinds, Closed with how many of them
-  shipped in the last 7 days); a click on one filters the list to that state. Otherwise it hides: **Designs**, **Issues**, **Product** and **People** leave the menu (a sent
+  shipped in the last 7 days); a click on one filters the list to that state. Otherwise it hides: **Designs**, **Issues**, **Product** and **People** leave the menu — for
+  every role but an admin, who keeps them all, for now, after **Requests & PRs**, with Product's pages, their
+  intros' lines and their notifications as in full mode — (a sent
   request offers no **Show the design**), Product's pages their bar, the presentation leaves Requests (its page, its buttons on a card and in an intro), a
   request offers no **Build a live prototype** (a prototype already up still shows), and an
   option shows no **Why it looks like this** section (the design workspace keeps it
@@ -289,8 +298,7 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   A link to anything hidden still opens it: a `D-3` in a request opens the decision, and
   `#people` or `#presentation` their pages. The Desk keeps each person's choice like day or
   night (`POST /api/prefs {simple}`, `simple` in `GET /api/me`; only the keys sent change), so
-  it follows them to every device; with no choice (null) a viewer starts in simple mode and
-  every other role in full mode. A choice the server has not taken yet stays in the browser,
+  it follows them to every device; with no choice (null) every role starts in simple mode. A choice the server has not taken yet stays in the browser,
   named for them (`desk-simple:<email>`, marked `desk-simple-unsaved:<email>`), and is sent
   again on the next load. The server's answer is what it saved; one with no `simple` keeps the
   choice just made, never the role's default. Turned on over a hidden tab (an open decision aside) or the
@@ -534,7 +542,8 @@ how it ended. **Design review** (green; its key `open`): it needs a design decis
 three For Designers. Design Desk at work on an item leaves it in its review: the spinner says so. **In dev** (the accent): it is
 approved and developers build it — a request writing its spec or sent to developers and not yet
 built, a change handled or auto handled whose pull request is not merged, and a change a review asked
-changes of until new commits arrive (its head says **Changes requested · developer**; a request a
+changes of until new commits arrive (its head says **Changes requested · developer**, and **Changes
+requested · you** to its pull request's author, by the GitHub username People keeps; a request a
 review asked changes of stays in its review, its head saying **Changes requested · Design Desk**,
 [desk.md](desk.md) → Reviews). **Closed**: nobody
 works on it, and its pill says how it ended — **Shipped** (purple) a request built or a handled

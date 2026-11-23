@@ -305,10 +305,11 @@ with spaces as hyphens (`UI dev owner` → `ui-dev-owner`); `lead-developer`, it
 | `designer`, `admin` | also decide: approve (a design against a decision too), choose what the presentation shows and mark it presented, mark a change handled, remove an option from any request, record or approve a decision |
 | `ui-dev-owner` | mark a change or an issue For Developers handled ([For Developers or For Designers](#for-developers-or-for-designers)) |
 | roles in `prototype_requesters` (default `designer`, `pm`, `admin`) | start a live prototype |
-| `admin` | also ask you to add a person to the list ([People](#people)) |
+| `admin` | also ask you to add a person to the list, and set a person's GitHub username ([People](#people)) |
 | `developer`, `ui-dev-owner`, `admin` | see **Designs** in the menu, ask a design's designer, mark a design done ([Designs](#designs)) |
 
-The page's **People** tab shows the roster, each role's actions and an admin's asks to add
+The page's **People** tab shows the roster (each person's email, role and GitHub username, the
+last a field an admin types in, [People](#people)), each role's actions and an admin's asks to add
 someone, from `GET /api/people`; everyone the Desk is shared with sees it, guests included.
 Each role has its icon, by the role there and by the person's own role in the page's header.
 
@@ -651,6 +652,16 @@ with a role; it has no card. This is the one roster change that comes from the D
    ask shows **Not shared yet** until that person loaded the Desk once (the store keeps
    `opened: {<address>: at}`, lower-cased, from the page's first load), with the owner's move and
    **Copy email** for the owner.
+
+**A GitHub username** per person, in People's **GitHub** column: an admin types it there and it is
+saved when the field is left (`POST /api/people/github {email, login}`; empty clears it, a leading
+`@` is dropped). It is no roster change and needs no run of yours: the store keeps it (`logins`, by
+the row's first address, with who set it and when), it grants nothing, and it applies at once.
+`GET /api/people` carries every one (`github: {email: login}`), `GET /api/me` the caller's
+(`github`). It ties a pull request's author (`source.author`) to a person: simple mode's **Mine** and
+**Changes requested · you** read it ([desk-page.md](desk-page.md) → Simple mode). A username is
+letters, digits and single inner hyphens, 39 at most, and belongs to one person; a person not on
+`## Desk people` takes none. Never set one yourself, and never guess one from an email.
 
 A person's row on People folds open to what they did on the Desk, read from what the store
 keeps anyway, nothing logged for it (`peopleActivity`, sent with `GET /api/people`): when they
