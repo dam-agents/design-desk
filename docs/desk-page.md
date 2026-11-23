@@ -384,6 +384,23 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   on, its jump to the part and Reopen. The order
   stays newest first.
 
+## New request
+
+**+ New request** opens one dialog. Full mode asks for the type (**Suggest a change**, **Report
+something broken**), the words, how they picture it, the screen, how many design options (a slider,
+0 to 5, 3 by default), questions first, the skills, a Figma link and up to two pictures. Simple mode
+asks only for the words (an idea, a bug report or a suggestion alike: type `idea`), the pictures and
+**Design options** as a row of buttons, **Just check** (0: Design Desk only checks what can be done,
+said under the row) then 1 to 5, 1 by default; both modes call 0 **Just check**. A picture's ✕
+takes it out. The words take the focus; Ctrl+Enter or ⌘+Enter sends.
+
+The send button is larger, and split for whose request starts as a draft: its arrow offers
+**Create draft** (private until sent on) and the one move the author may make at once, each with a
+muted line — **Create proposal** for a developer, a UI dev owner or an admin (to the dev team),
+**Send to design** for a PM (to the designers). The face keeps the last pick, in this browser
+(`desk-request-start:<email>`). A designer's request opens at once: one **Send**. The pick is
+`start` on `POST /api/requests` ([desk.md](desk.md) → Draft and Proposal).
+
 ## The element dialog
 
 A part under **All elements** opens in one dialog, the same in simple and full mode:

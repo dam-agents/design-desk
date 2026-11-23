@@ -90,6 +90,14 @@ function shim() {
     if (p.startsWith("/api/decisions")) return { decisions: Object.entries(cards[0].cited).map(([id, d]) => ({ id, ...d, side: "design", at: now(), concepts: [] })) };
     let x;
     if ((x = m(/^\/api\/cards\/([^/]+)$/)) && method === "GET") { const c = card(decodeURIComponent(x[1])); return c && seen(c) ? { card: structuredClone(c) } : { error: "no card" }; }
+    // New request: a draft for whom the server drafts, or sent straight on as `start` says (docs/desk.md → Draft and Proposal).
+    if (p === "/api/requests" && method === "POST") {
+      const stage = role === "designer" ? null : body.start === "proposal" ? "proposal" : body.start === "design" ? null : "draft";
+      const c = { id: `R-${++n}`, kind: "request", title: String(body.problem || "").split("\n")[0].slice(0, 80) || "New request", status: "triage", created: now(), updated: now(),
+        by: { name: me.name, email: me.email, role }, request: { type: body.type || "idea", problem: body.problem || "" }, variants: [], threads: [], waiting: [], votes: {}, prototype: { state: "none" }, ...(stage ? { stage } : { opened_at: now() }) };
+      cards.unshift(c);
+      return { card: structuredClone(c), inbox: { id: `Q-${n}` } };
+    }
     if ((x = m(/^\/api\/cards\/([^/]+)\/stage$/)) && method === "POST") {
       const c = card(decodeURIComponent(x[1]));
       if (["design", "developers"].includes(body.to)) { delete c.stage; c.opened_at = now(); if (body.to === "developers") c.for = "developers"; } else c.stage = body.to;

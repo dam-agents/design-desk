@@ -374,7 +374,9 @@ asked for it; who asked is its author.
 | `developer` | **Propose** |
 
 On a proposal the `ui-dev-owner` (any of them) picks **Send to design**, **Approve for dev**,
-**Back to draft** (`draft`) or **Close**; an `admin` makes any move on either. **Approve for dev**
+**Back to draft** (`draft`) or **Close**; an `admin` makes any move on either. New request may make the draft's first move in the same step
+(`start: "proposal" | "design"` on `POST /api/requests`, recorded in `staged`): refused, 403, before
+anything is filed when its author may not make it. **Approve for dev**
 is an approval (`POST /api/cards/<id>/actions {action: "approve", for_dev: true}`) that opens the
 request For Developers in the same step, so it goes to In dev without a designer; it takes what any
 approval takes (checked by Design Desk, the decisions in force). A draft's author
