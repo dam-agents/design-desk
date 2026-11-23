@@ -187,10 +187,10 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   filter shows), and **+ New request**; its one list holds every request and pull request change,
   whatever its side — For Developers or For Designers only decides which review it is in — each in
   one state ([A request's state in the list](#a-requests-state-in-the-list)), the newest change
-  first; only someone else's draft and an archived change are not listed. A row is the kind's icon (with a red dot on its upper right corner while an unread notification
+  first; only someone else's draft and an archived change are not listed. A row is the kind's icon (a change's in its pull request's ink, as the head's pill: green open, grey draft, purple merged; with a red dot on its upper right corner while an unread notification
   for the viewer is about the item, [Notifications](#notifications)), the title (two lines at most), when it last changed (Today, Yesterday or the
   day, with the time; the year only when it is not this year), then its number in the same grey
-  words, never broken across lines (a change its pull request's, as a small pill in GitHub's inks as in the head: `#812 Draft` grey, `#812 Open` green, `#812 Merged` purple; a request, or a change
+  words, never broken across lines (a change its pull request's, `PR#812`; a request, or a change
   with no pull request, its own on the Desk, `R-12` or `P-3`), who asked and where from in the same
   words (`by Pat Lee, from Slack`: the person behind a Slack message or an issue, never the Desk; a
   change's pull request author), the Desk's spinner while Design Desk works on it, and its state's

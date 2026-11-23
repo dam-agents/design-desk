@@ -4010,18 +4010,21 @@ test("a simple mode row says when it last changed, then its number: a change its
     return { order: [...l.children].map((x) => x.className), num: n.textContent, title: n.title || n.dataset.tip, same: font(n) === font(w) };
   });
   const change = await line("c-open"), request = await line("r-check");
-  assert.equal(change.num, "#7 Merged", "a change: its pull request's number and state, a small pill in GitHub's inks");
+  assert.equal(change.num, "PR#7", "a change: PR and its pull request's number");
   assert.match(change.title, /pull request/);
-  assert.equal(await desk.$eval('#list [data-card="c-open"] .snum', (n) => n.dataset.s), "pr-merged");
+  const ink = (id) => desk.$eval(`#list [data-card="${id}"] .kic`, (k) => [k.dataset.s || "", getComputedStyle(k).color]);
+  const [mergedInk, mergedColor] = await ink("c-open"), [, requestColor] = await ink("r-check");
+  assert.equal(mergedInk, "pr-merged", "its icon wears its pull request's state, merged in purple");
+  assert.notEqual(mergedColor, requestColor, "a request's icon stays grey");
   await desk.click("details.sf > summary");
   await desk.click('[data-simf="states:dev"]');
   await desk.keyboard.press("Escape");
-  assert.deepEqual(await desk.$eval('#list [data-card="c-review"] .snum', (n) => [n.textContent, n.dataset.s]), ["#7 Open", "pr-open"], "an open one says Open, in green");
+  assert.equal((await ink("c-review"))[0], "pr-open", "an open one in green");
   assert.equal(request.num, "r-check", "a request: its number on the Desk");
   assert.match(request.title, /number on the Desk/);
   assert.doesNotMatch(request.title, /pull request/);
   assert.deepEqual(request.order.slice(0, 3), ["when", "ssep", "snum"], "the number after when it last changed");
-  assert.ok(request.same, "in the date's font, size and grey");
+  assert.ok(change.same && request.same, "in the date's font, size and grey");
 }));
 
 // A list row's title: two lines at most, then an ellipsis, in both modes; its tooltip has it all.
