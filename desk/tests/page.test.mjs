@@ -3884,6 +3884,46 @@ test("simple mode lists requests and changes of the viewer's side in one list, e
   assert.equal(await desk.locator("details.sf[open]").count(), 1, "the menu stays open while ticking");
 }));
 
+test("a simple mode row says when it last changed, then its number: a change its pull request's, a request its own", (t) => open(t, DESK(SIMPLE_ME, SIMPLE_CARDS), async (desk) => {
+  await desk.waitForSelector('#list [data-card="r-check"]');
+  const line = (id) => desk.$eval(`#list [data-card="${id}"] .sdate`, (l) => {
+    const n = l.querySelector(".snum"), w = l.querySelector(".when"), font = (x) => { const s = getComputedStyle(x); return [s.fontFamily, s.fontSize, s.fontWeight, s.color].join(); };
+    return { order: [...l.children].map((x) => x.className), num: n.textContent, title: n.title || n.dataset.tip, same: font(n) === font(w) };
+  });
+  const change = await line("c-open"), request = await line("r-check");
+  assert.equal(change.num, "PR#7", "a change: PR and its pull request's number");
+  assert.match(change.title, /pull request/);
+  assert.equal(request.num, "r-check", "a request: its number on the Desk");
+  assert.match(request.title, /number on the Desk/);
+  assert.doesNotMatch(request.title, /pull request/);
+  assert.deepEqual(request.order.slice(0, 3), ["when", "ssep", "snum"], "the number after when it last changed");
+  assert.ok(change.same && request.same, "in the date's font, size and grey");
+}));
+
+// A change with no pull request, and a date as long as they get, in a list as narrow as a small
+// phone's: at 280 px the date breaks without the row's own style, at 320 px it still fits.
+const NARROW_CARDS = [
+  { id: "c-nopr", kind: "change", title: "A change with a long enough title to wrap", status: "new", attention: { level: "designer", reasons: ["New"] }, source: { kind: "commit" }, updated: "2025-10-15T14:11:00Z" },
+  { id: "r-long", kind: "request", title: "A request", status: "triage", updated: "2025-10-14T14:11:00Z" },
+];
+test("on a phone-wide list a simple mode row keeps its date and number on one line; a change with no pull request shows its Desk number", (t) => open(t, DESK(SIMPLE_ME, NARROW_CARDS), async (desk) => {
+  await desk.setViewportSize({ width: 280, height: 640 });
+  await desk.waitForSelector('#list [data-card="c-nopr"]');
+  await desk.click("details.sf > summary");
+  await desk.click('[data-simf="states:dev"]');
+  await desk.keyboard.press("Escape");
+  const box = (id) => desk.$eval(`#list [data-card="${id}"] .sline`, (l) => {
+    const r = (x) => x.getBoundingClientRect(), w = l.querySelector(".when"), n = l.querySelector(".snum");
+    const p = l.querySelector(".spill");
+    return { num: n.textContent, oneLine: r(w).height <= parseFloat(getComputedStyle(w).lineHeight) + 1 && Math.abs(r(n).top - r(w).top) < 2,
+      pill: Boolean(p) && Math.abs(r(p).right - r(l).right) < 2 && r(p).bottom <= r(l).bottom + 1 && (r(p).top >= r(w).bottom - 1 || r(p).left >= r(n).right) };
+  });
+  const change = await box("c-nopr"), request = await box("r-long");
+  assert.equal(change.num, "c-nopr", "no pull request: its number on the Desk");
+  assert.ok(change.oneLine && request.oneLine, "the date and the number stay on one line");
+  assert.ok(change.pill && request.pill, "the pill shows at the line's right end, beside the number or on a line of its own, never over them");
+}));
+
 test("simple mode's filter shows only what narrows the list, keeps one of each group and is kept in the browser", (t) => open(t, DESK(SIMPLE_ME, SIMPLE_CARDS), async (desk) => {
   await desk.waitForSelector('#list [data-card="r-check"]');
   assert.deepEqual(await desk.$$eval(".sf-chip", (xs) => xs.map((x) => x.textContent.trim())), ["Open"], "the default: one chip, no ×, no kind");

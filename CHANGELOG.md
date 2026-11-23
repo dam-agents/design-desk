@@ -7,6 +7,13 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.103.1 — 2026-11-19
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): in simple mode a row says
+   its number after when it last changed (`PR#812`; a request `R-12`, a change with no pull request
+   `P-3`). No data migration.
+
 ## 1.103.0 — 2026-11-19
 
 **Upgrade:**
