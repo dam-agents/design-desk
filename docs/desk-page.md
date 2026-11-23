@@ -111,11 +111,13 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   write the spec: no second Approve, no vote, and its questions are the spec's. Pointing at the state's
   word shows its help: what happens now and every way on from here as branches, each move the
   viewer can make, and each usual one they cannot, greyed, with why not and who can.
-  A dialog with something typed, picked or added in it asks before Escape or a click outside
-  closes it (its Cancel closes it at once); a picture dropped on it is added as if chosen.
+  Every dialog, the enlarged picture and the private ask close with a lone **✕** in the top-right
+  corner and with Escape (desk/guidelines.html → Dialogs and forms). A dialog with something
+  typed, picked or added in it asks before ✕, Escape or a click outside closes it (its Cancel
+  closes it at once); a picture dropped on it is added as if chosen.
   The browser's Back leaves the Desk: every view keeps the menu or its own way back on
   screen while it scrolls (the list beside an open item, or its back bar where the list hides
-  on a narrow screen; the presentation's Exit, a picture's Close).
+  on a narrow screen; the presentation's Exit, a picture's ✕).
   `desk/tests/page.test.mjs` drives every dialog in such a frame. It reports itself skipped
   only when it finds no Chromium or the toolkit's `playwright-core` is not installed.
 - **Pages and filters.** A tab's pages are tabs at the top of its list: **For Designers**, **For

@@ -614,6 +614,7 @@
   .zoom { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: grid; place-items: center; padding: 24px; z-index: 80; cursor: zoom-out; }
   .zoom img { max-width: 100%; max-height: 100%; border-radius: var(--r-sm); background: #fff; }
   .zoom .btn { position: absolute; top: 12px; right: 12px; }
+  .zoom .dlg-x { background: var(--panel); color: var(--ink); } .zoom .dlg-x:hover { background: var(--soft); }
   .zoom figure { margin: 0; display: grid; gap: 8px; justify-items: center; }
   .zoom figure img { max-height: calc(100vh - 110px); }
   .zoom .canvas img { max-height: calc(100vh - 110px); max-width: 100%; }
@@ -846,6 +847,11 @@
   dialog::backdrop { background: rgba(0,0,0,.35); }
   .drop.over { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
   dialog form { padding: 20px; display: grid; gap: 12px; }
+  /* Close: ✕ alone, in the dialog's top-right corner (desk/guidelines.html → Dialogs and forms); a heading keeps room for it. */
+  .dlg-x { position: absolute; top: 12px; right: 12px; z-index: 5; width: 32px; height: 32px; padding: 0; display: grid; place-items: center; border: 0; border-radius: var(--r-sm); background: none; color: var(--muted); font: inherit; font-size: var(--fs-head); line-height: 1; cursor: pointer; }
+  .dlg-x:hover { background: var(--soft); color: var(--ink); } .dlg-x:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  dialog form > h2 { padding-right: 32px; }
+  .elbar .dlg-x, .ask-panel header .dlg-x { position: static; flex: none; }
   dialog h2 { font-size: var(--fs-head); } label { font-size: var(--fs-meta); color: var(--muted); display: grid; gap: 4px; }
   .drop { border: 1px dashed var(--line); border-radius: var(--r-sm); padding: 12px; font-size: var(--fs-meta); color: var(--muted); display: grid; gap: 8px; }
   .thumbs { display: flex; gap: 8px; flex-wrap: wrap; } .thumbs img { height: 64px; border-radius: var(--r-sm); border: 1px solid var(--line); }
@@ -1737,7 +1743,7 @@
 <div id="workspace" hidden></div>
 
 <dialog id="request-dialog">
-  <form method="dialog" id="request-form">
+  <form method="dialog" id="request-form"><button type="button" class="dlg-x" data-dlg-x aria-label="Close">✕</button>
     <h2 id="rq-title">New request</h2>
     <p class="sub" id="rq-hint"></p>
     <div class="tabs" role="radiogroup" id="type-choice">
@@ -1765,7 +1771,7 @@
 </dialog>
 
 <dialog id="product-dialog">
-  <form method="dialog" id="product-form">
+  <form method="dialog" id="product-form"><button type="button" class="dlg-x" data-dlg-x aria-label="Close">✕</button>
     <h2>Add to Product</h2>
     <p class="sub" id="pd-hint"></p>
     <div class="tabs" role="radiogroup" id="kind-choice">
@@ -1786,7 +1792,7 @@
 </dialog>
 
 <dialog id="shots-dialog">
-  <form method="dialog" id="shots-form">
+  <form method="dialog" id="shots-form"><button type="button" class="dlg-x" data-dlg-x aria-label="Close">✕</button>
     <h2>Add screenshots</h2>
     <p class="sub" id="sh-hint">Take them in the product and paste them here. Design Desk checks that each one shows the change, and writes its caption.</p>
     <div class="drop">
@@ -1798,7 +1804,7 @@
 </dialog>
 
 <dialog id="decision-dialog">
-  <form method="dialog" id="decision-form">
+  <form method="dialog" id="decision-form"><button type="button" class="dlg-x" data-dlg-x aria-label="Close">✕</button>
     <h2>Add a decision</h2>
     <p class="sub">It is recorded in your name, as decided on the Desk. Design Desk then warns when a change or an option goes against it.</p>
     <label><span>What was decided</span><textarea name="text" maxlength="600" required placeholder="e.g. The send button is always on the right."></textarea></label>
@@ -1813,7 +1819,7 @@
 </dialog>
 
 <dialog id="person-dialog">
-  <form method="dialog" id="person-form">
+  <form method="dialog" id="person-form"><button type="button" class="dlg-x" data-dlg-x aria-label="Close">✕</button>
     <h2>Add a person</h2>
     <p class="sub">Design Desk puts them on the list with the role you pick. The Desk's owner still shares the Desk with them in the app, so they can open it.</p>
     <label><span>Their email — the one they sign in with</span><input name="email" type="email" maxlength="254" required placeholder="e.g. alex@example.com" /></label>
@@ -1823,7 +1829,7 @@
 </dialog>
 
 <dialog id="option-dialog">
-  <form method="dialog" id="option-form">
+  <form method="dialog" id="option-form"><button type="button" class="dlg-x" data-dlg-x aria-label="Close">✕</button>
     <h2>Add a design option</h2>
     <div class="tabs" role="radiogroup" id="of-mode">
       <button type="button" data-of-mode="draw" aria-pressed="true">Design Desk draws it</button>
@@ -1849,7 +1855,7 @@
 </dialog>
 
 <dialog id="slack-dialog">
-  <form method="dialog" id="slack-form">
+  <form method="dialog" id="slack-form"><button type="button" class="dlg-x" data-dlg-x aria-label="Close">✕</button>
     <h2>Send to Slack</h2>
     <div class="tabs" role="radiogroup" id="sl-mode">
       <button type="button" data-sl-mode="vote" aria-pressed="true">Ask for a vote</button>
@@ -1871,7 +1877,7 @@
 <dialog id="element-dialog" class="eldlg" aria-label="An element of a design option"><div id="el-body"></div></dialog>
 
 <dialog id="confirm-dialog">
-  <form method="dialog" id="confirm-form">
+  <form method="dialog" id="confirm-form"><button type="button" class="dlg-x" data-dlg-x aria-label="Close">✕</button>
     <h2 id="cf-title"></h2>
     <div id="cf-body" class="md"></div>
     <div id="cf-choices" class="choices"></div>
@@ -2236,6 +2242,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     wsState: (v) => v ? "Shows the option in this state" : "Shows the option as designed, in no particular state",
     elStep: (v) => v === "1" ? "Next state" : "Previous state",
     elNav: (v) => v === "1" ? "Next element" : "Previous element",
+    dlgX: "Close (Esc)",
+    elClose: "Close (Esc)",
     wsStep: (v) => v === "1" ? "Next state" : "Previous state",
     wsBuild: "Builds exactly this version, with the states shown, as a live prototype",
     wsEdit: "Goes back to change the design before building",
@@ -2976,6 +2984,13 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (formState(d) === d._clean) { d.close("cancel"); return; }
     ask({ title: "Close without sending?", body: "What you wrote or added in this window is lost; nothing is sent.", ok: "Close it", send: () => d.close("cancel") });
   };
+  // ✕ in a form dialog's corner does what Escape does (desk/guidelines.html → Dialogs and forms).
+  document.addEventListener("click", (e) => {
+    const x = e.target.closest?.("dialog [data-dlg-x]");
+    if (!x) return;
+    const d = x.closest("dialog");
+    if (d.id === "confirm-dialog") d.close("cancel"); else leave(d);
+  });
   for (const d of document.querySelectorAll("dialog:not(#confirm-dialog):not(#element-dialog)")) {
     // What it held when it opened; a dialog opened again after a failed send keeps it.
     new MutationObserver(() => { if (d.open && !d._reopen) d._clean = formState(d); d._reopen = false; }).observe(d, { attributes: true, attributeFilter: ["open"] });
@@ -4580,7 +4595,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (z.parentElement !== top) top.append(z);
     z.list = list; z.index = i;
     const many = list.length > 1, cap = list[i].caption;
-    z.innerHTML = `<button class="btn small" aria-label="Close the picture">✕ Close</button>${many ? `<button class="btn gal prev" data-gal="-1" aria-label="Previous picture">‹</button><button class="btn gal next" data-gal="1" aria-label="Next picture">›</button>` : ""}
+    z.innerHTML = `<button type="button" class="dlg-x" aria-label="Close the picture">✕</button>${many ? `<button class="btn gal prev" data-gal="-1" aria-label="Previous picture">‹</button><button class="btn gal next" data-gal="1" aria-label="Next picture">›</button>` : ""}
       <figure>${list[i].marks?.length ? `<div class="canvas"><img alt="${esc(cap)}" src="${dataUrl(a)}" />${marksOf(list[i].marks)}</div>` : `<img alt="${esc(cap)}" src="${dataUrl(a)}" />`}${many || cap ? `<figcaption>${many ? `${i + 1} / ${list.length}` : ""}${many && cap ? " · " : ""}${esc(cap)}</figcaption>` : ""}</figure>`;
   }
   const dataUrl = (a) => a.encoding === "base64" ? `data:${a.contentType};base64,${a.data}` : `data:${a.contentType};charset=utf-8,${encodeURIComponent(a.data)}`;
@@ -4901,7 +4916,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // keepFocus puts a focused button (send, a starter, close, a brief) back; the box is kept above.
     keepFocus(root, () => { root.innerHTML = `<section class="ask-panel" role="dialog" aria-label="Private ask"${size ? ` style="width:${size.w}px;height:${size.h}px"` : ""}>
       <div class="ask-grip" data-ask-grip title="Drag to resize"></div>
-      <header><div><b>Private ask</b> <span class="chip" title="Only you and Design Desk see these questions and answers: nobody else on the Desk, and nothing goes to Slack. Design Desk explains; it never changes the design from here.">🔒 only you</span></div><button class="btn small" data-ask-close title="Close; your questions stay here">✕</button></header>
+      <header><div><b>Private ask</b> <span class="chip" title="Only you and Design Desk see these questions and answers: nobody else on the Desk, and nothing goes to Slack. Design Desk explains; it never changes the design from here.">🔒 only you</span></div><button type="button" class="dlg-x" data-ask-close aria-label="Close" title="Close (Esc); your questions stay here">✕</button></header>
       <div class="ask-ctx" title="Design Desk answers about what you had open when you asked">About: <b>${esc(ctx.label)}</b></div>
       <div class="ask-body">
         ${stream(here, ctx) || `<p class="hint">Ask anything about what you have open.</p>`}
@@ -6241,7 +6256,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (!d || ["done", "stopped"].includes(d.state)) { bar?.remove(); return; }
     if (!bar) { bar = document.createElement("div"); bar.id = "story-player"; bar.setAttribute("role", "status"); document.body.append(bar); }
     if (d.state === "missing" || d.state === "unseen") {
-      bar.innerHTML = `<span class="pl-k">Can't play it</span><span class="pl-t">${d.state === "missing" ? "This version of the design does not have this story's parts." : "The design has this story's parts, but none of them is on the screen on the way through it."}</span><button class="btn small" data-play-ctl="stop">✕ Close</button>`;
+      bar.innerHTML = `<span class="pl-k">Can't play it</span><span class="pl-t">${d.state === "missing" ? "This version of the design does not have this story's parts." : "The design has this story's parts, but none of them is on the screen on the way through it."}</span><button class="btn small" data-play-ctl="stop" aria-label="Close">✕</button>`;
       return;
     }
     if (d.step) S.playStep = { step: d.step, of: d.of };
@@ -6381,7 +6396,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const sel = el.dataset.zoomSel || (base ? diffPath(decode(await asset(base)), html) : "");
     $(".zoom")?.remove();
     const z = document.createElement("div"); z.className = "zoom"; z.onclick = () => z.remove();
-    z.innerHTML = `<button class="btn small" aria-label="Close the picture">✕ Close</button><figure><div class="zoombox"><iframe class="zoomframe" sandbox="allow-scripts" title="${esc(el.dataset.zoomLabel || "")}"></iframe></div><figcaption>${esc(el.dataset.zoomLabel || "")}</figcaption></figure>`;
+    z.innerHTML = `<button type="button" class="dlg-x" aria-label="Close the picture">✕</button><figure><div class="zoombox"><iframe class="zoomframe" sandbox="allow-scripts" title="${esc(el.dataset.zoomLabel || "")}"></iframe></div><figcaption>${esc(el.dataset.zoomLabel || "")}</figcaption></figure>`;
     ($("#element-dialog[open]") || document.body).append(z);
     const f = z.querySelector("iframe");
     // The frame takes the part's own shape, enlarged to fit the screen, the part centred in it:
@@ -6595,7 +6610,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const toWs = S.el.look ? "" : `<button class="btn small" data-el-ws title="Opens the design at this part, to comment on it or ask for a change">Open in design workspace</button>`;
     $("#el-body").innerHTML = `<div class="elbar"><div><h2>${esc(e.name)}</h2>
         <div class="sub">${ch ? `<span class="chip ${ch[1]}" title="${esc(ch[2])}">${ch[0]}</span>` : ""}<span class="chip" title="The design option this element is part of"><span class="ono">${vs.indexOf(v) + 1}</span> ${esc(v.name)} · version ${esc(v.version || 1)}</span>${approvedOption(c)?.id === v.id ? `<span class="chip ok" title="The option that was approved">✓ Approved</span>` : ""}</div></div>
-        <div class="el-acts">${toWs}${elNav(c, v, e)}<button class="btn small" data-el-close aria-label="Close">✕ Close</button></div></div>
+        <div class="el-acts">${toWs}${elNav(c, v, e)}<button type="button" class="dlg-x" data-el-close aria-label="Close">✕</button></div></div>
       ${e.how ? `<p style="max-width:var(--measure)">${txt(e.how)}</p>` : ""}
       ${catalogButton(c, v, e) && !S.el.look ? `<div class="actions" style="margin:0 0 8px">${catalogButton(c, v, e)}</div>` : ""}
       ${stale.length ? `<p class="hint"><span class="chip warn" title="These states show the option before its latest change">${plural(stale.length, "state", "states")} drawn for an earlier version</span> Design Desk redraws them when it changes the option.</p>` : ""}
@@ -8995,6 +9010,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // Over the element dialog, its own cancel closes the picture (and keeps the dialog).
     if (z && e.key === "Escape" && !z.closest("dialog")) { z.remove(); return; }
     if (z?.list?.length > 1 && ["ArrowRight", "ArrowLeft"].includes(e.key)) { gallery(z.list, z.index + (e.key === "ArrowRight" ? 1 : -1)).catch(fail); return; }
+    // Escape closes the private ask from inside it, or when nothing else on the page is open.
+    if (e.key === "Escape" && S.ask?.open && !document.querySelector("dialog[open], .zoom, #present") && (e.target.closest?.(".ask-panel") || !S.ws?.open)) { S.ask.open = false; renderAsk(); return; }
     const ov = $("#present");
     // While a comment is written, Enter sends it and Escape leaves the box; the arrows are the text's.
     if (ov && e.target.id === "pc-text") {

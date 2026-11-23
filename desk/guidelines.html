@@ -47,7 +47,7 @@
   .gl-fixed { position: relative; transform: translateZ(0); width: 100%; min-height: 72px; }
   .gl-dlg { width: 100%; }
   .gl-palette { width: 340px; max-width: 100%; }
-  .gl-static { position: static; margin: 0; }
+  .gl-static { position: relative; margin: 0; }
   .gl-no { color: var(--bad); }
   @media (max-width: 760px) { .gl-item { grid-template-columns: minmax(0, 1fr); } }
 </style>
@@ -370,10 +370,13 @@
     <div class="gl-rule">
       <h3 class="gl-h3">A dialog asks one thing</h3>
       <p class="gl-p">Its name is the action that opened it, and its main button says the action again. A label sits above its field, grey and short. Nothing submits a form: every button is <code>type="button"</code>.</p>
+      <p class="gl-p"><b>Close is ✕, alone, in its top-right corner</b>, named "Close" for a screen reader; never "✕ Close". Esc closes it too, and ✕ does what Esc does: a form with something typed or picked in it asks before it is lost. Cancel stays beside a form's main button and closes it at once.</p>
+      <p class="gl-where">On the Desk: every dialog, the enlarged picture and the private ask; a dialog with a header that stays (an element's) holds its ✕ there.</p>
     </div>
     <div class="gl-ex gl-dlg">
       <dialog class="gl-static" open aria-label="Example dialog">
         <form>
+          <button type="button" class="dlg-x" aria-label="Close">✕</button>
           <h2 class="gl-h2">Request changes</h2>
           <label>What should change<textarea>The empty state should say what to do next.</textarea></label>
           <label class="check"><input type="checkbox" checked> Tell the person who asked</label>

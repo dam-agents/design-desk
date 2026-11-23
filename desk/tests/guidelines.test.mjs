@@ -146,6 +146,20 @@ test("every pressed or selected control the Desk styles has a look the guideline
   }
 });
 
+// Close is ✕, alone, in a dialog's corner (desk/guidelines.html → Dialogs and forms): every dialog
+// of the page carries one (the element dialog's is drawn with its header), and no "✕ Close" is left.
+test("every dialog closes with a lone ✕, as the guidelines show", () => {
+  assert.ok(body.includes('class="dlg-x"'), "the guidelines show the ✕");
+  assert.doesNotMatch(page, /✕ Close/, "Close is ✕ alone");
+  const dialogs = page.match(/<dialog id="[^"]+"[\s\S]*?<\/dialog>/g) || [];
+  assert.ok(dialogs.length >= 9, "the page has its dialogs");
+  for (const d of dialogs) {
+    const id = d.match(/id="([^"]+)"/)[1];
+    if (id === "element-dialog") assert.match(page, /class="dlg-x" data-el-close aria-label="Close">✕</, id);
+    else assert.match(d, /<button type="button" class="dlg-x" data-dlg-x aria-label="Close">✕<\/button>/, id);
+  }
+});
+
 // Two corners, no more (desk/guidelines.html → Corners): the Desk declares --r-sm and --radius
 // and no other radius token, and the page shows both.
 test("the Desk has two corners", () => {

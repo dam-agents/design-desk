@@ -147,6 +147,53 @@ async function launch(t, bridge) {
   return { top, desk, posts, settled, close: async () => { await chrome.close(); server.close(); } };
 }
 
+// Close is ✕, alone, in a dialog's corner, and Esc closes it too; a form with something typed in it
+// asks first, both ways (desk/guidelines.html → Dialogs and forms).
+test("✕ and Esc close a dialog; a form with something typed asks first", async (t) => {
+  const run = await launch(t, BRIDGE);
+  if (!run) return;
+  const { desk, settled } = run;
+  try {
+    const open = (id) => desk.evaluate((i) => document.getElementById(i).open, id);
+    await desk.waitForSelector("#new-request");
+    // Untouched: ✕ and Esc close it at once.
+    await desk.click("#new-request");
+    assert.equal(await desk.getAttribute("#request-dialog .dlg-x", "aria-label"), "Close");
+    await desk.click("#request-dialog .dlg-x");
+    assert.equal(await open("request-dialog"), false, "✕ closes it");
+    await desk.click("#new-request");
+    await desk.press("#request-dialog textarea[name=problem]", "Escape");
+    assert.equal(await open("request-dialog"), false, "Esc closes it");
+    // Something typed: ✕ asks, as Esc does; keeping it keeps the text.
+    await desk.click("#new-request");
+    await desk.fill("#request-dialog textarea[name=problem]", "Half a request");
+    await desk.click("#request-dialog .dlg-x");
+    assert.equal(await open("confirm-dialog"), true, "✕ asks first");
+    assert.match(await desk.textContent("#cf-title"), /Close without sending\?/);
+    await desk.click("#confirm-dialog .dlg-x");
+    assert.deepEqual([await open("confirm-dialog"), await open("request-dialog")], [false, true], "✕ on the question keeps the form");
+    assert.equal(await desk.inputValue("#request-dialog textarea[name=problem]"), "Half a request");
+    await desk.click("#request-dialog .dlg-x");
+    await desk.locator("#confirm-dialog .actions button", { hasText: "Close it" }).click();
+    assert.equal(await open("request-dialog"), false, "and closes it once confirmed");
+    await settled("/api/requests", 0, "nothing is sent");
+    // The confirmation dialog, through Close… on a request just sent: ✕ and Esc confirm nothing.
+    await desk.click("#new-request");
+    await desk.fill("#request-dialog textarea[name=problem]", "Make the send button bigger");
+    await desk.locator("#request-dialog .actions button", { hasText: "Send" }).click();
+    await desk.waitForFunction(() => calls.some((c) => c.path === "/api/cards/r1"));
+    await desk.click('.next [data-act="close"]');
+    await desk.click("#confirm-dialog .dlg-x");
+    assert.equal(await open("confirm-dialog"), false);
+    await desk.click('.next [data-act="close"]');
+    await desk.press("#cf-ok", "Escape");
+    assert.equal(await open("confirm-dialog"), false);
+    await settled("/api/cards/r1/actions", 0, "neither confirms anything");
+  } finally {
+    await run.close();
+  }
+});
+
 test("every dialog acts once from a sandboxed frame, and only on its own button", async (t) => {
   const run = await launch(t, BRIDGE);
   if (!run) return;
@@ -2325,6 +2372,10 @@ test("an element's dialog keeps its header and steps to the option's other eleme
     assert.equal(await desk.inputValue("#el-text"), "Half a thought", "what was written on it is back");
     await desk.click('#element-dialog [data-el-nav="-1"]');
     assert.equal((await head())[0], "Added note", "and back round the other way");
+    // Close is ✕ alone in the header; Esc closes it too.
+    assert.deepEqual(await desk.$eval("#element-dialog .elbar [data-el-close]", (b) => [b.textContent, b.getAttribute("aria-label")]), ["✕", "Close"]);
+    await desk.press("#element-dialog [data-el-close]", "Escape");
+    assert.equal(await desk.locator("#element-dialog[open]").count(), 0, "Esc closes it");
   } finally {
     await run.close();
   }
@@ -3100,6 +3151,21 @@ test("a private ask: a corner chat that names its context, says only you see it,
   await desk.click('[data-brief="T-2"]');
   assert.match(await desk.inputValue("#composer-text"), /fuel gauge/, "the brief lands as text in the page's public comments box");
   assert.equal(await desk.evaluate(() => posted.length), 2, "nothing is sent until the person sends it from the public box");
+}));
+
+// Close is ✕ alone in the private ask's header, and Esc closes it too (desk/guidelines.html → Dialogs and forms).
+test("a private ask closes with its ✕ and with Esc", (t) => open(t, PRIVATE, async (desk) => {
+  await desk.goto(desk.url().replace(/#.*$/, "") + "#C-5");
+  await desk.waitForSelector("[data-ask-open]");
+  await desk.click("[data-ask-open]");
+  await desk.waitForSelector(".ask-panel");
+  assert.equal(await desk.textContent(".ask-panel header .dlg-x"), "✕");
+  await desk.click(".ask-panel header .dlg-x");
+  assert.equal(await desk.locator(".ask-panel").count(), 0, "✕ closes it");
+  await desk.click("[data-ask-open]");
+  await desk.waitForSelector(".ask-panel");
+  await desk.press("#ask-text", "Escape");
+  assert.equal(await desk.locator(".ask-panel").count(), 0, "Esc closes it");
 }));
 
 // The answer once stayed behind the three dots until the person left the box or sent again: the
