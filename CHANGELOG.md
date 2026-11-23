@@ -7,6 +7,17 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.106.0 — 2026-11-23
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page). The element dialog shows a
+   part's states over its After picture (a switcher, As designed first) and under it (**All
+   states**, folded); **Draw all states** or **Redraw states** sits beside the switcher; its header
+   stays while it scrolls and steps to the option's other elements; a comment written while a
+   state is shown is about that state, and Open in design workspace opens at it. The design
+   workspace's State menu says "As designed" for none. Every dialog closes with a lone ✕ and with
+   Esc. No data migration.
+
 ## 1.105.0 — 2026-11-23
 
 **Upgrade:**
@@ -28,6 +39,7 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): a part of an option on
    another view than the first is drawn under All elements, in the element dialog and enlarged;
    before, its picture was empty. No data migration.
+
 
 ## 1.104.0 — 2026-11-23
 

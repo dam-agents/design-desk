@@ -554,6 +554,7 @@
   .el-drafts { display: grid; gap: 8px; margin: 8px 0; } .el-drafts .dbub { background: var(--warn-soft); }
   .el-box textarea { width: 100%; box-sizing: border-box; }
   .el-box .bar { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+  .el-box .el-about { margin: 0 0 4px; }
   .elbar h2 { margin: 0 0 4px; font-size: var(--fs-head); }
   /* What comes from an approved design, not from the product: a dashed edge and its own ink. */
   .row.item.fromdesign { border-left: 3px dashed var(--waiting); }

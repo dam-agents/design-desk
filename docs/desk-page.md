@@ -377,11 +377,17 @@ A part under **All elements** opens in one dialog, the same in simple and full m
   skipped), round from the last to the first; each arrow names the element it opens. Another
   element opens as designed, at the top; what someone was writing on a part stays with it, and is
   back in its box when they come back to it, while the page is open.
-- **Open in design workspace** opens the option with the part selected, on its Properties.
+- **Open in design workspace** opens the option with the part selected, on its Properties, at the
+  state shown in After. From the workspace, **Every state (n)** opens the dialog on the state the
+  workspace shows, when it is one of the part's.
 - **Comments**: the part's open comments (a click opens one in the design workspace), the
   viewer's notes on it waiting in their feedback ("Not sent yet", ✕), and a box: **Add to
   feedback** (the dialog's one primary button, as in the design workspace) keeps a note on the part
   ([desk.md](desk.md) → Reviews), **Comment** posts one for the team at once. Not on a closed request.
+  Written while a state is shown in After, a comment or a note is about that state: the box says
+  so ("Your comment is about <state>."), the note carries it, as one made in the workspace on that
+  state does, and a listed comment shows the state's name before its author, a note waiting
+  "Not sent yet · <state>".
 - **Its states**, seen without leaving Before and After:
   - A **switcher** over After: ‹ and › round a pick, **As designed** first, then each state in the
     option's order, as the design workspace's State menu names and orders them. Only After

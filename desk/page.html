@@ -566,6 +566,7 @@
   .el-drafts { display: grid; gap: 8px; margin: 8px 0; } .el-drafts .dbub { background: var(--warn-soft); }
   .el-box textarea { width: 100%; box-sizing: border-box; }
   .el-box .bar { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+  .el-box .el-about { margin: 0 0 4px; }
   .elbar h2 { margin: 0 0 4px; font-size: var(--fs-head); }
   /* What comes from an approved design, not from the product: a dashed edge and its own ink. */
   .row.item.fromdesign { border-left: 3px dashed var(--waiting); }
@@ -6539,16 +6540,20 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // in their feedback, then a box: Add to feedback, or Comment at once (docs/desk-page.md → The element dialog).
   const notesOnPart = (c, v, e) => (c.threads || []).filter((th) => th.state !== "resolved" && th.anchor?.variant === v.id
     && (e.selector ? th.anchor.selector === e.selector : String(th.anchor.label || "").split(" · ")[0] === e.name));
-  // The anchor a note on the part carries, the same whether it is posted or kept in the feedback.
-  const partAnchor = (v, e) => ({ variant: v.id, ...(e.selector ? { selector: e.selector, text: "", tag: "", view: e.view || null, view_name: e.view_name || null } : {}), label: e.name });
-  const draftsOnPart = (c, v, e) => draftsOf(c).filter((d) => !d.ok && d.anchor?.variant === v.id && (e.selector ? d.anchor.selector === e.selector : String(d.anchor.label || "") === e.name));
-  function elementTalk(c, v, e) {
+  // The anchor a note on the part carries, the same whether it is posted or kept in the feedback:
+  // written while a state is shown in After, it is about that state, and its label names it.
+  const partAnchor = (v, e, st) => ({ variant: v.id, ...(st ? { state: st.id } : {}), ...(e.selector ? { selector: e.selector, text: "", tag: "", view: e.view || null, view_name: e.view_name || null } : {}), label: st ? `${e.name} · ${st.name}` : e.name });
+  const draftsOnPart = (c, v, e) => draftsOf(c).filter((d) => !d.ok && d.anchor?.variant === v.id && (e.selector ? d.anchor.selector === e.selector : String(d.anchor.label || "").split(" · ")[0] === e.name));
+  // The state a note on the part is about, by its name; none for one about the part as designed.
+  const stateName = (v, a) => a?.state ? (v.states || []).find((x) => x.id === a.state)?.name || "" : "";
+  function elementTalk(c, v, e, st) {
     if (S.el?.look) return "";
     const notes = notesOnPart(c, v, e), mine = draftsOnPart(c, v, e);
+    const about = (a) => { const n = stateName(v, a); return n ? `<span class="chip" title="This comment is about ${esc(e.name)} in this state">${esc(n)}</span> ` : ""; };
     const list = notes.length ? `<ul class="el-said">${notes.map((th) => { const m = th.messages?.[0], more = (th.messages || []).length - 1;
-      return `<li><button class="anchor" data-goto="${esc(th.id)}" title="Open it in the design workspace"><b>${esc((noteBy(m?.by) || "someone").replace(/^./, (x) => x.toUpperCase()))}</b> <span class="tx">${esc(String(m?.text || "").replace(/\s+/g, " "))}</span>${more > 0 ? ` <span class="hint">${plural(more, "reply", "replies")}</span>` : ""}</button></li>`; }).join("")}</ul>` : "";
-    const waiting = mine.length ? `<div class="el-drafts">${mine.map((d) => `<div class="dbub"><div class="db-b"><span class="about">Not sent yet</span>${esc(d.text)}</div><button class="x" data-draft-del="${esc(d.id)}" aria-label="Remove this comment from your feedback" title="Remove from your feedback">✕</button></div>`).join("")}</div>` : "";
-    const box = (can("comment") || can("change")) && !closed(c) ? `<div class="el-box"><textarea id="el-text" rows="2" maxlength="4000" placeholder="What should change here?" aria-label="Comment on ${esc(e.name)}"></textarea>
+      return `<li><button class="anchor" data-goto="${esc(th.id)}" title="Open it in the design workspace">${about(th.anchor)}<b>${esc((noteBy(m?.by) || "someone").replace(/^./, (x) => x.toUpperCase()))}</b> <span class="tx">${esc(String(m?.text || "").replace(/\s+/g, " "))}</span>${more > 0 ? ` <span class="hint">${plural(more, "reply", "replies")}</span>` : ""}</button></li>`; }).join("")}</ul>` : "";
+    const waiting = mine.length ? `<div class="el-drafts">${mine.map((d) => `<div class="dbub"><div class="db-b"><span class="about">Not sent yet${stateName(v, d.anchor) ? ` · ${esc(stateName(v, d.anchor))}` : ""}</span>${esc(d.text)}</div><button class="x" data-draft-del="${esc(d.id)}" aria-label="Remove this comment from your feedback" title="Remove from your feedback">✕</button></div>`).join("")}</div>` : "";
+    const box = (can("comment") || can("change")) && !closed(c) ? `<div class="el-box">${st ? `<p class="hint el-about">Your comment is about <b>${esc(st.name)}</b>.</p>` : ""}<textarea id="el-text" rows="2" maxlength="4000" placeholder="${st ? `What should change in ${esc(st.name)}?` : "What should change here?"}" aria-label="Comment on ${esc(e.name)}${st ? `, ${esc(st.name)}` : ""}"></textarea>
         <div class="bar"><span class="grow"></span><button class="btn" data-el-comment>Comment</button><button class="btn primary" data-el-draft>Add to feedback</button></div></div>` : "";
     return list || waiting || box ? `<div class="el-talk"><span class="el-lab">Comments${notes.length ? ` · ${notes.length}` : ""}</span>${list}${waiting}${box}</div>` : "";
   }
@@ -6616,7 +6621,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ${stale.length ? `<p class="hint"><span class="chip warn" title="These states show the option before its latest change">${plural(stale.length, "state", "states")} drawn for an earlier version</span> Design Desk redraws them when it changes the option.</p>` : ""}
       ${pair}
       ${elAllStates(c, v, e, look, st)}
-      ${elementTalk(c, v, e)}`
+      ${elementTalk(c, v, e, st)}`
       // A lazy frame in a modal dialog never loads: the browser does not see it come into view.
       .replaceAll(' loading="lazy"', "");
     const back = !keep && S.elTyped?.[elTypedKey()];
@@ -8649,7 +8654,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if ("splitEnd" in ds) { endSplit(); return; }
     // An element of the option: its dialog, its states drawn, the product's element it changes.
     if (ds.el) { openElement(S.variant, ds.el); return; }
-    if (ds.wsStatesOf) { const v = wsVariant(S.card); if (v) openElement(v.id, ds.wsStatesOf, { look: true }); return; }
+    if (ds.wsStatesOf) { const v = wsVariant(S.card); if (v) openElement(v.id, ds.wsStatesOf, { look: true, state: S.ws.state || null }); return; }
     if ("elClose" in ds) { $("#element-dialog").close(); return; }
     // A state of the part in After: stepped to, or picked under All states (docs/desk-page.md → The element dialog).
     if (ds.elStep && S.el) {
@@ -8676,14 +8681,14 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       if (!e) return;
       if (!text) { box?.focus(); toast("Write your comment first."); return; }
       box.value = "";
-      await addDraft(c, { text, anchor: partAnchor(v, e) });
+      await addDraft(c, { text, anchor: partAnchor(v, e, e.states.find((x) => x.id === S.el.st)) });
       return;
     }
     if ("elComment" in ds) {
       const c = S.card, v = (c?.variants || []).find((x) => x.id === S.el?.variant), e = v && elementsOf(v).find((x) => x.key === S.el.key), box = $("#el-text"), text = box?.value.trim();
       if (!e) return;
       if (!text) { box?.focus(); toast("Write your comment first."); return; }
-      await api("POST", `/api/cards/${c.id}/threads`, { kind: "comment", text, anchor: partAnchor(v, e) });
+      await api("POST", `/api/cards/${c.id}/threads`, { kind: "comment", text, anchor: partAnchor(v, e, e.states.find((x) => x.id === S.el.st)) });
       box.value = "";
       toast("Comment added.");
       await openCard(c.id); return;
@@ -8692,9 +8697,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if ("elWs" in ds) {
       const c = S.card, v = (c?.variants || []).find((x) => x.id === S.el?.variant), e = v && elementsOf(v).find((x) => x.key === S.el.key);
       if (!e) return;
+      // At the state shown in After, As designed for none.
+      const st = e.states.find((x) => x.id === S.el.st)?.id || null;
       $("#element-dialog").close();
       S.variant = v.id;
-      S.ws = { ...S.ws, open: true, check: false, version: null, state: null, alt: null, edit: null, note: null, pop: null, why: false, reason: null,
+      S.ws = { ...S.ws, open: true, check: false, version: null, state: st, alt: null, edit: null, note: null, pop: null, why: false, reason: null,
         view: e.view || e.view_name ? { view: String(e.view || ""), view_name: e.view_name || "" } : null,
         mode: e.selector ? "select" : "off", ...(e.selector ? { panel: "props" } : {}), selected: e.selector ? { selector: e.selector, text: "", tag: "", label: e.name, view: e.view || null, view_name: e.view_name || null } : null };
       renderDetail(); renderWorkspace(); return;
