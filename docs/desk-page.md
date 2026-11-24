@@ -254,8 +254,9 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   to For Designers, for a UI dev owner or an admin, asking first; it then is in Design review — beside
   Submit feedback, whose approval is **Approve for dev** (on a change **Approve**, which marks it
   handled; on an approved request whose spec draft waits, **Send to developers** stands in Send to
-  design's place). **Feedback** ([desk.md](desk.md) → Reviews): under the shown option, and in a change's or a part's
-  dialog, a box offers **Add to feedback** — a draft, the viewer's alone — and **Comment**, a
+  design's place). **Feedback** ([desk.md](desk.md) → Reviews): in a change's or a part's
+  dialog (and in full mode under the shown option; simple mode has no box under the designs: a comment
+  on a design goes through the design workspace, an element or Submit feedback), a box offers **Add to feedback** — a draft, the viewer's alone — and **Comment**, a
   comment on the Desk at once (never on GitHub); the box at the end of the page posts at once. No box
   under the head lists the drafts: **Submit feedback** holds them. Sent feedback shows in Comments, in both modes, as
   one block: who, the verdict (**Changes requested** amber, **Approved** green, **Comments**), when,
@@ -263,7 +264,7 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   the same **Changes requested** line under the title, the same boxes, the same **Changes** of a change and dialogs, and **Your feedback** at the top
   of Questions and comments while drafts wait, with the same **Submit feedback** in it; before design it
   offers no Approve. A request that went to design folds the conversations and feedback begun
-  before it opened (`opened_at`) into **Before design · n**, after the rest, in both modes. ⋯ holds **Close…** or **Reopen** on a request
+  before it opened (`opened_at`) into **Before design · n**, in both modes: after the rest in full mode, first in simple mode. ⋯ holds **Close…** or **Reopen** on a request
   — on one sent to developers, first **Mark as shipped** while it is In dev and **Not shipped yet** once
   it is Shipped, for whoever marks a design done (`built`: a developer, a UI dev owner, an admin;
   `POST /api/cards/R-<n>/built`): the store marks it built by itself when a merged change that builds it
@@ -274,19 +275,27 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   → Triage), a change's summary — then a request's **Original request** folded: where it came from
   and when (no name: the head has it), its words, and for one in another language `Written in
   <language>` beside a small **Show in English** button (**Show original** and `Translated from …
-  by Design Desk` back); a request with no `gist` shows its words in full instead, open. Its words
-  keep a readable width (680 px) however wide the screen; the designs and pictures take it all.
+  by Design Desk` back); a request with no `gist` shows its words in full instead, open. Its words,
+  every fold of words and the comments keep one readable width (800 px) however wide the screen, on one left
+  edge; the designs and pictures take it all, as do the folds that hold them (a live prototype's
+  options) and the developer spec, a document of its own.
   Then the designs (a request's
-  options, votes as counts only) or **Changes** (below), **What Design Desk
+  options, with no votes: only the count of open notes) or **Changes** (below), then the folds, alike: first **What Design Desk
   found** (the decisions in force it goes against, a change's reasons to look at it, how it
-  differs from the approved design, Figma when on, its check holding the pull request; else
-  "Nothing to flag"), the long reads folded alike (**What's already known**, **Details**, a
+  differs from the approved design, Figma when on, its check holding the pull request), whose head
+  carries Design Desk's mark and its answer, counted from the same parts its body shows — **n things to check** in amber (each decision it goes
+  against, on the item or an option still there, each reason to look, a difference from the approved design, its check holding the pull request, a difference from Figma), open, or
+  **Nothing to flag** in green, folded — then the long reads (**What's already known**, **Details**, a
   change's **Parts it changed** and **What changed and why**, and the impact's **Where else this shows up**, **Under the hood**, **Earlier
-  decisions about it**), then **Comments**: each conversation a card, its first message with the
-  replies indented under it, each by an avatar, the name, the role and a short date, a note on a
-  design led by its option (and part) as a chip that opens the design workspace there; one marked
-  done folds to one line (who wrote it and how it starts, who resolved it and when) that opens on
-  a click. Reply, Mark done, Add to my feedback and Reopen work as in full mode. With nothing open, the pane shows
+  decisions about it**), then **Comments** with their count, oldest first so the newest sits above
+  the box to write in, each where it began: each conversation a card, its first message with the
+  replies hung under it on a thin line, each by an avatar, the name (in the reading size), a designer's role
+  (only theirs, in its colour) and a short date — the viewer's own on a faint accent tint, Design Desk's on a soft
+  panel with its mark outlined, everyone else's on none —, a note on a
+  design led by its option (and part) as a chip that opens the design workspace there; one resolved
+  folds to one line where it falls (who wrote it and how it starts, who resolved it and when) that opens on
+  a click. Its moves are quiet words under it: **Reply** opens its box, the cursor in it (**Cancel**
+  folds it), **Resolve** (full mode's Mark done), **Add to my feedback** and **Reopen**. With nothing open, the pane shows
   instead of the Requests intro a box per state, **Draft** only while it holds
   something, then **Dev review**, **Design review**, **In dev** and **Closed**: how many items are
   in each — the viewer's alone while Whose is Mine, redrawn as the filter changes — (the reviews and In dev with their kinds, Closed with how many of them
@@ -411,7 +420,7 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
 - **Done conversations fold.** A conversation marked done, on any item, folds to one line: its
   kind, who started it and their first words, then *done*; a click opens it with the option it is
   on, its jump to the part and Reopen. The order
-  stays newest first.
+  stays newest first in full mode; simple mode runs oldest first (Simple mode above).
 
 ## New request
 
