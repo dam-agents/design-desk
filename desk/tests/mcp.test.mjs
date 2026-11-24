@@ -84,6 +84,8 @@ test("desk/mcp.mjs answers MCP over stdio: tools, a request filed, the list read
   const call = async (method, params) => { const id = ++n; proc.stdin.write(JSON.stringify({ jsonrpc: "2.0", id, method, params }) + "\n"); const r = JSON.parse((await lines.next()).value); assert.equal(r.id, id); return r; };
   const init = await call("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "test", version: "1" } });
   assert.equal(init.result.serverInfo.name, "design-desk");
+  assert.equal(init.result.serverInfo.title, "Design Desk");
+  assert.equal(init.result.serverInfo.icons, undefined, "no icons for a protocol before 2025-11-25");
   proc.stdin.write(JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }) + "\n");
   const tools = (await call("tools/list")).result.tools.map((x) => x.name);
   assert.deepEqual(tools, ["list_items", "read_item", "list_decisions", "read_decision", "ask", "comment", "reply", "file_request", "report_bug"]);

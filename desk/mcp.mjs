@@ -12,6 +12,10 @@ import { WORK } from "../toolkit/lib/core.mjs";
 const PORT = Number(process.env.DESK_PORT || 5555);
 const DIR = process.env.DESK_DIR || join(WORK, "desk");
 const MAX_TEXT = 60000;
+// Design Desk's mark (desk/brand/mark.svg) as the server's icon, for a client that speaks a protocol
+// with Implementation.icons (2025-11-25 on); an older one gets the title alone.
+const ICON = (() => { try { return `data:image/svg+xml;base64,${readFileSync(new URL("brand/mark.svg", import.meta.url)).toString("base64")}`; } catch { return null; } })();
+const serverInfo = (v) => ({ name: "design-desk", title: "Design Desk", version: VERSION, ...(ICON && String(v) >= "2025-11-25" ? { icons: [{ src: ICON, mimeType: "image/svg+xml", sizes: ["any"] }] } : {}) });
 const VERSION = (() => { try { return readFileSync(new URL("../VERSION", import.meta.url), "utf8").trim(); } catch { return "0.0.0"; } })();
 
 const ID = { type: "string", pattern: "^[A-Za-z]+-\\d+$" };
@@ -147,7 +151,7 @@ export async function handle(msg) {
   const ok = (result) => ({ jsonrpc: "2.0", id, result });
   const err = (code, message) => ({ jsonrpc: "2.0", id: id ?? null, error: { code, message } });
   if (id === undefined || id === null) return null; // a notification: nothing to answer
-  if (method === "initialize") return ok({ protocolVersion: params?.protocolVersion || "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "design-desk", version: VERSION }, instructions: INSTRUCTIONS });
+  if (method === "initialize") return ok({ protocolVersion: params?.protocolVersion || "2025-06-18", capabilities: { tools: {} }, serverInfo: serverInfo(params?.protocolVersion || "2025-06-18"), instructions: INSTRUCTIONS });
   if (method === "ping") return ok({});
   if (method === "tools/list") return ok({ tools: TOOLS.map(({ name, description, inputSchema }) => ({ name, description, inputSchema })) });
   if (method === "tools/call") {
