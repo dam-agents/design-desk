@@ -734,10 +734,10 @@ Every change to the page keeps to one scale; `desk/tests/page.test.mjs` fails on
   Never letters. The spark alone is the icon of **Draw options**. Two cuts: `mark-small.svg`, its
   gaps and spark wider, for 32px and below (all of the Desk, the favicon, the avatar, GitHub);
   `mark.svg` from 48px. **At work** the mark moves: `.dd-spin` is the small mark in the spinner's brown
-  (`--warn`), at text size (16px at least), calm: its pieces bounce one after another like
-  jumping dots (the two on top rise, the two below dip), the first D turns round to close the circle,
-  a rest; then the same as a circle, opening into DD (`SPIN_SVG`). It never turns as a whole; waiting,
-  it rests, faint. In the list it stands
+  (`--warn`), at text size (16px at least), never still: its pieces bounce one after another
+  like jumping dots (the two on top rise, the two below dip) and, as the last lands, a D turns round;
+  the D's take turns, so it passes through the circle, both facing left, facing each other and DD
+  (`SPIN_SVG`). It never turns as a whole; waiting, it rests, faint. In the list it stands
   at a row's top right (the state's pill drops to the second line), in a request beside its buttons.
   Still when it speaks, moving when it works. The page carries one inline copy of the mark, in the
   head; a test keeps it equal to `mark-small.svg`.
