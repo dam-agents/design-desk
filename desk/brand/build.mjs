@@ -71,31 +71,45 @@ export const AVATAR_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 
 export const MARK_INLINE = `<svg class="dd-mark" viewBox="0 0 24 24" aria-hidden="true">${paths(PIECES_SMALL)}</svg>`;
 
 /**
- * The spinner (.dd-spin): the small mark, calm. Four phrases of four beats (BEAT s each): a D turns
- * round — the first one in the 1st and 3rd phrase (DD closes into a disc), the second in the 2nd
- * and 4th (the D's face each other) — and back; the mark turns a quarter; a beat of rest. After the
- * four phrases it has turned once and stands as it began. The mark fills SPIN_SIZE of the box.
- * The SVG carries its own motion and is the CSS mask of .dd-spin, whose colour is the page's.
- * SPIN_STILL is the mark at rest, for a spinner that waits (.queued).
+ * The spinner (.dd-spin): the small mark, calm and slow. Four phrases of eight beats (SPIN_BEAT s
+ * each): the first D turns round and the two close into a circle; it holds; the circle turns a
+ * quarter; it holds; the D turns back and it opens into DD, a quarter on from where it began; three
+ * beats of rest. After the four it stands as it began. Every turn pivots on a fixed point (a group
+ * moved there, so the browser never measures a box mid-motion and nothing drifts).
+ * SPIN_BOUNCE is the other one, to compare: the upper pieces rise and fall one after the other,
+ * then the lower ones dip and come back, like jumping dots.
+ * The SVG carries its own motion and is the CSS mask of .dd-spin, whose colour is the page's;
+ * SPIN_STILL is the mark at rest, for a spinner that waits (.queued). The mark fills SPIN_SIZE.
  */
-export const SPIN_BEAT = 0.7;
+export const SPIN_BEAT = 0.8;
 export const SPIN_SIZE = 0.8;
-const BEATS = 16, MOVE = 0.55; // each move takes 0.55 s of its beat
+const PHRASE = 8, BEATS = 4 * PHRASE, MOVE = 0.65; // a move takes 0.65 s of its beat
 const at = (beat) => f((beat * 100) / BEATS), end = (beat) => f(((beat + MOVE / SPIN_BEAT) * 100) / BEATS);
-// A D turns round on the first beat of the phrases it moves in and back on the second.
-const flipKeys = (phrases) => {
-  const k = ["0%{transform:scaleX(1)}"];
-  for (const p of phrases) k.push(`${at(4 * p)}%{transform:scaleX(1)}`, `${end(4 * p)}%,${at(4 * p + 1)}%{transform:scaleX(-1)}`, `${end(4 * p + 1)}%{transform:scaleX(1)}`);
-  return k.join("") + "100%{transform:scaleX(1)}";
-};
-const turnKeys = [0, 1, 2, 3].map((p) => `${at(4 * p + 2)}%{transform:rotate(${90 * p}deg)}${end(4 * p + 2)}%{transform:rotate(${90 * (p + 1)}deg)}`).join("");
 const LOOP = f(BEATS * SPIN_BEAT), EASE = "cubic-bezier(.65,0,.35,1)";
-const pad = f((24 / SPIN_SIZE - 24) / 2);
-const spinPaths = (cls) => `<g class="${cls}">${(cls === "l" ? ["tl", "bl"] : ["tr", "br"]).map((k) => `<path d="${PIECES_SMALL[k]}"/>`).join("")}</g>`;
-export const SPIN_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${-pad} ${-pad} ${f(24 + 2 * pad)} ${f(24 + 2 * pad)}"><style>g{transform-box:fill-box;transform-origin:center;animation:${LOOP}s ${EASE} infinite}.a{animation-name:t}.l{animation-name:l}.r{animation-name:r}@keyframes t{0%{transform:rotate(0)}${turnKeys}100%{transform:rotate(360deg)}}@keyframes l{${flipKeys([0, 2])}}@keyframes r{${flipKeys([1, 3])}}@media (prefers-reduced-motion:reduce){g{animation-duration:${f(LOOP * 2)}s}}</style><g class="a">${spinPaths("l")}${spinPaths("r")}</g></svg>`;
+// The first D closes on beat 0 of each phrase and opens on beat 4; the circle turns on beat 2.
+const closeKeys = [0, 1, 2, 3].map((p) => `${at(PHRASE * p)}%{transform:scaleX(1)}${end(PHRASE * p)}%,${at(PHRASE * p + 4)}%{transform:scaleX(-1)}${end(PHRASE * p + 4)}%{transform:scaleX(1)}`).join("");
+const turnKeys = [0, 1, 2, 3].map((p) => `${at(PHRASE * p + 2)}%{transform:rotate(${90 * p}deg)}${end(PHRASE * p + 2)}%{transform:rotate(${90 * (p + 1)}deg)}`).join("");
+const box = f(24 / SPIN_SIZE), pad = f((box - 24) / 2), mid = f(box / 2);
+const lCx = f(C + leftMid(SMALL)); // the first D's own centre line
+const piecesOfD = (ks) => ks.map((k) => `<path d="${PIECES_SMALL[k]}"/>`).join("");
+// A group pivots on its own origin: move it to the pivot, turn it, move its drawing back.
+const pivot = (x, y, cls, inner) => `<g transform="translate(${x} ${y})"><g class="${cls}"><g transform="translate(${-x} ${-y})">${inner}</g></g></g>`;
+const svgOf = (css, body) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${box} ${box}"><style>g[class]{transform-origin:0 0;transform-box:view-box}${css}</style><g transform="translate(${pad} ${pad})">${body}</g></svg>`;
+export const SPIN_SVG = svgOf(
+  `.a,.l{animation:${LOOP}s ${EASE} infinite}.a{animation-name:t}.l{animation-name:l}@keyframes t{0%{transform:rotate(0)}${turnKeys}100%{transform:rotate(360deg)}}@keyframes l{0%{transform:scaleX(1)}${closeKeys}100%{transform:scaleX(1)}}@media (prefers-reduced-motion:reduce){.a,.l{animation-duration:${f(LOOP * 2)}s}}`,
+  pivot(C, C, "a", pivot(lCx, C, "l", piecesOfD(["tl", "bl"])) + piecesOfD(["tr", "br"])),
+);
+// Bounce: 2.4 s; top left rises, then top right; bottom left dips, then bottom right; a rest.
+const BOUNCE = 2.4, LIFT = 2.2;
+const bounce = (start, dir) => { const s0 = f(start), up = f(start + 12), back = f(start + 26); return `0%,${s0}%{transform:translateY(0)}${up}%{transform:translateY(${f(dir * LIFT)}px)}${back}%,100%{transform:translateY(0)}`; };
+export const SPIN_BOUNCE = svgOf(
+  `.p{animation:${BOUNCE}s cubic-bezier(.45,0,.55,1) infinite}${[["tl", 0, -1], ["tr", 12, -1], ["bl", 36, 1], ["br", 48, 1]].map(([k, s0, d]) => `.${k}{animation-name:${k}}@keyframes ${k}{${bounce(s0, d)}}`).join("")}@media (prefers-reduced-motion:reduce){.p{animation-duration:${f(BOUNCE * 2)}s}}`,
+  ORDER.map((k) => `<path class="p ${k}" d="${PIECES_SMALL[k]}"/>`).join(""),
+);
 const dataUrl = (svg) => `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
 export const SPIN_MASK = dataUrl(SPIN_SVG);
-export const SPIN_STILL = dataUrl(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${-pad} ${-pad} ${f(24 + 2 * pad)} ${f(24 + 2 * pad)}">${ORDER.map((k) => `<path d="${PIECES_SMALL[k]}"/>`).join("")}</svg>`);
+export const SPIN_BOUNCE_MASK = dataUrl(SPIN_BOUNCE);
+export const SPIN_STILL = dataUrl(svgOf("", piecesOfD(ORDER)));
 /** A mask in a JS string's single quotes (the prototype overlay's own copy). */
 export const sq = (s) => s.replace(/"/g, "'");
 
