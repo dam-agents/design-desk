@@ -285,6 +285,18 @@ test("For Developers: a UI dev owner moves it there, any developer but its autho
   assert.equal(s.setSize(card.id, lee, false).card.size.small, false);
 });
 
+// What a person writes to Design Desk or the team has one generous bound, LIMITS.prompt; the page sets none.
+test("a long request, comment or note to an action goes whole, up to one bound", () => {
+  const s = fresh(), long = "Say it at length. ".repeat(400).trim();
+  assert.ok(long.length > 5000 && long.length < LIMITS.prompt);
+  const { card, inbox } = s.createRequest(bob, { title: "Long", problem: long, vision: long });
+  assert.deepEqual([s.card(card.id).request.problem, s.card(card.id).request.vision], [long, long]);
+  assert.throws(() => s.createRequest(bob, { title: "Too long", problem: "x".repeat(LIMITS.prompt + 1) }), /problem is longer than 20000 characters/);
+  s.claim(inbox.id, "s1"); s.done(inbox.id, "s1", "triaged");
+  const { thread } = s.openThread(card.id, alice, { kind: "comment", text: long });
+  assert.equal(thread.messages[0].text, long, "a comment");
+});
+
 test("the developer spec waits for a person: edit keeps every version, changes go back to Design Desk, only a send lets it go", () => {
   const s = fresh();
   const shot = () => s.addAsset({ kind: "spec", name: "spec.md", contentType: "text/markdown", data: "# Spec v1", encoding: "utf8" }).asset.id;
@@ -303,8 +315,13 @@ test("the developer spec waits for a person: edit keeps every version, changes g
   assert.deepEqual(edited.spec.history.map((x) => x.asset), [first], "the version it replaces stays");
   assert.equal(edited.spec.review, "draft");
   assert.equal(edited.spec.acceptance.length, 1, "an edit keeps the acceptance criteria");
-  const asked = s.specAction(card.id, alice, { action: "changes", note: "The error state needs its own picture." });
+  assert.throws(() => s.specAction(card.id, alice, { action: "changes", note: "x".repeat(LIMITS.prompt + 1) }), /longer than 20000 characters/, "one generous bound, and it says so");
+  const long = `The error state needs its own picture. ${"The empty state too, with its own words. ".repeat(130)}`.trim();
+  assert.ok(long.length > 5000);
+  const asked = s.specAction(card.id, alice, { action: "changes", note: long });
   assert.equal(asked.inbox.scope, "spec-revise");
+  assert.equal(asked.inbox.note, long, "a long note goes to Design Desk whole");
+  assert.equal(s.card(card.id).spec.review, "changes");
   assert.throws(() => s.specAction(card.id, alice, { action: "send" }), /not waiting|already|still/i, "not while Design Desk rewrites it");
   s.claim(asked.inbox.id, "s3");
   const third = shot();

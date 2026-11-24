@@ -151,6 +151,22 @@ function shim() {
     if ((x = m(/^\/api\/threads\/([^/]+)\/messages$/))) { const [, t] = thread(x[1]); t?.messages.push({ by: { name: me.name, email: me.email }, at: now(), text: body.text }); return {}; }
     if ((x = m(/^\/api\/threads\/([^/]+)\/resolve$/))) { const [, t] = thread(x[1]); if (t) t.state = "resolved"; return {}; }
     if ((x = m(/^\/api\/threads\/([^/]+)\/reopen$/))) { const [, t] = thread(x[1]); if (t) t.state = "open"; return {}; }
+    // The developer spec, read before it goes (docs/handoff.md → Review before it goes): Edit saves a
+    // version; Ask for changes is rewritten as a new version after 25 s; Send sends it.
+    if ((x = m(/^\/api\/cards\/([^/]+)\/spec$/))) {
+      const c = card(x[1]), sp = c.spec, version = (asset) => { sp.history = [...(sp.history || []), { asset: sp.asset, at: sp.at, by: sp.by }]; Object.assign(sp, { asset, at: now() }); };
+      if (body.action === "edit") { const id = `${sp.asset}-e${++n}`; ASSETS[id] = { ...ASSETS[sp.asset], id, data: body.text }; version(id); sp.by = { email: me.email }; }
+      if (body.action === "changes") {
+        Object.assign(sp, { review: "changes", asked: { by: { email: me.email }, at: now(), note: body.note } });
+        const w = { kind: "handoff", scope: "spec-revise", state: "queued", created: now() };
+        c.waiting.push(w);
+        setTimeout(() => Object.assign(w, { state: "claimed", started: now(), usual_min: 1 }), 4000);
+        setTimeout(() => { c.waiting = c.waiting.filter((y) => y !== w); const id = `${sp.asset}-r${++n}`; ASSETS[id] = { ...ASSETS[sp.asset], id, data: `${ASSETS[sp.asset].data}\n## Changed as asked\n${body.note}\n` }; version(id); sp.by = { agent: true }; sp.review = "draft"; }, 25000);
+      }
+      if (body.action === "send") { Object.assign(sp, { review: "sent", sent: { by: { email: me.email }, at: now() } }); c.status = "handed-off"; }
+      c.updated = now();
+      return { card: structuredClone(c) };
+    }
     // Edit text, saved: the words change in the page as its next version, as the server does.
     if ((x = m(/^\/api\/cards\/([^/]+)\/text$/))) {
       const c = card(x[1]), v = c.variants.find((y) => y.id === body.variant), d = body.state ? v.states.find((y) => y.id === body.state) : v;

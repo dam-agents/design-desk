@@ -80,7 +80,7 @@ Nothing leaves the Desk until a person sends it (`spec_review`, default `enabled
 `done --outcome review` and stop. Simple mode's Approve asks for the send as soon as the spec is written (`auto_send`) wherever
 that is allowed — not for a Slack origin or a request from an open pull request, whose spec
 waits as above ([desk-page.md](desk-page.md) → The page). On the
-card the people who may approve it read the spec, and:
+card the people who may approve it read the spec in its banner ([desk-page.md](desk-page.md) → The spec banner), and:
 - **Edit the spec** — their text becomes the newest version (`spec.history` keeps the others);
 - **Ask for changes…** — a `handoff` item with `scope: "spec-revise"` and their note: rewrite
   the spec from its newest version (theirs, if they edited it) as the note says, upload it,
