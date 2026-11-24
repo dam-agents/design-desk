@@ -7,6 +7,20 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.110.0 — 2026-11-23
+
+**Upgrade:**
+1. Restart the Desk server ([desk.md](docs/desk.md) → Server), which keeps a screen's `unchanged` and
+   `new`, then republish the page ([desk.md](docs/desk.md) → Publishing the page). **Submit feedback** replaces
+   the **Your feedback** box under the head and the head's Request changes, Approve and Approve for
+   dev: one button, coloured by the verdict it sends, with its counts, whose panel sends the review; it
+   stands in the element's dialog too, which opens with the cursor in its comment box. A pull
+   request's changes are tiles, as All elements, each opened in the element's dialog. Propose and Send
+   to design are outlined, with a paper plane. Option tabs shrink to fit and fold the rest into **+n**
+   ([desk-page.md](docs/desk-page.md) → Submit feedback, Changes). No data migration.
+2. Screens gain `unchanged: true` and `new: true` ([screens.md](docs/screens.md) → What changed,
+   [watch.md](docs/watch.md) step 6): read per run; screens already on cards carry neither and show as before.
+
 ## 1.109.0 — 2026-11-23
 
 **Upgrade:**

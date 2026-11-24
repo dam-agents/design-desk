@@ -321,6 +321,47 @@
   .dbub { display: flex; gap: 8px; align-items: flex-start; padding: 8px 12px; border-radius: var(--r-sm); background: var(--panel); } .dbub + .dbub { margin-top: 8px; }
   .dbub .db-b { min-width: 0; flex: 1; white-space: pre-wrap; overflow-wrap: anywhere; } .dbub .about { display: block; font-size: var(--fs-micro); color: var(--muted); white-space: normal; }
   .dbub .x { border: 0; background: none; color: var(--muted); cursor: pointer; font: inherit; padding: 0 4px; } .dbub .x:hover { color: var(--ink); }
+  /* Submit feedback (docs/desk-page.md → Submit feedback): its colour is the verdict it sends — green
+     an approval, amber Request changes, ink Comment only; its counts sit inside it. */
+  .fbw { position: relative; display: inline-flex; }
+  .btn.fbk { --v: var(--approved); background: var(--v); border-color: var(--v); color: var(--panel); font-weight: 600; gap: 8px; transition: background-color .2s, border-color .2s; }
+  .btn.fbk[data-v="rc"] { --v: var(--warn); } .btn.fbk[data-v="c"] { --v: var(--ink); }
+  .btn.fbk:hover { background: var(--v); opacity: .9; }
+  .btn.fbk .cnt { display: inline-flex; align-items: center; gap: 4px; padding: 0 8px; border-radius: 999px; font-size: var(--fs-micro); line-height: 18px; background: color-mix(in srgb, var(--panel) 24%, transparent); }
+  .btn.fbk .cnt .ico { width: 11px; height: 11px; }
+  .btn.fbk .chev { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2; opacity: .8; }
+  .fb-pop { position: absolute; top: calc(100% + 8px); right: 0; z-index: 30; width: min(460px, calc(100vw - 32px)); max-height: min(72vh, 640px); overflow: auto; text-align: left; font-weight: 400; color: var(--ink);
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--float); }
+  .fb-pop .fb-h { position: sticky; top: 0; z-index: 1; display: flex; align-items: baseline; gap: 8px; padding: 12px 16px 8px; background: var(--panel); border-bottom: 1px solid var(--line); }
+  .fb-pop .fb-h b { font-weight: 600; } .fb-pop .fb-h .hint { font-size: var(--fs-meta); }
+  .fb-pop .fb-b { display: grid; gap: 12px; padding: 12px 16px 16px; }
+  .fb-pop .fb-prog { display: grid; gap: 8px; font-size: var(--fs-meta); } .fb-pop .fb-prog .pbar { width: 100%; } .fb-pop .chg-done { margin: 0; }
+  .fb-pop .fb-left { display: flex; flex-wrap: wrap; gap: 4px; } .fb-pop .fb-left .chip { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 1px dashed var(--line); background: none; cursor: pointer; }
+  .fb-pop .fb-items { display: grid; gap: 8px; } .fb-pop .dbub { border: 1px solid var(--line); margin: 0; } .fb-pop .dbub.ok { background: var(--approved-soft); border-color: transparent; }
+  .fb-pop .dbub .link.about { display: block; padding: 0; font-size: var(--fs-micro); text-align: left; }
+  .fb-pop .fb-empty { margin: 0; padding: 8px 12px; border: 1px dashed var(--line); border-radius: var(--r-sm); }
+  .fb-vs { display: grid; grid-auto-columns: 1fr; grid-auto-flow: column; border: 1px solid var(--line); border-radius: var(--r-sm); overflow: hidden; }
+  .fb-vs button { display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 8px 4px; border: 0; border-right: 1px solid var(--line); background: var(--panel); color: inherit; font: inherit; font-size: var(--fs-meta); white-space: nowrap; cursor: pointer; }
+  .fb-vs button:last-child { border-right: 0; } .fb-vs button:hover { background: var(--soft); } .fb-vs .ico { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; }
+  .fb-vs button[aria-checked="true"] { font-weight: 600; background: var(--soft); }
+  .fb-vs button[aria-checked="true"][data-v="ok"] { background: var(--approved-soft); color: var(--approved); } .fb-vs button[aria-checked="true"][data-v="rc"] { background: var(--warn-soft); color: var(--warn); }
+  .fb-pop .fb-hint { margin: -4px 0 0; } .fb-pop textarea { width: 100%; min-height: 56px; }
+  .fb-pop .fb-send { display: flex; gap: 8px; } .fb-pop .fb-send .fbk { flex: 1; }
+  .elbar .el-acts .fb-pop { z-index: 6; }
+  /* On a narrow screen the panel spans it, edge to edge, so none of it hangs off to the left. */
+  @media (max-width: 560px) { .fb-pop { position: fixed; top: 64px; left: 8px; right: 8px; width: auto; max-height: calc(100vh - 80px); } }
+  /* Changes as tiles (docs/desk-page.md → Changes): an option's All elements, on the same canvas. */
+  .chg-canvas { padding: 16px; border-radius: var(--radius); background: var(--canvas) radial-gradient(circle, var(--dot) 1px, transparent 1.4px) 0 0 / 18px 18px; }
+  .chg-tiles .elname { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; min-height: 2.8em; }
+  .chg-tiles .elpic { background: var(--bg); } .chg-tiles .elpic img { object-fit: cover; object-position: top; }
+  .chg-tiles .elpic .ono { position: absolute; top: 8px; left: 8px; margin: 0; background: var(--ink); }
+  .chip.todo { background: none; border: 1px dashed var(--line); }
+  .chg-tile[data-m="ok"] { border-color: color-mix(in srgb, var(--approved) 45%, var(--line)); } .chg-tile[data-m="changes"] { border-color: color-mix(in srgb, var(--waiting) 45%, var(--line)); } .chip.warn-line { background: none; border: 1px solid var(--warn); color: var(--warn); }
+  .chg-prog { display: inline-flex; align-items: center; gap: 8px; margin-left: 12px; font-size: var(--fs-meta); font-weight: 400; color: var(--muted); white-space: nowrap; }
+  .chg-prog .chg-done { margin: 0; }
+  .pbar { display: inline-block; width: 80px; height: 6px; border-radius: 999px; background: var(--soft); overflow: hidden; } .pbar > i { display: block; height: 100%; border-radius: 999px; background: var(--approved); }
+  .chg-same { margin: 12px 0 0; } .chg-same .link { font-size: inherit; padding: 0; }
+  #element-dialog .chg-foot { margin-top: 16px; border: 0; border-radius: var(--r-sm); }
   /* A pull request's changes, one at a time: one framed panel — tabs, the pictures of the change
      shown under their labels, and a tinted foot that takes the reviewer's feedback on it. */
   .chg-h .hint { font-weight: 400; margin-left: 4px; }
@@ -797,6 +838,14 @@
   .tabs.vtabs.vrow { flex-wrap: nowrap; }
   .vtabs .vscroll { display: flex; gap: 4px; align-items: flex-end; min-width: 0; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; margin-bottom: -1px; }
   .tabs.vtabs .vscroll button { margin-bottom: 0; flex: none; white-space: nowrap; }
+  /* An option's tab shrinks to fit, its name cut with an ellipsis (on the baseline: "Desk Ellipsis");
+     what still does not fit folds into +n at the row's end (docs/desk-page.md → The page, "The options' tabs"). */
+  .tabs.vtabs .vscroll button[data-variant] { flex: 0 1 auto; min-width: 0; max-width: 320px; }
+  .tabs.vtabs .vscroll button[data-variant] .vname { min-width: 64px; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tabs.vtabs .vscroll button[data-variant] > :not(.vname) { flex: none; }
+  .tabs.vtabs .vscroll button[data-variant][hidden] { display: none; }
+  .vtabs .vmore { position: relative; flex: none; align-self: center; } .vtabs .vmore > summary { min-height: 26px; padding: 0 8px; border-radius: 999px; font-size: var(--fs-meta); color: var(--muted); }
+  .vtabs .vmore .menu { right: auto; left: 0; } .vtabs .vmore .menu button { display: flex; width: 100%; padding: 8px 12px; border: 0; }
   /* The scroll row clips what is drawn outside a tab, so the focus ring is drawn inside it. */
   .tabs.vtabs .vscroll button:focus-visible { outline-offset: -2px; }
   .tabs.vtabs.vrow button.vws { flex: none; }
@@ -1241,9 +1290,9 @@
   .step .n { background: none; box-shadow: inset 0 0 0 1.5px var(--line); font-weight: 600; }
   .step.done .n { background: var(--ink); color: var(--panel); box-shadow: none; }
   .step.now .n { background: none; color: var(--ink); box-shadow: inset 0 0 0 2px var(--ink); }
-  /* What moves an item forward wears Approve's green: approving, sending it on, proposing it (docs/desk-page.md → The look). */
-  :is(.btn[data-act="approve"], .btn[data-act="approve-dev"], .btn[data-review="approve"], .btn[data-handle="1"], .btn[data-spec-send], .btn[data-stage="proposal"], .btn[data-stage="design"]):not(.menu .btn) { background: var(--approved); border-color: var(--approved); color: var(--panel); }
-  :is(.btn[data-act="approve"], .btn[data-act="approve-dev"], .btn[data-review="approve"], .btn[data-handle="1"], .btn[data-spec-send], .btn[data-stage="proposal"], .btn[data-stage="design"]):not(.menu .btn):hover { opacity: .88; background: var(--approved); }
+  /* What approves an item wears Approve's green; sending it on (Propose, Send to design) is outlined, with a paper plane (docs/desk-page.md → The look). */
+  :is(.btn[data-act="approve"], .btn[data-act="approve-dev"], .btn[data-review="approve"], .btn[data-handle="1"], .btn[data-spec-send]):not(.menu .btn) { background: var(--approved); border-color: var(--approved); color: var(--panel); }
+  :is(.btn[data-act="approve"], .btn[data-act="approve-dev"], .btn[data-review="approve"], .btn[data-handle="1"], .btn[data-spec-send]):not(.menu .btn):hover { opacity: .88; background: var(--approved); }
   /* Design options: the tabs stay; each carries a square number, so "option 2" is easy to say. */
   .ono { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 8px; margin-right: 8px; border-radius: var(--r-sm); background: var(--muted); color: var(--panel); font-size: var(--fs-meta); font-weight: 600; vertical-align: 1px; }
   .tabs button[aria-pressed="true"] .ono { background: var(--ink); }
@@ -2354,12 +2403,15 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     down: '<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>',
     up: '<path d="M12 15V3M7 8l5-5 5 5M5 21h14"/>',
     link: '<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/>',
+    checkOnly: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
+    // Approve for dev: code brackets, straight to developers.
+    code: '<path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/>',
   };
   const BTN_ICON = {
-    act: { workspace: "pen", explore: "spark", build: (el) => /another option/.test(textOf(el)) ? "undo" : "screen", approve: () => S.card?.kind === "request" && !(S.card.variants || []).length ? "send" : "check",
+    act: { workspace: "pen", explore: "spark", build: (el) => /another option/.test(textOf(el)) ? "undo" : "screen", approve: () => S.card?.kind === "request" && !(S.card.variants || []).length ? "send" : "check", "approve-dev": "code",
       reopen: "undo", revise: "redo", close: "cross", states: "layers", slack: "send", unqueue: "minus",
       draw: "pen", refresh: "redo", history: "clock", "figma-import": "down", "figma-export": "up" },
-    size: { small: "bolt", designer: "person" },
+    size: { small: "bolt", designer: () => simple() ? "send" : "person" }, stage: { design: "send", proposal: "send" },
     adjust: "pen", addShots: "image", wsEdit: "pen", wsBuild: "screen",
   };
   const OWN_SIGN = /^[^\p{L}\p{N}]/u;
@@ -3526,14 +3578,15 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const closesStaged = (c) => (preDesign(c) === "draft" ? filedIt(c) || S.me?.role === "admin" : preDesign(c) === "proposal" && can("stage-own"));
   // A request's moves before design, by its stage and the viewer: [the head's first button, the ones under ⋯].
   function stageMoves(c) {
-    const b = (to, label, primary = false) => `<button class="btn${primary ? " primary" : ""}" data-stage="${to}">${label}</button>`;
+    // Outlined: green is the approval's alone (docs/desk-page.md → The look).
+    const b = (to, label) => `<button class="btn" data-stage="${to}">${label}</button>`;
     const lead = can("stage-own"), design = can("stage-design") || lead;
     // Approve for dev: For Developers and approved in one step, once Design Desk checked it.
     const dev = lead && (c.triage || (c.variants || []).length) ? `<button class="btn" data-act="approve-dev" title="Approve it for developers: it goes to In dev, without a designer">Approve for dev</button>` : "";
     // [the first move, the others under ⋯, Approve for dev]: simple mode's head shows the first and Approve for dev.
-    if (preDesign(c) === "proposal") return lead ? [b("design", "Send to design", true), b("draft", "Back to draft"), dev] : ["", "", ""];
+    if (preDesign(c) === "proposal") return lead ? [b("design", "Send to design"), b("draft", "Back to draft"), dev] : ["", "", ""];
     if (!(filedIt(c) || S.me?.role === "admin")) return ["", "", ""];
-    const first = design ? b("design", "Send to design", true) : can("stage-propose") ? b("proposal", "Propose", true) : "";
+    const first = design ? b("design", "Send to design") : can("stage-propose") ? b("proposal", "Propose") : "";
     return [first, design && can("stage-propose") ? b("proposal", "Propose") : "", dev];
   }
   const STAGE_DONE = { proposal: "Proposed: the dev team sees it now, and the UI dev owner sends it to design.", design: "Sent to design: designers see it in Design review now.",
@@ -3569,36 +3622,29 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const after = [ap ? `Approved by ${esc(ap.agent ? "Design Desk" : shortName(ap.email, ap.name))}${(change ? c.handled?.at : c.approved?.at) ? `, ${esc(sWhen(change ? c.handled.at : c.approved.at))}` : ""}` : "",
       sent ? `Sent to <a href="${safeUrl(sent)}" target="_blank" rel="noopener noreferrer">#${esc(String(sent).match(/\/(?:issues|pull)\/(\d+)/)?.[1] || "")} ↗</a>` : "",
       built ? `Shipped ${esc(sWhen(built))}` : ""].filter(Boolean).join(" · ");
-    // At most two moves, only while it is in review (Dev or Design) and only the viewer's own.
+    // At most two moves, only while it is in review (Dev or Design) and only the viewer's own:
+    // the stage's move on (Propose, Send to design, Send to developers) and Submit feedback, which
+    // holds Request changes and every approval, Approve for dev included (docs/desk-page.md → Submit feedback).
     const btn = (attr, label, primary = false) => `<button class="btn${primary ? " primary" : ""}" ${attr}>${label}</button>`;
     const open = s.state === "open" || s.state === "proposal";
-    // With drafts waiting, Request changes counts them and is the next step; either verdict opens
-    // the review dialog with it picked (docs/desk.md → Reviews).
-    const n = draftsOf(c).filter((d) => !d.ok).length + lookFeedback(c).length, verdicts = verdictsFor(c).map((x) => x.id);
-    const changes = verdicts.includes("request-changes") ? btn('data-review="request-changes"', n ? `Request changes · ${n}` : "Request changes", n > 0) : "";
-    const approve = (attr, label = "Approve") => (n ? btn('data-review="approve"', label) : btn(attr, label, true));
+    const fb = fbButton(c, "head");
     // Before design the head's moves are the stage's (docs/desk.md → Draft and Proposal): Send to design or
-    // Propose first, Request changes beside it; the rest of the stage's moves go under ⋯.
-    const stage = !change && !closed(c) && preDesign(c), [stageFirst, stageMore, stageDev] = stage ? stageMoves(c) : ["", "", ""], stageMain = stageFirst + stageDev;
+    // Propose, then Submit feedback; the rest of the stage's moves go under ⋯.
+    const stage = !change && !closed(c) && preDesign(c), [stageFirst, stageMore] = stage ? stageMoves(c) : ["", ""];
     const sendSpec = () => (canApprove(c) && !(c.threads || []).some((th) => th.kind === "asks" && th.state === "open") ? btn("data-spec-send", "Send to developers", true) : "");
-    const approveReq = (label) => (canApprove(c) && (c.triage || (c.variants || []).length) ? approve('data-act="approve"', label) : "");
-    // Dev review after design opened (docs/desk-page.md → Simple mode): the same two moves as a
-    // proposal's, Approve for dev and Send to design (the move to For Designers); with feedback
-    // drafted, Request changes and Approve first. What does not fit goes under ⋯.
+    // Dev review after design opened (docs/desk-page.md → Simple mode): Send to design (the move to
+    // For Designers) beside Submit feedback, whose approval is Approve for dev.
     const devReview = s.state === "proposal" && !stage;
     const toDesign = devReview && can("size") && !(change ? handledAt(c) : c.approved || c.status === "spec") ? btn('data-size="designer"', "Send to design") : "";
-    const devApprove = !devReview ? "" : change ? (mayHandle(c) && !c.handled ? approve('data-handle="1"') : "") : specWaits(c) ? sendSpec() : approveReq("Approve for dev");
-    const devMoves = !devReview ? [] : (n ? [changes, devApprove, toDesign] : [devApprove, toDesign, changes]).filter(Boolean);
-    const moves = devReview ? devMoves.slice(0, 2).join("")
-      : change ? ((open || c.responsible?.who === "developer") && mayHandle(c) ? changes + (c.handled ? "" : approve('data-handle="1"')) : "")
-      : stage ? stageMain + (stageMain.includes("approve-dev") ? "" : changes)
-      : !open ? ""
-      : specWaits(c) ? sendSpec()
-      : changes + approveReq();
+    // Submit feedback shows wherever the viewer may send a verdict, or has something of theirs to send.
+    const moves = stage ? stageFirst + fb
+      : devReview ? (!change && specWaits(c) ? sendSpec() : toDesign) + fb
+      : !change && open && specWaits(c) ? sendSpec() + fb
+      : fb;
     const url = change ? src.url : c.spec?.issue_url || c.spec?.pr_url || "";
-    const items = [devMoves.slice(2).join(""), change ? (can("follow-up") && !hasRequest(c) ? btn("data-adjust", "Turn into a design request") : "") + (handledAt(c) && mayHandle(c) ? btn('data-handle="0"', "Undo approval") : "")
+    const items = [change ? (can("follow-up") && !hasRequest(c) ? btn("data-adjust", "Turn into a design request") : "") + (handledAt(c) && mayHandle(c) ? btn('data-handle="0"', "Undo approval") : "")
         : closed(c) ? shipMove(c) + ((c.status === "handed-off" ? S.me?.role === "admin" : can("reopen") || closesStaged(c)) ? btn('data-act="reopen"', "Reopen") : "")
-        : (stage && stageMain.includes("approve-dev") ? changes : "") + stageMore + ((preDesign(c) ? closesStaged(c) : can("close") || can("skip")) ? btn('data-act="close"', "Close…") : ""),
+        : stageMore + ((preDesign(c) ? closesStaged(c) : can("close") || can("skip")) ? btn('data-act="close"', "Close…") : ""),
       url ? `<a class="btn" href="${safeUrl(url)}" target="_blank" rel="noopener noreferrer">Open on GitHub ↗</a>` : ""].join("");
     const more = items ? `<details class="more sh-more"><summary class="btn" aria-label="More" title="More">⋯</summary><div class="menu">${items}</div></details>` : "";
     return `<div class="shead"><div class="sh-main"><h2>${kindIcon(c)}<span class="sh-t" title="${esc(sTitle(c))}">${txt(sTitle(c))}</span>${num(c)}${titleLink(c)}</h2>
@@ -3674,12 +3720,112 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     .flatMap(([key, all]) => Object.entries(all).filter(([, e]) => e.fb && changeCount(e)).map(([selector, e]) => ({ key, selector, e }))) : [];
   const lookBubble = (x, remove = true) => `<div class="dbub"><div class="db-b"><span class="about">Look of ${esc(x.e.label)} · this browser</span>${esc(changeWords(x.e).join("; "))}</div>${remove ? `<button class="x" data-look-unfb="${esc(`${x.key}\n${x.selector}`)}" aria-label="Take this look edit out of your feedback" title="Take it out of your feedback; the edit stays in the design">✕</button>` : ""}</div>`;
   const feedbackCount = (c) => draftsOf(c).length + lookFeedback(c).length;
-  // Under the head while drafts wait: each one, and the way to send them.
+  // Full mode's Questions and comments, while drafts wait: each one, and Submit feedback to send them.
+  // Simple mode has no such box: Submit feedback in the head holds them (docs/desk-page.md → Simple mode).
   function yourReview(c) {
     const ds = draftsOf(c), looks = lookFeedback(c);
-    if (!ds.length && !looks.length) return "";
-    return `<section class="yreview" aria-label="Your feedback"><div class="yr-h"><b>Your feedback · ${ds.length + looks.length}</b><button class="btn small" data-review="">Send feedback…</button></div>
+    if (simple() || (!ds.length && !looks.length)) return "";
+    return `<section class="yreview" aria-label="Your feedback"><div class="yr-h"><b>Your feedback · ${ds.length + looks.length}</b>${fbButton(c, "talk")}</div>
       ${ds.map((d) => draftBubble(c, d)).join("")}${looks.map((x) => lookBubble(x)).join("")}</section>`;
+  }
+  // Submit feedback (docs/desk-page.md → Submit feedback): one button for the viewer's review, in
+  // simple mode's head and in every dialog's head. Its colour is the verdict it sends, its counts
+  // what waits: notes, and changes marked Looks good. It opens a panel under it, never moving the page.
+  const VERDICT_TONE = { approve: "ok", "approve-dev": "ok", "request-changes": "rc", comment: "c" };
+  const FB_ICON = { "request-changes": "pen", approve: "checkOnly", "approve-dev": "code", comment: "chat" };
+  const fbSvg = (k) => `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">${ICON_PATH[k]}</svg>`;
+  const notesWaiting = (c) => draftsOf(c).filter((d) => !d.ok).length + lookFeedback(c).length;
+  // A Looks good on a screen that looks the same as before is no mark: it is not counted.
+  const marksWaiting = (c) => { const same = new Set(c?.kind === "change" ? changesOf(c).filter((x) => x.unchanged).map((x) => x.key) : []); return draftsOf(c).filter((d) => d.ok && !same.has(d.change)).length; };
+  // The verdict it sends: the one picked in its panel, else Request changes while notes wait, else
+  // the approval, else Comment only.
+  function fbPick(c) {
+    const vs = verdictsFor(c).map((x) => x.id), kept = S.fb?.card === c.id ? S.fb.pick : null;
+    if (kept && vs.includes(kept)) return kept;
+    const ok = vs.find((x) => x === "approve" || x === "approve-dev");
+    return notesWaiting(c) ? (vs.includes("request-changes") ? "request-changes" : ok || vs[0]) : ok || (vs.includes("comment") ? "comment" : vs[0]);
+  }
+  // `where`: the head, a dialog's head, or full mode's Questions and comments; one panel is open at a time.
+  function fbButton(c, where) {
+    const vs = verdictsFor(c), n = notesWaiting(c), g = marksWaiting(c);
+    // Someone who may only comment gets it only once something of theirs waits to be sent.
+    if (!vs.length || (!n && !g && vs.every((x) => x.id === "comment"))) return "";
+    const v = fbPick(c), open = S.fb?.card === c.id && S.fb.where === where;
+    const counts = `${n ? `<span class="cnt" title="${esc(plural(n, "note waits", "notes wait"))} to be sent">${fbSvg("pen")}${n}</span>` : ""}${g ? `<span class="cnt" title="${esc(plural(g, "change", "changes"))} marked Looks good">${fbSvg("checkOnly")}${g}</span>` : ""}`;
+    const says = { ok: "approves it", rc: "asks for changes", c: "only comments" }[VERDICT_TONE[v]];
+    return `<span class="fbw"><button type="button" class="btn fbk" data-fb="${where}" data-v="${VERDICT_TONE[v]}" aria-expanded="${open}" aria-haspopup="dialog" title="Your feedback: what waits to be sent, and the verdict it goes with. As it is now, it ${says}.">${fbSvg("chat")}Submit feedback${counts}<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>${open ? fbPanel(c, v) : ""}</span>`;
+  }
+  // A note in the panel: what it is about (a change's opens it) and ✕.
+  function fbItem(c, d) {
+    const about = draftAbout(c, d), jump = d.change && c.kind === "change" && changesOf(c).some((x) => x.key === d.change);
+    const head = about ? (jump ? `<button class="link about" data-chg-open="${esc(d.change)}" title="Opens this change">${esc(about)}</button>` : `<span class="about">${esc(about)}</span>`) : "";
+    return `<div class="dbub${d.ok ? " ok" : ""}"><div class="db-b">${head}${d.ok ? "✓ Looks good" : d.work_in ? esc(workInWords(c, d)) : esc(d.text)}</div><button class="x" data-draft-del="${esc(d.id)}" aria-label="${d.ok ? "Take back this Looks good" : "Remove this comment from your feedback"}" title="${d.ok ? "Takes back your Looks good" : "Remove from your feedback"}">✕</button></div>`;
+  }
+  function fbPanel(c, v) {
+    const ds = draftsOf(c), looks = lookFeedback(c), vs = verdictsFor(c), x = vs.find((y) => y.id === v) || vs[0], n = notesWaiting(c);
+    const chs = c.kind === "change" ? changesToLook(c) : [], left = c.kind === "change" ? notLookedAt(c) : [];
+    const prog = chs.length ? `<div class="fb-prog"><span>${chs.length - left.length} of ${esc(plural(chs.length, "change", "changes"))} looked at</span><span class="pbar"><i style="width:${Math.round((chs.length - left.length) / chs.length * 100)}%"></i></span>
+      ${left.length ? `<div class="fb-left">${left.map((y) => `<button class="chip" data-chg-open="${esc(y.key)}" title="${esc(`Opens ${y.name}: not looked at yet`)}">${esc(y.name)}</button>`).join("")}</div>` : `<span class="chg-done">✓ All looked at</span>`}</div>` : "";
+    const items = ds.length || looks.length ? `<div class="fb-items">${ds.map((d) => fbItem(c, d)).join("")}${looks.map((y) => lookBubble(y)).join("")}</div>`
+      : `<p class="hint fb-empty">${c.kind === "change" ? "Notes you add on a change and the changes you mark Looks good gather here." : "Notes you add on a design or a part gather here."} You can also send a verdict right away.</p>`;
+    // Look edits and comments to work in are drawn only with Request changes: said where another choice is offered.
+    const onlyChanges = (looks.length || ds.some((d) => d.work_in)) && vs.some((y) => y.id !== "request-changes")
+      ? `<p class="hint">Look edits and comments to work in are drawn only with Request changes; with another choice look edits go as comments and comments stay as they are.</p>` : "";
+    const pr = S.me?.review_post && c.kind === "change" && c.source?.pr && !c.source?.merged_at ? `<p class="hint">It goes to the pull request on GitHub too, as a comment.</p>` : "";
+    const label = { "request-changes": n ? `Request changes · ${n}` : "Request changes", approve: n ? `${x.name} with ${plural(n, "note", "notes")}` : x.name, "approve-dev": n ? `Approve for dev with ${plural(n, "note", "notes")}` : "Approve for dev", comment: "Send comments" }[x.id];
+    return `<div class="fb-pop" role="dialog" aria-label="Your feedback">
+      <div class="fb-h"><b>Your feedback</b><span class="hint">${ds.length || looks.length ? "not sent yet · only you see it" : "nothing yet"}</span></div>
+      <div class="fb-b">${prog}${items}${onlyChanges}
+        <div class="fb-vs" role="radiogroup" aria-label="What your feedback says">${vs.map((y) => `<button type="button" role="radio" aria-checked="${y.id === x.id}" data-fb-v="${y.id}" data-v="${VERDICT_TONE[y.id]}" title="${esc(y.hint)}">${fbSvg(FB_ICON[y.id])}${esc(y.name)}</button>`).join("")}</div>
+        <p class="hint fb-hint">${esc(x.hint)}</p>${pr}
+        <textarea id="fb-note" maxlength="4000" placeholder="A note for the whole feedback (optional)" aria-label="A note for the whole feedback">${esc(S.fb?.note || "")}</textarea>
+        <div class="fb-send"><button type="button" class="btn fbk" data-fb-send data-v="${VERDICT_TONE[x.id]}" title="Sends your feedback: ${esc(x.name)}">${fbSvg(FB_ICON[x.id])}${esc(label)}</button><button type="button" class="btn" data-fb-close title="Closes this panel; your notes stay, not sent">Keep drafting</button></div></div></div>`;
+  }
+  // The panel follows a redraw of what holds it; one open at a time, closed by Esc or a click outside it.
+  function fbToggle(c, where) { S.fb = S.fb?.card === c.id && S.fb.where === where ? null : { card: c.id, where, pick: S.fb?.card === c.id ? S.fb.pick : null, note: S.fb?.card === c.id ? S.fb.note : "" }; fbRedraw(); }
+  function fbClose() { if (!S.fb) return false; S.fb = { card: S.fb.card, where: null, pick: S.fb.pick, note: S.fb.note }; fbRedraw(); return true; }
+  function fbRedraw() { renderDetail(); }
+  document.addEventListener("input", (e) => { if (e.target.id === "fb-note" && S.fb) S.fb.note = e.target.value; });
+  document.addEventListener("click", (e) => { if (S.fb?.where && !e.target.closest?.(".fbw")) fbClose(); }, true);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && S.fb?.where) { e.preventDefault(); e.stopPropagation(); fbClose(); } }, true);
+  // Sends the drafts with a verdict: an approval with nothing drafted is the approval alone; Approve
+  // for dev is the approval sent For Developers, the feedback going with it as an approval.
+  async function sendFeedback(c, verdict, note) {
+    await loadDrafts(c, true);
+    if (!S.drafts[c.id]) { toast("Your draft comments could not be read. Try again in a moment; nothing was sent."); return false; }
+    const ds = draftsOf(c), looks = lookFeedback(c), empty = !ds.length && !looks.length && !note;
+    const approving = verdict === "approve" || verdict === "approve-dev";
+    if (empty && !approving) { toast("Write a comment or a note first."); return false; }
+    // Approving a request is today's approval, its own questions included; the review goes with it.
+    if (c.kind === "request" && approving) {
+      await act(verdict);
+      const { card } = await api("GET", `/api/cards/${encodeURIComponent(c.id)}`);
+      if (!card.approved) return false;
+      S.fb = null;
+      if (empty) { await refreshList(); await openCard(c.id); return true; }
+    } else if (approving && empty) {
+      await api("POST", `/api/cards/${encodeURIComponent(c.id)}/handled`, { handled: true });
+      S.fb = null; toast("Approved: design is done with this change.");
+      await refreshList(); await openCard(c.id); return true;
+    }
+    // The look edits become notes with their values now, then go with the rest.
+    for (const x of looks) {
+      const { e } = x, style = lookChanges(e), controls = pickChanges(e);
+      const anchor = { variant: e.fb.variant, ...(e.fb.state ? { state: e.fb.state } : {}), selector: x.selector, text: e.text, tag: e.tag, label: e.label, view: e.view, view_name: e.view_name, ...(style.length ? { style } : {}), ...(controls.length ? { controls } : {}) };
+      await api("POST", `/api/cards/${encodeURIComponent(c.id)}/drafts`, { text: lookText(e), anchor });
+      // Now a draft on the server: should the send fail, it waits there, never twice.
+      delete e.fb;
+    }
+    const sent = approving ? "approve" : verdict;
+    const r = await api("POST", `/api/cards/${encodeURIComponent(c.id)}/reviews`, { verdict: sent, note, ...(S.variant ? { variant: S.variant } : {}) });
+    for (const x of looks) { if (x.key === S.ws.shown) lookSent(x.selector); else delete S.ws.looks[x.key]?.[x.selector]; }
+    S.drafts[c.id] = []; S.fb = null;
+    toast(sent === "request-changes" && c.kind === "request" ? "Feedback sent. Design Desk draws the next version; this page updates by itself."
+      : r.inbox?.kind === "review" ? "Feedback sent. It goes to the pull request on GitHub too."
+      : r.skipped ? `Feedback sent. ${plural(r.skipped, "comment to work in stays", "comments to work in stay")} in your feedback: they go only with Request changes.` : "Feedback sent.");
+    await loadDrafts(c, true);
+    await refreshList(); await openCard(c.id);
+    return true;
   }
   // A box under an option or a change: Add to feedback keeps it for the feedback, Comment posts it
   // at once, on the Desk only (docs/desk-page.md → Simple mode).
@@ -3696,7 +3842,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const out = [];
     if (c.kind === "request") {
       if (can("change") && (c.variants || []).length && !locked(c) && !closed(c)) out.push({ id: "request-changes", name: "Request changes", hint: "Design Desk draws the next version from your comments." });
-      if (open && !preDesign(c) && !specWaits(c) && canApprove(c) && (c.triage || (c.variants || []).length) && !closed(c)) out.push({ id: "approve", name: "Approve", hint: "You approve the request; your comments go with it." });
+      // In Dev review after design opened, the approval is Approve for dev; before design, the UI dev
+      // owner's Approve for dev is the only one (docs/desk.md → Draft and Proposal).
+      const dev = simpleState(c, true)?.state === "proposal";
+      if (open && !preDesign(c) && !specWaits(c) && canApprove(c) && (c.triage || (c.variants || []).length) && !closed(c)) out.push({ id: "approve", name: dev ? "Approve for dev" : "Approve", hint: dev ? "It goes to In dev, without a designer; your comments go with it." : "You approve the request; your comments go with it." });
+      if (preDesign(c) && !closed(c) && stageMoves(c)[2]) out.push({ id: "approve-dev", name: "Approve for dev", hint: "It goes to In dev at once, without a designer; your comments go with it." });
     } else if (mayHandle(c) && !c.source?.merged_at && c.status !== "archived") {
       out.push({ id: "request-changes", name: "Request changes", hint: S.me?.review_post ? "The developer makes the next version; your feedback goes to the pull request." : "The developer makes the next version." });
       if (!c.handled) out.push({ id: "approve", name: "Approve", hint: "Design is done with this change." });
@@ -3720,32 +3870,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const a = await ask({ title: "Send your feedback", html: `${warn}${ds.length || looks.length ? ds.map((d) => draftBubble(c, d, false)).join("") + looks.map((x) => lookBubble(x, false)).join("") + onlyChanges : `<p class="hint">No comments yet: write a note for the whole feedback.</p>`}${pr ? `<p class="hint">It goes to the pull request on GitHub too, as a comment.</p>` : ""}`,
       ok: "Send feedback", choices, pick: choices.some((x) => x.id === pick) ? pick : choices[0].id, note: "A note for the whole feedback (optional)", max: 4000,
       send: async (x) => {
-        if (!ds.length && !looks.length && !x.note) throw new Said("Write a comment or a note first.");
+        if (!ds.length && !looks.length && !x.note && !["approve", "approve-dev"].includes(x.choice)) throw new Said("Write a comment or a note first.");
         return x;
       } });
     if (!a) return;
-    // Approving a request is today's approval, its own questions included; the review goes with it.
-    if (a.choice === "approve" && c.kind === "request") {
-      await act("approve");
-      const { card } = await api("GET", `/api/cards/${encodeURIComponent(c.id)}`);
-      if (!card.approved) return;
-    }
-    // The look edits become notes with their values now, then go with the rest.
-    for (const x of looks) {
-      const { e } = x, style = lookChanges(e), controls = pickChanges(e);
-      const anchor = { variant: e.fb.variant, ...(e.fb.state ? { state: e.fb.state } : {}), selector: x.selector, text: e.text, tag: e.tag, label: e.label, view: e.view, view_name: e.view_name, ...(style.length ? { style } : {}), ...(controls.length ? { controls } : {}) };
-      await api("POST", `/api/cards/${encodeURIComponent(c.id)}/drafts`, { text: lookText(e), anchor });
-      // Now a draft on the server: should the send fail, it waits there, never twice.
-      delete e.fb;
-    }
-    const r = await api("POST", `/api/cards/${encodeURIComponent(c.id)}/reviews`, { verdict: a.choice, note: a.note, ...(S.variant ? { variant: S.variant } : {}) });
-    for (const x of looks) { if (x.key === S.ws.shown) lookSent(x.selector); else delete S.ws.looks[x.key]?.[x.selector]; }
-    S.drafts[c.id] = [];
-    toast(a.choice === "request-changes" && c.kind === "request" ? "Feedback sent. Design Desk draws the next version; this page updates by itself."
-      : r.inbox?.kind === "review" ? "Feedback sent. It goes to the pull request on GitHub too."
-      : r.skipped ? `Feedback sent. ${plural(r.skipped, "comment to work in stays", "comments to work in stay")} in your feedback: they go only with Request changes.` : "Feedback sent.");
-    await loadDrafts(c, true);
-    await refreshList(); await openCard(c.id);
+    await sendFeedback(c, a.choice, a.note);
   }
   // Simple mode's comments: each conversation a card, its first message and the replies indented
   // under it, each by its avatar, name, role and a short date; a resolved one folds to one line
@@ -5112,41 +5241,82 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
 
   // ---------- a pull request's changes, one at a time (docs/desk-page.md → Simple mode) ----------
   // The same as desk/store.mjs's changesOf: one per screen pair, then one per lone screen. `key`
-  // is what a draft or a Looks good names; a lone screen is after only (no picture says it is new).
+  // is what a draft or a Looks good names. A screen Design Desk found unchanged (`unchanged`) is no
+  // change to look at; one it knows the change adds is `new` (docs/screens.md → What changed).
   function changesOf(c) {
     const list = (c?.screens || []).filter((x) => x && typeof x === "object");
     const pairs = [...new Set(list.filter((x) => x.stage && x.stage !== "diff" && x.pair).map((x) => String(x.pair)))];
     const of = (pair, stage) => list.find((x) => x.stage === stage && String(x.pair) === pair) || null;
-    return [...pairs.map((pair) => ({ key: pair, name: pair, before: of(pair, "before"), after: of(pair, "after") })),
-      ...list.filter((x) => (!x.stage || (!x.pair && x.stage !== "diff")) && x.asset).map((x, i) => ({ key: String(x.asset), name: String(x.caption || "").trim().slice(0, 120) || `Screen ${i + 1}`, before: null, after: x }))];
+    const flags = (...xs) => ({ unchanged: xs.some((x) => x?.unchanged === true), new: xs.some((x) => x?.new === true) });
+    return [...pairs.map((pair) => ({ key: pair, name: pair, before: of(pair, "before"), after: of(pair, "after"), ...flags(of(pair, "after"), of(pair, "before")) })),
+      ...list.filter((x) => (!x.stage || (!x.pair && x.stage !== "diff")) && x.asset).map((x, i) => ({ key: String(x.asset), name: String(x.caption || "").trim().slice(0, 120) || `Screen ${i + 1}`, before: null, after: x, ...flags(x) }))];
   }
-  const changeShown = (c) => { const xs = changesOf(c); return xs.find((x) => S.chg?.card === c.id && x.key === S.chg.key) || xs[0] || null; };
+  // The changes to look at: every one but those that look the same as before.
+  const changesToLook = (c) => changesOf(c).filter((x) => !x.unchanged);
   const changeName = (c, key) => changesOf(c).find((x) => x.key === key)?.name || key;
   // A conversation about a change leads to it; one no longer among the changes only names it.
   const changeChip = (c, th) => changesOf(c).some((x) => x.key === th.change)
-    ? `<button class="chip sjump" data-chg-show="${esc(th.change)}" title="Shows this change, before and after">◎ ${esc(changeName(c, th.change))}</button>`
+    ? `<button class="chip sjump" data-chg-open="${esc(th.change)}" title="Opens this change, before and after">◎ ${esc(changeName(c, th.change))}</button>`
     : `<span class="chip">◎ ${esc(th.change)}</span>`;
   // Where the pictures come from while there are none (docs/screens.md, docs/watch.md → Screens).
   const noShotsYet = (c) => c.source?.merged_at ? "No screenshots of this change."
     : S.me?.screens ? "No screenshots yet. Design Desk takes them on its own copy of the product while one is free, else once the pull request merges."
     : "No screenshots yet: the pull request carries none. Design Desk adds them once it merges.";
-  // Changes: a tab per change (desk/guidelines.html → Tabs and switchers), its pictures, and under
-  // them the box whose feedback is about that change: Add to feedback and Looks good.
+  // Changes: a tile per change, drawn as an option's All elements (docs/desk-page.md → Changes):
+  // its after picture, its name, Changed or New, and how far the viewer got. One opens it in the
+  // dialog an element opens in. A screen that looks the same as before is no tile: one line names it.
+  const CHG_PILL = (x) => x.unchanged ? `<span class="chip" title="Design Desk found nothing changed on it">Looks the same</span>`
+    : x.before ? `<span class="chip warn" title="A screen of the product this change changes: before and after">Changed</span>`
+    : x.new ? `<span class="chip info" title="A screen this change adds">New</span>`
+    : `<span class="chip" title="Only a picture from after: there is none from before">No picture from before</span>`;
+  const MARK_CHIP = { ok: `<span class="chip ok">✓ Looks good</span>`, changes: `<span class="chip warn-line">Changes asked</span>`, "": `<span class="chip todo">Not looked at</span>` };
+  function changeTile(c, x, k) {
+    const m = markOf(c, x.key), n = draftsOf(c).filter((d) => d.change === x.key && !d.ok).length;
+    const mine = n ? `<span class="chip warn-line">${esc(plural(n, "note", "notes"))}</span>` : x.unchanged ? "" : MARK_CHIP[m] || "";
+    const pic = x.after || x.before;
+    return `<div class="eltile chg-tile"${changeMark(c, x.key)}><button class="elopen" data-chg-open="${esc(x.key)}" title="${esc(`Open ${x.name}: before and after, its comments and Looks good`)}"><span class="elpic">${x.unchanged ? "" : `<span class="ono">${k + 1}</span>`}${pic ? `<img alt="" data-asset="${esc(pic.asset)}" />` : ""}</span><span class="elname">${esc(x.name)}</span>
+      <span class="elmeta">${CHG_PILL(x)}${mine}</span></button></div>`;
+  }
   function changeView(c) {
-    const xs = changesOf(c);
+    const all = changesOf(c), xs = all.filter((x) => !x.unchanged), same = all.filter((x) => x.unchanged);
     const add = !c.instance && can("screens") ? `<div class="actions"><button class="btn" data-add-shots>Add screenshots</button></div>` : "";
-    if (!xs.length) return `<h3>Changes</h3><div class="cv"><div class="cv-body"><p class="hint">${esc(noShotsYet(c))}</p></div>${changeBox(c, null)}</div>${add}`;
-    const x = changeShown(c);
-    const tabs = xs.length > 1 ? `<div class="tabs vtabs vrow utabs chg-tabs cv-tabs" role="group" aria-label="Changes"><div class="vscroll">${xs.map((y, k) => `<button data-chg="${esc(y.key)}" aria-pressed="${y.key === x.key}"${changeMark(c, y.key)}><span class="ono">${k + 1}</span>${esc(y.name)}</button>`).join("")}</div></div>` : "";
+    if (!all.length) return `<h3>Changes</h3><div class="cv"><div class="cv-body"><p class="hint">${esc(noShotsYet(c))}</p></div>${changeBox(c, null)}</div>${add}`;
+    const looked = xs.length - notLookedAt(c).length;
+    const prog = xs.length ? `<span class="chg-prog" title="Changes you marked Looks good or wrote a note on"><span class="pbar"><i style="width:${Math.round(looked / xs.length * 100)}%"></i></span>${looked === xs.length ? `<span class="chg-done">✓ All looked at</span>` : `${looked} of ${xs.length} looked at`}</span>` : "";
+    const sameLine = same.length ? `<p class="hint chg-same">${esc(plural(same.length, "more screen", "more screens"))} the pull request shows ${same.length > 1 ? "look" : "looks"} the same as before: ${same.map((x) => `<button class="link" data-chg-open="${esc(x.key)}" title="Opens it: nothing to look at">${esc(x.name)}</button>`).join(", ")}</p>` : "";
+    return `<h3 class="chg-h">Changes <span class="hint">${xs.length}</span>${prog}</h3>
+      <div class="chg-canvas">${xs.length ? `<div class="elgrid chg-tiles">${xs.map((x, k) => changeTile(c, x, k)).join("")}</div>` : ""}${sameLine}</div>${add}`;
+  }
+  // One change in the element's dialog: its name and pill, Submit feedback, ‹ n of m › and ✕ in its
+  // head; Before beside After (or After alone), Outline what changed, then its box.
+  function renderChangeDialog() {
+    const c = S.card, all = c?.kind === "change" && c.id === S.el.card ? changesOf(c) : [], x = all.find((y) => y.key === S.el.chg);
+    const dlg = $("#element-dialog");
+    if (!x) { S.el = null; if (dlg.open) dlg.close(); return; }
+    const steps = x.unchanged ? all.filter((y) => y.unchanged) : all.filter((y) => !y.unchanged), i = steps.indexOf(x);
+    const at = (d) => steps[(i + d + steps.length) % steps.length];
+    const nav = steps.length > 1 ? `<span class="pl-step el-nav"><button data-chg-nav="-1" aria-label="Previous change" title="Previous: ${esc(at(-1).name)}">‹</button><span class="pl-v">${i + 1} of ${steps.length}</span><button data-chg-nav="1" aria-label="Next change" title="Next: ${esc(at(1).name)}">›</button></span>` : "";
+    const typed = $("#el-body").dataset.el === elTypedKey() ? $("#el-body textarea:not(#fb-note)") : null, keep = typed?.value || "", focused = Boolean(typed) && document.activeElement === typed;
     // Marks are measured on the "after" picture: a "before" one with no "after" gets none.
     const before = x.before && !x.after ? { ...x.before, marks: [] } : x.before;
-    // Each picture under its label; its own caption and where it came from stay under it.
     const col = (sh, label, frame) => `<div class="cv-col"><div class="cv-lab">${label}</div>${figure({ ...sh, caption: captionBeside(sh.caption, label) }, "", frame)}</div>`;
     const pics = [before && col(before, "Before", x.after?.asset), x.after && col(x.after, "After")].filter(Boolean);
-    return `<h3 class="chg-h">Changes <span class="hint">${xs.length}</span>${changeProgress(c)}</h3>
-      <div class="cv">${tabs}${xs.length > 1 ? "" : `<div class="cv-one"><b>${esc(x.name)}</b></div>`}
+    $("#el-body").innerHTML = `<div class="elbar"><div><h2 title="${esc(x.name)}">${esc(x.name)}</h2><div class="sub">${CHG_PILL(x)}</div></div>
+        <div class="el-acts">${fbButton(c, "dlg")}${nav}<button type="button" class="dlg-x" data-el-close aria-label="Close">✕</button></div></div>
       <div class="cv-body">${outlineToggle([x.before, x.after].filter(Boolean))}<div class="cv-pair" style="--cols:${pics.length}">${pics.join("")}</div></div>
-      ${changeBox(c, x)}</div>${add}`;
+      ${changeBox(c, x)}`;
+    $("#el-body").dataset.el = elTypedKey();
+    const back = !keep && S.elTyped?.[elTypedKey()];
+    if (back) delete S.elTyped[elTypedKey()];
+    const box = $("#el-body .chg-foot textarea"); if (box && (keep || back)) box.value = keep || back; if (box && focused) box.focus();
+    loadPictures(dlg).catch(() => {});
+  }
+  // Opens a change in the dialog, the cursor in its box (docs/desk-page.md → Changes).
+  function openChange(key) {
+    if (!S.card || !changesOf(S.card).some((x) => x.key === key)) return;
+    S.el = { card: S.card.id, chg: key }; renderElementDialog();
+    const d = $("#element-dialog"); if (!d.open) d.showModal();
+    d.scrollTop = 0; $("#el-body .chg-foot textarea")?.focus();
   }
   // Under the change shown: the viewer's notes on it waiting in their feedback, a box, Add to
   // feedback and Looks good. No comment for the team here: what is written is for the developer.
@@ -5163,7 +5333,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const said = ok ? `<span class="chg-ok">${CHECK}You marked it as good<button class="link" data-draft-del="${esc(ok.id)}" title="Takes your Looks good back">Undo</button></span>` : "";
     return `<div class="composer rbox chg-foot" data-rbox data-change="${esc(x.key)}">${talk}${notes.map((d) => draftBubble(c, d)).join("")}
       <textarea maxlength="4000" placeholder="What should change here?" aria-label="${esc(`A comment on ${x.name}`)}"></textarea>
-      <div class="bar">${said}<span class="grow"></span><button class="btn" data-draft-add>Add to feedback</button>${ok || notes.length ? "" : `<button class="btn cv-ok" data-draft-ok>${CHECK}Looks good</button>`}</div></div>`;
+      <div class="bar">${said}<span class="grow"></span><button class="btn primary" data-draft-add>Add to feedback</button>${ok || notes.length || x.unchanged ? "" : `<button class="btn cv-ok" data-draft-ok>${CHECK}Looks good</button>`}</div></div>`;
   }
   // How far the viewer got with a change (desk/guidelines.html → Tabs and switchers): "changes"
   // with a note of theirs on it, "ok" marked Looks good (theirs, or sent on this version), else "".
@@ -5173,10 +5343,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const owed = c.responsible?.who === "developer" && (c.threads || []).some((th) => th.change === key && th.state !== "resolved");
     return ds.some((d) => !d.ok) || owed ? "changes" : ds.some((d) => d.ok) || (c.looks_good || []).includes(key) ? "ok" : "";
   }
-  const MARK_TIP = { ok: "Looks good", changes: "You ask for changes here; not sent yet", "": "Not looked at yet" };
+  const MARK_TIP = { ok: "Looks good", changes: "Changes asked here: a note of yours waits to be sent, or one sent waits for the developer's next version", "": "Not looked at yet" };
   const changeMark = (c, key) => { const m = markOf(c, key); return `${m ? ` data-m="${m}"` : ""} title="${esc(MARK_TIP[m])}"`; };
-  const notLookedAt = (c) => changesOf(c).filter((x) => !markOf(c, x.key));
-  const changeProgress = (c) => changesOf(c).length > 1 && !notLookedAt(c).length ? `<span class="chg-done">✓ All looked at</span>` : "";
+  const notLookedAt = (c) => changesToLook(c).filter((x) => !markOf(c, x.key));
 
   // ---------- a shipped change ----------
   // The box under a change's or an issue's title, as on a request: its state's word and dot on the
@@ -6052,7 +6221,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const v = vs.find((x) => x.id === S.variant);
     const mine = myVote(c, v.id);
     return `<h3>Design options${locked(c) ? ` <span class="hint locked-note">🔒 Approved: this design no longer changes. To change it, ${can("request") ? `<button class="anchor-text" data-adjust>start a new request from this one</button>` : "start a new request from this one"}.</span>` : ""}</h3>
-      <div class="tabs vtabs vrow utabs" role="group" aria-label="Design options"><div class="vscroll">${splitTab(c)}${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${!splitOf(c)?.on && x.id === v.id}"${optionMark(c, x.id)}${x.asset ? ` draggable="true" title="Shows this design option; drag it onto the panel below to set it beside another"` : ""}><span class="ono">${vs.indexOf(x) + 1}</span>${esc(x.name)}${(x.version || 1) > 1 ? ` <span class="chip" title="Design Desk changed this option ${x.version - 1} ${x.version === 2 ? "time" : "times"}; this is its latest version">version ${x.version}</span>` : ""}${c.live_pick?.variant === x.id && (["building", "live"].includes(c.prototype?.state) || working(c).includes("build")) ? ` <span class="chip info" title="The option the live prototype is built from">▶ Goes live</span>` : ""}${closeTab(c, x)}</button>`).join("")}${addOptionTab(c)}</div>${wsTab0(c)}</div>
+      <div class="tabs vtabs vrow utabs" role="group" aria-label="Design options"><div class="vscroll">${splitTab(c)}${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${!splitOf(c)?.on && x.id === v.id}"${optionMark(c, x.id)}${x.asset ? ` draggable="true" title="Shows this design option; drag it onto the panel below to set it beside another"` : ""}><span class="ono">${vs.indexOf(x) + 1}</span><span class="vname" title="${esc(x.name)}">${esc(x.name)}</span>${(x.version || 1) > 1 ? ` <span class="chip" title="Design Desk changed this option ${x.version - 1} ${x.version === 2 ? "time" : "times"}; this is its latest version">version ${x.version}</span>` : ""}${c.live_pick?.variant === x.id && (["building", "live"].includes(c.prototype?.state) || working(c).includes("build")) ? ` <span class="chip info" title="The option the live prototype is built from">▶ Goes live</span>` : ""}${closeTab(c, x)}</button>`).join("")}${addOptionTab(c)}</div>${wsTab0(c)}</div>
       ${splitOf(c)?.on ? `<div class="vpanel">${designBox(c, v)}${dropLayer(c)}</div>` : `<div class="vpanel">
       ${v.fidelity === "picture" ? `<p class="hint">Pictures added by ${v.by ? who(v.by) : "a person"}; Design Desk drew nothing.</p>` : ""}
       <div class="vbar">
@@ -6615,7 +6784,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // states, the button that has them drawn. It follows the card as it refreshes.
   // Closed (✕, Esc) with a comment half written, the text stays with its part, back in the box
   // when the dialog opens on it again, as a step to another element keeps it.
-  $("#element-dialog").addEventListener("close", () => { const box = $("#el-text"), t = box?.value; if (S.el && t?.trim()) (S.elTyped ||= {})[elTypedKey()] = t; if (box) box.value = ""; delete $("#el-body").dataset.el; S.el = null; });
+  $("#element-dialog").addEventListener("close", () => { if (S.fb?.where === "dlg") S.fb = { ...S.fb, where: null }; const box = $("#el-text") || $("#el-body .chg-foot textarea"), t = box?.value; if (S.el && t?.trim()) (S.elTyped ||= {})[elTypedKey()] = t; if (box) box.value = ""; delete $("#el-body").dataset.el; S.el = null; });
   // All states open or folded: kept while the page is open, for every part. Read from the press on
   // its summary (a click, or Enter or Space on it), before the fold opens or closes: a redraw
   // between the press and the fold's own toggle event would lose it.
@@ -6722,12 +6891,14 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   }
   // What someone was writing on a part stays with it while the page is open: kept when they step to
   // another element, given back to its box when they come back to it.
-  const elTypedKey = () => S.el ? `${S.el.card}|${S.el.variant}|${S.el.key}` : "";
+  const elTypedKey = () => S.el ? (S.el.chg ? `${S.el.card}|change|${S.el.chg}` : `${S.el.card}|${S.el.variant}|${S.el.key}`) : "";
   // `look`: only to look through the states drawn (from the design workspace): nothing is drawn or added from it.
-  function openElement(variant, key, { look = false, state = null } = {}) { S.el = { card: S.card?.id, variant, key, look, st: state }; renderElementDialog(); const d = $("#element-dialog"); if (!d.open) d.showModal(); }
+  // It opens with the cursor in its comment box (docs/desk-page.md → The element dialog).
+  function openElement(variant, key, { look = false, state = null } = {}) { S.el = { card: S.card?.id, variant, key, look, st: state }; renderElementDialog(); const d = $("#element-dialog"); if (!d.open) d.showModal(); $("#el-text")?.focus(); }
   function renderElementDialog() {
     const dlg = $("#element-dialog");
     if (!S.el) { if (dlg.open) dlg.close(); return; }
+    if (S.el.chg) { renderChangeDialog(); return; }
     const c = S.card, vs = c?.kind === "request" && c.id === S.el.card ? c.variants || [] : [], v = vs.find((x) => x.id === S.el.variant), e = v && elementsOf(v).find((x) => x.key === S.el.key);
     if (!e) { S.el = null; if (dlg.open) dlg.close(); return; }
     const busy = drawingStates(c, v, e), ch = CHANGE[e.change];
@@ -6750,7 +6921,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const toWs = S.el.look ? "" : `<button class="btn small ws-way" data-el-ws title="Opens the design at this part, to comment on it or ask for a change">${wsMark()}Open in design workspace</button>`;
     $("#el-body").innerHTML = `<div class="elbar"><div><h2>${esc(e.name)}</h2>
         <div class="sub">${ch ? `<span class="chip ${ch[1]}" title="${esc(ch[2])}">${ch[0]}</span>` : ""}<span class="chip" title="The design option this element is part of"><span class="ono">${vs.indexOf(v) + 1}</span> ${esc(v.name)} · version ${esc(v.version || 1)}</span>${approvedOption(c)?.id === v.id ? `<span class="chip ok" title="The option that was approved">✓ Approved</span>` : ""}</div></div>
-        <div class="el-acts">${toWs}${elNav(c, v, e)}<button type="button" class="dlg-x" data-el-close aria-label="Close">✕</button></div></div>
+        <div class="el-acts">${toWs}${S.el.look ? "" : fbButton(c, "dlg")}${elNav(c, v, e)}<button type="button" class="dlg-x" data-el-close aria-label="Close">✕</button></div></div>
       ${e.how ? `<p style="max-width:var(--measure)">${txt(e.how)}</p>` : ""}
       ${catalogButton(c, v, e) && !S.el.look ? `<div class="actions" style="margin:0 0 8px">${catalogButton(c, v, e)}</div>` : ""}
       ${stale.length ? `<p class="hint"><span class="chip warn" title="These states show the option before its latest change">${plural(stale.length, "state", "states")} drawn for an earlier version</span> Design Desk redraws them when it changes the option.</p>` : ""}
@@ -7984,7 +8155,33 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const t = sc?.querySelector('button[aria-pressed="true"]');
     return sc && { card: tabsCard, at: sc.scrollLeft, picked: t?.dataset.variant ?? t?.dataset.chg ?? "split" };
   };
+  // Options' tabs that do not fit in the row, even cut, fold into +n at its end, from the last one;
+  // the one shown always stays. Measured again as the pane changes width.
+  function fitTabs() {
+    for (const sc of document.querySelectorAll('#detail .vtabs[aria-label="Design options"] .vscroll')) {
+      sc.querySelector(":scope > .vmore")?.remove();
+      const tabs = [...sc.querySelectorAll(":scope > button[data-variant]")];
+      tabs.forEach((t) => (t.hidden = false));
+      // Too tight: the row runs over, or a tab is squeezed below its own parts (its name's least width, ✕).
+      const tight = () => sc.scrollWidth > sc.clientWidth + 1 || tabs.some((t) => !t.hidden && t.scrollWidth > t.clientWidth + 1);
+      if (!tight()) continue;
+      const more = document.createElement("details");
+      more.className = "more vmore";
+      more.innerHTML = `<summary class="btn">+0</summary>`;
+      sc.insertBefore(more, tabs[tabs.length - 1].nextSibling);
+      const out = [];
+      for (const t of [...tabs].reverse()) {
+        if (!tight()) break;
+        if (t.getAttribute("aria-pressed") === "true") continue;
+        t.hidden = true; out.unshift(t);
+        more.innerHTML = `<summary class="btn" title="${esc(`More options: ${out.map((x) => x.querySelector(".vname")?.textContent).join(", ")}`)}">+${out.length}</summary><div class="menu">${out.map((x) => `<button class="btn" data-variant="${esc(x.dataset.variant)}">${x.querySelector(".ono").outerHTML}${esc(x.querySelector(".vname")?.textContent || "")}</button>`).join("")}</div>`;
+      }
+      if (!out.length) more.remove(); else tip(more);
+    }
+  }
+  new ResizeObserver(() => fitTabs()).observe(document.querySelector("#detail") || document.body);
   function keepTabs(was) {
+    fitTabs();
     const sc = $("#detail .vtabs .vscroll");
     tabsCard = sc ? S.card?.id : null;
     if (!sc || !was || was.card !== tabsCard) return;
@@ -8670,6 +8867,16 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     }
     if (ds.draftDel) { await removeDraft(S.card, ds.draftDel); return; }
     if ("review" in ds) { await reviewDialog(S.card, ds.review || null); return; }
+    // Submit feedback and its panel (docs/desk-page.md → Submit feedback).
+    if (ds.fb && S.card) { fbToggle(S.card, ds.fb); return; }
+    if (ds.fbV && S.fb) { S.fb.pick = ds.fbV; fbRedraw(); return; }
+    if ("fbClose" in ds) { fbClose(); return; }
+    if ("fbSend" in ds && S.card && S.fb) {
+      const c = S.card, note = ($("#fb-note")?.value || "").trim();
+      el.disabled = true;
+      try { if (await sendFeedback(c, fbPick(c), note) && $("#element-dialog").open) $("#element-dialog").close(); } finally { el.disabled = false; }
+      return;
+    }
     if (ds.stage && S.card) { await moveStage(S.card, ds.stage); return; }
     if ("built" in ds) { await api("POST", `/api/cards/${S.card.id}/built`, { built: ds.built === "1" }); await refreshList(); await openCard(S.card.id); return; }
     if ("devAsk" in ds) { if (!devAsked(S.card)) { store.set(`desk-dev-asked:${S.card.id}`, "1"); renderDetail(); } const d = $("#dev-parts"); if (d) { d.open = true; d.scrollIntoView({ block: "center", behavior: "smooth" }); d.classList.add("flash"); setTimeout(() => d.classList.remove("flash"), 2000); } return; }
@@ -8779,17 +8986,29 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       await refreshList(); await openCard(S.card.id); return;
     }
     if (ds.variant) { S.variant = ds.variant; showSplit(false, false); renderDetail(); return; }
-    if (ds.chg !== undefined) { S.chg = { card: S.card.id, key: ds.chg }; renderDetail(); return; }
-    if (ds.chgShow) { S.chg = { card: S.card.id, key: ds.chgShow }; renderDetail(); $("#detail .chg-h")?.scrollIntoView({ block: "start", behavior: "smooth" }); return; }
-    if (ds.chgTalk) { const n = document.getElementById(`th-${ds.chgTalk}`); if (n) { n.scrollIntoView({ block: "center", behavior: "smooth" }); n.classList.add("flash"); setTimeout(() => n.classList.remove("flash"), 1600); } return; }
+    // A change opens in the element's dialog: from its tile, a conversation's chip, the feedback's panel.
+    if (ds.chgOpen && S.card) { if (S.fb?.where) S.fb = { ...S.fb, where: null }; openChange(ds.chgOpen); return; }
+    if (ds.chgNav && S.el?.chg) {
+      const all = changesOf(S.card), x = all.find((y) => y.key === S.el.chg), steps = all.filter((y) => Boolean(y.unchanged) === Boolean(x?.unchanged)), i = steps.indexOf(x);
+      if (i < 0 || steps.length < 2) return;
+      const box = $("#el-body .chg-foot textarea");
+      if (box?.value.trim()) (S.elTyped ||= {})[elTypedKey()] = box.value;
+      if (box) box.value = "";
+      S.el.chg = steps[(i + Number(ds.chgNav) + steps.length) % steps.length].key;
+      renderElementDialog(); $("#element-dialog").scrollTop = 0; $(`#el-body [data-chg-nav="${ds.chgNav}"]`)?.focus(); return;
+    }
+    if (ds.chgTalk) { if ($("#element-dialog").open) $("#element-dialog").close(); const n = document.getElementById(`th-${ds.chgTalk}`); if (n) { n.scrollIntoView({ block: "center", behavior: "smooth" }); n.classList.add("flash"); setTimeout(() => n.classList.remove("flash"), 1600); } return; }
     if ("draftOk" in ds) {
-      // Looks good moves on to the next change not looked at; on the last, the feedback opens.
+      // Looks good moves on to the next change not looked at; on the last, the feedback's panel
+      // opens in the dialog, the approval picked where the viewer may send one.
       const c = S.card, box = el.closest("[data-rbox]");
       await addDraft(c, { ok: true, change: box.dataset.change });
-      const xs = changesOf(c), at = xs.findIndex((x) => x.key === box.dataset.change), left = notLookedAt(c);
+      const xs = changesToLook(c), at = xs.findIndex((x) => x.key === box.dataset.change), left = notLookedAt(c);
       const next = left.find((x) => xs.indexOf(x) > at) || left[0];
-      if (next) { S.chg = { card: c.id, key: next.key }; renderDetail(); return; }
-      if (xs.length > 1) await reviewDialog(c, verdictsFor(c).some((v) => v.id === "approve") ? "approve" : null);
+      if (next) { openChange(next.key); return; }
+      const ok = verdictsFor(c).some((v) => v.id === "approve");
+      S.fb = { card: c.id, where: "dlg", pick: ok && !notesWaiting(c) ? "approve" : S.fb?.card === c.id ? S.fb.pick : null, note: S.fb?.card === c.id ? S.fb.note : "" };
+      fbRedraw();
       return;
     }
     if ("splitTab" in ds) { showSplit(true); return; }

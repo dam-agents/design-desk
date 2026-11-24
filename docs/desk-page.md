@@ -87,10 +87,11 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   sending the feedback makes one note per part with `anchor.style` / `anchor.controls`, a `change`
   note with Request changes ([requests.md](requests.md) → revise). A reload drops them.
   The options' tabs are underline tabs with a number chip, in both modes and in the design
-  workspace; what the chip's colour means is on the guidelines page ([The guidelines](#the-guidelines)). They stay one row: when they do not fit, the row scrolls sideways and keeps the
-  picked tab in view, and **Design workspace** stays fixed at its right end. A redraw of the same
-  item keeps the row where the person scrolled it; only another tab picked moves it, just enough to
-  show that tab; another item's row starts at its beginning.
+  workspace; what the chip's colour means is on the guidelines page ([The guidelines](#the-guidelines)). They stay one row and never scroll sideways: an option's tab shrinks to fit,
+  its name cut with an ellipsis on the text's baseline (the page's `Desk Ellipsis` font; the full name on
+  hover); what still does not fit folds, from the last tab, into **+n** at the row's end, a menu of the
+  options it holds (the one shown always stays out), measured again as the pane changes width. **Design
+  workspace** stays fixed at its right end. A redraw folds the row again for the tab shown.
   **Side by side:** an option's tab dragged onto the panel the tabs switch lights the half of
   that whole panel it would land on (left or right); the drop splits the design in two, that option in its half, the other half
   empty until another tab is dragged there. The empty half also offers **Show how it looks
@@ -224,35 +225,30 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   its severity), who asked and where from in the row's words, and when (a person by their name on
   the roster, else the name the item keeps, else the part of their address before the @), and once approved one muted
   line — who approved it and when, the issue or pull request it was sent to, when it shipped —
-  then at most two buttons and ⋯. Before design a request offers its stage's moves
-  ([desk.md](desk.md) → Draft and Proposal), each only for who may: on a draft, to its author,
-  **Send to design** (else **Propose**) then **Request changes**, with ⋯ holding **Propose** for a
-  UI dev owner, and **Close…**; to a UI dev owner, on their draft or on a proposal, **Send to
-  design** then **Approve for dev**, with ⋯ holding **Request changes**, **Propose** or **Back to
-  draft**, and **Close…**. Both ask first, as it cannot come back; Approve for dev asks as an
-  approval does. No plain Approve; votes on a proposal in full mode (**Ask for feedback**, **End the
-  vote**), none on a draft. While it is in Design review, a request offers **Request changes** (with options drawn) and **Approve** — which sends the spec
-  as soon as it is written, with no box to tick, or, for one the Desk may not send by itself (a
-  Slack origin, an open pull request; [handoff.md](handoff.md) → Review before it goes), leaves it
-  in its review with **Send to developers** — and a change **Request changes** and **Approve** (marks it handled); each only for
-  who may. In Dev review after design opened, a request or a change has a proposal's two moves:
-  **Approve for dev** (on a change **Approve**, which marks it handled; on an approved request whose
-  spec draft waits, **Send to developers**) and **Send to design** — the move to For Designers, for
-  a UI dev owner or an admin, asking first; it then is in Design review — with **Request changes**
-  under ⋯; while feedback drafts wait, **Request changes · n** and the approval come first and Send
-  to design goes under ⋯. **Feedback** ([desk.md](desk.md) → Reviews): under the shown option, and under a change's
-  screens, a box offers **Add to feedback** — a draft, the viewer's alone — and **Comment**, a
-  comment on the Desk at once (never on GitHub); the box at the end of the page posts at once. While
-  drafts wait, **Your feedback · n** under the head lists them, each with what it is about and ✕, and
-  **Send feedback…**; **Request changes** counts them (`Request changes · 2`) and is the primary
-  button, and **Approve** opens the feedback too. Both open one dialog: the drafts, the verdicts the
-  viewer may send (**Request changes**, **Approve**, **Comment only**, the one they pressed
-  picked) and a note for the whole feedback. Approving a request there is the usual approval first,
-  its own questions included, then the feedback. Sent feedback shows in Comments, in both modes, as
+  then at most two buttons and ⋯: the stage's move on, if any, then **Submit feedback**
+  ([Submit feedback](#submit-feedback)), which holds Request changes and every approval. Before design a
+  request offers its stage's moves ([desk.md](desk.md) → Draft and Proposal), each only for who may: on a
+  draft, to its author, **Send to design** (else **Propose**), with ⋯ holding **Propose** for a UI dev
+  owner, and **Close…**; to a UI dev owner, on their draft or on a proposal, **Send to design**, with ⋯
+  holding **Propose** or **Back to draft**, and **Close…**. Both ask first, as it cannot come back. Its
+  **Approve for dev** is a verdict in Submit feedback, and asks as an approval does. No plain Approve;
+  votes on a proposal in full mode (**Ask for feedback**, **End the vote**), none on a draft. While it
+  is in Design review, a request's approval is **Approve** — which sends the spec as soon as it is
+  written, with no box to tick, or, for one the Desk may not send by itself (a Slack origin, an open
+  pull request; [handoff.md](handoff.md) → Review before it goes), leaves it in its review with **Send
+  to developers** beside Submit feedback — and a change's **Approve** marks it handled; each only for
+  who may. In Dev review after design opened, a request or a change has **Send to design** — the move
+  to For Designers, for a UI dev owner or an admin, asking first; it then is in Design review — beside
+  Submit feedback, whose approval is **Approve for dev** (on a change **Approve**, which marks it
+  handled; on an approved request whose spec draft waits, **Send to developers** stands in Send to
+  design's place). **Feedback** ([desk.md](desk.md) → Reviews): under the shown option, and in a change's or a part's
+  dialog, a box offers **Add to feedback** — a draft, the viewer's alone — and **Comment**, a
+  comment on the Desk at once (never on GitHub); the box at the end of the page posts at once. No box
+  under the head lists the drafts: **Submit feedback** holds them. Sent feedback shows in Comments, in both modes, as
   one block: who, the verdict (**Changes requested** amber, **Approved** green, **Comments**), when,
   **On GitHub ↗** once posted, the note, then each of its comments with its replies. Full mode has
-  the same **Changes requested** line under the title, the same boxes, the same **Changes** of a change, and **Your feedback** at the top
-  of Questions and comments, whose **Send feedback…** opens the same dialog; before design it
+  the same **Changes requested** line under the title, the same boxes, the same **Changes** of a change and dialogs, and **Your feedback** at the top
+  of Questions and comments while drafts wait, with the same **Submit feedback** in it; before design it
   offers no Approve. A request that went to design folds the conversations and feedback begun
   before it opened (`opened_at`) into **Before design · n**, after the rest, in both modes. ⋯ holds **Close…** or **Reopen** on a request
   — on one sent to developers, first **Mark as shipped** while it is In dev and **Not shipped yet** once
@@ -308,27 +304,32 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   anywhere. Kept on the Desk like simple mode (`POST /api/prefs {figma}`, `figma_pref` in
   `GET /api/me`); with no choice (null) it is off.
   The Desk opens on Requests.
-- **Changes**, on a pull request change's page in both modes: the change's screens one change at
-  a time, in one framed panel — the tabs, the pictures under **BEFORE** / **AFTER**, and a tinted foot
-  with the feedback, **Looks good** a filled green button. A change is a screen pair (`pair`, its pictures by `stage`) or a screen with no `stage`,
-  in that order (`changesOf`, [desk.md](desk.md) → Reviews). With two or more, one tab each, the
-  underline tabs with a number chip ([the guidelines](../desk/guidelines.html) → Tabs and
-  switchers), scrolling sideways in one row. The change shown: **Before** beside **After**, or
-  **After** alone (nothing says a screen is new), each with its caption and where it came from;
-  **Outline what changed** over them; the separate "What changed" picture is not shown. Under
-  them, for who may comment on an open item: the viewer's notes on it waiting in their feedback,
-  a box, **Add to feedback** and **Looks good** (a mark with no words; then "You marked it as
-  good" with **Undo**, and no Looks good while notes on it wait). No comment for the team there:
-  what is written is for the developer. "n comments on this change ↓" leads to its conversations,
-  and a conversation's **◎ <change>** chip back to it. A tab's chip says how far the viewer got:
-  green for Looks good (theirs, or sent on the pull request's head, `looks_good`), amber for a note
-  of theirs on it or one sent while the developer owes the next version, grey for not looked at; "✓ All looked at" beside **Changes** once none is grey.
-  Looks good shows the next change not looked at, and on the last opens the feedback, Approve
-  picked where the viewer may. The feedback's dialog names the changes not looked at yet, and
-  sends anyway. **Request changes · n** counts notes, never marks.
-  With no screens, a line says how they come: Design Desk's own copy of the product while one is
-  free (`screens` on), else when the pull request merges; **Add screenshots** stays, and a box
-  with **Add to feedback** alone takes notes on the whole pull request.
+- **Changes**, on a pull request change's page in both modes: a tile per change on the canvas, drawn
+  as an option's **All elements** — its after picture (else its before), its number, its name cut at
+  two lines (in full on hover), a pill in the elements' words, **Changed** (a before and an after),
+  **New** (a screen the change adds, `new`) or grey **No picture from before** (an after alone not
+  known to be new), and where the viewer stands: *Not looked at*, *n notes*, *Changes asked* (a note
+  sent on it while the developer owes the next version) or *✓ Looks good*, the tile's edge in the same colour. A
+  change is a screen pair (`pair`, its pictures by `stage`) or a screen with no `stage`, in that order
+  (`changesOf`, [desk.md](desk.md) → Reviews); one tile even for a single change. Beside **Changes**,
+  its count, a bar and "n of m looked at", or "✓ All looked at". A screen Design Desk found looks the
+  same as before (`unchanged`, [screens.md](screens.md) → What changed) is no change: no tile, not in
+  the count, and one muted line under the tiles names it ("1 more screen the pull request shows looks
+  the same as before: …"), a click opening it with no Looks good. A tile opens its change in the
+  element's dialog ([The element dialog](#the-element-dialog)): its name and pill, **Submit feedback**,
+  **‹ n of m ›** through the changes to look at (the unchanged ones among themselves), and ✕ in the
+  head that stays while it scrolls; **Before** beside **After**, or **After** alone, each with its
+  caption and where it came from; **Outline what changed** over them; the separate "What changed"
+  picture is not shown. Under them, for who may comment on an open item: the viewer's notes on it
+  waiting in their feedback, a box with the cursor in it, **Add to feedback** (primary) and **Looks
+  good** (a mark with no words; then "You marked it as good" with **Undo**, and no Looks good while
+  notes on it wait). No comment for the team there: what is written is for the developer. "n comments
+  on this change ↓" closes the dialog on its conversations, and a conversation's **◎ <change>** chip
+  opens it. Looks good opens the next change not looked at, and on the last opens Submit feedback's
+  panel in the dialog, Approve picked where the viewer may and no note waits. **Request changes · n**
+  counts notes, never marks. With no screens, a line says how they come: Design Desk's own copy of
+  the product while one is free (`screens` on), else when the pull request merges; **Add screenshots**
+  stays, and a box with **Add to feedback** alone takes notes on the whole pull request.
 - **Motion.** Short, soft animations, in the `@media (prefers-reduced-motion: no-preference)`
   block of `desk/page.html`'s style, so a person whose system asks for less motion gets none:
   dialogs rise in and fade out with their backdrop, More and the menu under a name pop open,
@@ -384,6 +385,35 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   on, its jump to the part and Reopen. The order
   stays newest first.
 
+## Submit feedback
+
+One button holds a person's review of an item ([desk.md](desk.md) → Reviews): in simple mode's
+head, in every dialog's head (a change's, a part's), and in full mode's **Your feedback**.
+
+- **Its colour is the verdict it sends:** Approved's green for an approval (Approve, Approve for
+  dev), also with nothing drafted yet; amber for **Request changes**; ink for **Comment only**. Inside
+  it, its counts, each only when there is one: notes waiting (a pen) and changes marked Looks good (a
+  check). The verdict is the one picked in its panel, else Request changes while notes wait, else the
+  approval the viewer may send, else Comment only; it follows each note added or removed.
+- **Who gets it:** whoever may send a verdict on the item (`verdictsFor`); someone who may only
+  comment, once something of theirs waits to be sent.
+- **Its panel** opens under it and never moves the page; one is open at a time, closed by Esc, a
+  click outside it or **Keep drafting**, and kept through the page's redraws: on a change, how many
+  of the changes to look at were looked at, a bar, and the ones not looked at as chips that open them
+  (else "✓ All looked at"); each note and Looks good waiting (a Looks good on an unchanged screen is not counted), with what it is about (a change's opens
+  it) and ✕; else a line saying where notes come from; the verdicts as one control, each with its
+  line under it; a note for the whole feedback; and the send button in the verdict's colour (`Request
+  changes · 2`, `Approve with 2 notes`, `Approve for dev`, `Send comments`).
+- **The verdicts**, the viewer's own: **Request changes** (with options drawn on a request; on a
+  change for who may handle it), the approval — **Approve** in Design review, **Approve for dev** in
+  Dev review and, for the UI dev owner, before design — and **Comment only**. Look edits and comments
+  to work in say they go only with Request changes; a change whose review goes to GitHub says so.
+- **Sending:** an approval with nothing drafted and no note is the approval alone (a request's asks
+  its questions; a change's marks it handled). Approving a request is the usual approval first, its
+  own questions included, then the feedback; Approve for dev is the approval sent For Developers, the
+  feedback going with it as an approval. Request changes or Comment only with nothing to send says
+  to write a note first.
+
 ## The element dialog
 
 A part under **All elements** opens in one dialog, the same in simple and full mode:
@@ -402,7 +432,9 @@ A part under **All elements** opens in one dialog, the same in simple and full m
   opens that view first, once the design's review bar has made its view buttons. The tiles under
   All elements are drawn the same way; an enlarged part opens its view and is laid out wide too.
 - **Its header stays** at the top while the dialog scrolls: the part's name and chips, **Open in
-  design workspace**, the way to the option's other elements and Close. **‹ n of m ›** steps
+  design workspace**, **Submit feedback** ([Submit feedback](#submit-feedback): the feedback is sent
+  from the dialog, which closes once it is), the way to the option's other elements and Close. It
+  opens with the cursor in its comment box. **‹ n of m ›** steps
   through the option's elements in the order of its All elements tiles (a part it leaves out is
   skipped), round from the last to the first; each arrow names the element it opens. Another
   element opens as designed, at the top; what someone was writing on a part stays with it, and is
@@ -648,8 +680,10 @@ Every change to the page keeps to one scale; `desk/tests/page.test.mjs` fails on
 - **Text:** only the `--fs-*` tokens: `title` 26, `head` 17, `ui` 14, `meta` 12.5, `micro` 11.
   Weights 400, 500, 600; nothing bolder. One family: `--font`, `--mono` for code. Which size and
   weight a thing takes: the guidelines (Type).
-- **Moving on:** every button that moves an item forward — Approve, Propose, Send to design, Keep
-  for developers, Send to developers, a change's Approve — is Approved's green, outside a ⋯ menu.
+- **Moving on:** every button that approves an item — Approve, Approve for dev, Send to developers,
+  a change's Approve, Looks good — is Approved's green, outside a ⋯ menu.
+  **Propose** and **Send to design** only send it on to the next review: outlined, with a paper plane.
+  **Submit feedback** wears the colour of the verdict it sends ([Submit feedback](#submit-feedback)).
 - **Corners:** two, `--r-sm` 6 and `--radius` 12, and two shapes, `999px` and `50%`; nothing
   else. Which a thing takes: the guidelines (Corners).
 - **Space:** multiples of 4 (4, 8, 12, 16, 24, 32); 1 or 2px only as a hairline or a nudge. Which

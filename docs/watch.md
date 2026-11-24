@@ -39,7 +39,9 @@ steps say; the decision notes of step 4 are always yours to read.
    here. A change behind a flag that is on for some users is a card, and says so.
 6. **Screens**, best source first; each screen is a JPEG under 700 KB with a one-line caption:
    1. The images the PR carries: `design pr-shots <repo> <pr> /tmp/design-desk-<pr>/shots`.
-      Use those that show the change; drop logos, diagrams and terminal output.
+      Use those that show the change; drop logos, diagrams and terminal output. One its caption
+      or the pull request says shows a screen unchanged gets `unchanged: true`, one it says the
+      change adds `new: true` ([screens.md](screens.md) → What changed).
    2. The screens instance (`screens: enabled`): the merged change on `main`, an open pull
       request on its own `pr<n>`, with a shot list and a recipe ([screens.md](screens.md)).
       The card gets the instance's link and demo account, so people try it and add pictures.
