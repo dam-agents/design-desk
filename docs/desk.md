@@ -524,7 +524,7 @@ draft becomes its own conversation tagged `review`, all or none. The verdicts:
 
 - **Request changes** — on a request, by whoever may write a change note: the drafts are
   change notes (one without an option goes on the option shown), queued as one `revise`; a
-  note alone becomes one. On a change, by whoever may mark it handled: the drafts are comments,
+  note alone becomes one, and the page shows its words there only, not again as the review's note. On a change, by whoever may mark it handled: the drafts are comments,
   and the review keeps the pull request's head commit (`sha`) the Desk last read, or the first it
   reads, until its post names the last commit from before it (judged by the next read, never the post).
 - **Approve** — on a change, by whoever may mark it handled: it is marked handled. On a request,

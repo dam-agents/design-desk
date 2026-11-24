@@ -4716,6 +4716,24 @@ test("simple mode: a sent review is one block with its comments; a change that w
   assert.equal(await desk.locator("#detail .sthreads > .sthread").count(), 1, "the other comment stays on its own");
 }));
 
+// Request changes with a note alone: the note is the change note, its words shown once (#221).
+const noteAlone = { ...drawn, id: "R-9", title: "Note alone",
+  reviews: [{ id: "U-2", by: { email: "d.k@example.com", name: "Dana Kim", role: "designer" }, at: "2026-11-18T10:00:00Z", verdict: "request-changes", note: "Remove the coloured bars.\n\nTone down the warning.", threads: ["T-31"] }],
+  threads: [{ id: "T-31", kind: "change", review: "U-2", state: "resolved", anchor: { variant: "v1" }, may: { reply: true, resolve: true }, messages: [{ by: { email: "d.k@example.com", role: "designer" }, at: "2026-11-18T10:00:00Z", text: "Remove the coloured bars.\n\nTone down the warning." }] }] };
+
+for (const simple of [true, false])
+  test(`${simple ? "simple" : "full"} mode shows a Request changes note sent alone once, as its change note; a note with comments stays above them`, (t) => open(t, REVIEW_DESK({ ...HEAD_ME, simple, simFilter: null }, [noteAlone, reviewed]), async (desk) => {
+    await desk.evaluate(() => localStorage.setItem("desk-simFilter", JSON.stringify({ states: ["open", "dev", "closed"], kinds: ["request", "change"] })));
+    await desk.evaluate(() => { location.hash = "#R-9"; });
+    await desk.waitForSelector("#detail .rvw", { state: "attached" });
+    assert.equal(await desk.locator("#detail .rvw .rv-note").count(), 0, "no note above its own change note");
+    assert.equal(await desk.locator("#detail .rvw :is(.sthread, .thread)").count(), 1, "its change note");
+    assert.match(await desk.textContent("#detail .rvw :is(.sthread, .thread)"), /Remove the coloured bars/, "the words in the change note");
+    await desk.evaluate(() => { location.hash = "#P-8"; });
+    await desk.waitForFunction(() => document.querySelector("#detail .rvw")?.id === "rv-U-1");
+    assert.match(await desk.textContent("#detail .rvw .rv-note"), /Two things\./, "a note with its own comments stays");
+  }));
+
 test("full mode shows a sent review as one block in the conversation", (t) => open(t, REVIEW_DESK({ ...HEAD_ME, simple: false }, [{ ...reviewed, status: "new" }]), async (desk) => {
   await desk.evaluate(() => { location.hash = "#P-8"; });
   await desk.waitForSelector("#detail .rvw", { state: "attached" });
