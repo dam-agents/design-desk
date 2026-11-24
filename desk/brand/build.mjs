@@ -71,79 +71,45 @@ export const AVATAR_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 
 export const MARK_INLINE = `<svg class="dd-mark" viewBox="0 0 24 24" aria-hidden="true">${paths(PIECES_SMALL)}</svg>`;
 
 /**
- * The spinner (.dd-spin): the small mark, calm and slow. Four phrases of eight beats (SPIN_BEAT s
- * each): the first D turns round and the two close into a circle; it holds; the circle turns a
- * quarter; it holds; the D turns back and it opens into DD, a quarter on from where it began; three
- * beats of rest. After the four it stands as it began. Every turn pivots on a fixed point (a group
- * moved there, so the browser never measures a box mid-motion and nothing drifts).
- * SPIN_BOUNCE is the other one, to compare: the upper pieces rise and fall one after the other,
- * then the lower ones dip and come back, like jumping dots.
+ * The spinner (.dd-spin): the small mark, calm, in two phrases of SPIN_PHRASE beats (SPIN_BEAT s
+ * each). In each, the two pieces on top rise and settle one after the other, then the two below
+ * dip and come back, like jumping dots; then the first D turns round — closing the two into a
+ * circle in the first phrase, opening it into DD in the second; then rest. Nothing turns as a
+ * whole. The D turns about a fixed line (a group moved there), so nothing drifts.
  * The SVG carries its own motion and is the CSS mask of .dd-spin, whose colour is the page's;
  * SPIN_STILL is the mark at rest, for a spinner that waits (.queued). The mark fills SPIN_SIZE.
  */
 export const SPIN_BEAT = 0.8;
+export const SPIN_PHRASE = 6;
 export const SPIN_SIZE = 0.8;
-const PHRASE = 8, BEATS = 4 * PHRASE, MOVE = 0.65; // a move takes 0.65 s of its beat
-const at = (beat) => f((beat * 100) / BEATS), end = (beat) => f(((beat + MOVE / SPIN_BEAT) * 100) / BEATS);
-const LOOP = f(BEATS * SPIN_BEAT), EASE = "cubic-bezier(.65,0,.35,1)";
-// The first D closes on beat 0 of each phrase and opens on beat 4; the circle turns on beat 2.
-const closeKeys = [0, 1, 2, 3].map((p) => `${at(PHRASE * p)}%{transform:scaleX(1)}${end(PHRASE * p)}%,${at(PHRASE * p + 4)}%{transform:scaleX(-1)}${end(PHRASE * p + 4)}%{transform:scaleX(1)}`).join("");
-const turnKeys = [0, 1, 2, 3].map((p) => `${at(PHRASE * p + 2)}%{transform:rotate(${90 * p}deg)}${end(PHRASE * p + 2)}%{transform:rotate(${90 * (p + 1)}deg)}`).join("");
-const box = f(24 / SPIN_SIZE), pad = f((box - 24) / 2), mid = f(box / 2);
+const FLIP_AT = 3, MOVE = 0.65;                            // the flip: on beat 3, taking 0.65 s
+const UP = 1.9, STAGGER = 0.28, RISE = 0.38, FALL = 0.46;  // the bounce: height and timing, s
+const LOOP = f(2 * SPIN_PHRASE * SPIN_BEAT), EASE = "cubic-bezier(.65,0,.35,1)";
+const pc = (sec) => f((sec * 100) / LOOP);
+const box = f(24 / SPIN_SIZE), pad = f((box - 24) / 2);
 const lCx = f(C + leftMid(SMALL)); // the first D's own centre line
-const piecesOfD = (ks) => ks.map((k) => `<path d="${PIECES_SMALL[k]}"/>`).join("");
-// A group pivots on its own origin: move it to the pivot, turn it, move its drawing back.
-const pivot = (x, y, cls, inner) => `<g transform="translate(${x} ${y})"><g class="${cls}"><g transform="translate(${-x} ${-y})">${inner}</g></g></g>`;
-const svgOf = (css, body) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${box} ${box}"><style>g[class]{transform-origin:0 0;transform-box:view-box}${css}</style><g transform="translate(${pad} ${pad})">${body}</g></svg>`;
-export const SPIN_FLIP = svgOf(
-  `.a,.l{animation:${LOOP}s ${EASE} infinite}.a{animation-name:t}.l{animation-name:l}@keyframes t{0%{transform:rotate(0)}${turnKeys}100%{transform:rotate(360deg)}}@keyframes l{0%{transform:scaleX(1)}${closeKeys}100%{transform:scaleX(1)}}@media (prefers-reduced-motion:reduce){.a,.l{animation-duration:${f(LOOP * 2)}s}}`,
-  pivot(C, C, "a", pivot(lCx, C, "l", piecesOfD(["tl", "bl"])) + piecesOfD(["tr", "br"])),
-);
-
-// The two together (SPIN_SVG): each phrase bounces, flips and turns. Phrase p (0-3): the pieces on
-// top rise one after the other, then the lower ones dip (always up and down on the screen, whichever
-// pieces are where after the turns and flips so far); the first D turns round (closing the circle
-// in phrases 0 and 2, opening it in 1 and 3); the whole turns a quarter; a beat of rest.
-const J = { beats: 8, bounceAt: 0, flipAt: 3, turnAt: 5 }; // in beats of SPIN_BEAT
-const JB = J.beats * 4, JLOOP = f(JB * SPIN_BEAT);
-const jt = (sec) => f((sec * 100) / JLOOP); // seconds into the loop → per cent
-const jbeat = (b) => b * SPIN_BEAT;
-const UP = 1.9, STAGGER = 0.28, RISE = 0.38, FALL = 0.46; // bounce height and timing, s
-const centreOf = { tl: [-6, -6], bl: [-6, 6], tr: [6, -6], br: [6, 6] }; // each piece's side of the mark
-const turnPt = ([x, y], deg) => { const r = (deg * Math.PI) / 180, c = Math.round(Math.cos(r)), si = Math.round(Math.sin(r)); return [x * c - y * si, x * si + y * c]; };
-function jumpKeys(k) {
-  const left = k === "tl" || k === "bl", frames = ["0%{transform:translate(0,0)}"];
-  for (let p = 0; p < 4; p++) {
-    const turned = 90 * p, closed = p % 2 === 1;
-    const [sx, sy] = turnPt(centreOf[k], turned); // where the piece is on the screen now
-    // Its order: top left, top right, bottom left, bottom right; up on top, down below.
-    const order = (sy < 0 ? 0 : 2) + (sx < 0 ? 0 : 1), dir = sy < 0 ? -1 : 1;
-    // The screen's up or down, in the piece's own coordinates: undo the turn, then the flip.
-    let [lx, ly] = turnPt([0, dir * UP], -turned);
-    if (left && closed) lx = -lx;
-    const t0 = jbeat(J.beats * p + J.bounceAt) + order * STAGGER;
-    frames.push(`${jt(t0)}%{transform:translate(0,0)}`, `${jt(t0 + RISE)}%{transform:translate(${f(lx)}px,${f(ly)}px)}`, `${jt(t0 + RISE + FALL)}%{transform:translate(0,0)}`);
+// The pieces, in the order they bounce: on top left to right, then below.
+const BOUNCE_ORDER = ["tl", "tr", "bl", "br"];
+function bounceKeys(k) {
+  const i = BOUNCE_ORDER.indexOf(k), dir = i < 2 ? -1 : 1, frames = ["0%{transform:translateY(0)}"];
+  for (const p of [0, 1]) {
+    // Closed (the second phrase), the first D's pieces are turned round: up and down stay up and down.
+    const t0 = p * SPIN_PHRASE * SPIN_BEAT + i * STAGGER;
+    frames.push(`${pc(t0)}%{transform:translateY(0)}`, `${pc(t0 + RISE)}%{transform:translateY(${f(dir * UP)}px)}`, `${pc(t0 + RISE + FALL)}%{transform:translateY(0)}`);
   }
-  return frames.join("") + "100%{transform:translate(0,0)}";
+  return frames.join("") + "100%{transform:translateY(0)}";
 }
-const jFlip = [0, 1, 2, 3].map((p) => { const b = J.beats * p + J.flipAt, from = p % 2 ? -1 : 1; return `${jt(jbeat(b))}%{transform:scaleX(${from})}${jt(jbeat(b) + MOVE)}%{transform:scaleX(${-from})}`; }).join("");
-const jTurn = [0, 1, 2, 3].map((p) => { const b = J.beats * p + J.turnAt; return `${jt(jbeat(b))}%{transform:rotate(${90 * p}deg)}${jt(jbeat(b) + MOVE)}%{transform:rotate(${90 * (p + 1)}deg)}`; }).join("");
+const flipAt = (p) => (p * SPIN_PHRASE + FLIP_AT) * SPIN_BEAT;
+const flipKeys = `0%,${pc(flipAt(0))}%{transform:scaleX(1)}${pc(flipAt(0) + MOVE)}%,${pc(flipAt(1))}%{transform:scaleX(-1)}${pc(flipAt(1) + MOVE)}%,100%{transform:scaleX(1)}`;
+const piece = (k) => `<path class="p ${k}" d="${PIECES_SMALL[k]}"/>`;
+const svgOf = (css, body) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${box} ${box}"><style>g[class]{transform-origin:0 0;transform-box:view-box}${css}</style><g transform="translate(${pad} ${pad})">${body}</g></svg>`;
 export const SPIN_SVG = svgOf(
-  `.a,.l{animation:${JLOOP}s ${EASE} infinite}.a{animation-name:t}.l{animation-name:l}.p{animation:${JLOOP}s cubic-bezier(.45,0,.55,1) infinite}@keyframes t{0%{transform:rotate(0)}${jTurn}100%{transform:rotate(360deg)}}@keyframes l{0%{transform:scaleX(1)}${jFlip}100%{transform:scaleX(1)}}${ORDER.map((k) => `.${k}{animation-name:j${k}}@keyframes j${k}{${jumpKeys(k)}}`).join("")}@media (prefers-reduced-motion:reduce){.a,.l,.p{animation-duration:${f(JLOOP * 2)}s}}`,
-  pivot(C, C, "a", pivot(lCx, C, "l", ["tl", "bl"].map((k) => `<path class="p ${k}" d="${PIECES_SMALL[k]}"/>`).join("")) + ["tr", "br"].map((k) => `<path class="p ${k}" d="${PIECES_SMALL[k]}"/>`).join("")),
-);
-// Bounce: 2.4 s; top left rises, then top right; bottom left dips, then bottom right; a rest.
-const BOUNCE = 2.4, LIFT = 2.2;
-const bounce = (start, dir) => { const s0 = f(start), up = f(start + 12), back = f(start + 26); return `0%,${s0}%{transform:translateY(0)}${up}%{transform:translateY(${f(dir * LIFT)}px)}${back}%,100%{transform:translateY(0)}`; };
-export const SPIN_BOUNCE = svgOf(
-  `.p{animation:${BOUNCE}s cubic-bezier(.45,0,.55,1) infinite}${[["tl", 0, -1], ["tr", 12, -1], ["bl", 36, 1], ["br", 48, 1]].map(([k, s0, d]) => `.${k}{animation-name:${k}}@keyframes ${k}{${bounce(s0, d)}}`).join("")}@media (prefers-reduced-motion:reduce){.p{animation-duration:${f(BOUNCE * 2)}s}}`,
-  ORDER.map((k) => `<path class="p ${k}" d="${PIECES_SMALL[k]}"/>`).join(""),
+  `.l{animation:l ${LOOP}s ${EASE} infinite}.p{animation:${LOOP}s cubic-bezier(.45,0,.55,1) infinite}@keyframes l{${flipKeys}}${ORDER.map((k) => `.${k}{animation-name:b${k}}@keyframes b${k}{${bounceKeys(k)}}`).join("")}@media (prefers-reduced-motion:reduce){.l,.p{animation-duration:${f(LOOP * 2)}s}}`,
+  `<g transform="translate(${lCx} ${C})"><g class="l"><g transform="translate(${-lCx} ${-C})">${piece("tl")}${piece("bl")}</g></g></g>${piece("tr")}${piece("br")}`,
 );
 const dataUrl = (svg) => `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
 export const SPIN_MASK = dataUrl(SPIN_SVG);
-export const SPIN_BOUNCE_MASK = dataUrl(SPIN_BOUNCE);
-export const SPIN_FLIP_MASK = dataUrl(SPIN_FLIP);
-export const SPIN_STILL = dataUrl(svgOf("", piecesOfD(ORDER)));
+export const SPIN_STILL = dataUrl(svgOf("", ORDER.map((k) => `<path d="${PIECES_SMALL[k]}"/>`).join("")));
 /** A mask in a JS string's single quotes (the prototype overlay's own copy). */
 export const sq = (s) => s.replace(/"/g, "'");
 
