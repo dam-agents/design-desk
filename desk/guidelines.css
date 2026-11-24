@@ -1,7 +1,7 @@
 /* desk/page.html's own <style>, copied by `node desk/dev/guidelines.mjs` for desk/guidelines.html; never edit it here. */
   :root {
-    /* Design Desk's mark (desk/brand/mark.svg): its gradient's four stops and its D's. */
-    --mk-s0: #139a9c; --mk-s1: #2f5bd3; --mk-s2: #7a45d0; --mk-s3: #c94a98; --mk-d: #ffffff;
+    /* Design Desk's mark (desk/brand/mark.svg): its disc and its D's. */
+    --mk-disc: #9a6200; --mk-d: #ffffff;
     --bg: #fcfbfc; --panel: #ffffff; --ink: #1b1b1a; --muted: #6b6b66; --line: #e4e3df; --soft: #f0efeb;
     --tip-opens: #6fd3a0; --accent: #2f5bd3; --accent-ink: #ffffff; --ok: #1f7a4d; --ok-soft: #e3f3ea; --warn: #9a6200; --warn-soft: #fbf0d9;
     --bad: #b3261e; --bad-soft: #fbe5e3; --info-soft: #e7edfc; --live: #6b3fc4; --live-soft: #efe8fb; --why: #0d7d78; --why-soft: #e0f3f1; --r-sm: 6px; --radius: 12px; --shadow: 0 1px 2px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.04);
@@ -17,12 +17,12 @@
   @media (min-width: 2200px) { :root { --measure: 150ch; --pad-x: 64px; --list-w: 550px; --side-w: 520px; --shot-w: 400px; --shot-h: 440px; } }
   /* Night follows the system unless the header switch chose a mode (data-theme). */
   @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) { --mk-s0: #6ad6d8; --mk-s1: #86a3ff; --mk-s2: #b48dff; --mk-s3: #f08ccc; --mk-d: #1b1b1a;
+    :root:not([data-theme="light"]) { --mk-disc: #f0c060; --mk-d: #1b1b1a;
       --bg: #151514; --panel: #1e1e1c; --ink: #ecebe7; --muted: #a09f99; --line: #33332f; --soft: #262624;
       --tip-opens: #1f7a4d; --accent: #8aa8ff; --accent-ink: #10142a; --ok: #6fd3a0; --ok-soft: #1c2f25; --warn: #f0c060; --warn-soft: #34291a;
       --bad: #ff8a80; --bad-soft: #3a1f1d; --info-soft: #1f2640; --live: #c3a6ff; --live-soft: #2a2140; --why: #62d2c8; --why-soft: #16302e; --shadow: none; --float: 0 0 0 1px rgba(255,255,255,.10), 0 14px 36px rgba(0,0,0,.6), 0 36px 90px rgba(0,0,0,.7); color-scheme: dark; }
   }
-  :root[data-theme="dark"] { --mk-s0: #6ad6d8; --mk-s1: #86a3ff; --mk-s2: #b48dff; --mk-s3: #f08ccc; --mk-d: #1b1b1a;
+  :root[data-theme="dark"] { --mk-disc: #f0c060; --mk-d: #1b1b1a;
     --bg: #151514; --panel: #1e1e1c; --ink: #ecebe7; --muted: #a09f99; --line: #33332f; --soft: #262624;
     --tip-opens: #1f7a4d; --accent: #8aa8ff; --accent-ink: #10142a; --ok: #6fd3a0; --ok-soft: #1c2f25; --warn: #f0c060; --warn-soft: #34291a;
     --bad: #ff8a80; --bad-soft: #3a1f1d; --info-soft: #1f2640; --live: #c3a6ff; --live-soft: #2a2140; --why: #62d2c8; --why-soft: #16302e; --shadow: none; --float: 0 0 0 1px rgba(255,255,255,.10), 0 14px 36px rgba(0,0,0,.6), 0 36px 90px rgba(0,0,0,.7); color-scheme: dark; }
@@ -45,7 +45,7 @@
   header h1 { font-size: var(--fs-ui); margin: 0; font-weight: 600; letter-spacing: .01em; }
   /* Requests leads the menu; the other tabs are smaller, their counts grey. */
   nav { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
-  nav button { border: 0; background: transparent; padding: 8px 12px; border-radius: var(--r-sm); cursor: pointer; color: var(--muted); font-size: var(--fs-meta); }
+  nav button { border: 0; background: transparent; height: 32px; padding: 0 12px; border-radius: var(--r-sm); cursor: pointer; color: var(--muted); font-size: var(--fs-meta); }
   nav button[aria-current="true"] { background: var(--soft); color: var(--ink); font-weight: 600; }
   nav .sep, header > .head-sep { width: 1px; height: 18px; background: var(--line); margin: 0 8px; }
   /* New request sits right after the tabs, behind one more separator. */
@@ -1873,8 +1873,8 @@
   /* Design Desk at work: the DD pair. The Ds flip one at a time and rest in three ways: as DD, with the
      round sides out, with the round sides in; back as DD, the pair turns once round. Its size follows the
      font size, its color the text color. Queued: still and faint. */
-  /* Design Desk at work: the DD pair, as before #215, in the mark's blue (--accent). */
-  .dd-spin { position: relative; display: inline-block; width: 1.25em; height: 1.25em; flex: none; vertical-align: -0.25em; color: var(--accent); animation: dd-spin-turn 5s cubic-bezier(.65,0,.35,1) infinite; }
+  /* Design Desk at work: the DD pair, as before #215, in amber (--warn), the mark's colour. */
+  .dd-spin { position: relative; display: inline-block; width: 1.25em; height: 1.25em; flex: none; vertical-align: -0.25em; color: var(--warn); animation: dd-spin-turn 5s cubic-bezier(.65,0,.35,1) infinite; }
   .dd-spin::before, .dd-spin::after { content: ""; position: absolute; top: 29.167%; width: 37.5%; height: 41.667%; background: currentColor; border-radius: 0 999px 999px 0; animation: dd-spin-left 5s cubic-bezier(.65,0,.35,1) infinite; }
   .dd-spin::before { left: 7.5%; }
   .dd-spin::after { left: 55%; animation-name: dd-spin-right; }
@@ -1888,13 +1888,13 @@
   /* Design Desk's mark, wherever it speaks or acts (docs/desk-page.md → The mark). Its colours follow
      the mode; on the ink circle of its avatar (.mk-on-ink) it takes the other mode's. */
   svg.dd-mark { display: block; flex: none; }
-  svg.dd-mark path { stroke: none; }
-  svg.dd-mark .mk-s0 { stop-color: var(--mk-s0); } svg.dd-mark .mk-s1 { stop-color: var(--mk-s1); } svg.dd-mark .mk-s2 { stop-color: var(--mk-s2); } svg.dd-mark .mk-s3 { stop-color: var(--mk-s3); } svg.dd-mark .mk-d { fill: var(--mk-d); }
+  svg.dd-mark circle, svg.dd-mark path { stroke: none; }
+  svg.dd-mark .mk-disc { fill: var(--mk-disc); } svg.dd-mark .mk-d { fill: var(--mk-d); }
   /* As its avatar the mark is the circle itself. */
   .mk-on-ink { background: none; }
   /* As an avatar the mark fills its circle: 28px (.sav, .ask-avatar, the bell), 24px (.face), 18px (.msg-av). */
   .mk-on-ink svg.dd-mark { width: 28px; height: 28px; } .brief-k .face.mk-on-ink svg.dd-mark { width: 24px; height: 24px; } .msg .who .msg-av svg.dd-mark { width: 18px; height: 18px; }
-  header .brand { display: inline-grid; place-items: center; margin-right: 8px; border-radius: var(--r-sm); } header .brand svg.dd-mark { width: 22px; height: 22px; }
+  header .brand { display: inline-grid; place-items: center; margin-right: 8px; border-radius: var(--r-sm); } header .brand svg.dd-mark { width: 32px; height: 32px; }
   .msg .who .msg-av { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; vertical-align: -4px; margin-right: 8px; }
   .prov svg.dd-mark { width: 12px; height: 12px; }
   .banner .mk-off { display: inline-block; vertical-align: -3px; margin-right: 8px; filter: grayscale(1); opacity: .55; } .banner .mk-off svg.dd-mark { width: 16px; height: 16px; }
