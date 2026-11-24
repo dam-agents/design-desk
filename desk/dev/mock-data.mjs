@@ -273,7 +273,8 @@ const p4 = pr("P-4", 790, "Billing: copy fix in the footer", 60 * 48, { attentio
 const p5 = pr("P-5", 785, "Table: one more column", 60 * 3, { attention: { level: "developer", reasons: ["A column in an existing table."] } });
 
 // An open pull request with three changes (docs/desk-page.md → Simple mode → Changes): a screen
-// pair with the after picture's marks, then two lone screens, after only.
+// pair with the after picture's marks, then two lone screens, after only (the first one new),
+// and one that looks the same as before.
 const screen = (id, title, rows, accent = "#2f5bd3") => { A[id] = { id, contentType: "image/svg+xml", encoding: "utf8", data: `<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540"><rect width="960" height="540" fill="#f7f7f5"/><rect x="0" y="0" width="960" height="56" fill="#fff"/><text x="32" y="36" font-family="sans-serif" font-size="20" fill="#222">${title}</text>${rows.map((r, i) => `<rect x="32" y="${88 + i * 64}" width="896" height="52" rx="6" fill="#fff" stroke="#e3e3e0"/><text x="52" y="${120 + i * 64}" font-family="sans-serif" font-size="16" fill="#333">${r[0]}</text>${r[1] ? `<rect x="760" y="${100 + i * 64}" width="148" height="28" rx="14" fill="${accent}" opacity=".14"/><text x="776" y="${119 + i * 64}" font-family="sans-serif" font-size="14" fill="${accent}">${r[1]}</text>` : ""}`).join("")}</svg>` }; return id; };
 screen("A-agents-before", "Agents", [["Research helper"], ["Release notes"], ["Support triage"]]);
 screen("A-agents-after", "Agents", [["Research helper", "$4.60 of $5"], ["Release notes", "$0.80"], ["Support triage", "$2.10"]]);
@@ -282,8 +283,9 @@ screen("A-usage", "Usage", [["This week: $7.50", "3 agents"], ["Research helper:
 const p6 = pr("P-6", 815, "Agents: spend shown in the list", 12, { merged: false, summary: "Each agent's row shows what it spent this week, against its limit when it has one.",
   screens: [{ asset: "A-agents-before", stage: "before", pair: "Agents list", caption: "The list before", source: "instance" },
     { asset: "A-agents-after", stage: "after", pair: "Agents list", caption: "Each row shows its spend", source: "instance", marks: [{ x: 0.78, y: 0.17, w: 0.18, h: 0.38 }] },
-    { asset: "A-limit-dialog", caption: "The weekly limit dialog", source: "instance" },
-    { asset: "A-usage", caption: "The usage page", source: "pr" }] });
+    { asset: "A-limit-dialog", caption: "The weekly limit dialog", source: "instance", new: true },
+    { asset: "A-usage", caption: "The usage page", source: "pr" },
+    { asset: "A-agents-before", caption: "The agent's settings", source: "pr", unchanged: true }] });
 
 // Before design (docs/desk.md → Draft and Proposal): the mock's person's own draft, and Pat's
 // proposal; the page shows them to the roles that see them (?role=developer, ui-dev-owner, admin).

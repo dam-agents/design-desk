@@ -933,50 +933,62 @@ test("a change shows its age and gets handled, pictures step through, the form a
     await desk.click('[data-handle="1"]');
     assert.deepEqual(await sent("/api/cards/ch2/handled", 1), { handled: true });
 
-    // The change shown opens in the gallery; each change is a tab of its own (docs/desk-page.md → Changes).
-    assert.deepEqual(await desk.locator("#detail .chg-tabs button").allTextContents(), ["1The list", "2The card"]);
-    await desk.click('[data-zoom="A-1"]');
+    // Each change is a tile; one opens in the element's dialog, its pictures in the gallery (docs/desk-page.md → Changes).
+    assert.deepEqual(await desk.locator("#detail .chg-tiles .elname").allTextContents(), ["The list", "The card"]);
+    await desk.click('#detail [data-chg-open="A-1"]');
+    await desk.waitForSelector("#element-dialog[open] .cv-pair");
+    await desk.click('#element-dialog [data-zoom="A-1"]');
     await desk.waitForSelector(".zoom figcaption");
     assert.match(await desk.textContent(".zoom figcaption"), /The list/);
     await desk.press("body", "Escape");
-    assert.equal(await desk.locator(".zoom").count(), 0, "Escape closes the gallery");
+    await desk.waitForFunction(() => !document.querySelector(".zoom"));
+    assert.equal(await desk.locator("#element-dialog[open]").count(), 1, "Escape closes the gallery, not the dialog");
+
+    // Where the change is: outlined until the switch is off, and in the gallery too.
+    const mark = '#element-dialog .shot[data-zoom="A-1"] .mark';
+    assert.equal(await desk.isChecked("#element-dialog [data-outline]"), true, "outlines are on at first");
+    assert.equal(await desk.isVisible(mark), true);
+    assert.deepEqual(await desk.$eval(mark, (m) => [m.style.left, m.style.width]), ["25%", "50%"]);
+    await desk.uncheck("#element-dialog [data-outline]");
+    assert.equal(await desk.isVisible(mark), false, "unticked hides every outline");
+    await desk.check("#element-dialog [data-outline]");
+    await desk.click('#element-dialog [data-zoom="A-1"]');
+    await desk.waitForSelector(".zoom .mark", { state: "visible" });
+    await desk.press("body", "Escape");
+    await desk.waitForFunction(() => !document.querySelector(".zoom"));
+    await desk.click("#element-dialog [data-chg-nav=\"1\"]");
+    await desk.waitForSelector('#element-dialog .shot[data-zoom="A-2"]');
+    assert.equal(await desk.locator('#element-dialog .shot[data-zoom="A-2"] .mark').count(), 0, "a picture without marks has none");
+    await desk.click("#element-dialog [data-el-close]");
+    await desk.waitForFunction(() => !document.querySelector("#element-dialog[open]"));
 
     // The filters stay on one line in the list's width.
     assert.equal(new Set(await desk.$$eval("#list .filters .btn", (bs) => bs.map((b) => b.offsetTop))).size, 1, "the filters do not wrap");
-
-    // Where the change is: outlined until the switch is off, and in the gallery too.
-    const mark = '.shot[data-zoom="A-1"] .mark';
-    assert.equal(await desk.isChecked("[data-outline]"), true, "outlines are on at first");
-    assert.equal(await desk.isVisible(mark), true);
-    assert.deepEqual(await desk.$eval(mark, (m) => [m.style.left, m.style.width]), ["25%", "50%"]);
-    assert.equal(await desk.locator('.shot[data-zoom="A-2"] .mark').count(), 0, "a picture without marks has none");
-    await desk.uncheck("[data-outline]");
-    assert.equal(await desk.isVisible(mark), false, "unticked hides every outline");
-    await desk.check("[data-outline]");
-    await desk.click('[data-zoom="A-1"]');
-    await desk.waitForSelector(".zoom .mark", { state: "visible" });
-    await desk.press("body", "Escape");
 
     // A before picture keeps the after picture's marks only when the two are the same size.
     // ch4 is handled: it is listed under Handled.
     await desk.click('[data-filter="newFilter:handled"]');
     await desk.click('[data-card="ch4"]');
-    await desk.waitForFunction(() => document.querySelectorAll("figure[data-frame]").length === 0 && document.querySelector('[data-zoom="A-5"] img')?.naturalHeight);
-    assert.deepEqual(await desk.$$eval(".shot", (fs) => fs.map((f) => [f.dataset.zoom, f.querySelectorAll(".mark").length])), [["A-4", 1], ["A-5", 1]], "the same size: both keep them");
-    await desk.click('#detail .chg-tabs [data-chg="Taller"]');
-    await desk.waitForFunction(() => document.querySelectorAll("figure[data-frame]").length === 0 && document.querySelector('[data-zoom="A-7"] img')?.naturalHeight);
-    assert.deepEqual(await desk.$$eval(".shot", (fs) => fs.map((f) => [f.dataset.zoom, f.querySelectorAll(".mark").length])),
+    await desk.waitForSelector('#detail [data-chg-open="Same"]');
+    await desk.click('#detail [data-chg-open="Same"]');
+    await desk.waitForFunction(() => document.querySelectorAll("#element-dialog figure[data-frame]").length === 0 && document.querySelector('#element-dialog [data-zoom="A-5"] img')?.naturalHeight);
+    assert.deepEqual(await desk.$$eval("#element-dialog .shot", (fs) => fs.map((f) => [f.dataset.zoom, f.querySelectorAll(".mark").length])), [["A-4", 1], ["A-5", 1]], "the same size: both keep them");
+    await desk.click('#element-dialog [data-chg-nav="1"]');
+    await desk.waitForFunction(() => document.querySelectorAll("#element-dialog figure[data-frame]").length === 0 && document.querySelector('#element-dialog [data-zoom="A-7"] img')?.naturalHeight);
+    assert.deepEqual(await desk.$$eval("#element-dialog .shot", (fs) => fs.map((f) => [f.dataset.zoom, f.querySelectorAll(".mark").length])),
       [["A-6", 0], ["A-7", 1]], "the shorter before picture loses its frames");
-    assert.equal(await desk.getAttribute('[data-zoom="A-6"]', "data-marks"), null, "and the gallery draws none on it");
-    await desk.click('#detail .chg-tabs [data-chg="Same"]');
-    await desk.waitForSelector('[data-zoom="A-4"]');
+    assert.equal(await desk.getAttribute('#element-dialog [data-zoom="A-6"]', "data-marks"), null, "and the gallery draws none on it");
+    await desk.click('#element-dialog [data-chg-nav="-1"]');
+    await desk.waitForSelector('#element-dialog [data-zoom="A-4"]');
     // Until the sizes are compared, the frames stay hidden, on the card and in the gallery.
-    await desk.$eval('[data-zoom="A-4"]', (f) => { f.dataset.frame = "A-5"; });
-    assert.equal(await desk.isVisible('[data-zoom="A-4"] .mark'), false);
-    await desk.click('[data-zoom="A-4"]');
+    await desk.$eval('#element-dialog [data-zoom="A-4"]', (f) => { f.dataset.frame = "A-5"; });
+    assert.equal(await desk.isVisible('#element-dialog [data-zoom="A-4"] .mark'), false);
+    await desk.click('#element-dialog [data-zoom="A-4"]');
     await desk.waitForSelector(".zoom img");
     assert.equal(await desk.locator(".zoom .mark").count(), 0);
     await desk.press("body", "Escape");
+    await desk.waitForFunction(() => !document.querySelector(".zoom"));
+    await desk.click("#element-dialog [data-el-close]");
     await desk.click('[data-filter="newFilter:open"]');
     await desk.click('[data-card="ch2"]');
     await desk.waitForSelector(".impact", { state: "attached" });
@@ -2388,10 +2400,12 @@ test("an element's dialog keeps its header and steps to the option's other eleme
     await desk.click('[data-card="r7"]');
     await desk.click('#detail [data-el="card"]');
     await desk.waitForSelector("#element-dialog[open] .el-nav");
+    assert.equal(await desk.evaluate(() => document.activeElement?.id), "el-text", "it opens with the cursor in its comment box");
+    assert.equal(await desk.locator('#element-dialog .elbar [data-fb="dlg"]').count(), 1, "Submit feedback in its head: the feedback is sent from the dialog");
     const head = () => desk.$eval("#element-dialog .elbar", (b) => [b.querySelector("h2").textContent, b.querySelector(".el-nav .pl-v").textContent, b.querySelector('[data-el-nav="-1"]').dataset.tip, b.querySelector('[data-el-nav="1"]').dataset.tip]);
     assert.equal(await desk.$eval("#element-dialog .elbar", (b) => getComputedStyle(b).position), "sticky", "the header stays while the dialog scrolls");
     // Its controls are one height; the way into the workspace has its fill and no border there.
-    assert.deepEqual(await desk.$eval("#element-dialog .el-acts", (a) => [...a.children].map((x) => Math.round(x.getBoundingClientRect().height))), [32, 32, 32]);
+    assert.deepEqual(await desk.$eval("#element-dialog .el-acts", (a) => [...a.children].map((x) => Math.round(x.getBoundingClientRect().height))), [32, 32, 32, 32], "Submit feedback among them");
     assert.equal(await desk.$eval("#element-dialog .el-acts .ws-way", (x) => getComputedStyle(x).borderTopWidth), "0px");
     assert.deepEqual(await head(), ["Agent card", "1 of 3", "Previous: Added note", "Next: Limit label"]);
     await desk.selectOption("#el-state", "hover");
@@ -4030,8 +4044,9 @@ test("a caption that only repeats its stage is not said twice", (t) => open(t, D
   screens: [{ asset: "A-1", caption: "Before", stage: "before", pair: "home" }, { asset: "A-2", caption: "After the redesign", stage: "after", pair: "home" }] }]), async (desk) => {
   await desk.click('[data-tab="new"]');
   await desk.click('#list [data-card="ch1"]');
-  await desk.waitForSelector("#detail figcaption");
-  const caps = await desk.$$eval("#detail .cv-col", (els) => els.map((e) => e.textContent.replace(/\s+/g, " ").trim()));
+  await desk.click('#detail [data-chg-open="home"]');
+  await desk.waitForSelector("#element-dialog figcaption");
+  const caps = await desk.$$eval("#element-dialog .cv-col", (els) => els.map((e) => e.textContent.replace(/\s+/g, " ").trim()));
   assert.doesNotMatch(caps[0], /Before Before/, "Before under Before is said once");
   assert.match(caps[1], /^After ?After the redesign/, "a caption that says more stays");
 }));
@@ -4448,7 +4463,13 @@ const slackDraft = { ...drawn, id: "R-6", title: "From Slack", status: "spec", a
 const prChange = { id: "P-3", kind: "change", title: "A new toggle row", status: "new", created: "2026-11-18T08:00:00Z", updated: "2026-11-18T08:00:00Z",
   source: { kind: "pr", pr: 812, url: "https://github.com/o/r/pull/812", draft: true, author: "dana-dev" }, attention: { level: "designer", reasons: ["New"] }, threads: [], waiting: [], screens: [] };
 
-test("simple mode heads a request with its number, link, state, author and two moves; Approve sends as soon as the spec is written", (t) => open(t, HEAD_DESK(HEAD_ME, [drawn, slackDraft, prChange]), async (desk) => {
+const shActs = (desk) => desk.$$eval("#detail .sh-acts > .btn, #detail .sh-acts > .fbw > .btn", (xs) => xs.map((x) => x.childNodes.length ? [...x.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join("").trim() : ""));
+// Submit feedback's panel (docs/desk-page.md → Submit feedback): opened from where it stands, its verdicts by id.
+const openFeedback = async (desk, where = "head") => { await desk.click(`[data-fb="${where}"]`); await desk.waitForSelector(".fb-pop"); };
+const verdicts = (desk) => desk.$$eval(".fb-pop [data-fb-v]", (xs) => xs.map((x) => x.dataset.fbV));
+const picked = (desk) => desk.$eval('.fb-pop [data-fb-v][aria-checked="true"]', (x) => x.dataset.fbV);
+
+test("simple mode heads a request with its number, link, state, author and Submit feedback; its Approve sends as soon as the spec is written", (t) => open(t, HEAD_DESK(HEAD_ME, [drawn, slackDraft, prChange]), async (desk) => {
   await desk.waitForSelector('#list [data-card="R-5"]');
   await desk.click('#list [data-card="R-5"]');
   await desk.waitForSelector("#detail .shead");
@@ -4456,9 +4477,14 @@ test("simple mode heads a request with its number, link, state, author and two m
   assert.equal(await desk.locator("#detail .shead h2 [data-copy-link]").count(), 1, "and the link icon that copies its link");
   assert.match(await desk.textContent("#detail .sh-line"), /Design review[\s\S]*jana\.novak[\s\S]*\d:\d\d [AP]M/, "its state, who (no name: the part before the @) and when");
   assert.doesNotMatch(await desk.textContent("#detail .sh-line"), /@example\.com/, "never a whole address");
-  assert.deepEqual(await desk.$$eval("#detail .sh-acts > .btn", (xs) => xs.map((x) => x.textContent.trim())), ["Request changes", "Approve"]);
+  assert.deepEqual(await shActs(desk), ["Submit feedback"], "Request changes and Approve are in Submit feedback");
+  assert.equal(await desk.getAttribute('#detail [data-fb="head"]', "data-v"), "ok", "green with nothing drafted: it would approve");
   assert.equal(await desk.locator("#detail .status.req").count(), 0, "no status box in simple mode");
-  await desk.click('#detail .sh-acts [data-act="approve"]');
+  await openFeedback(desk);
+  assert.deepEqual(await verdicts(desk), ["request-changes", "approve", "comment"]);
+  assert.equal(await picked(desk), "approve");
+  await desk.click(".fb-pop [data-fb-send]");
+  await desk.waitForSelector("#confirm-dialog[open]");
   assert.equal(await desk.locator("#cf-check2-wrap").isHidden(), true, "no box to tick: it goes as soon as it is written");
   assert.match(await desk.textContent("#cf-body"), /as soon as it is written/);
   await desk.click("#cf-ok");
@@ -4468,14 +4494,18 @@ test("simple mode heads a request with its number, link, state, author and two m
 
 // Dev review after design opened: a For Developers request or change has the proposal's two moves,
 // Approve for dev (a change: Approve) and Send to design, the move to For Designers.
-test("simple mode: a For Developers item in Dev review offers Approve for dev and Send to design", (t) => open(t, HEAD_DESK({ ...HEAD_ME, role: "ui-dev-owner",
+test("simple mode: a For Developers item in Dev review offers Send to design, and Approve for dev in Submit feedback", (t) => open(t, HEAD_DESK({ ...HEAD_ME, role: "ui-dev-owner",
   can: { comment: true, change: true, size: true, "handle-small": true } }, [{ ...drawn, size: { small: true } }, { ...prChange, attention: { level: "developer", reasons: ["Copy"] } }]), async (desk) => {
   await desk.waitForSelector('#list [data-card="R-5"]');
   await desk.click('#list [data-card="R-5"]');
   await desk.waitForSelector("#detail .shead");
   assert.match(await desk.textContent("#detail .sh-line .spill"), /Proposal/);
-  assert.deepEqual(await desk.$$eval("#detail .sh-acts > .btn", (xs) => xs.map((x) => x.textContent.trim())), ["Approve for dev", "Send to design"]);
-  assert.equal(await desk.locator('#detail .sh-more [data-review="request-changes"]').count(), 1, "Request changes under ⋯");
+  assert.deepEqual(await shActs(desk), ["Send to design", "Submit feedback"]);
+  assert.equal(await desk.locator('#detail .sh-acts > [data-size="designer"] svg.ico').count(), 1, "Send to design carries its paper plane");
+  await openFeedback(desk);
+  assert.deepEqual(await desk.locator(".fb-pop [data-fb-v]").allTextContents(), ["Request changes", "Approve for dev", "Comment only"], "its approval is Approve for dev");
+  await desk.keyboard.press("Escape");
+  await desk.waitForFunction(() => !document.querySelector(".fb-pop"));
   await desk.click('#detail .sh-acts > [data-size="designer"]');
   await desk.waitForSelector("#confirm-dialog[open]");
   assert.equal(await desk.textContent("#cf-title"), "Send it to design?");
@@ -4484,28 +4514,37 @@ test("simple mode: a For Developers item in Dev review offers Approve for dev an
   await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/R-5/size"));
   assert.deepEqual(await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/R-5/size").body), { small: false });
   await desk.evaluate(() => { location.hash = "#P-3"; });
-  await desk.waitForSelector('#detail .shead [data-handle="1"]');
+  await desk.waitForFunction(() => /A new toggle row/.test(document.querySelector("#detail .shead h2")?.textContent || ""));
   assert.match(await desk.textContent("#detail .sh-line .spill"), /Dev review/, "a change is no proposal");
   assert.equal(await desk.$eval("#detail .sh-line", (l) => l.querySelector(".sh-pr").getBoundingClientRect().height === l.querySelector(".spill").getBoundingClientRect().height), true, "its pull request's pill as tall as its state's");
-  assert.deepEqual(await desk.$$eval("#detail .sh-acts > .btn", (xs) => xs.map((x) => x.textContent.trim())), ["Approve", "Send to design"]);
+  assert.deepEqual(await shActs(desk), ["Send to design", "Submit feedback"]);
+  // A change's Approve with nothing drafted marks it handled, without a review.
+  await openFeedback(desk);
+  assert.equal(await picked(desk), "approve");
+  await desk.click(".fb-pop [data-fb-send]");
+  await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/P-3/handled"));
+  assert.deepEqual(await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/P-3/handled").body), { handled: true });
+  assert.equal(await desk.evaluate(() => posts.some((p) => /reviews$/.test(p.path))), false);
 }));
 
-test("simple mode's Request changes opens the review: a note alone is sent with the verdict; ⋯ holds Close", (t) => open(t, HEAD_DESK(HEAD_ME, [drawn]), async (desk) => {
+test("simple mode's Submit feedback: Request changes with a note alone is sent with the verdict; nothing to send says so; ⋯ holds Close", (t) => open(t, HEAD_DESK(HEAD_ME, [drawn]), async (desk) => {
   await desk.waitForSelector('#list [data-card="R-5"]');
   await desk.click('#list [data-card="R-5"]');
   await desk.waitForSelector("#detail .shead");
   await desk.click("#detail details.sh-more > summary");
   assert.deepEqual(await desk.$$eval("#detail .sh-more .menu > *", (xs) => xs.map((x) => x.textContent.trim())), ["Close…"]);
   await desk.keyboard.press("Escape");
-  await desk.click('#detail .sh-acts [data-review="request-changes"]');
-  assert.equal(await desk.textContent("#cf-title"), "Send your feedback");
-  assert.equal(await desk.$eval("#cf-choices input:checked", (x) => x.value), "request-changes");
-  assert.deepEqual(await desk.$$eval("#cf-choices input", (xs) => xs.map((x) => x.value)), ["request-changes", "approve", "comment"]);
-  await desk.click("#cf-ok");
-  await desk.waitForSelector("#confirm-dialog[open] .toast");
-  assert.match(await desk.textContent("#confirm-dialog .toast"), /Write a comment or a note first/, "nothing to send: the dialog stays");
-  await desk.fill("#confirm-form [name=note]", "Make the bar thicker.");
-  await desk.click("#cf-ok");
+  await openFeedback(desk);
+  assert.match(await desk.textContent(".fb-pop"), /Your feedback[\s\S]*nothing yet/);
+  await desk.click('.fb-pop [data-fb-v="request-changes"]');
+  assert.equal(await picked(desk), "request-changes");
+  assert.equal(await desk.getAttribute('#detail [data-fb="head"]', "data-v"), "rc", "the button takes the verdict's colour");
+  await desk.click(".fb-pop [data-fb-send]");
+  await desk.waitForSelector(".toast");
+  assert.match(await desk.textContent(".toast"), /Write a comment or a note first/, "nothing to send");
+  assert.equal(await desk.evaluate(() => posts.some((p) => /reviews$/.test(p.path))), false);
+  await desk.fill("#fb-note", "Make the bar thicker.");
+  await desk.click(".fb-pop [data-fb-send]");
   await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/R-5/reviews"));
   assert.deepEqual(await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/R-5/reviews").body), { verdict: "request-changes", note: "Make the bar thicker.", variant: "v1" }, "the option shown, for a note about no option");
 }));
@@ -4530,7 +4569,7 @@ window.platform = { async request({ method, path, body }) {
 try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
 </script>`;
 
-test("simple mode: Add to feedback keeps a comment for the feedback, Comment posts it; Your feedback lists and removes them; the head counts them", (t) => open(t, REVIEW_DESK(HEAD_ME, [drawn, prChange]), async (desk) => {
+test("simple mode: Add to feedback keeps a comment for the feedback, Comment posts it; Submit feedback counts, lists and removes them; no box under the head", (t) => open(t, REVIEW_DESK(HEAD_ME, [drawn, prChange]), async (desk) => {
   await desk.waitForSelector('#list [data-card="R-5"]');
   await desk.click('#list [data-card="R-5"]');
   await desk.waitForSelector("#detail .rbox");
@@ -4538,30 +4577,34 @@ test("simple mode: Add to feedback keeps a comment for the feedback, Comment pos
   assert.deepEqual(await desk.locator("#detail .rbox .bar button").allTextContents(), ["Add to feedback", "Comment"], "the box's two buttons, in the words people read");
   await desk.fill("#detail .rbox textarea", "Tighter rows.");
   await desk.click("#detail .rbox [data-draft-add]");
-  await desk.waitForSelector("#detail .yreview .dbub");
+  await desk.waitForSelector('#detail [data-fb="head"] .cnt');
   assert.deepEqual(await desk.evaluate(() => posts.find((p) => /drafts$/.test(p.path)).body), { text: "Tighter rows.", anchor: { variant: "v1" } });
-  assert.match(await desk.textContent("#detail .yreview"), /Your feedback · 1[\s\S]*Option 1 · Calm[\s\S]*Tighter rows\./);
-  assert.match(await desk.textContent('#detail .sh-acts [data-review="request-changes"]'), /Request changes · 1/);
-  assert.equal(await desk.locator("#detail .sh-acts .btn.primary").count(), 1, "one next step");
-  assert.equal(await desk.getAttribute('#detail .sh-acts [data-review="request-changes"]', "class"), "btn primary", "and it is Request changes");
+  assert.equal(await desk.locator("#detail .yreview").count(), 0, "no box under the head: nothing moves the page");
+  assert.match(await desk.textContent('#detail [data-fb="head"]'), /Submit feedback\s*1/, "the head counts the note");
+  assert.equal(await desk.getAttribute('#detail [data-fb="head"]', "data-v"), "rc", "amber: it asks for changes");
   await desk.fill("#detail .rbox textarea", "Second.");
   await desk.click("#detail .rbox [data-draft-add]");
-  await desk.waitForFunction(() => document.querySelectorAll("#detail .yreview .dbub").length === 2);
-  await desk.click("#detail .yreview .dbub:last-child [data-draft-del]");
-  await desk.waitForFunction(() => document.querySelectorAll("#detail .yreview .dbub").length === 1);
-  assert.ok(await desk.evaluate(() => posts.some((p) => p.method === "DELETE" && /\/drafts\/d/.test(p.path))));
+  await desk.waitForFunction(() => /2/.test(document.querySelector('#detail [data-fb="head"] .cnt')?.textContent || ""));
+  await openFeedback(desk);
+  assert.match(await desk.textContent(".fb-pop"), /Option 1 · Calm[\s\S]*Tighter rows\.[\s\S]*Second\./);
+  await desk.click(".fb-pop .dbub:last-child [data-draft-del]");
+  await desk.waitForFunction(() => document.querySelectorAll(".fb-pop .dbub").length === 1);
+  assert.ok(await desk.evaluate(() => posts.some((p) => p.method === "DELETE" && /\/drafts\/d/.test(p.path))), "removed, and the panel stays open");
+  await desk.click(".fb-pop [data-fb-close]");
+  await desk.waitForFunction(() => !document.querySelector(".fb-pop"));
   // Comment: a comment on the Desk at once, not in the feedback.
   await desk.fill("#detail .rbox textarea", "Looks calm.");
   await desk.click("#detail .rbox [data-draft-now]");
   await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/R-5/threads"));
   assert.deepEqual(await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/R-5/threads").body), { kind: "comment", text: "Looks calm.", anchor: { variant: "v1" } });
-  // Send: the drafts in the dialog, one review.
-  await desk.click('#detail .sh-acts [data-review="request-changes"]');
-  assert.match(await desk.textContent("#cf-body"), /Tighter rows\./);
-  await desk.click("#cf-ok");
+  // Send: the drafts go as one review.
+  await openFeedback(desk);
+  assert.equal(await picked(desk), "request-changes", "with notes waiting, Request changes is picked");
+  assert.match(await desk.textContent(".fb-pop [data-fb-send]"), /Request changes · 1/);
+  await desk.click(".fb-pop [data-fb-send]");
   await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/R-5/reviews"));
   assert.equal((await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/R-5/reviews").body)).verdict, "request-changes");
-  await desk.waitForFunction(() => !document.querySelector("#detail .yreview"));
+  await desk.waitForFunction(() => !document.querySelector('#detail [data-fb="head"] .cnt'));
 }));
 
 test("simple mode: a change's review offers Request changes and Approve to who may mark it handled, Comment only to everyone; with review_post it goes to the pull request", (t) => open(t, REVIEW_DESK({ ...HEAD_ME, review_post: true }, [prChange]), async (desk) => {
@@ -4570,13 +4613,14 @@ test("simple mode: a change's review offers Request changes and Approve to who m
   await desk.waitForSelector("#detail .rbox");
   await desk.fill("#detail .rbox textarea", "The toggle is too loud.");
   await desk.click("#detail .rbox [data-draft-add]");
-  await desk.waitForSelector("#detail .yreview .dbub");
-  await desk.click('#detail .sh-acts [data-review="approve"]');
-  assert.deepEqual(await desk.$$eval("#cf-choices input", (xs) => xs.map((x) => x.value)), ["request-changes", "approve", "comment"]);
-  assert.equal(await desk.$eval("#cf-choices input:checked", (x) => x.value), "approve");
-  assert.match(await desk.textContent("#cf-body"), /pull request on GitHub/);
-  await desk.click('#cf-choices input[value="comment"]');
-  await desk.click("#cf-ok");
+  await desk.waitForSelector('#detail [data-fb="head"] .cnt');
+  await openFeedback(desk);
+  assert.deepEqual(await verdicts(desk), ["request-changes", "approve", "comment"]);
+  assert.equal(await picked(desk), "request-changes");
+  assert.match(await desk.textContent(".fb-pop"), /pull request on GitHub/);
+  await desk.click('.fb-pop [data-fb-v="comment"]');
+  assert.equal(await desk.getAttribute('#detail [data-fb="head"]', "data-v"), "c", "ink for Comment only");
+  await desk.click(".fb-pop [data-fb-send]");
   await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/P-3/reviews"));
   assert.equal((await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/P-3/reviews").body)).verdict, "comment");
 }));
@@ -4597,7 +4641,7 @@ test("simple mode: a sent review is one block with its comments; a change that w
   await desk.waitForSelector("#detail .rvw");
   assert.match(await desk.textContent("#detail .sh-line .spill"), /In dev/);
   assert.match(await desk.textContent("#detail .sh-line"), /Changes requested · developer/);
-  assert.deepEqual(await desk.$$eval("#detail .sh-acts > .btn", (xs) => xs.map((x) => x.textContent.trim())), ["Request changes", "Approve"], "a designer still approves it while it waits");
+  assert.deepEqual(await shActs(desk), ["Submit feedback"], "a designer still approves it while it waits");
   assert.equal(await desk.locator("#detail .rvw .sthread").count(), 2, "its two comments inside it");
   assert.match(await desk.textContent("#detail .rvw .rv-h"), /Dana Kim[\s\S]*Changes requested[\s\S]*On GitHub/);
   assert.match(await desk.textContent("#detail .rvw .rv-note"), /Two things\./);
@@ -4612,17 +4656,17 @@ test("full mode shows a sent review as one block in the conversation", (t) => op
   assert.match(await desk.textContent("#detail .sh-resp"), /Changes requested · developer/, "full mode says who makes the next version too");
 }));
 
-test("full mode collects drafts under an option and sends them from Your feedback with the same dialog", (t) => open(t, REVIEW_DESK({ ...HEAD_ME, simple: false }, [drawn]), async (desk) => {
+test("full mode collects drafts under an option and sends them from Your feedback with Submit feedback", (t) => open(t, REVIEW_DESK({ ...HEAD_ME, simple: false }, [drawn]), async (desk) => {
   await desk.evaluate(() => { location.hash = "#R-5"; });
   await desk.waitForSelector("#detail .rbox");
   await desk.fill("#detail .rbox textarea", "Calmer bar.");
   await desk.click("#detail .rbox [data-draft-add]");
   await desk.waitForSelector("#detail .talk .yreview .dbub");
   assert.match(await desk.textContent("#detail .talk .yreview"), /Your feedback · 1[\s\S]*Calmer bar\./);
-  await desk.click('#detail .yreview [data-review=""]');
-  assert.deepEqual(await desk.$$eval("#cf-choices input", (xs) => xs.map((x) => x.value)), ["request-changes", "approve", "comment"]);
-  await desk.click('#cf-choices input[value="comment"]');
-  await desk.click("#cf-ok");
+  await openFeedback(desk, "talk");
+  assert.deepEqual(await verdicts(desk), ["request-changes", "approve", "comment"]);
+  await desk.click('.fb-pop [data-fb-v="comment"]');
+  await desk.click(".fb-pop [data-fb-send]");
   await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/R-5/reviews"));
   assert.equal((await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/R-5/reviews").body)).verdict, "comment");
 }));
@@ -4632,30 +4676,34 @@ test("a review is never sent from drafts the page could not read", (t) => open(t
   await desk.click('#list [data-card="R-5"]');
   await desk.waitForSelector("#detail .shead");
   await desk.evaluate(() => { window.failDrafts = true; });
-  await desk.click('#detail .sh-acts [data-review="request-changes"]');
+  await openFeedback(desk);
+  await desk.click('.fb-pop [data-fb-v="comment"]');
+  await desk.fill("#fb-note", "A note.");
+  await desk.click(".fb-pop [data-fb-send]");
   await desk.waitForSelector(".toast");
   assert.match(await desk.textContent(".toast"), /could not be read/);
-  assert.equal(await desk.locator("#confirm-dialog[open]").count(), 0, "no dialog");
+  assert.equal(await desk.evaluate(() => posts.some((p) => /reviews$/.test(p.path))), false, "nothing sent");
 }));
 
 test("without review_post, a change's review says nothing of GitHub", (t) => open(t, REVIEW_DESK(HEAD_ME, [prChange]), async (desk) => {
   await desk.waitForSelector('#list [data-card="P-3"]');
   await desk.click('#list [data-card="P-3"]');
   await desk.waitForSelector("#detail .shead");
-  await desk.click('#detail .sh-acts [data-review="request-changes"]');
-  assert.doesNotMatch(await desk.textContent("#confirm-dialog"), /GitHub|pull request/);
+  await openFeedback(desk);
+  assert.doesNotMatch(await desk.textContent(".fb-pop"), /GitHub|pull request/);
 }));
 
-test("simple mode: a guest's review is Comment only", (t) => open(t, REVIEW_DESK({ ...HEAD_ME, role: "guest", can: { comment: true } }, [prChange]), async (desk) => {
+test("simple mode: a guest's review is Comment only, Submit feedback only once something of theirs waits", (t) => open(t, REVIEW_DESK({ ...HEAD_ME, role: "guest", can: { comment: true } }, [prChange]), async (desk) => {
   await desk.waitForSelector('#list [data-card="P-3"]');
   await desk.click('#list [data-card="P-3"]');
   await desk.waitForSelector("#detail .rbox");
-  assert.equal(await desk.locator("#detail .sh-acts [data-review]").count(), 0, "no verdict in the head");
+  assert.equal(await desk.locator("#detail [data-fb]").count(), 0, "no verdict in the head");
   await desk.fill("#detail .rbox textarea", "Hm.");
   await desk.click("#detail .rbox [data-draft-add]");
-  await desk.waitForSelector('#detail .yreview [data-review=""]');
-  await desk.click('#detail .yreview [data-review=""]');
-  assert.deepEqual(await desk.$$eval("#cf-choices input", (xs) => xs.map((x) => x.value)), ["comment"]);
+  await desk.waitForSelector('#detail [data-fb="head"]');
+  assert.equal(await desk.getAttribute('#detail [data-fb="head"]', "data-v"), "c");
+  await openFeedback(desk);
+  assert.deepEqual(await verdicts(desk), ["comment"]);
 }));
 
 test("simple mode: a spec draft that cannot go by itself is Open with Send to developers", (t) => open(t, HEAD_DESK(HEAD_ME, [slackDraft]), async (desk) => {
@@ -4663,7 +4711,7 @@ test("simple mode: a spec draft that cannot go by itself is Open with Send to de
   await desk.click('#list [data-card="R-6"]');
   await desk.waitForSelector("#detail .shead");
   assert.match(await desk.textContent("#detail .sh-line .spill"), /Design review/);
-  assert.deepEqual(await desk.$$eval("#detail .sh-acts > .btn", (xs) => xs.map((x) => x.textContent.trim())), ["Send to developers"]);
+  assert.deepEqual(await shActs(desk), ["Send to developers"], "approved: nothing but comments to send, and none waits");
 }));
 
 test("simple mode heads a change with its pull request, Approve and Turn into a design request", (t) => open(t, HEAD_DESK(HEAD_ME, [prChange]), async (desk) => {
@@ -4673,10 +4721,11 @@ test("simple mode heads a change with its pull request, Approve and Turn into a 
   assert.match(await desk.textContent("#detail .sh-pr"), /#812 Draft/);
   assert.equal(await desk.getAttribute("#detail .sh-pr", "href"), "https://github.com/o/r/pull/812");
   assert.match(await desk.textContent("#detail .sh-line"), /dana-dev/);
-  assert.deepEqual(await desk.$$eval("#detail .sh-acts > .btn", (xs) => xs.map((x) => x.textContent.trim())), ["Request changes", "Approve"], "a review asks for changes; Approve marks it handled");
+  assert.deepEqual(await shActs(desk), ["Submit feedback"], "Request changes and Approve, which marks it handled, are in Submit feedback");
   assert.deepEqual(await desk.$$eval("#detail .sh-more .menu > *", (xs) => xs.map((x) => x.textContent.trim())), ["Turn into a design request", "Open on GitHub ↗"]);
-  await desk.click('#detail .sh-acts [data-handle="1"]');
-  await desk.waitForFunction(() => posts.some((p) => /P-3/.test(p.path)));
+  await openFeedback(desk);
+  await desk.click(".fb-pop [data-fb-send]");
+  await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/P-3/handled"));
 }));
 
 // Simple mode's page under the head (docs/desk-page.md → Simple mode): a short lead, the designs,
@@ -4792,6 +4841,37 @@ test("simple mode's change page: lead, the changes, what to look at, comments; N
   assert.match(await desk.textContent("#detail .sfound"), /Nothing to flag/);
 }));
 
+// The options' tabs (docs/desk-page.md → the options' tabs): one row that never scrolls sideways;
+// a name cut with an ellipsis, what still does not fit folded into +n, the one shown always out.
+test("simple mode: five options with long names stay in one row that never scrolls; the rest fold into +n", (t) => open(t, HEAD_DESK(HEAD_ME, [{ ...drawn, variants: [
+  "Spinner in the badge, a panel on click", "A progress bar under the agent's name", "A banner across the tile while it updates", "A quiet dot, the details in its tooltip", "A full-width strip with a Continue button",
+].map((name, i) => ({ id: `v${i + 1}`, name, asset: "A-1", version: 1 })) }]), async (desk) => {
+  await desk.setViewportSize({ width: 1100, height: 900 });
+  await desk.waitForSelector('#list [data-card="R-5"]');
+  await desk.click('#list [data-card="R-5"]');
+  const row = '#detail [aria-label="Design options"] .vscroll';
+  await desk.waitForSelector(row);
+  const fit = () => desk.$eval(row, (r) => ({ over: r.scrollWidth - r.clientWidth, shown: [...r.querySelectorAll(":scope > button[data-variant]:not([hidden])")].map((b) => b.dataset.variant), more: r.querySelector(":scope > .vmore > summary")?.textContent || "" }));
+  let f = await fit();
+  assert.ok(f.over <= 1, `the row does not scroll sideways (${f.over} px over)`);
+  assert.equal(await desk.$eval(row, (r) => [...r.querySelectorAll(":scope > button[data-variant]:not([hidden])")].every((b) => b.scrollWidth <= b.clientWidth + 1)), true, "no tab is squeezed below its parts");
+  assert.ok(f.shown.includes("v1"), "the option shown stays out");
+  assert.equal(f.more, `+${5 - f.shown.length}`, "+n counts what it holds");
+  assert.equal(await desk.$eval(`${row} button[data-variant="v1"] .vname`, (n) => getComputedStyle(n).textOverflow), "ellipsis", "a long name is cut with an ellipsis");
+  // Picked from +n, it comes out; the row still fits.
+  await desk.click(`${row} .vmore > summary`);
+  const last = await desk.$eval(`${row} .vmore .menu [data-variant]:last-child`, (b) => b.dataset.variant);
+  await desk.click(`${row} .vmore .menu [data-variant="${last}"]`);
+  await desk.waitForFunction(([r, v]) => document.querySelector(`${r} > button[data-variant="${v}"]`)?.getAttribute("aria-pressed") === "true" && !document.querySelector(`${r} > button[data-variant="${v}"]`).hidden, [row, last]);
+  f = await fit();
+  assert.ok(f.over <= 1 && f.shown.includes(last));
+  // A wider pane shows more of them.
+  const before = f.shown.length;
+  await desk.setViewportSize({ width: 2200, height: 900 });
+  await desk.waitForFunction(([r, n]) => document.querySelectorAll(`${r} > button[data-variant]:not([hidden])`).length > n, [row, before]);
+  assert.ok((await fit()).over <= 1);
+}));
+
 // A pull request's changes, one at a time (docs/desk-page.md → Changes): a pair, then lone screens.
 const svgShot = (c) => ({ contentType: "image/svg+xml", encoding: "utf8", data: `<svg xmlns="http://www.w3.org/2000/svg" width="8" height="4"><rect width="8" height="4" fill="${c}"/></svg>` });
 const threeChanges = { ...prChange, id: "P-7", title: "Spend in the list", source: { ...prChange.source, draft: false },
@@ -4800,82 +4880,134 @@ const threeChanges = { ...prChange, id: "P-7", title: "Spend in the list", sourc
 const CHANGES_DESK = (me) => REVIEW_DESK(me, [threeChanges, { ...prChange, id: "P-8", title: "Nothing yet" }]).replace("const answer = path ===",
   `if (path.startsWith("/api/assets/S-")) return json(${JSON.stringify(svgShot("#36c"))});
   const answer = path ===`);
+// The same pull request with a screen Design Desk found unchanged, and one it knows the change adds.
+const fourScreens = { ...threeChanges, screens: [...threeChanges.screens.map((x) => (x.asset === "S-1" ? { ...x, new: true } : x)), { asset: "S-3", caption: "The settings page", source: "pr", unchanged: true }] };
 for (const simple of [true, false]) {
-  test(`${simple ? "simple" : "full"} mode: a pull request's changes are tabs, one shown with its pictures; Add to feedback and Looks good name the change`, (t) => open(t, CHANGES_DESK({ ...HEAD_ME, simple }), async (desk) => {
+  test(`${simple ? "simple" : "full"} mode: a pull request's changes are tiles; one opens in the element's dialog with the cursor in its box; Add to feedback and Looks good name the change`, (t) => open(t, CHANGES_DESK({ ...HEAD_ME, simple }).replace(JSON.stringify(threeChanges), JSON.stringify(fourScreens)), async (desk) => {
     await desk.waitForSelector("#list");
     await desk.evaluate(() => { location.hash = "#P-7"; });
-    await desk.waitForSelector("#detail .chg-tabs");
-    assert.deepEqual(await desk.locator("#detail .chg-tabs button").allTextContents(), ["1Agents list", "2The limit dialog", "3The usage page"], "a pair, then each lone screen");
-    assert.equal(await desk.getAttribute("#detail .chg-tabs button:first-child", "aria-pressed"), "true", "the first shown");
-    assert.deepEqual(await desk.locator("#detail .cv-lab").allTextContents(), ["Before", "After"]);
-    assert.equal(await desk.locator('#detail .cv [data-zoom="S-d"]').count(), 0, "no separate What changed picture");
-    assert.equal(await desk.locator("#detail .outline-toggle").count(), 1, "its outline still toggles");
-    assert.deepEqual(await desk.locator("#detail .chg-foot .bar button").allTextContents(), ["Add to feedback", "Looks good"], "no comment for the team under a change");
-    await desk.fill("#detail .chg-foot textarea", "Show the limit only when set.");
-    await desk.click("#detail .chg-foot [data-draft-add]");
-    await desk.waitForSelector("#detail .chg-foot .dbub");
+    await desk.waitForSelector("#detail .chg-tiles");
+    assert.deepEqual(await desk.locator("#detail .chg-tiles .elname").allTextContents(), ["Agents list", "The limit dialog", "The usage page"], "a pair, then each lone screen; the unchanged one is no tile");
+    assert.deepEqual(await desk.$$eval("#detail .chg-tiles .elmeta .chip:first-child", (xs) => xs.map((x) => x.textContent)), ["Changed", "New", "No picture from before"], "the elements' words");
+    assert.match(await desk.textContent("#detail .chg-h"), /Changes\s*3[\s\S]*0 of 3 looked at/);
+    assert.match(await desk.textContent("#detail .chg-same"), /1 more screen the pull request shows looks the same as before: The settings page/);
+    assert.equal(await desk.locator("#detail .chg-tabs, #detail .cv-pair").count(), 0, "no tabs, no pictures on the page");
+    await desk.click('#detail [data-chg-open="Agents list"]');
+    await desk.waitForSelector("#element-dialog[open] .cv-pair");
+    assert.equal(await desk.evaluate(() => document.activeElement?.closest(".chg-foot") && document.activeElement.tagName), "TEXTAREA", "the cursor waits in its box");
+    assert.equal(await desk.textContent("#element-dialog .elbar h2"), "Agents list");
+    assert.equal(await desk.textContent("#element-dialog .pl-v"), "1 of 3");
+    assert.equal(await desk.locator('#element-dialog .elbar [data-fb="dlg"]').count(), 1, "Submit feedback in its head");
+    assert.deepEqual(await desk.locator("#element-dialog .cv-lab").allTextContents(), ["Before", "After"]);
+    assert.equal(await desk.locator('#element-dialog [data-zoom="S-d"]').count(), 0, "no separate What changed picture");
+    assert.equal(await desk.locator("#element-dialog .outline-toggle").count(), 1, "its outline still toggles");
+    assert.deepEqual(await desk.locator("#element-dialog .chg-foot .bar button").allTextContents(), ["Add to feedback", "Looks good"], "no comment for the team under a change");
+    assert.match(await desk.getAttribute("#element-dialog .chg-foot [data-draft-add]", "class"), /\bprimary\b/, "Add to feedback is the primary button");
+    await desk.fill("#element-dialog .chg-foot textarea", "Show the limit only when set.");
+    await desk.click("#element-dialog .chg-foot [data-draft-add]");
+    await desk.waitForSelector("#element-dialog .chg-foot .dbub");
     assert.deepEqual(await desk.evaluate(() => posts.find((p) => /drafts$/.test(p.path)).body), { text: "Show the limit only when set.", change: "Agents list" });
-    assert.deepEqual(await desk.locator("#detail .chg-foot .bar button").allTextContents(), ["Add to feedback"], "no Looks good while a note on it waits");
-    await desk.click('#detail .chg-tabs [data-chg="S-1"]');
-    await desk.waitForFunction(() => document.querySelector('#detail .chg-tabs [data-chg="S-1"]')?.getAttribute("aria-pressed") === "true");
-    assert.deepEqual(await desk.locator("#detail .cv-lab").allTextContents(), ["After"], "a lone screen: after only");
-    await desk.click("#detail .chg-foot [data-draft-ok]");
-    await desk.waitForFunction(() => document.querySelector('#detail .chg-tabs [data-chg="S-2"]')?.getAttribute("aria-pressed") === "true");
+    assert.deepEqual(await desk.locator("#element-dialog .chg-foot .bar button").allTextContents(), ["Add to feedback"], "no Looks good while a note on it waits");
+    await desk.click('#element-dialog [data-chg-nav="1"]');
+    await desk.waitForFunction(() => document.querySelector("#element-dialog .elbar h2")?.textContent === "The limit dialog");
+    assert.deepEqual(await desk.locator("#element-dialog .cv-lab").allTextContents(), ["After"], "a lone screen: after only");
+    await desk.click("#element-dialog .chg-foot [data-draft-ok]");
+    await desk.waitForFunction(() => document.querySelector("#element-dialog .elbar h2")?.textContent === "The usage page");
     assert.deepEqual(await desk.evaluate(() => posts.filter((p) => /drafts$/.test(p.path)).at(-1).body), { ok: true, change: "S-1" });
-    await desk.click('#detail .chg-tabs [data-chg="S-1"]');
-    await desk.waitForSelector("#detail .chg-ok");
-    assert.match(await desk.textContent("#detail .yreview"), /The limit dialog[\s\S]*Looks good/, "the mark lists by the change's name");
-    await desk.click("#detail .chg-ok [data-draft-del]");
-    await desk.waitForSelector("#detail .chg-foot [data-draft-ok]");
+    await desk.click('#element-dialog [data-chg-nav="-1"]');
+    await desk.waitForSelector("#element-dialog .chg-ok");
+    await desk.click("#element-dialog .chg-ok [data-draft-del]");
+    await desk.waitForSelector("#element-dialog .chg-foot [data-draft-ok]");
+    await desk.click("#element-dialog [data-el-close]");
+    // The unchanged screen opens too, with nothing to mark.
+    await desk.click('#detail .chg-same [data-chg-open="S-3"]');
+    await desk.waitForFunction(() => document.querySelector("#element-dialog .elbar h2")?.textContent === "The settings page");
+    assert.match(await desk.textContent("#element-dialog .elbar .sub"), /Looks the same/);
+    assert.equal(await desk.locator("#element-dialog [data-draft-ok]").count(), 0, "nothing to mark: no Looks good");
+    assert.equal(await desk.locator("#element-dialog .pl-v").count(), 0, "no steps: it is alone");
+    await desk.click("#element-dialog [data-el-close]");
     // With no screens: how they come.
     await desk.evaluate(() => { location.hash = "#P-8"; });
     await desk.waitForFunction(() => /No screenshots yet/.test(document.querySelector("#detail")?.textContent || ""));
-    assert.equal(await desk.locator("#detail .chg-tabs").count(), 0);
+    assert.equal(await desk.locator("#detail .chg-tiles").count(), 0);
   }));
 }
 
-test("a change's tab marks how far the viewer got; Looks good moves on, the last opens the feedback; sending warns of the changes not looked at", (t) => open(t, CHANGES_DESK(HEAD_ME), async (desk) => {
-  const marks = () => desk.$$eval("#detail .chg-tabs button", (bs) => bs.map((b) => b.dataset.m || ""));
-  const shown = () => desk.$eval('#detail .chg-tabs button[aria-pressed="true"]', (b) => b.dataset.chg);
+test("a change's tile marks how far the viewer got; Looks good moves on, the last opens Submit feedback in the dialog, Approve picked", (t) => open(t, CHANGES_DESK(HEAD_ME), async (desk) => {
+  const marks = () => desk.$$eval("#detail .chg-tile", (bs) => bs.map((b) => b.dataset.m || ""));
+  const shown = () => desk.textContent("#element-dialog .elbar h2");
   await desk.waitForSelector("#list");
   await desk.evaluate(() => { location.hash = "#P-7"; });
-  await desk.waitForSelector("#detail .chg-tabs");
+  await desk.waitForSelector("#detail .chg-tiles");
   assert.deepEqual(await marks(), ["", "", ""]);
-  await desk.click("#detail .chg-foot [data-draft-ok]");
-  await desk.waitForFunction(() => document.querySelector('#detail .chg-tabs [data-chg="S-1"]')?.getAttribute("aria-pressed") === "true");
+  await desk.click('#detail [data-chg-open="Agents list"]');
+  await desk.waitForSelector("#element-dialog[open]");
+  await desk.click("#element-dialog .chg-foot [data-draft-ok]");
+  await desk.waitForFunction(() => document.querySelector("#element-dialog .elbar h2")?.textContent === "The limit dialog");
   assert.deepEqual(await marks(), ["ok", "", ""], "green, and the next change shown");
-  await desk.fill("#detail .chg-foot textarea", "Say the limit in words.");
-  await desk.click("#detail .chg-foot [data-draft-add]");
-  await desk.waitForFunction(() => document.querySelectorAll('#detail .chg-tabs [data-m="changes"]').length === 1);
+  await desk.fill("#element-dialog .chg-foot textarea", "Say the limit in words.");
+  await desk.click("#element-dialog .chg-foot [data-draft-add]");
+  await desk.waitForFunction(() => document.querySelectorAll('#detail .chg-tile[data-m="changes"]').length === 1);
   assert.deepEqual(await marks(), ["ok", "changes", ""], "amber with a note");
-  assert.match(await desk.textContent('#detail .sh-acts [data-review="request-changes"]'), /Request changes · 1/, "the head counts the notes, not the marks");
-  assert.match(await desk.textContent("#detail .yreview"), /Agents list[\s\S]*✓ Looks good[\s\S]*The limit dialog[\s\S]*Say the limit in words\./);
-  // Sending with a change nobody looked at: said, never in the way.
-  await desk.click('#detail .yreview [data-review=""]');
-  await desk.waitForSelector("#cf-body .rv-warn");
-  assert.match(await desk.textContent("#cf-body .rv-warn"), /1 change not looked at yet: The usage page/);
-  await desk.click('#confirm-dialog [data-close="cancel"]');
-  await desk.click('#detail .chg-tabs [data-chg="S-2"]');
-  await desk.waitForFunction(() => document.querySelector('#detail .chg-tabs [data-chg="S-2"]')?.getAttribute("aria-pressed") === "true");
-  await desk.click("#detail .chg-foot [data-draft-ok]");
-  await desk.waitForSelector("#confirm-dialog[open]");
-  assert.equal(await desk.locator("#cf-body .rv-warn").count(), 0, "every change looked at: no warning");
-  assert.equal(await desk.$eval("#cf-choices input:checked", (x) => x.value), "approve", "the last Looks good opens the feedback, Approve picked");
+  assert.match(await desk.textContent('#element-dialog [data-fb="dlg"]'), /Submit feedback\s*1\s*1/, "the note and the mark, counted apart");
+  assert.equal(await desk.getAttribute('#element-dialog [data-fb="dlg"]', "data-v"), "rc");
+  // The panel, from the dialog: how far, what waits, and the change not looked at, which opens.
+  await openFeedback(desk, "dlg");
+  assert.match(await desk.textContent(".fb-pop .fb-prog"), /2 of 3 changes looked at[\s\S]*The usage page/);
+  assert.match(await desk.textContent(".fb-pop .fb-items"), /Agents list[\s\S]*✓ Looks good[\s\S]*The limit dialog[\s\S]*Say the limit in words\./);
+  await desk.click('.fb-pop .fb-left [data-chg-open="S-2"]');
+  await desk.waitForFunction(() => document.querySelector("#element-dialog .elbar h2")?.textContent === "The usage page" && !document.querySelector(".fb-pop"));
+  await desk.click("#element-dialog .chg-foot [data-draft-ok]");
+  await desk.waitForSelector("#element-dialog .fb-pop");
+  assert.equal(await picked(desk), "request-changes", "a note waits: Request changes stays picked");
+  assert.match(await desk.textContent(".fb-pop .fb-prog"), /All looked at/);
   assert.match(await desk.textContent("#detail .chg-h"), /All looked at/);
-  assert.equal(await shown(), "S-2");
+  assert.equal(await shown(), "The usage page");
+  await desk.click(".fb-pop [data-fb-send]");
+  await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/P-7/reviews"));
+  assert.equal((await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/P-7/reviews").body)).verdict, "request-changes");
+  await desk.waitForFunction(() => !document.querySelector("#element-dialog[open]"));
 }));
 
-test("sent feedback shows its Looks good; the mark holds on this version; a conversation about a change shows it", (t) => open(t, CHANGES_DESK(HEAD_ME).replace(JSON.stringify(threeChanges), JSON.stringify({ ...threeChanges, looks_good: ["S-1"],
+test("on a narrow screen Submit feedback's panel spans it and hangs off no edge", (t) => open(t, REVIEW_DESK(HEAD_ME, [drawn]), async (desk) => {
+  await desk.setViewportSize({ width: 360, height: 800 });
+  await desk.evaluate(() => { location.hash = "#R-5"; });
+  await desk.waitForSelector('#detail [data-fb="head"]');
+  await openFeedback(desk);
+  const [l, r] = await desk.$eval(".fb-pop", (p) => { const b = p.getBoundingClientRect(); return [b.left, b.right]; });
+  assert.ok(l >= 0 && r <= 360, `the panel stays on the screen (${l} to ${r} of 360)`);
+}));
+
+test("the last Looks good with no note opens Submit feedback with Approve picked", (t) => open(t, CHANGES_DESK(HEAD_ME), async (desk) => {
+  await desk.waitForSelector("#list");
+  await desk.evaluate(() => { location.hash = "#P-7"; });
+  await desk.waitForSelector("#detail .chg-tiles");
+  await desk.click('#detail [data-chg-open="Agents list"]');
+  for (const next of ["The limit dialog", "The usage page"]) {
+    await desk.click("#element-dialog .chg-foot [data-draft-ok]");
+    await desk.waitForFunction((n) => document.querySelector("#element-dialog .elbar h2")?.textContent === n, next);
+  }
+  await desk.click("#element-dialog .chg-foot [data-draft-ok]");
+  await desk.waitForSelector("#element-dialog .fb-pop");
+  assert.equal(await picked(desk), "approve");
+  assert.equal(await desk.getAttribute('#element-dialog [data-fb="dlg"]', "data-v"), "ok", "green: it approves");
+}));
+
+test("sent feedback shows its Looks good; the mark holds on this version; a change the developer owes is Changes asked; a conversation about a change opens it", (t) => open(t, CHANGES_DESK(HEAD_ME).replace(JSON.stringify(threeChanges), JSON.stringify({ ...threeChanges, looks_good: ["S-1"],
+  responsible: { who: "developer", review: "U-3", since: "2026-11-18T10:00:00Z" },
   reviews: [{ id: "U-3", by: { email: "d.k@example.com", name: "Dana Kim", role: "designer" }, at: "2026-11-18T10:00:00Z", verdict: "comment", note: "", threads: ["T-31"], looks_good: [{ key: "S-1", name: "The limit dialog" }] }],
   threads: [{ id: "T-31", kind: "comment", review: "U-3", change: "S-2", state: "open", may: { reply: true, resolve: true }, messages: [{ by: { email: "d.k@example.com", role: "designer" }, at: "2026-11-18T10:00:00Z", text: "Bigger numbers." }] }] })), async (desk) => {
   await desk.waitForSelector("#list");
   await desk.evaluate(() => { location.hash = "#P-7"; });
-  await desk.waitForSelector("#detail .chg-tabs");
-  assert.deepEqual(await desk.$$eval("#detail .chg-tabs button", (bs) => bs.map((b) => b.dataset.m || "")), ["", "ok", ""], "a sent Looks good on this version");
+  await desk.waitForSelector("#detail .chg-tiles");
+  assert.deepEqual(await desk.$$eval("#detail .chg-tile", (bs) => bs.map((b) => b.dataset.m || "")), ["", "ok", "changes"], "a sent Looks good on this version; a sent note the developer owes");
+  assert.match(await desk.textContent('#detail .chg-tile[data-m="changes"] .elmeta'), /Changes asked/, "the amber state is said on the tile");
   assert.match(await desk.textContent("#detail .rvw .rv-ok"), /✓ Looks good: The limit dialog/);
-  await desk.click('#detail .rvw [data-chg-show="S-2"]');
-  await desk.waitForFunction(() => document.querySelector('#detail .chg-tabs [data-chg="S-2"]')?.getAttribute("aria-pressed") === "true");
-  assert.match(await desk.textContent("#detail .chg-foot .chg-talk"), /1 comment on this change/);
+  await desk.click('#detail .rvw [data-chg-open="S-2"]');
+  await desk.waitForFunction(() => document.querySelector("#element-dialog .elbar h2")?.textContent === "The usage page");
+  assert.match(await desk.textContent("#element-dialog .chg-foot .chg-talk"), /1 comment on this change/);
+  await desk.click("#element-dialog .chg-talk");
+  await desk.waitForFunction(() => !document.querySelector("#element-dialog[open]"));
 }));
 
 // Simple mode with nothing open: how many items are in each state, each box filtering the list.
@@ -5008,20 +5140,26 @@ test("simple mode: a PM has every state and starts at all of them; a designer ha
 });
 
 const stageButtons = (desk) => desk.$$eval("#detail .sh-acts [data-stage], #detail .sh-acts [data-act=approve-dev], #detail .sh-acts [data-act=close]", (xs) => xs.map((x) => `${x.closest(".sh-more") ? "⋯ " : ""}${x.textContent.trim()}`));
-for (const [who, me, card, want] of [
+for (const [who, me, card, want, dev = false] of [
   ["a developer proposes their draft", DEV_ME, STAGED[0], ["Propose", "⋯ Close…"]],
   ["a PM sends their draft to design", { ...DEV_ME, role: "pm", can: { request: true, "stage-design": true, close: true } }, STAGED[0], ["Send to design", "⋯ Close…"]],
   ["the UI dev owner sends their draft on, proposes it or approves it for developers", { ...DEV_ME, role: "ui-dev-owner", can: { request: true, "stage-propose": true, "stage-design": true, "stage-own": true } }, STAGED[0],
-    ["Send to design", "Approve for dev", "⋯ Propose", "⋯ Close…"]],
+    ["Send to design", "⋯ Propose", "⋯ Close…"], true],
   ["the UI dev owner moves a proposal on", { ...DEV_ME, role: "ui-dev-owner", can: { request: true, "stage-propose": true, "stage-design": true, "stage-own": true } }, STAGED[1],
-    ["Send to design", "Approve for dev", "⋯ Back to draft", "⋯ Close…"]],
+    ["Send to design", "⋯ Back to draft", "⋯ Close…"], true],
   ["a developer does not move another's proposal", DEV_ME, STAGED[1], []],
+  // `dev`: Approve for dev is Submit feedback's approval, the UI dev owner's alone.
 ]) test(`simple mode's head before design: ${who}`, (t) => open(t, HEAD_DESK({ ...HEAD_ME, ...me }, [{ ...drawn, ...card, variants: drawn.variants }]), async (desk) => {
   await desk.waitForSelector("#list");
   await desk.evaluate((id) => { location.hash = `#${id}`; }, card.id);
   await desk.waitForSelector("#detail .shead");
   assert.deepEqual(await stageButtons(desk), want);
   assert.equal(await desk.locator('#detail [data-review="approve"], #detail [data-act="approve"]').count(), 0, "no Approve before design");
+  if (await desk.locator('#detail [data-fb="head"]').count()) {
+    await openFeedback(desk);
+    assert.equal((await verdicts(desk)).includes("approve-dev"), dev, dev ? "Approve for dev in Submit feedback" : "no Approve for dev");
+    assert.equal((await verdicts(desk)).includes("approve"), false);
+  } else assert.equal(dev, false);
 }));
 
 test("simple mode: Propose moves a draft on at once; Send to design asks first", (t) => open(t, HEAD_DESK({ ...HEAD_ME, role: "ui-dev-owner", can: { ...HEAD_ME.can, request: true, "stage-propose": true, "stage-design": true, "stage-own": true } }, [{ ...drawn, ...STAGED[0] }]), async (desk) => {
@@ -5065,17 +5203,16 @@ test("full mode: a draft and a proposal show their stage, count as Open on the v
   assert.equal(await desk.locator('#detail [data-act="approve"], #detail [data-act="queue"], #detail [data-size]').count(), 0, "no plain Approve, presentation or side");
 }));
 
-test("Send feedback: one button and one dialog, in both modes; no Approve before design", (t) => open(t, HEAD_DESK({ ...HEAD_ME, role: "developer", can: { ...HEAD_ME.can, approve: false, request: true, "stage-propose": true } },
+test("Submit feedback: one button and one panel; no Approve before design for who may not approve for dev", (t) => open(t, HEAD_DESK({ ...HEAD_ME, role: "developer", can: { ...HEAD_ME.can, approve: false, request: true, "stage-propose": true } },
   [{ ...drawn, ...STAGED[0], status: "feedback", variants: drawn.variants }]).replace("path.endsWith(\"/drafts\") ? { drafts: [] }", "path.endsWith(\"/drafts\") ? { drafts: [{ id: \"d1\", text: \"Fewer columns.\" }] }"), async (desk) => {
   await desk.waitForSelector("#list");
   await desk.evaluate(() => { location.hash = "#R-20"; });
-  await desk.waitForSelector("#detail .yreview");
-  assert.equal((await desk.textContent("#detail .yreview [data-review]")).trim(), "Send feedback…");
-  await desk.click("#detail .yreview [data-review]");
-  await desk.waitForSelector("#confirm-dialog[open]");
-  assert.equal(await desk.textContent("#cf-title"), "Send your feedback");
-  assert.equal((await desk.textContent("#cf-ok")).trim(), "Send feedback");
-  assert.deepEqual(await desk.$$eval("#cf-choices input", (xs) => xs.map((x) => x.value)), ["request-changes", "comment"], "no Approve before design");
+  await desk.waitForSelector('#detail [data-fb="head"] .cnt');
+  assert.equal(await desk.locator("#detail .yreview").count(), 0);
+  await openFeedback(desk);
+  assert.match(await desk.textContent(".fb-pop"), /Fewer columns\./);
+  assert.deepEqual(await verdicts(desk), ["request-changes", "comment"], "no Approve before design");
+  assert.equal((await desk.textContent(".fb-pop [data-fb-send]")).trim(), "Request changes · 1");
 }));
 
 test("a request that went to design folds what was said before it under Before design", (t) => open(t, HEAD_DESK(HEAD_ME, [{ ...drawn, opened_at: "2026-11-18T12:00:00Z", threads: [
@@ -5139,18 +5276,26 @@ test("simple mode's filter: Only shows one state at once and keeps the kinds", (
   assert.deepEqual((await rows(desk)).map(([id]) => id), ["R-21", "r-small"], "a proposal and an open For Developers request");
 }));
 
-test("Approve for dev asks as an approval does, then sends it For Developers", (t) => open(t, HEAD_DESK({ ...HEAD_ME, role: "ui-dev-owner", can: { ...HEAD_ME.can, request: true, "stage-propose": true, "stage-design": true, "stage-own": true } }, [{ ...drawn, ...STAGED[1] }]), async (desk) => {
+test("Approve for dev is Submit feedback's approval on a proposal: it asks as an approval does, then sends it For Developers; Send to design is outlined", (t) => open(t, HEAD_DESK({ ...HEAD_ME, role: "ui-dev-owner", can: { ...HEAD_ME.can, request: true, "stage-propose": true, "stage-design": true, "stage-own": true } }, [{ ...drawn, ...STAGED[1] }]), async (desk) => {
   await desk.waitForSelector("#list");
   await desk.evaluate(() => { location.hash = "#R-21"; });
-  await desk.waitForSelector('#detail [data-act="approve-dev"]');
-  assert.equal(await desk.evaluate(() => getComputedStyle(document.querySelector('#detail [data-act="approve-dev"]')).backgroundColor === getComputedStyle(document.querySelector('#detail [data-stage="design"]')).backgroundColor), true, "green, as Send to design");
-  await desk.click('#detail [data-act="approve-dev"]');
+  await desk.waitForSelector('#detail .sh-acts [data-stage="design"]');
+  assert.deepEqual(await shActs(desk), ["Send to design", "Submit feedback"]);
+  assert.equal(await desk.locator('#detail .sh-acts [data-act="approve-dev"]').count(), 0, "Approve for dev is no head button");
+  assert.equal(await desk.evaluate(() => getComputedStyle(document.querySelector('#detail [data-stage="design"]')).backgroundColor === getComputedStyle(document.querySelector("#detail .sh-more > summary")).backgroundColor), true, "Send to design is outlined, as ⋯ is");
+  assert.equal(await desk.locator('#detail [data-stage="design"] svg.ico').count(), 1, "with its paper plane");
+  assert.equal(await desk.getAttribute('#detail [data-fb="head"]', "data-v"), "ok", "the green is the approval's");
+  await openFeedback(desk);
+  assert.deepEqual(await verdicts(desk), ["request-changes", "approve-dev", "comment"]);
+  assert.equal(await picked(desk), "approve-dev");
+  await desk.click(".fb-pop [data-fb-send]");
   await desk.waitForSelector("#confirm-dialog[open]");
   assert.equal(await desk.textContent("#cf-title"), "Approve it for developers");
   await desk.click("#cf-ok");
   await desk.waitForFunction(() => window.posts.some((p) => p.path.endsWith("/actions")));
   const sent = await desk.evaluate(() => window.posts.find((p) => p.path.endsWith("/actions")).body);
   assert.deepEqual([sent.action, sent.for_dev], ["approve", true]);
+  assert.equal(await desk.evaluate(() => window.posts.some((p) => /reviews$/.test(p.path))), false, "nothing drafted: the approval alone");
 }));
 
 test("full mode: a proposal's options go to the dev team's vote with Ask for feedback; a draft's do not", async (t) => {

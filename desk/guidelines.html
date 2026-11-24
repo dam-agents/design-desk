@@ -108,9 +108,10 @@
   <div class="gl-item">
     <div class="gl-rule">
       <h3 class="gl-h3">Underline tabs with a number chip</h3>
-      <p class="gl-p">Things reviewed one at a time: a request's design options, a pull request's changes. The chip carries the review:</p>
+      <p class="gl-p">Things reviewed one at a time: a request's design options. The chip carries the review:</p>
       <ul class="gl-ul"><li>ink for the one shown,</li><li>green for the approved one, even when shown,</li><li>amber while changes asked for on it wait for its next version; never on an approved or closed request, which draws none,</li><li>grey for the rest.</li></ul>
-      <p class="gl-where">On the Desk: a request's design options, in both modes, and the design workspace's; a pull request's changes, green for one marked Looks good, amber for one with notes.</p>
+      <p class="gl-p">They stay one row and never scroll: a tab shrinks to fit, its name cut with an ellipsis on the baseline; what still does not fit folds into <b>+n</b> at the row's end.</p>
+      <p class="gl-where">On the Desk: a request's design options, in both modes, and the design workspace's. A pull request's changes are tiles, as All elements are.</p>
     </div>
     <div class="gl-ex gl-wide">
       <div class="tabs vtabs vrow utabs" role="group" aria-label="Example options">
@@ -221,7 +222,7 @@
   <div class="gl-item">
     <div class="gl-rule">
       <h3 class="gl-h3">One primary action in a view</h3>
-      <p class="gl-p">The dark primary is the next step. Green is only what moves an item forward: Approve, Approve for dev, Propose, Send to design, Send to developers, and Looks good. Everything else is neutral. Red only for what deletes.</p>
+      <p class="gl-p">The dark primary is the next step. Green is only what approves an item: Approve, Approve for dev, Send to developers, and Looks good. Propose and Send to design only send it on to the next review: outlined, with a paper plane. <b>Submit feedback</b> wears the colour of the verdict it sends: green an approval, amber Request changes, ink Comment only. Everything else is neutral. Red only for what deletes.</p>
       <p class="gl-p">An action keeps its name everywhere: “Request changes” in the header, in its dialog, and in the message that follows.</p>
       <p class="gl-p">Small buttons sit inside a row, a card or a toolbar; the full size stands on its own.</p>
       <p class="gl-p">A way into the design workspace looks the same wherever it stands: its icon, on a very light violet fill (<code>--ws</code> at 7%, a violet edge), the words and the icon in the button's own ink.</p>
@@ -388,11 +389,16 @@
   <div class="gl-item">
     <div class="gl-rule">
       <h3 class="gl-h3">Feedback, and a draft not sent yet</h3>
-      <p class="gl-p">Comments added to feedback wait as drafts, in amber, seen by their writer alone, until <b>Send feedback…</b> sends them together with one verdict. The feedback then shows as one block: who, the verdict in its colour on the block's edge (amber for changes asked for, green for approved), its note, then its comments.</p>
-      <p class="gl-where">On the Desk: a request's and a pull request's comments.</p>
+      <p class="gl-p">Comments added to feedback wait as drafts, seen by their writer alone, counted inside <b>Submit feedback</b>, whose panel sends them together with one verdict. The button takes the verdict's colour. The feedback then shows as one block: who, the verdict in its colour on the block's edge (amber for changes asked for, green for approved), its note, then its comments.</p>
+      <p class="gl-where">On the Desk: an item's head and every dialog's head, and a request's and a pull request's comments.</p>
     </div>
     <div class="gl-ex gl-wide">
-      <section class="yreview" aria-label="Example feedback in the making"><div class="yr-h"><b>Your feedback · 2</b><button class="btn small" type="button">Send feedback…</button></div>
+      <div class="gl-row">
+        <span class="fbw"><button class="btn fbk" type="button" data-v="ok">Submit feedback</button></span>
+        <span class="fbw"><button class="btn fbk" type="button" data-v="rc">Submit feedback <span class="cnt">2</span></button></span>
+        <span class="fbw"><button class="btn fbk" type="button" data-v="c">Submit feedback <span class="cnt">1</span></button></span>
+      </div>
+      <section class="yreview" aria-label="Example feedback in the making"><div class="yr-h"><b>Your feedback · 2</b><span class="fbw"><button class="btn fbk" type="button" data-v="rc">Submit feedback <span class="cnt">2</span></button></span></div>
         <div class="dbub"><div class="db-b"><span class="about">Option 2 · Compact · Send button</span>The button should say what it sends.</div><button class="x" type="button" aria-label="Remove this comment from your feedback">✕</button></div>
         <div class="dbub"><div class="db-b"><span class="about">Option 2 · Compact</span>The empty state needs a next step.</div><button class="x" type="button" aria-label="Remove this comment from your feedback">✕</button></div>
       </section>

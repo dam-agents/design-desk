@@ -508,7 +508,9 @@ exist), at most 50 wait per person and item, and a deleted request takes its dra
 
 On a pull request's change with screens, a draft names the change it is about in `change`: its key, the
 screens' `pair`, or a lone screen's `asset` (`changesOf` in `desk/store.mjs`, the page's change
-view). **Looks good** is a draft with no words, `{ok: true, change}`: once per person and change,
+view). A screen keeps Design Desk's `unchanged: true` (it looks the same as before) or `new: true`
+(the change adds it) ([screens.md](screens.md) → What changed); an unchanged one is still a change
+a note may name, which the page shows apart from those to look at. **Looks good** is a draft with no words, `{ok: true, change}`: once per person and change,
 refused while they have notes on that change, and taken back by a note on it. Sent, it makes no
 conversation: the review keeps `looks_good: [{key, name}]`, shown under its note as "✓ Looks
 good: <name>, …", and may hold nothing else. A card
