@@ -3,9 +3,8 @@
 //   node desk/brand/build.mjs        writes mark.svg, favicon.svg, avatar.svg and their PNGs
 //
 // The mark is a disc with DD on it: two D's, a spark cut out of the second so the disc shows
-// through (the operator's drawing, dd-light.svg), the disc a gradient from pink at the top left to
-// blue at the bottom right. Light mode: deep colours, white D's. Dark mode: light colours,
-// near-black D's. The page, the guidelines and their tests import the shapes
+// through (the operator's drawing, dd-light.svg), the disc a pastel orange-red. Light mode: white
+// D's. Dark mode: a lighter disc, near-black D's. The page, the guidelines and their tests import the shapes
 // from here, so there is one drawing.
 import { writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -16,10 +15,10 @@ const BOX = 48, C = 24, SCALE = 0.74;
 /** The two D's, the spark cut from the second (filled even-odd). */
 export const D_PATH = "M4 14H12A10 10 0 0 1 12 34H4Z M26 14H34A10 10 0 0 1 34 34H26Z M33.5 16.5C33.5 24 33.5 24 41 24C33.5 24 33.5 24 33.5 31.5C33.5 24 33.5 24 26.5 24C33.5 24 33.5 24 33.5 16.5Z";
 
-/** Its colours, light and dark mode: the disc's gradient, pink to blue, and the D's. Finalised here (#215). */
+/** Its colours, light and dark mode: the disc (a gradient's two ends; one pastel orange-red for now) and the D's. Finalised here (#215). */
 export const COLORS = {
-  light: { from: "#e0559a", to: "#2f5bd3", d: "#ffffff" },
-  dark: { from: "#f59ac6", to: "#8aa8ff", d: "#1b1b1a" },
+  light: { from: "#ee7d5e", to: "#ee7d5e", d: "#ffffff" },
+  dark: { from: "#f6a58c", to: "#f6a58c", d: "#1b1b1a" },
 };
 
 // The drawing; `id` names its gradient (unique in a document). Fixed colours for a mode, or

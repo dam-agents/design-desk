@@ -1,7 +1,7 @@
 /* desk/page.html's own <style>, copied by `node desk/dev/guidelines.mjs` for desk/guidelines.html; never edit it here. */
   :root {
-    /* Design Desk's mark (desk/brand/mark.svg): its disc's gradient, pink to blue, and its D's. */
-    --mk-from: #e0559a; --mk-to: #2f5bd3; --mk-d: #ffffff;
+    /* Design Desk's mark (desk/brand/mark.svg): its disc (a gradient's two ends) and its D's. */
+    --mk-from: #f6a58c; --mk-to: #f6a58c; --mk-d: #1b1b1a;
     --bg: #fcfbfc; --panel: #ffffff; --ink: #1b1b1a; --muted: #6b6b66; --line: #e4e3df; --soft: #f0efeb;
     --tip-opens: #6fd3a0; --accent: #2f5bd3; --accent-ink: #ffffff; --ok: #1f7a4d; --ok-soft: #e3f3ea; --warn: #9a6200; --warn-soft: #fbf0d9;
     --bad: #b3261e; --bad-soft: #fbe5e3; --info-soft: #e7edfc; --live: #6b3fc4; --live-soft: #efe8fb; --why: #0d7d78; --why-soft: #e0f3f1; --r-sm: 6px; --radius: 12px; --shadow: 0 1px 2px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.04);
@@ -1873,8 +1873,8 @@
   /* Design Desk at work: the DD pair. The Ds flip one at a time and rest in three ways: as DD, with the
      round sides out, with the round sides in; back as DD, the pair turns once round. Its size follows the
      font size, its color the text color. Queued: still and faint. */
-  /* Design Desk at work: the DD pair, as before #215, in the mark's blue (--accent). */
-  .dd-spin { position: relative; display: inline-block; width: 1.25em; height: 1.25em; flex: none; vertical-align: -0.25em; color: var(--accent); animation: dd-spin-turn 5s cubic-bezier(.65,0,.35,1) infinite; }
+  /* Design Desk at work: the DD pair, as before #215, in the mark's colour (--mk-to). */
+  .dd-spin { position: relative; display: inline-block; width: 1.25em; height: 1.25em; flex: none; vertical-align: -0.25em; color: var(--mk-to); animation: dd-spin-turn 5s cubic-bezier(.65,0,.35,1) infinite; }
   .dd-spin::before, .dd-spin::after { content: ""; position: absolute; top: 29.167%; width: 37.5%; height: 41.667%; background: currentColor; border-radius: 0 999px 999px 0; animation: dd-spin-left 5s cubic-bezier(.65,0,.35,1) infinite; }
   .dd-spin::before { left: 7.5%; }
   .dd-spin::after { left: 55%; animation-name: dd-spin-right; }
