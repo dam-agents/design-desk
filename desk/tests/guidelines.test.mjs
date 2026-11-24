@@ -18,7 +18,8 @@ test("the guidelines wear the Desk's own stylesheet, as it is now", () => {
   assert.match(gl, /<link rel="stylesheet" href="guidelines\.css">/, "the page links the copy");
   assert.equal((gl.replace(/<!--[\s\S]*?-->/g, "").match(/<style\b/g) || []).length, 1, "the page carries no stylesheet but its own layout");
   // Read whole in one go: the page holds its rules, never a copy of the Desk's stylesheet.
-  assert.ok(Buffer.byteLength(gl) < 40_000, `desk/guidelines.html is ${Buffer.byteLength(gl)} bytes`);
+  // 42 kB since the mark's section (#215).
+  assert.ok(Buffer.byteLength(gl) < 42_000, `desk/guidelines.html is ${Buffer.byteLength(gl)} bytes`);
 });
 
 test("the guidelines' own styles only lay the page out", () => {
