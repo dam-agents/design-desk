@@ -93,7 +93,7 @@ confirm" or a choice left to the reader. Every question went to the Desk first
 ([docs/handoff.md](../../../docs/handoff.md) step 4); a spec that still holds one goes back
 there instead of out. The body's last line before the marker names the Desk card
 (`<desk_link>#R-<n>`) as the place for a question that still comes up, signed with the mark line
-([docs/watch.md](../../../docs/watch.md) → The mark line): `<img src="https://raw.githubusercontent.com/dam-agents/design-desk/aad383076ea663c80a3e22c74e0c782e7755cae0/desk/brand/mark.png" width="16" height="16" alt=""> **Design Desk** · Questions: <desk_link>#R-<n>`
+([docs/watch.md](../../../docs/watch.md) → The mark line): `<img src="https://raw.githubusercontent.com/dam-agents/design-desk/92e9ed9eb6e914001ab3c954d361024adecc8317/desk/brand/mark.png" width="16" height="16" alt=""> **Design Desk** · Questions: <desk_link>#R-<n>`
 (without `desk_link`, the card's number alone). The marker stays as it is.
 
 ## By the request's type
