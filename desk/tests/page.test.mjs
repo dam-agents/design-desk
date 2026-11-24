@@ -5045,12 +5045,15 @@ test("a spec sent back for changes keeps its review, not In dev", (t) => open(t,
   { ...drawn, id: "R-7", title: "Rewritten for design", status: "spec", approved: { by: { email: "d@example.com" }, at: "2026-11-18T09:00:00Z" }, spec: { review: "changes", asset: "A-2", asked: { by: { email: "d@example.com" }, at: "2026-11-18T10:00:00Z", note: "Bigger prices." } } },
   { ...drawn, id: "R-8", title: "Rewritten for dev", status: "spec", for: "developers", approved: { by: { email: "d@example.com" }, at: "2026-11-18T09:00:00Z" }, spec: { review: "changes", asset: "A-2" } },
   { ...drawn, id: "R-9", title: "Sent on", status: "spec", approved: { by: { email: "d@example.com" }, at: "2026-11-18T09:00:00Z" }, spec: { review: "sent", asset: "A-2" } }]), async (desk) => {
-  await desk.waitForSelector('#list [data-card="R-9"]');
-  const pill = async (id) => (await rows(desk)).find(([x]) => x === id)?.[1] || "";
-  assert.match(await pill("R-7"), /Design review/, "For Designers: still in Design review");
-  assert.match(await pill("R-8"), /Dev review/, "For Developers: still in Dev review");
-  assert.match(await pill("R-9"), /In dev/, "only a sent spec is In dev");
-  await desk.evaluate(() => { location.hash = "#R-7"; });
+  await desk.waitForSelector("#list");
+  const pill = async (id, title) => {
+    await desk.evaluate((h) => { location.hash = h; }, `#${id}`);
+    await desk.waitForFunction((x) => (document.querySelector("#detail .shead h2")?.textContent || "").includes(x), title);
+    return desk.textContent("#detail .sh-line .spill");
+  };
+  assert.match(await pill("R-8", "Rewritten for dev"), /Dev review/, "For Developers: still in Dev review");
+  assert.match(await pill("R-9", "Sent on"), /In dev/, "only a sent spec is In dev");
+  assert.match(await pill("R-7", "Rewritten for design"), /Design review/, "For Designers: still in Design review");
   await desk.waitForSelector('#detail .spec-banner[data-s="rewriting"]');
   assert.match(await desk.textContent("#detail .spec-banner"), /Design Desk is rewriting the spec as you asked\.\s*Asked by you/);
   assert.match(await desk.textContent("#detail .sh-line .spill"), /Design review/);

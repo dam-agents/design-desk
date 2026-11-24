@@ -5998,11 +5998,12 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   }
   const specWho = (e) => e && e === S.me?.email ? "you" : e || "someone";
   const specBy = (x) => x.by?.agent || !x.by ? "Design Desk" : specWho(x.by.email);
-  // A spec once sent, or not waiting for anyone: a fold further down, closed.
+  // A spec once sent, or not waiting for a review: a fold further down, closed; open while Design
+  // Desk's question about it waits, so its answers are read beside it (docs/handoff.md step 4).
   function specPanel(c) {
-    const sp = c.spec;
+    const sp = c.spec, asks = c.status === "spec" && (c.threads || []).some((th) => th.kind === "asks" && th.state === "open");
     const state = sp.sent ? `<span class="chip ok" title="Sent by ${esc(specWho(sp.sent.by?.email))}">✓ Sent ${esc(day(sp.sent.at))}</span>` : "";
-    return `<details class="fold" id="spec"${S.specEdit === c.id ? " open" : ""}><summary>The developer spec${specTarget(c)} ${state}</summary><div class="panel">
+    return `<details class="fold" id="spec"${S.specEdit === c.id || asks ? " open" : ""}><summary>The developer spec${specTarget(c)} ${state}</summary><div class="panel">
       ${specInner(c)}</div></details>`;
   }
   // A spec waiting for its review, or rewritten after Ask for changes: a banner under the head, the
