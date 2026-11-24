@@ -1808,16 +1808,18 @@
   /* Design Desk at work: the DD pair. The Ds flip one at a time and rest in three ways: as DD, with the
      round sides out, with the round sides in; back as DD, the pair turns once round. Its size follows the
      font size, its color the text color. Queued: still and faint. */
-  /* Design Desk at work: its mark, DD, in one colour and two tones. The first D turns round, the two
-     close into a disc, the disc turns once and opens into DD again. Each D is the mark's own shape
-     (desk/brand/build.mjs D_MASK); the first one flips. */
-  .dd-spin { position: relative; display: inline-block; width: 1.25em; height: 1.25em; flex: none; vertical-align: -0.25em; color: var(--warn); animation: dd-spin-turn 5s cubic-bezier(.65,0,.35,1) infinite; }
-  .dd-spin::before, .dd-spin::after { content: ""; position: absolute; top: 15.5%; width: 32.7%; height: 69%; background: currentColor; -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2010.9%2023%22%3E%3Cpath%20d%3D%22M0%200A10.9%2010.9%200%200%201%2010.9%2010.9L4.4%2010.9C0.4%2010.9%200%2010.5%200%206.5Z%22%2F%3E%3Cpath%20d%3D%22M10.9%2012.1A10.9%2010.9%200%200%201%200%2023L0%2016.5C0%2012.5%200.4%2012.1%204.4%2012.1Z%22%2F%3E%3C%2Fsvg%3E") center / 100% 100% no-repeat; mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2010.9%2023%22%3E%3Cpath%20d%3D%22M0%200A10.9%2010.9%200%200%201%2010.9%2010.9L4.4%2010.9C0.4%2010.9%200%2010.5%200%206.5Z%22%2F%3E%3Cpath%20d%3D%22M10.9%2012.1A10.9%2010.9%200%200%201%200%2023L0%2016.5C0%2012.5%200.4%2012.1%204.4%2012.1Z%22%2F%3E%3C%2Fsvg%3E") center / 100% 100% no-repeat; }
-  .dd-spin::before { left: 15.5%; animation: dd-spin-left 5s cubic-bezier(.65,0,.35,1) infinite; }
-  .dd-spin::after { left: 51.8%; opacity: .5; }
+  /* Design Desk at work: its mark, DD, in ink. The first D turns round, the two close into a disc,
+     the disc turns once and opens into DD again. Never smaller than 20px. Each D is the small mark's
+     own, as a mask over the whole box (desk/brand/build.mjs SPIN_MASK_*), so the box turns about its
+     centre; the first D turns round about its own centre line. */
+  .dd-spin { position: relative; display: inline-block; width: max(1.5em, 20px); height: max(1.5em, 20px); flex: none; vertical-align: middle; color: var(--ink); animation: dd-spin-turn 5s cubic-bezier(.65,0,.35,1) infinite; }
+  .dd-spin::before, .dd-spin::after { content: ""; position: absolute; inset: 0; background: currentColor; }
+  .dd-spin::before { -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22M10.7%2010.7A10.2%2010.2%200%200%200%200.5%200.5L0.5%204.5C0.5%209.9%201.3%2010.7%206.7%2010.7Z%22%2F%3E%3Cpath%20d%3D%22M0.5%2023.5A10.2%2010.2%200%200%200%2010.7%2013.3L6.7%2013.3C1.3%2013.3%200.5%2014.1%200.5%2019.5Z%22%2F%3E%3C%2Fsvg%3E") center / 100% 100% no-repeat; mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22M10.7%2010.7A10.2%2010.2%200%200%200%200.5%200.5L0.5%204.5C0.5%209.9%201.3%2010.7%206.7%2010.7Z%22%2F%3E%3Cpath%20d%3D%22M0.5%2023.5A10.2%2010.2%200%200%200%2010.7%2013.3L6.7%2013.3C1.3%2013.3%200.5%2014.1%200.5%2019.5Z%22%2F%3E%3C%2Fsvg%3E") center / 100% 100% no-repeat; transform-origin: 23.333% 50%; animation: dd-spin-left 5s cubic-bezier(.65,0,.35,1) infinite; }
+  .dd-spin::after { -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22M13.3%200.5A10.2%2010.2%200%200%201%2023.5%2010.7L19.5%2010.7C14.1%2010.7%2013.3%209.9%2013.3%204.5Z%22%2F%3E%3Cpath%20d%3D%22M23.5%2013.3A10.2%2010.2%200%200%201%2013.3%2023.5L13.3%2019.5C13.3%2014.1%2014.1%2013.3%2019.5%2013.3Z%22%2F%3E%3C%2Fsvg%3E") center / 100% 100% no-repeat; mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22M13.3%200.5A10.2%2010.2%200%200%201%2023.5%2010.7L19.5%2010.7C14.1%2010.7%2013.3%209.9%2013.3%204.5Z%22%2F%3E%3Cpath%20d%3D%22M23.5%2013.3A10.2%2010.2%200%200%201%2013.3%2023.5L13.3%2019.5C13.3%2014.1%2014.1%2013.3%2019.5%2013.3Z%22%2F%3E%3C%2Fsvg%3E") center / 100% 100% no-repeat; }
   .dd-spin.queued, .dd-spin.queued::before { animation: none; }
-  .dd-spin.queued { opacity: .5; }
-  .dd-spin.light { color: var(--bg); }
+  .dd-spin.queued { opacity: .45; }
+  /* In a comment pin's number, white on the pin: the one place it is smaller than 20px. */
+  .dd-spin.light { color: var(--bg); width: 1.25em; height: 1.25em; }
   @keyframes dd-spin-turn { 0%, 36% { transform: rotate(0); } 62%, 100% { transform: rotate(360deg); } }
   @keyframes dd-spin-left { 0%, 14% { transform: scaleX(1); } 26%, 70% { transform: scaleX(-1); } 82%, 100% { transform: scaleX(1); } }
   @media (prefers-reduced-motion: reduce) { .dd-spin, .dd-spin::before { animation-duration: 10s; } }

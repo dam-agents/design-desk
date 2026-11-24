@@ -4785,17 +4785,22 @@ test("in full mode Design Desk's messages carry its mark, people's none", (t) =>
 test("the mark on the page is desk/brand/mark.svg, and the spark is Draw options' alone", async () => {
   const brand = await import("../brand/build.mjs");
   const ds = (svg) => [...svg.matchAll(/<path class="(mk-\w+)" d="([^"]+)"/g)].map((m) => m[1] + " " + m[2]);
-  const file = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "brand", "mark.svg"), "utf8");
-  assert.equal(file, brand.MARK_SVG, "desk/brand/mark.svg is stale: run node desk/brand/build.mjs");
+  const brandFile = (name) => readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "brand", name), "utf8");
+  assert.equal(brandFile("mark.svg"), brand.MARK_SVG, "desk/brand/mark.svg is stale: run node desk/brand/build.mjs");
+  const file = brandFile("mark-small.svg");
+  assert.equal(file, brand.MARK_SMALL_SVG, "desk/brand/mark-small.svg is stale: run node desk/brand/build.mjs");
   const head = page.match(/<a class="brand"[^>]*>(<svg class="dd-mark"[\s\S]*?<\/svg>)<\/a>/);
   assert.ok(head, "the head carries the mark inline");
   assert.equal(head[1], brand.MARK_INLINE, "the head's copy is build.mjs's");
-  assert.deepEqual(ds(head[1]), ds(file), "the same four pieces as mark.svg");
+  assert.deepEqual(ds(head[1]), ds(file), "the same four pieces as mark-small.svg: the Desk shows it at 32px and below");
   assert.equal(page.match(/<svg class="dd-mark"/g).length, 1, "one inline copy; the script reuses it");
   assert.match(page, /<a class="brand" href="#" data-home /, "the mark in the head goes home");
   assert.ok(page.includes(`<link rel="icon" href="${brand.FAVICON_HREF}" />`), "the favicon is the mark");
-  assert.ok(page.includes(`mask: ${brand.D_MASK} center`), "the spinner's D's are the mark's");
-  assert.ok(page.includes(`mask:${brand.D_MASK_SQ} center`), "and so are the prototype overlay's");
+  for (const m of [brand.SPIN_MASK_LEFT, brand.SPIN_MASK_RIGHT]) {
+    assert.ok(page.includes(`mask: ${m} center`), "the spinner's D's are the mark's");
+    assert.ok(page.includes(`mask:${brand.sq(m)} center`), "and so are the prototype overlay's");
+  }
+  assert.ok(page.includes(`transform-origin: ${brand.SPIN_FLIP_X} 50%`), "the first D turns round about its own centre line");
   assert.deepEqual([...page.matchAll(/["']spark["']|ICON_PATH\.spark/g)].map((m) => m[0]), ['"spark"'], "the spark only as Draw options' icon (BTN_ICON explore)");
   assert.doesNotMatch(page, /data-r="agent">DD</, "no letters stand for Design Desk");
 });
