@@ -4760,6 +4760,8 @@ test("simple mode's request page with no summary: the request in full, designs, 
   assert.equal(await desk.locator("#detail .votes button.vote").count(), 0, "no vote buttons in simple mode");
   assert.match(await desk.textContent("#th-T-1 .smsg:not(.re) .who"), /pat\.lee[\s\S]*designer/i, "who by name (the part before the @) and role");
   assert.equal(await desk.locator("#th-T-1 .smsg.re").count(), 1, "a reply is indented under the first message");
+  assert.equal(await desk.locator("#th-T-1 .smsg.re .sav.mk-on-ink svg.dd-mark").count(), 1, "Design Desk's avatar is its mark (#215)");
+  assert.doesNotMatch(await desk.textContent("#th-T-1 .smsg.re .sav"), /\S/, "never letters");
   assert.equal(await desk.locator("#th-T-3 [data-work-in]").count(), 1, "a comment on a design can be worked in");
   assert.match(await desk.textContent("#th-T-3 .sjump"), /Option 1: Calm · Title/, "its option and part, a jump to them");
   assert.equal(await desk.locator("#th-T-1 [data-work-in]").count(), 0, "one on no design cannot");
@@ -4768,6 +4770,33 @@ test("simple mode's request page with no summary: the request in full, designs, 
   await desk.click("#th-T-2 summary");
   assert.equal(await desk.locator("#th-T-2[open]").count(), 1, "and opens on a click");
 }));
+
+test("in full mode Design Desk's messages carry its mark, people's none", (t) => open(t, HEAD_DESK({ ...HEAD_ME, simple: false }, [talked, drawn]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="R-7"]');
+  await desk.click('#list [data-card="R-7"]');
+  await desk.waitForSelector("#th-T-1");
+  await desk.$eval("#th-T-1", (x) => { if (x.tagName === "DETAILS") x.open = true; });
+  assert.equal(await desk.locator("#th-T-1 .msg.agent .who .msg-av.mk-on-ink svg.dd-mark").count(), 1, "the agent's message opens with the mark");
+  assert.equal(await desk.locator("#th-T-1 .msg:not(.agent) .msg-av").count(), 0, "a person's message keeps its name alone");
+}));
+
+// Design Desk's mark (#215): one drawing, desk/brand/build.mjs, wherever it stands.
+test("the mark on the page is desk/brand/mark.svg, and the spark is Draw options' alone", async () => {
+  const brand = await import("../brand/build.mjs");
+  const ds = (svg) => [...svg.matchAll(/<path class="(mk-\w+)" d="([^"]+)"/g)].map((m) => m[1] + " " + m[2]);
+  const file = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "brand", "mark.svg"), "utf8");
+  assert.equal(file, brand.MARK_SVG, "desk/brand/mark.svg is stale: run node desk/brand/build.mjs");
+  const head = page.match(/<a class="brand"[^>]*>(<svg class="dd-mark"[\s\S]*?<\/svg>)<\/a>/);
+  assert.ok(head, "the head carries the mark inline");
+  assert.equal(head[1], brand.MARK_INLINE, "the head's copy is build.mjs's");
+  assert.deepEqual(ds(head[1]), ds(file), "the same four pieces as mark.svg");
+  assert.equal(page.match(/<svg class="dd-mark"/g).length, 1, "one inline copy; the script reuses it");
+  assert.ok(page.includes(`<link rel="icon" href="${brand.FAVICON_HREF}" />`), "the favicon is the mark");
+  assert.ok(page.includes(`mask: ${brand.D_MASK} center`), "the spinner's D's are the mark's");
+  assert.ok(page.includes(`mask:${brand.D_MASK_SQ} center`), "and so are the prototype overlay's");
+  assert.deepEqual([...page.matchAll(/["']spark["']|ICON_PATH\.spark/g)].map((m) => m[0]), ['"spark"'], "the spark only as Draw options' icon (BTN_ICON explore)");
+  assert.doesNotMatch(page, /data-r="agent">DD</, "no letters stand for Design Desk");
+});
 
 // Who asked, a short summary first, and the request as asked folded under it (docs/desk-page.md →
 // Simple mode): a request from Slack written in Czech, with Design Desk's English and its gist.
