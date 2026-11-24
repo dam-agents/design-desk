@@ -434,7 +434,7 @@ head, in every dialog's head (a change's, a part's), and in full mode's **Your f
   it) and ✕; else a line saying where notes come from; the verdicts as one control, each with its
   line under it; in simple mode, for an approval of a request with more than one option (and no live
   prototype naming it), **Which design?**: the options as one control, each by its number and name,
-  the one shown on the page picked first — the approval is for it, and its dialog asks for no option
+  the one shown on the page picked first, in a neutral grey with its number in ink (never the verdict's green) — the approval is for it, and its dialog asks for no option
   (Request changes and Comment only show none: a comment on a design goes through the workspace or
   an element); a note for the whole feedback; and, in a footer fixed to the panel's bottom that stays
   in view while the notes scroll, the send button in the verdict's colour (`Request

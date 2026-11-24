@@ -355,7 +355,10 @@
   .fb-pop .fb-opt { display: grid; gap: 8px; } .fb-pop .fb-opt > b { font-size: var(--fs-meta); font-weight: 600; }
   .fb-os button { min-width: 0; padding: 8px; } .fb-os .fb-on { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .fb-os .fb-no { flex: none; min-width: 18px; line-height: 18px; padding: 0 4px; border-radius: var(--r-sm); background: var(--soft); color: var(--muted); font-size: var(--fs-micro); font-weight: 600; }
-  .fb-os button[aria-checked="true"] { background: var(--approved-soft); color: var(--approved); } .fb-os button[aria-checked="true"] .fb-no { background: var(--approved); color: var(--panel); }
+  /* Neutral, never the verdict's green: the pick is which design, not the approval. Its number in ink,
+     as the option's tab shows it on the page; the others muted. */
+  .fb-os button { color: var(--muted); } .fb-os button[aria-checked="true"] { color: var(--ink); }
+  .fb-os button[aria-checked="true"] .fb-no { background: var(--ink); color: var(--panel); }
   .elbar .el-acts .fb-pop { z-index: 6; }
   /* On a narrow screen the panel spans it, edge to edge, so none of it hangs off to the left. */
   @media (max-width: 560px) { .fb-pop { position: fixed; top: 64px; left: 8px; right: 8px; width: auto; max-height: calc(100vh - 80px); } }
