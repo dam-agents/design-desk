@@ -18,7 +18,7 @@ A request a person files on the Desk is a draft or a proposal before it goes to 
 
 **The request is the person's words.** `problem`, `goal`, `steps` and `vision` hold what the
 person who asked wrote, as they wrote it (an issue's body, a Slack message, the operator's
-chat), cut at 4000 characters, never summarized, reworded or filled in; what Design Desk makes
+chat), whole up to the store's one bound ([desk-page.md](desk-page.md) → What a person writes has no limit on the page), never summarized, reworded or filled in; what Design Desk makes
 of it goes in research, `issue_brief` and triage. An idea's text is its `problem`, their whole
 message (and `vision`, how they picture it, from the Desk's dialog); `goal` (what should
 happen) and `steps` are a bug report's, only when the reporter wrote them, and the store keeps

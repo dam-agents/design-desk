@@ -1676,19 +1676,28 @@ test("the menu names you by your row of the people list, the title stays the Des
   assert.equal(await desk.title(), "Acme Desk");
 }));
 
-// The developer spec waits for a person: Send to developers is the next step, Edit and
-// Ask for changes sit in the row, and nothing goes before a send (docs/handoff.md → Review before it goes).
-test("a spec in draft waits for a person: read it, edit it, then send it", (t) => open(t, BRIDGE_STORIES
+// The developer spec waits for a person in a banner under the head, the spec closed in it: Read
+// the spec, Edit, Ask for changes and Send there, nothing goes before a send (docs/desk-page.md → The spec banner).
+test("a spec in draft waits for a person in a banner: read it, edit it, then send it", (t) => open(t, BRIDGE_STORIES
   .replace('title: "Spend in the list", status: "feedback"', 'title: "Spend in the list", status: "spec", approved: { by: { email: "alice@example.com" }, variant: "v1" }, spec: { asset: "A-9", review: "draft" }')
   .replace('{ role: "designer", email: "alice@example.com", can: { vote: true, comment: true } }', '{ role: "designer", email: "alice@example.com", can: { vote: true, comment: true, approve: true, close: true } }')
   .replace(': path === "/api/assets/A-1"', ': path === "/api/assets/A-9" ? { contentType: "text/markdown", encoding: "utf8", data: "# The spec\\n\\nGrey header." }\n    : path === "/api/assets/A-1"'), async (desk) => {
   await desk.click('[data-tab="requests"]');
   await desk.click('[data-card="r7"]');
-  await desk.waitForSelector("#detail .moves [data-spec-send]");
-  assert.equal(await desk.locator("#detail .spec-tools [data-spec-edit]").count(), 1, "Edit on the spec itself");
-  assert.equal(await desk.locator("#detail .spec-tools [data-spec-changes]").count(), 1, "and Ask for changes…");
-  assert.equal(await desk.locator("#detail .next [data-spec-edit]").count(), 0, "not in the row");
-  await desk.waitForFunction(() => /Grey header/.test(document.querySelector("#spec-body")?.textContent || ""));
+  await desk.waitForSelector('#detail .spec-banner[data-s="ready"]');
+  assert.match(await desk.textContent("#detail .spec-banner"), /The developer spec is ready\. Read it, then send it to developers\./);
+  for (const a of ["data-spec-read", "data-spec-edit", "data-spec-changes", "data-spec-send"]) assert.equal(await desk.locator(`#detail .spec-banner [${a}]`).count(), 1, `${a} on the banner`);
+  assert.equal(await desk.locator("#detail .spec-banner [data-spec-send] svg.ico").count(), 1, "Send wears the paper plane");
+  assert.deepEqual(await desk.$eval("#detail .spec-banner > .sb-bar", (bar) => { const r = bar.querySelector(":scope > [data-spec-read]").getBoundingClientRect(), a = bar.querySelector(".sb-acts").getBoundingClientRect();
+    return [bar.nextElementSibling === null, bar.querySelector("[data-spec-read]").classList.contains("ghost"), Math.abs(r.top - a.top) < 4, r.right < a.left]; }), [true, true, true, true], "one row along its bottom: Read the spec, a ghost, on the left; the rest on the right");
+  assert.deepEqual(await desk.$$eval("#detail .spec-banner .sb-acts .btn", (xs) => xs.map((x) => x.textContent.trim())), ["✎ Edit", "Ask for changes…", "Send to developers"], "what moves it on sits on the right, Send last");
+  assert.equal(await desk.locator("#detail #spec-body").count(), 0, "the spec stays closed: the page below keeps its place");
+  assert.equal(await desk.locator("#detail details#spec").count(), 0, "no open fold");
+  assert.equal(await desk.$eval("#detail [data-spec-read]", (b) => [b.getAttribute("aria-expanded"), getComputedStyle(b.querySelector(".xchev")).transform].join(" ")), "false none", "Read the spec ends with a chevron pointing right: it opens in place");
+  await desk.click("#detail [data-spec-read]");
+  await desk.waitForFunction(() => /Grey header/.test(document.querySelector("#detail .spec-banner #spec-body")?.textContent || ""));
+  assert.equal(await desk.textContent("#detail [data-spec-read]"), "Hide the spec");
+  assert.equal(await desk.$eval("#detail [data-spec-read]", (b) => [b.getAttribute("aria-expanded"), getComputedStyle(b.querySelector(".xchev")).transform !== "none"].join(" ")), "true true", "its chevron turns down as the spec opens in place");
   assert.match(await desk.textContent("#detail"), /Approved\s*the spec waits to be read/, "the state says the spec has not gone");
   await desk.click("#detail [data-spec-edit]");
   await desk.waitForFunction(() => /Grey header/.test(document.querySelector("#spec-text")?.value || ""), null, { timeout: 5000 });
@@ -5034,6 +5043,55 @@ test("simple mode's head says, muted, who approved it and where it went; a bug s
   assert.match(await desk.textContent("#detail .sh-after"), /Approved by you/);
   assert.equal(await desk.locator('#detail .sh-more [data-handle="0"]').count(), 1, "Undo approval under ⋯");
 }));
+
+// A spec sent back with Ask for changes is not with developers yet: it keeps the review it was in,
+// For Designers and For Developers alike, and its banner says Design Desk rewrites it (docs/desk-page.md → The spec banner).
+test("a spec sent back for changes keeps its review, not In dev", (t) => open(t, HEAD_DESK(HEAD_ME, [
+  { ...drawn, id: "R-7", title: "Rewritten for design", status: "spec", approved: { by: { email: "d@example.com" }, at: "2026-11-18T09:00:00Z" }, spec: { review: "changes", asset: "A-2", asked: { by: { email: "d@example.com" }, at: "2026-11-18T10:00:00Z", note: "Bigger prices." } } },
+  { ...drawn, id: "R-8", title: "Rewritten for dev", status: "spec", for: "developers", approved: { by: { email: "d@example.com" }, at: "2026-11-18T09:00:00Z" }, spec: { review: "changes", asset: "A-2" } },
+  { ...drawn, id: "R-9", title: "Sent on", status: "spec", approved: { by: { email: "d@example.com" }, at: "2026-11-18T09:00:00Z" }, spec: { review: "sent", asset: "A-2" } },
+  { ...drawn, id: "R-10", title: "Asked to go by itself", status: "spec", approved: { by: { email: "d@example.com" }, at: "2026-11-18T09:00:00Z", auto_send: true }, spec: { review: "changes", asset: "A-2" } }]), async (desk) => {
+  await desk.waitForSelector("#list");
+  const pill = async (id, title) => {
+    await desk.evaluate((h) => { location.hash = h; }, `#${id}`);
+    await desk.waitForFunction((x) => (document.querySelector("#detail .shead h2")?.textContent || "").includes(x), title);
+    return desk.textContent("#detail .sh-line .spill");
+  };
+  assert.match(await pill("R-8", "Rewritten for dev"), /Dev review/, "For Developers: still in Dev review");
+  assert.match(await pill("R-9", "Sent on"), /In dev/, "only a sent spec is In dev");
+  assert.match(await pill("R-10", "Asked to go by itself"), /Design review/, "sent back for changes, whatever its approver asked");
+  assert.match(await pill("R-7", "Rewritten for design"), /Design review/, "For Designers: still in Design review");
+  await desk.waitForSelector('#detail .spec-banner[data-s="rewriting"]');
+  assert.match(await desk.textContent("#detail .spec-banner"), /Design Desk is rewriting the spec as you asked\.\s*Asked by you/);
+  assert.match(await desk.textContent("#detail .sh-line .spill"), /Design review/);
+  assert.equal(await desk.locator("#detail [data-spec-send]").count(), 0, "no send while it is rewritten");
+  assert.equal(await desk.locator("#detail .spec-banner [data-spec-read]").count(), 1, "the last version still reads");
+  assert.equal(await desk.locator('#detail [data-fb="head"]').count(), 0, "no Submit feedback offering Approve again: it is approved, and nothing waits to be sent");
+}));
+
+// Ask for changes takes a note of any length: the dialog sets no limit, and the note goes whole.
+test("Ask for changes to the spec sends a long note whole", (t) => open(t, HEAD_DESK(HEAD_ME, [
+  { ...drawn, id: "R-7", title: "Spec to change", status: "spec", approved: { by: { email: "d@example.com" }, at: "2026-11-18T09:00:00Z" }, spec: { review: "draft", asset: "A-2" } }]), async (desk) => {
+  await desk.waitForSelector("#list");
+  await desk.evaluate(() => { location.hash = "#R-7"; });
+  await desk.click("#detail .spec-banner [data-spec-changes]");
+  await desk.waitForSelector("#confirm-dialog[open]");
+  assert.equal(await desk.$eval("#confirm-form textarea[name=note]", (x) => x.hasAttribute("maxlength")), false, "no limit on the note");
+  const long = "Make the prices bigger and the plan names bolder. ".repeat(110).trim();
+  await desk.fill("#confirm-form textarea[name=note]", long);
+  await desk.click("#cf-ok");
+  await desk.waitForFunction(() => posts.some((x) => x.path === "/api/cards/R-7/spec"));
+  assert.deepEqual(await desk.evaluate(() => posts.find((x) => x.path === "/api/cards/R-7/spec").body), { action: "changes", note: long });
+}));
+
+// The fields people write to Design Desk or the team in carry no limit (the server keeps one generous
+// bound); the short records keep theirs: a decision and its why, a line for Slack.
+test("no prompt field limits what a person writes", () => {
+  const limited = (page.match(/<textarea\b[^>]*maxlength[^>]*>/g) || []).map((x) => `${x.match(/name="(\w+)"/)?.[1]}:${x.match(/maxlength="(\d+)"/)[1]}`);
+  assert.deepEqual(limited, ["text:600", "why:1500", "note:500"], "the decision's words, its why, the Slack line");
+  assert.doesNotMatch(page, /data-(reply|q-note)[^>]*maxlength/, "replies and answers have none");
+  assert.match(page, /if \(noteMax\) f\.note\.maxLength = noteMax; else f\.note\.removeAttribute\("maxlength"\);/, "a dialog's note has none unless it is a short record");
+});
 
 // The head keeps to the store's rules (review of #184): an archived change opens, a draft waits
 // whatever spec_review says, no send past an open question, Reopen as full mode allows it, a

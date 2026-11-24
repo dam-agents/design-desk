@@ -7,6 +7,16 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.112.0 — 2026-11-24
+
+**Upgrade:**
+1. Restart the Desk server ([desk.md](docs/desk.md) → Server) and republish the page
+   ([desk.md](docs/desk.md) → Publishing the page): a spec waiting for its review stands under the head as a
+   banner, its text closed until Read the spec, and Send to developers wears the paper plane; a spec
+   rewritten after Ask for changes keeps its request in Dev review or Design review; what a person
+   writes has no limit on the page, one bound of 20,000 characters on the server
+   ([desk-page.md](docs/desk-page.md) → The spec banner). No data migration.
+
 ## 1.111.0 — 2026-11-24
 
 **Upgrade:**

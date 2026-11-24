@@ -258,6 +258,21 @@ const pr = (id, n, title, min, extra = {}) => ({ id, kind: "change", title, stat
   source: { kind: "pr", author: "dana-kim", pr: n, url: `https://github.com/example/product/pull/${n}`, repo: "example/product", ...(extra.merged === false ? {} : { merged_at: ago(min) }) },
   attention: { level: "designer", reasons: ["A new element: the diff adds it."] }, screens: [], ...bare, ...extra });
 const r4 = req("R-4", "Settings: group the toggles by topic", "spec", 90, { approved: { by: ALICE, at: ago(90) }, spec: { review: "sent" } });
+// R-10: approved, its developer spec written and waiting to be read and sent (docs/handoff.md → Review before it goes).
+A["A-spec-r10"] = { id: "A-spec-r10", contentType: "text/markdown", encoding: "utf8", data: `# Billing: a clearer plan picker
+
+## What changes
+The three plans sit side by side as cards, the current one marked **Current**.
+
+## Acceptance
+- Each plan shows its price per month.
+- Upgrade is the only primary button.
+- The plans read in the same order as today.
+
+## Out of scope
+- New plans or prices.
+` };
+const r10 = req("R-10", "Billing: a clearer plan picker", "spec", 20, { approved: { by: ALICE, at: ago(40) }, spec: { asset: "A-spec-r10", at: ago(20), by: { agent: true }, review: "draft" } });
 const r5 = req("R-5", "Login: a calmer error state", "handed-off", 60 * 26, { approved: { by: ALICE, at: ago(60 * 30) }, built: { by: DEV, at: ago(60 * 26) } });
 const r6 = req("R-6", "A second primary button on Billing", "declined", 60 * 50);
 const r7 = req("R-7", "Rounded corners on every table", "declined", 60 * 24 * 400, { decided: { by: ALICE, at: ago(60 * 24 * 400), text: "Tables keep square corners." } });
@@ -293,5 +308,5 @@ const r8 = { ...r3, id: "R-8", title: "Agents list: fewer columns", stage: "draf
   request: { type: "idea", problem: "The agents list has more columns than anyone reads." }, threads: [], votes: {} };
 const r9 = { ...r3, id: "R-9", title: "A quieter usage chart", stage: "proposal", created: ago(300), updated: ago(15),
   request: { type: "idea", problem: "The usage chart pulls the eye from the totals." }, threads: [], votes: {} };
-export const CARDS = [r1, r2, r3, r4, r5, r6, r7, r8, r9, p1, p2, p3, p4, p5, p6];
+export const CARDS = [r1, r2, r3, r10, r4, r5, r6, r7, r8, r9, p1, p2, p3, p4, p5, p6];
 export const ASSETS = A;

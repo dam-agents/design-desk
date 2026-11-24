@@ -122,6 +122,19 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   on a narrow screen; the presentation's Exit, a picture's ✕).
   `desk/tests/page.test.mjs` drives every dialog in such a frame. It reports itself skipped
   only when it finds no Chromium or the toolkit's `playwright-core` is not installed.
+- **The spec banner.** A spec draft waiting for its review, or rewritten after Ask for changes,
+  stands under the request's head as a banner, in both modes; the spec itself stays closed in it, so
+  the page below keeps its place. Waiting: green, *The developer spec is ready. Read it, then send it
+  to developers.*, its version, who wrote it and where it goes, and one row of buttons along its bottom: **Read the
+  spec**, a ghost, on the left, its chevron turning as the spec opens right under it, with its versions;
+  **Edit**, **Ask for changes…** and, last, **Send to developers** on the right for who may approve it; anyone else reads who sends it. Rewritten: blue, a spinner, *Design Desk is rewriting
+  the spec as you asked.*, who asked and when, and **Read the last version**; no Send. With Design
+  Desk's question open: blue, pointing to the questions, no Send. Once sent, the spec is a closed fold
+  further down. Send to developers wears the paper plane wherever it stands, its dialog's button too.
+- **What a person writes has no limit on the page.** A request, a comment, a reply, a review, an
+  answer and the note of every dialog take any length; the server keeps one bound, 20,000 characters
+  (`LIMITS.prompt`), and says when text passes it. Short records keep theirs: a title, a name, a link,
+  a decision's words (600) and why (1,500), a revoke's reason (600), a line for Slack (500).
 - **Pages and filters.** A tab's pages are tabs at the top of its list: **For Designers**, **For
   Developers** and **For presentation** on Requests; **For Designers** and **For Developers** on
   PR Changes and Issues, each opened on the viewer's own as Requests ([desk.md](desk.md) → For
@@ -583,13 +596,14 @@ person has seen an item is its bold title alone ([Read and unread](#read-and-unr
 **In simple mode** an item has one state, by who works on it, whatever its side, and no status dot. **Draft**
 (grey, dashed): a draft, its author's ([desk.md](desk.md) → Draft and Proposal). **Dev review**
 (amber; its key `proposal`): the dev team decides — a proposal, and, For Developers, an open request
-at any step before it is approved, one approved whose spec draft waits for a person to send it, and a
+at any step before it is approved, one approved whose spec draft waits for a person to send it or is
+rewritten after Ask for changes, and a
 change nobody marked handled that is not auto handled; a UI dev owner approves it for developers or
 sends it to design. Its pill says **Proposal** on a request not yet approved (a proposal, or an open
-For Developers request), **Dev review** on a change and on a spec draft waiting, as Closed's pill says
+For Developers request), **Dev review** on a change and on a spec draft waiting or rewritten, as Closed's pill says
 how it ended. **Design review** (green; its key `open`): it needs a design decision — the same
 three For Designers. Design Desk at work on an item leaves it in its review: the spinner says so. **In dev** (the accent): it is
-approved and developers build it — a request writing its spec or sent to developers and not yet
+approved and developers build it — a request writing its first spec or sent to developers and not yet
 built, a change handled or auto handled whose pull request is not merged, and a change a review asked
 changes of until new commits arrive (its head says **Changes requested · developer**, and **Changes
 requested · you** to its pull request's author, by the GitHub username People keeps, in both modes; a request a
@@ -701,6 +715,9 @@ Every change to the page keeps to one scale; `desk/tests/page.test.mjs` fails on
   a change's Approve, Looks good — is Approved's green, outside a ⋯ menu.
   **Propose** and **Send to design** only send it on to the next review: outlined, with a paper plane.
   **Submit feedback** wears the colour of the verdict it sends ([Submit feedback](#submit-feedback)).
+- **Opens in place:** a button or a row that shows its content right there wears one chevron
+  (`.xchev`), right while closed, turned down while open (`aria-expanded`): **Read the spec**, a
+  person on People. A long read in the page's flow is a fold, + and −; the guidelines (Folds).
 - **Corners:** two, `--r-sm` 6 and `--radius` 12, and two shapes, `999px` and `50%`; nothing
   else. Which a thing takes: the guidelines (Corners).
 - **Space:** multiples of 4 (4, 8, 12, 16, 24, 32); 1 or 2px only as a hairline or a nudge. Which

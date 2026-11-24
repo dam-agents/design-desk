@@ -25,8 +25,9 @@ export const LIMITS = {
   designDifferences: 12,
   // The ways of one part a person picks from (docs/requests.md → Alternatives of a part).
   alternatives: 4,
-  // What a person writes a new option should look like and have.
-  optionAsk: 2000,
+  // What a person writes to Design Desk or the team: a request, a note to an action, a comment,
+  // a reply, a review. The page sets no limit on these; this bound only keeps the store whole.
+  prompt: 20000,
   messagesPerThread: 200,
   // One person's draft comments on one item, not sent yet (docs/desk.md → Reviews).
   draftsPerCard: 50,
@@ -259,7 +260,7 @@ function cleanTranslation(t, request, at) {
   for (const k of ["title", "problem", "vision", "goal", "steps"]) {
     if (t[k] == null || t[k] === "") continue;
     if (k !== "title" && !request[k]) throw bad(`translation.${k}: the request has no ${k}`);
-    out[k] = clean(t[k], k === "title" ? LIMITS.title : LIMITS.text, `translation.${k}`);
+    out[k] = clean(t[k], k === "title" ? LIMITS.title : LIMITS.prompt, `translation.${k}`);
   }
   if (!out.problem) throw bad("translation.problem is empty");
   return { ...out, at };
@@ -814,7 +815,7 @@ export class Store {
     if (kind === "change" && !(c.variants || []).some((v) => v.id === anchor?.variant)) throw bad("a change note belongs to one of the design options");
     if (anchor?.state && !(c.variants || []).find((v) => v.id === anchor.variant)?.states?.some((x) => x.id === anchor.state)) throw bad("That state is not drawn for this option.");
     if ((c.threads || []).length >= LIMITS.threadsPerCard) throw bad("This page holds at most 300 conversations. Mark some as done first.");
-    const body = clean(text, LIMITS.text, "text");
+    const body = clean(text, LIMITS.prompt, "text");
     const pictures = this.changeShots(shots, who);
     const id = this.next("thread", "T");
     const t = {
@@ -835,7 +836,7 @@ export class Store {
     return { thread: t, inbox: item };
   }
 
-  reply(threadId, who, text, max = LIMITS.text) {
+  reply(threadId, who, text, max = LIMITS.prompt) {
     const t = this.threadFor(threadId, who);
     if (t.messages.length >= LIMITS.messagesPerThread) throw bad("This conversation is full. Start a new one below.");
     const body = clean(text, max, "text");
@@ -912,7 +913,7 @@ export class Store {
     const a = anchor ? cleanAnchor(anchor) : null;
     if (a?.variant && !(c.variants || []).some((v) => v.id === a.variant)) throw bad("That design option is not on this request.");
     if (a?.state && !(c.variants || []).find((v) => v.id === a.variant)?.states?.some((x) => x.id === a.state)) throw bad("That state is not drawn for this option.");
-    return put({ id: randomUUID().slice(0, 8), text: clean(text, LIMITS.text, "text"), anchor: a, ...(change ? { change: clean(String(change), 120, "change") } : {}), at: this.clock() });
+    return put({ id: randomUUID().slice(0, 8), text: clean(text, LIMITS.prompt, "text"), anchor: a, ...(change ? { change: clean(String(change), 120, "change") } : {}), at: this.clock() });
   }
   removeDraft(cardId, who, id) {
     const c = this.card(cardId), key = this.draftsFor(who);
@@ -942,7 +943,7 @@ export class Store {
     if (!["request", "change"].includes(c.kind)) throw bad("Feedback is sent on a request or a pull request's change.");
     if (c.kind === "change" && verdict !== "comment") this.mayHandle(c, who);
     const drafts = structuredClone(own(own(this.db.drafts, key) || {}, c.id) || []);
-    const words = optText(note, LIMITS.text, "note");
+    const words = optText(note, LIMITS.prompt, "note");
     if (!drafts.length && !words) throw bad("Write a comment or a note first.");
     // Looks good marks make no conversation: the review keeps them, by key and name.
     const chs = c.kind === "change" ? changesOf(c) : [];
@@ -1190,7 +1191,7 @@ export class Store {
     if (mine.length >= LIMITS.threadsPerCard) throw bad("You have 300 private asks. Mark some as done first.");
     const id = this.next("thread", "T");
     const t = { id, card: ctx.card, kind: "private", owner, context: ctx, ...(starter ? { starter } : {}), state: "open", anchor: null, needs_agent: true, created: this.clock(),
-      messages: [{ by: person(who), at: this.clock(), text: clean(text, LIMITS.text, "text") }] };
+      messages: [{ by: person(who), at: this.clock(), text: clean(text, LIMITS.prompt, "text") }] };
     this.db.threads[id] = t;
     const item = this.enqueue("question", ctx.card, id, who);
     this.save();
@@ -1475,11 +1476,11 @@ export class Store {
       const a = answers[i] || {};
       const choice = a.choice == null || a.choice === "" ? null : String(a.choice);
       if (choice !== null && !q.options.includes(choice)) throw bad(`"${choice}" is not an option of question ${i + 1}`);
-      return { choice, note: optText(a.note, 500, "note") };
+      return { choice, note: optText(a.note, LIMITS.prompt, "note") };
     });
-    // Six full questions with notes stay under twice the text limit; the reply takes that.
     const text = t.questions.map((q, i) => { const a = given[i]; return `**${q.text}**\n${a.choice ?? "Leave it to Design Desk"}${a.note ? ` — ${a.note}` : ""}`; }).join("\n\n");
-    const out = this.reply(threadId, who, text, LIMITS.text * 2);
+    // Each answer may take the whole bound; the questions and their choices ride beside them.
+    const out = this.reply(threadId, who, text, (LIMITS.prompt + LIMITS.text) * t.questions.length);
     t.answers = given;
     this.save();
     return out;
@@ -1580,12 +1581,12 @@ export class Store {
     // own proposal. Nobody fills them in for an idea, so they are not kept for one.
     const reported = type === "bug" || type === "proposal";
     const request = {
-      type, problem: clean(problem, LIMITS.text, "problem"), goal: reported ? optText(goal, LIMITS.text, "goal") : "",
-      screen: optText(screen, 500, "screen"), steps: reported ? optText(steps, LIMITS.text, "steps") : "",
+      type, problem: clean(problem, LIMITS.prompt, "problem"), goal: reported ? optText(goal, LIMITS.prompt, "goal") : "",
+      screen: optText(screen, 500, "screen"), steps: reported ? optText(steps, LIMITS.prompt, "steps") : "",
       from: from ? this.card(String(from)).id : null,
       figma: figma ? String(figma) : null,
       // How the person pictures it, and the skills they switched for its options (docs/requests.md).
-      vision: optText(vision, LIMITS.text, "vision"), skills: cleanSkills(skills),
+      vision: optText(vision, LIMITS.prompt, "vision"), skills: cleanSkills(skills),
       // How many options to draw (0: none), whether Design Desk questions the person first
       // (the grill action), and whether the options start right after triage: only when the
       // person who filed it may start them (docs/requests.md).
@@ -1717,7 +1718,7 @@ export class Store {
     if (vs.length >= 6) throw bad("A request has at most 6 options. Close one first.");
     if (!images.length) throw bad("Add at least one picture.");
     for (const im of images) if (!/^image\/(png|jpeg|webp)$/.test(im?.contentType || "") || !/^[A-Za-z0-9+/]+=*$/.test(String(im?.data || ""))) throw bad("Only PNG, JPEG or WebP pictures can be added.");
-    const title = clean(String(name || "").trim() || `Option ${vs.length + 1}`, 80, "name"), why = optText(note, 1000, "note");
+    const title = clean(String(name || "").trim() || `Option ${vs.length + 1}`, 80, "name"), why = optText(note, LIMITS.prompt, "note");
     const html = `<!doctype html><html><head><meta charset="utf-8"><title>${title.replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch])}</title>`
       + `<style>body{margin:0;background:#fff}img{display:block;max-width:100%;height:auto;margin:0 auto}</style></head><body>`
       + images.map((im, i) => `<img alt="Picture ${i + 1}" src="data:${im.contentType};base64,${im.data}">`).join("") + `</body></html>`;
@@ -1744,7 +1745,7 @@ export class Store {
   // A screen already mapped at the address given is that card, and no new work.
   addToProduct(who, { kind, part, where = "", show = "", screens = [] }) {
     if (kind !== "screen" && kind !== "element") throw bad("kind must be screen or element");
-    const wanted = { part: clean(part, 500, "part"), where: optText(where, 500, "where"), show: optText(show, 2000, "show") };
+    const wanted = { part: clean(part, LIMITS.prompt, "part"), where: optText(where, 500, "where"), show: optText(show, LIMITS.prompt, "show") };
     if (kind === "screen" && /^\/\S*$/.test(wanted.where)) {
       const known = Object.values(this.db.cards).find((x) => x.kind === "screen" && x.path === wanted.where && x.status !== "dropped");
       if (known) return { card: known, existing: true, inbox: null };
@@ -2070,7 +2071,7 @@ export class Store {
       if (action !== "refresh") throw bad("a screen can only be checked again");
       if (c.status === "building" || c.status === "dropped") throw bad("Design Desk has not drawn this screen yet.");
       if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === "map")) throw bad(BUSY);
-      const item = this.enqueue("map", cardId, null, who, optText(note, 1000, "note"));
+      const item = this.enqueue("map", cardId, null, who, optText(note, LIMITS.prompt, "note"));
       item.scope = "refresh";
       this.save();
       return { card: c, inbox: item };
@@ -2080,7 +2081,7 @@ export class Store {
       // `history` draws how it looked at earlier commits of the code (docs/catalog.md → History).
       if (action !== "refresh" && action !== "history") throw bad("a catalog element can only be redrawn or have its history drawn");
       if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === "catalog")) throw bad(BUSY);
-      const item = this.enqueue("catalog", cardId, null, who, optText(note, 1000, "note"));
+      const item = this.enqueue("catalog", cardId, null, who, optText(note, LIMITS.prompt, "note"));
       if (action === "history") item.scope = "history";
       this.save();
       return { card: c, inbox: item };
@@ -2089,7 +2090,7 @@ export class Store {
       if (action !== "draw") throw bad("an issue can only be drawn");
       if (c.status === "archived") throw bad("This issue is closed.");
       if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === "draw")) throw bad(BUSY);
-      const item = this.enqueue("draw", cardId, null, who, optText(note, 1000, "note"));
+      const item = this.enqueue("draw", cardId, null, who, optText(note, LIMITS.prompt, "note"));
       this.save();
       return { card: c, inbox: item };
     }
@@ -2169,7 +2170,7 @@ export class Store {
         if ((c.variants || []).length) Object.assign(c, { status: "variants", team_feedback: { state: "waiting", since: at } });
         else c.status = "triage";
         c.updated = at;
-        const item = (c.variants || []).length ? null : this.enqueue("request", cardId, null, who, optText(note, 1000, "note"));
+        const item = (c.variants || []).length ? null : this.enqueue("request", cardId, null, who, optText(note, LIMITS.prompt, "note"));
         this.save();
         return { card: c, inbox: item };
       }
@@ -2183,7 +2184,7 @@ export class Store {
       delete c.not_built;
       delete c.dev_summary;
       c.updated = this.clock();
-      const item = this.enqueue("request", cardId, null, who, optText(note, 1000, "note"));
+      const item = this.enqueue("request", cardId, null, who, optText(note, LIMITS.prompt, "note"));
       this.save();
       return { card: c, inbox: item };
     }
@@ -2243,7 +2244,7 @@ export class Store {
     if (action === "approve" && autoSend && c.origin?.channel !== "slack" && !this.fromPr(c)) c.approved.auto_send = true;
     // A picture of a part from the product documents the design; it changes nothing on it.
     if (action !== "take-before") c.updated = this.clock();
-    const item = this.enqueue(kinds[action], cardId, null, who, optText(note, action === "add-option" ? LIMITS.optionAsk : 1000, "note"));
+    const item = this.enqueue(kinds[action], cardId, null, who, optText(note, LIMITS.prompt, "note"));
     if (action === "draw-now") item.scope = "now";
     if (action === "take-before") { item.scope = "before"; item.element = beforeOf.id; }
     // Sent to Figma: the option it is, so the page shows Design Desk at work on it.
@@ -2298,7 +2299,7 @@ export class Store {
       return { card: c };
     }
     if (action === "changes") {
-      const ask = clean(note, 2000, "what to change");
+      const ask = clean(note, LIMITS.prompt, "what to change");
       c.spec = { ...c.spec, review: "changes", asked: { by: person(who), at, note: ask } };
       c.updated = at;
       const item = this.enqueue("handoff", cardId, null, who, ask);
@@ -2422,7 +2423,7 @@ export class Store {
     // A page published before the option picker sends none: the favourite, else the first.
     if (vs.length && variant == null) variant = (favouriteOf(c) || vs[0]).id;
     if (vs.length && !vs.some((v) => v.id === variant)) throw bad("Pick the design option to present.");
-    c.agenda = { status: "queued", by: person(who), at: this.clock(), note: optText(note, 500, "note"), variant: vs.length ? variant : null, brief: null };
+    c.agenda = { status: "queued", by: person(who), at: this.clock(), note: optText(note, LIMITS.prompt, "note"), variant: vs.length ? variant : null, brief: null };
     c.updated = this.clock();
     const item = this.enqueue("agenda", cardId, null, who, c.agenda.note);
     this.save();
@@ -3226,7 +3227,7 @@ export class Store {
     if (t.messages[i].by?.agent) throw bad("Design Desk does not decide: record what a person said");
     if (t.messages[i].decision) throw bad(`This is already ${t.messages[i].decision}.`);
     if (Object.values(this.db.inbox).some((x) => x.kind === "decision" && x.thread === threadId && x.message === i && x.state !== "done")) throw bad(BUSY);
-    const item = this.enqueue("decision", t.card, threadId, who, optText(note, 600, "note"));
+    const item = this.enqueue("decision", t.card, threadId, who, optText(note, LIMITS.prompt, "note"));
     item.message = i;
     this.save();
     return { inbox: item };
