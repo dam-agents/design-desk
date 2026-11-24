@@ -7,6 +7,14 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.113.0 — 2026-11-24
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): simple mode's request page has
+   no comment box under the designs and no vote pills; What Design Desk found is a fold with its answer
+   in its head; every fold and the comments keep one 800 px width; comments run oldest first, Reply
+   and Resolve as words ([desk-page.md](docs/desk-page.md) → Simple mode). No data migration.
+
 ## 1.112.0 — 2026-11-24
 
 **Upgrade:**

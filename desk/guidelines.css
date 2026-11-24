@@ -274,10 +274,10 @@
   /* Simple mode's page: Design Desk's short summary, the request as it was asked, what Design Desk
      found, the folds, the comments. Its words keep a readable width however wide the page is; the
      designs and the pictures take the whole width. */
-  :root { --read: 680px; }
+  :root { --read: 800px; }
   .slead { max-width: var(--read); font-size: var(--fs-head); line-height: 1.55; margin: 4px 0 8px; }
   .slead p { margin: 0; } .slead p + p { margin-top: 8px; }
-  #detail details.fold.big.sfold, #detail .sfound, #detail .sthreads, #detail .yreview, #detail .rvw, #detail .slead + .hint, #detail .sfull { max-width: var(--read); }
+  #detail details.fold.big.sfold, #detail .sthreads, #detail .yreview, #detail .rvw, #detail .slead + .hint, #detail .sfull { max-width: var(--read); }
   /* A request with no summary yet (filed before Design Desk wrote one) shows its words in full, open. */
   #detail .sfull { font-size: var(--fs-head); line-height: 1.55; } #detail .sfull p { margin: 0 0 8px; } #detail .sfull h4 { margin: 12px 0 4px; }
   /* The request as it was asked, folded under the summary: where it came from and when, no name. */
@@ -288,14 +288,33 @@
   .tr-bar { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font-size: var(--fs-meta); color: var(--muted); }
   .tr-btn { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); color: var(--ink); font: inherit; font-size: var(--fs-meta); cursor: pointer; }
   .tr-btn:hover { background: var(--soft); } .tr-btn svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-  .sfound { max-width: var(--measure); margin-top: 24px; padding: 16px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--panel); }
-  .sfound h3 { margin-top: 0; } .sfound h4 { margin: 12px 0 4px; } .sfound ul { margin: 4px 0 0; padding-left: 20px; }
+  /* What Design Desk found: a fold like the others, the first of them. Its head carries Design
+     Desk's mark and its answer, so a glance tells whether there is anything to check. */
+  details.sfound > summary .sf-mark { width: 24px; height: 24px; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--ink); color: var(--bg); }
+  details.sfound > summary .sf-mark svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+  details.sfound > summary .sf-say { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-meta); font-weight: 500; color: var(--ok); }
+  details.sfound > summary .sf-say[data-k="warn"] { padding: 0 8px; line-height: 24px; border-radius: 999px; color: var(--warn); background: var(--warn-soft); }
+  details.sfound > summary .sf-say svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  details.sfound .section { padding: 0 0 16px; } .sfound h4 { margin: 12px 0 4px; } .sfound h4:first-child { margin-top: 0; } .sfound ul { margin: 4px 0 0; padding-left: 20px; }
   details.sfold { max-width: var(--measure); border-top: 1px solid var(--line); }
+  /* Comments: oldest first, so the newest sits just above the box to write in. */
   .sthreads { max-width: var(--measure); margin-top: 32px; }
-  .sthread { padding: 12px 16px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--panel); margin-bottom: 12px; }
-  details.sthread.done > summary { display: flex; gap: 8px; align-items: baseline; justify-content: space-between; cursor: pointer; list-style: none; color: var(--muted); font-size: var(--fs-meta); }
-  details.sthread.done > summary::-webkit-details-marker { display: none; } details.sthread.done > summary .q { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sthreads > h3 .n { margin-left: 4px; color: var(--muted); font-weight: 500; }
+  .sthread { padding: 16px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--panel); margin-bottom: 12px; }
+  details.sthread.done { padding: 12px 16px; }
+  details.sthread.done > summary { display: flex; gap: 8px; align-items: center; cursor: pointer; list-style: none; color: var(--muted); font-size: var(--fs-meta); }
+  details.sthread.done > summary::-webkit-details-marker { display: none; } details.sthread.done > summary .q { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  details.sthread.done > summary .q b { color: var(--ink); font-weight: 500; }
+  details.sthread.done > summary .ok { width: 14px; height: 14px; flex: none; fill: none; stroke: var(--ok); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  details.sthread.done > summary .chev { width: 12px; height: 12px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; transition: transform .12s; }
+  details.sthread.done[open] > summary .chev { transform: rotate(90deg); }
   details.sthread.done[open] > summary { margin-bottom: 12px; }
+  /* A conversation's moves are quiet words under it; Reply opens its box. */
+  .sthread .sacts { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; margin: 12px 0 0 40px; }
+  .sthread .slk { border: 0; background: none; padding: 0; font: inherit; font-size: var(--fs-meta); font-weight: 500; color: var(--muted); cursor: pointer; }
+  .sthread .slk:hover { color: var(--ink); text-decoration: underline; } .sthread .slk:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--r-sm); }
+  .sthread .sacts .chip { margin: 0; }
+  .sthread .reply.sreply { margin: 12px 0 0 40px; padding: 0; border: 0; } .sthread .reply.sreply[hidden] { display: none; }
   .smsg { display: flex; gap: 12px; align-items: flex-start; } .smsg + .smsg { margin-top: 12px; } .smsg.re { margin-left: 40px; }
   .smsg .sm-b { min-width: 0; flex: 1; } .smsg .sm-b > p:first-of-type { margin-top: 4px; }
   .smsg .who { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: var(--fs-meta); } .smsg .who .role, .smsg .who .at { color: var(--muted); }

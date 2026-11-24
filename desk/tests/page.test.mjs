@@ -4578,22 +4578,16 @@ window.platform = { async request({ method, path, body }) {
 try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
 </script>`;
 
-test("simple mode: Add to feedback keeps a comment for the feedback, Comment posts it; Submit feedback counts, lists and removes them; no box under the head", (t) => open(t, REVIEW_DESK(HEAD_ME, [drawn, prChange]), async (desk) => {
+test("simple mode: no comment box under the designs; Submit feedback counts, lists and removes what waits in the feedback; no box under the head", (t) => open(t, REVIEW_DESK(HEAD_ME, [drawn, prChange]), async (desk) => {
   await desk.waitForSelector('#list [data-card="R-5"]');
+  // Comments for the feedback come from the design workspace and an element's dialog; here they wait already.
+  await desk.evaluate(() => { drafts["R-5"] = [{ id: "d1", text: "Tighter rows.", anchor: { variant: "v1" }, at: "2026-11-18T10:00:00Z" }, { id: "d2", text: "Second.", anchor: { variant: "v1" }, at: "2026-11-18T10:01:00Z" }]; });
   await desk.click('#list [data-card="R-5"]');
-  await desk.waitForSelector("#detail .rbox");
-  assert.match(await desk.getAttribute("#detail .rbox textarea", "placeholder"), /Option 1 · Calm/, "the box is about the option shown");
-  assert.deepEqual(await desk.locator("#detail .rbox .bar button").allTextContents(), ["Add to feedback", "Comment"], "the box's two buttons, in the words people read");
-  await desk.fill("#detail .rbox textarea", "Tighter rows.");
-  await desk.click("#detail .rbox [data-draft-add]");
   await desk.waitForSelector('#detail [data-fb="head"] .cnt');
-  assert.deepEqual(await desk.evaluate(() => posts.find((p) => /drafts$/.test(p.path)).body), { text: "Tighter rows.", anchor: { variant: "v1" } });
+  assert.equal(await desk.locator("#detail .rbox").count(), 0, "no comment box under the designs");
   assert.equal(await desk.locator("#detail .yreview").count(), 0, "no box under the head: nothing moves the page");
-  assert.match(await desk.textContent('#detail [data-fb="head"]'), /Submit feedback\s*1/, "the head counts the note");
+  assert.match(await desk.textContent('#detail [data-fb="head"]'), /Submit feedback\s*2/, "the head counts the notes");
   assert.equal(await desk.getAttribute('#detail [data-fb="head"]', "data-v"), "rc", "amber: it asks for changes");
-  await desk.fill("#detail .rbox textarea", "Second.");
-  await desk.click("#detail .rbox [data-draft-add]");
-  await desk.waitForFunction(() => /2/.test(document.querySelector('#detail [data-fb="head"] .cnt')?.textContent || ""));
   await openFeedback(desk);
   assert.match(await desk.textContent(".fb-pop"), /Option 1 · Calm[\s\S]*Tighter rows\.[\s\S]*Second\./);
   await desk.click(".fb-pop .dbub:last-child [data-draft-del]");
@@ -4601,11 +4595,6 @@ test("simple mode: Add to feedback keeps a comment for the feedback, Comment pos
   assert.ok(await desk.evaluate(() => posts.some((p) => p.method === "DELETE" && /\/drafts\/d/.test(p.path))), "removed, and the panel stays open");
   await desk.click(".fb-pop [data-fb-close]");
   await desk.waitForFunction(() => !document.querySelector(".fb-pop"));
-  // Comment: a comment on the Desk at once, not in the feedback.
-  await desk.fill("#detail .rbox textarea", "Looks calm.");
-  await desk.click("#detail .rbox [data-draft-now]");
-  await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/R-5/threads"));
-  assert.deepEqual(await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/R-5/threads").body), { kind: "comment", text: "Looks calm.", anchor: { variant: "v1" } });
   // Send: the drafts go as one review.
   await openFeedback(desk);
   assert.equal(await picked(desk), "request-changes", "with notes waiting, Request changes is picked");
@@ -4753,11 +4742,26 @@ test("simple mode's request page with no summary: the request in full, designs, 
   await desk.waitForSelector('#list [data-card="R-7"]');
   await desk.click('#list [data-card="R-7"]');
   await desk.waitForSelector("#detail .sthreads");
-  const order = await desk.$$eval("#detail .slead, #detail .vtabs, #detail .sfound, #detail details.fold.big:not(.vpanel details), #detail .sthreads", (xs) => xs.map((x) => x.className.split(" ")[0] === "fold" ? x.querySelector("summary").textContent.trim() : x.className.split(" ").find((k) => ["slead", "vtabs", "sfound", "sthreads"].includes(k))));
-  assert.deepEqual(order, ["vtabs", "sfound", "Where else this shows up", "sthreads"], "no summary yet: no lead and no fold");
+  const order = await desk.$$eval("#detail .slead, #detail .vtabs, #detail details.fold.big:not(.vpanel details), #detail .sthreads", (xs) => xs.map((x) => x.className.split(" ")[0] === "fold" ? x.querySelector("summary h3").textContent.trim() : x.className.split(" ").find((k) => ["slead", "vtabs", "sthreads"].includes(k))));
+  assert.deepEqual(order, ["vtabs", "What Design Desk found", "Where else this shows up", "sthreads"], "no summary yet: no lead and no Original request; what Design Desk found is the first fold");
   assert.match(await desk.textContent("#detail .sfull"), /First paragraph\.[\s\S]*Second paragraph\./, "the request in full leads instead, open");
-  assert.match(await desk.textContent("#detail .sfound"), /Goes against D-3/);
-  assert.equal(await desk.locator("#detail .votes button.vote").count(), 0, "no vote buttons in simple mode");
+  // What Design Desk found: a fold, its answer in its head, open while there is something to check.
+  assert.equal(await desk.locator("#detail details.sfound.sfold[open]").count(), 1, "open: it goes against a decision");
+  assert.equal((await desk.textContent("#detail details.sfound > summary .sf-say")).trim(), "1 thing to check");
+  assert.equal(await desk.getAttribute("#detail details.sfound > summary .sf-say", "data-k"), "warn");
+  assert.match(await desk.textContent("#detail .sfound .section"), /Goes against D-3/);
+  assert.equal(await desk.locator("#detail .votes .vote").count(), 0, "no vote pills in simple mode, not even as counts");
+  assert.equal(await desk.locator("#detail .rbox").count(), 0, "no comment box under the designs: the workspace, an element and Submit feedback take comments");
+  // Comments: their count, oldest first, the resolved one where it falls; the moves are words.
+  assert.match(await desk.textContent("#detail .sthreads > h3"), /^Comments\s*3$/);
+  assert.deepEqual(await desk.$$eval("#detail .sthreads > .sthread", (xs) => xs.map((x) => x.id)), ["th-T-3", "th-T-2", "th-T-1"], "oldest first, the newest above the box");
+  assert.deepEqual(await desk.locator("#th-T-1 .sacts button").allTextContents(), ["Reply", "Resolve"], "Reply and Resolve, as words");
+  assert.equal(await desk.locator("#th-T-1 .sreply").isHidden(), true, "the reply box waits for Reply");
+  await desk.click("#th-T-1 [data-reply-open]");
+  assert.equal(await desk.evaluate(() => document.activeElement?.dataset.reply), "T-1", "Reply opens the box, the cursor in it");
+  assert.equal(await desk.locator("#th-T-1 [data-reply-open]").isHidden(), true);
+  await desk.click("#th-T-1 [data-reply-close]");
+  assert.equal(await desk.locator("#th-T-1 .sreply").isHidden(), true, "Cancel folds it away");
   assert.match(await desk.textContent("#th-T-1 .smsg:not(.re) .who"), /pat\.lee[\s\S]*designer/i, "who by name (the part before the @) and role");
   assert.equal(await desk.locator("#th-T-1 .smsg.re").count(), 1, "a reply is indented under the first message");
   assert.equal(await desk.locator("#th-T-3 [data-work-in]").count(), 1, "a comment on a design can be worked in");
@@ -4829,13 +4833,16 @@ test("simple mode's head keeps the English title on one line with an ellipsis an
   assert.match(await desk.textContent("#detail .so-body"), /A new agent shows an empty page\./);
 }));
 
-test("simple mode's words keep a readable width on a wide screen; the designs take the whole width", (t) => open(t, HEAD_DESK(HEAD_ME, [czech, drawn]), async (desk) => {
+test("simple mode's words keep one readable width on a wide screen, every fold and the comments alike; the designs take the whole width", (t) => open(t, HEAD_DESK(HEAD_ME, [{ ...czech, impact: talked.impact }, drawn]), async (desk) => {
   await desk.setViewportSize({ width: 2000, height: 900 });
   await desk.waitForSelector('#list [data-card="R-8"]');
   await desk.click('#list [data-card="R-8"]');
   await desk.waitForSelector("#detail .slead");
   const w = (sel) => desk.$eval(sel, (x) => x.getBoundingClientRect().width);
-  for (const sel of ["#detail .slead", "#detail details.sorig", "#detail .sfound"]) assert.ok(await w(sel) <= 680, `${sel} keeps to 680 px`);
+  for (const sel of ["#detail .slead", "#detail details.sorig", "#detail .sfound", "#detail .sthreads"]) assert.ok(await w(sel) <= 800, `${sel} keeps to 800 px`);
+  const folds = await desk.$$eval("#detail details.fold.big:not(.vpanel details)", (xs) => xs.map((x) => [x.querySelector("summary h3").textContent.trim(), Math.round(x.getBoundingClientRect().width)]));
+  assert.ok(folds.some(([t]) => t === "Where else this shows up"), "the impact's folds are there");
+  assert.deepEqual(folds.map(([, x]) => x), folds.map(() => 800), `every fold is as wide as the others: ${JSON.stringify(folds)}`);
   assert.ok(await w("#detail .vtabs") > 900, "the designs are wider");
 }));
 

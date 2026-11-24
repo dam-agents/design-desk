@@ -211,6 +211,8 @@ const r1 = {
   ],
   waiting: [{ kind: "revise", state: "claimed", created: ago(4), started: ago(3), usual_min: 12, variant: "v2" }],
   prototype: { state: "none" },
+  impact: { concept: "the daily limit", places: [{ where: "Usage", kind: "screen", how: "Shows the same limit beside the workspace limit." }, { where: "Slack alert", kind: "message", how: "Says the agent stopped at its limit." }],
+    behind: { text: "The limit that stops first is worked out from the agent's own limit and the workspace limit; the card only shows it." } },
   // The parts every option shows, and each as it was before the design (docs/requests.md).
   shared_elements: [{ id: "change", name: "Change button" }, { id: "bar", name: "Limit bar" }, { id: "text", name: "Limit amount" }, { id: "providers", name: "Provider list" }],
   now: { asset: "A-now", name: "Providers", at: ago(60 * 20), elements: [{ id: "change", selector: "#limit-change", view: null, view_name: null }, { id: "bar", selector: "#limit-bar", view: null, view_name: null }, { id: "text", selector: "#limit-text", view: null, view_name: null }] },
@@ -232,6 +234,8 @@ put("A-r3-1", '<body><h1>List</h1><button id="kit">Kit</button></body>');
 const r3 = {
   id: "R-3", kind: "request", title: "A bare design", status: "feedback", created: ago(60 * 30), updated: ago(30),
   by: PAT, triage: { verdict: "design", reasons: [] }, request: { type: "idea", problem: "A design with no review bar." },
+  // What Design Desk found: something to check, so the fold opens with its amber answer.
+  conflicts: [{ decision: "D-12", status: "active", variant: "q1", text: "Kit is a second primary button on the screen.", why: "One primary button per screen." }],
   variants: [{ id: "q1", name: "Quiet", asset: "A-r3-1", version: 1 }],
   threads: [{ id: "T-30", kind: "comment", state: "open", may, anchor: { variant: "q1", selector: "#kit", text: "Kit", label: "Text" }, messages: [{ by: PAT, at: ago(40), text: "Too bright here." }] }],
   waiting: [], prototype: { state: "none" },
