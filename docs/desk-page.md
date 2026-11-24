@@ -125,9 +125,9 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
 - **The spec banner.** A spec draft waiting for its review, or rewritten after Ask for changes,
   stands under the request's head as a banner, in both modes; the spec itself stays closed in it, so
   the page below keeps its place. Waiting: green, *The developer spec is ready. Read it, then send it
-  to developers.*, its version, who wrote it and where it goes, then **Read the spec** (opens it in
-  the banner, with its versions), **Edit**, **Ask for changes…** and **Send to developers** for who may
-  approve it; anyone else reads who sends it. Rewritten: blue, a spinner, *Design Desk is rewriting
+  to developers.*, its version, who wrote it and where it goes, and one row of buttons along its bottom: **Read the
+  spec**, a ghost, on the left, its chevron turning as the spec opens right under it, with its versions;
+  **Edit**, **Ask for changes…** and, last, **Send to developers** on the right for who may approve it; anyone else reads who sends it. Rewritten: blue, a spinner, *Design Desk is rewriting
   the spec as you asked.*, who asked and when, and **Read the last version**; no Send. With Design
   Desk's question open: blue, pointing to the questions, no Send. Once sent, the spec is a closed fold
   further down. Send to developers wears the paper plane wherever it stands, its dialog's button too.
@@ -715,6 +715,9 @@ Every change to the page keeps to one scale; `desk/tests/page.test.mjs` fails on
   a change's Approve, Looks good — is Approved's green, outside a ⋯ menu.
   **Propose** and **Send to design** only send it on to the next review: outlined, with a paper plane.
   **Submit feedback** wears the colour of the verdict it sends ([Submit feedback](#submit-feedback)).
+- **Opens in place:** a button or a row that shows its content right there wears one chevron
+  (`.xchev`), right while closed, turned down while open (`aria-expanded`): **Read the spec**, a
+  person on People. A long read in the page's flow is a fold, + and −; the guidelines (Folds).
 - **Corners:** two, `--r-sm` 6 and `--radius` 12, and two shapes, `999px` and `50%`; nothing
   else. Which a thing takes: the guidelines (Corners).
 - **Space:** multiples of 4 (4, 8, 12, 16, 24, 32); 1 or 2px only as a hairline or a nudge. Which

@@ -187,6 +187,8 @@
   #tip .tk kbd { padding: 0 4px; border: 1px solid color-mix(in srgb, var(--bg) 35%, transparent); border-bottom-width: 1px; color: inherit; font-size: var(--fs-micro); line-height: 16px; }
   .btn { border: 1px solid var(--line); background: var(--panel); padding: 4px 12px; border-radius: var(--r-sm); cursor: pointer; text-decoration: none; color: inherit; display: inline-flex; align-items: center; gap: 8px; }
   .btn:hover { background: var(--soft); }
+  /* A ghost: no fill, no edge, until the pointer rests on it — a quiet move beside the real ones, one that only shows something (the guidelines, Buttons). */
+  .btn.ghost { background: transparent; border-color: transparent; } .btn.ghost:hover { background: color-mix(in srgb, var(--ink) 7%, transparent); }
   .btn.primary { background: var(--ink); color: var(--panel); border-color: var(--ink); }
   .btn.primary:hover { opacity: .9; }
   .btn.small { padding: 2px 12px; font-size: var(--fs-meta); }
@@ -1014,8 +1016,7 @@
   /* A person's row folds open to what they did on the Desk (docs/desk.md → People). */
   .people .who { all: unset; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; border-radius: var(--r-sm); }
   .people .who:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .people .who .chev { width: 14px; height: 14px; color: var(--muted); transition: transform .15s ease; flex: none; }
-  .people .who[aria-expanded="true"] .chev { transform: rotate(90deg); }
+  .people .who .xchev { color: var(--muted); }
   .people tr.open > td { border-bottom-color: transparent; background: var(--soft); }
   .people .gh-login { width: 100%; max-width: 180px; padding: 4px 8px; font: inherit; font-size: var(--fs-meta); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-sm); }
   .people .gh-login:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
@@ -1041,7 +1042,7 @@
   .pact-box.pact-none { display: block; }
   .pact-box.pact-none p { margin: 0; }
   @media (max-width: 700px) { .pact-box { grid-template-columns: 1fr; } .pact-spark { justify-self: start; text-align: left; } .pact-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-  @media (prefers-reduced-motion: reduce) { .people .who .chev { transition: none; } }
+  @media (prefers-reduced-motion: reduce) { .xchev { transition: none; } }
   .roles { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin-top: 8px; }
   .roles .panel h4 { margin: 0 0 4px; display: flex; gap: 8px; align-items: center; } .roles .panel p { margin: 0 0 8px; color: var(--muted); font-size: var(--fs-meta); }
   .roles .panel ul { margin: 0; padding-left: 20px; font-size: var(--fs-meta); } .roles .panel li { margin-bottom: 4px; }
@@ -1446,12 +1447,20 @@
   /* A spec that waits for its review: a banner under the head, in Approve's green; Design Desk rewriting it, in its blue (docs/desk-page.md → The spec banner). */
   .spec-banner { margin: 12px 0; border-radius: var(--radius); background: var(--approved-soft); border: 1px solid color-mix(in srgb, var(--approved) 35%, transparent); overflow: hidden; }
   .spec-banner:is([data-s="rewriting"], [data-s="asks"]) { background: var(--info-soft); border-color: color-mix(in srgb, var(--accent) 30%, transparent); }
-  .spec-banner .sb-row { display: flex; align-items: center; gap: 12px 16px; flex-wrap: wrap; padding: 12px 16px; }
+  .spec-banner .sb-row { display: flex; align-items: flex-start; gap: 12px 16px; padding: 12px 16px 8px; }
   .spec-banner .sb-ico { flex: none; width: 36px; height: 36px; border-radius: var(--r-sm); display: grid; place-items: center; background: var(--panel); color: var(--approved); }
   .spec-banner:is([data-s="rewriting"], [data-s="asks"]) .sb-ico { color: var(--accent); } .spec-banner .sb-ico .spin { margin: 0; }
   .spec-banner .sb-ico svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
   .spec-banner .sb-main { flex: 1 1 280px; min-width: 0; } .spec-banner .sb-main b { display: block; font-size: var(--fs-ui); font-weight: 600; color: var(--ink); }
-  .spec-banner .sb-main .hint { margin: 2px 0 0; } .spec-banner .sb-acts { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  /* One row of buttons along its bottom: Read the spec, a ghost, on the left, over where the spec opens; what moves it
+     on on the right, Send last (docs/desk-page.md → The spec banner). */
+  .spec-banner .sb-main .hint { margin: 2px 0 0; }
+  .spec-banner .sb-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 0 16px 12px 56px; }
+  .spec-banner .sb-acts { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; justify-content: flex-end; margin-left: auto; }
+  /* What opens its content in place, under or beside it, wears one chevron: right while closed, turned down while open,
+     as its aria-expanded says (docs/desk-page.md → The look). A long read in the page's flow is a fold, + and −, instead. */
+  .xchev { width: 14px; height: 14px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; transition: transform .15s ease; }
+  [aria-expanded="true"] > .xchev { transform: rotate(90deg); } .btn > .xchev:last-child { margin-right: -2px; }
   .spec-banner .sb-body { background: var(--panel); border-top: 1px solid var(--line); padding: 12px 16px; max-height: 60vh; overflow: auto; }
   .spec-edit { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: 12px; }
   .spec-preview { border: 1px solid var(--line); border-radius: var(--r-sm); padding: 12px 16px; overflow: auto; max-height: 36em; }
@@ -2450,6 +2459,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // Approve for dev: code brackets, straight to developers.
     code: '<path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/>',
   };
+  // The chevron of what opens in place (.xchev): after a button's words, before a row's name.
+  const XCHEV = `<svg class="xchev" viewBox="0 0 16 16" aria-hidden="true"><path d="m6 4 4 4-4 4"/></svg>`;
   const BTN_ICON = {
     act: { workspace: "pen", explore: "spark", build: (el) => /another option/.test(textOf(el)) ? "undo" : "screen", approve: () => S.card?.kind === "request" && !(S.card.variants || []).length ? "send" : "check", "approve-dev": "code",
       reopen: "undo", revise: "redo", close: "cross", states: "layers", slack: "send", unqueue: "minus",
@@ -4256,7 +4267,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // A row folds open to what that person did on the Desk: read from what the Desk keeps anyway.
     const rows = people.map((x) => {
       const open = S.personOpen === x.email;
-      const who = `<button class="who" data-person-open="${esc(x.email)}" aria-expanded="${open}" title="${open ? "Hide" : "Show"} what they did on the Desk"><svg class="chev" viewBox="0 0 16 16" aria-hidden="true"><path d="m6 4 4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>${x.name ? `<b>${esc(x.name)}</b> ` : ""}${esc(x.email)}</span></button>`;
+      const who = `<button class="who" data-person-open="${esc(x.email)}" aria-expanded="${open}" title="${open ? "Hide" : "Show"} what they did on the Desk">${XCHEV}<span>${x.name ? `<b>${esc(x.name)}</b> ` : ""}${esc(x.email)}</span></button>`;
       return `<tr class="${open ? "open" : ""}"><td>${who}${(x.also || []).length ? ` <span class="hint">also ${esc(x.also.join(", "))}</span>` : ""}${isMe(x.email) ? ` <span class="chip" title="This is you">you</span>` : ""}</td><td>${roleIcon(x.role)}${esc(roleLabel(x.role))}</td><td>${ghCell(x)}</td></tr>${open ? `<tr class="pact"><td colspan="3">${personActivity(x, P.activity?.[x.email])}</td></tr>` : ""}`;
     }).join("");
     const shown = order.filter((r) => P.roles[r]);
@@ -6021,11 +6032,12 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const sub = rewriting && sp.asked ? `Asked by ${esc(specWho(sp.asked.by?.email))}${sp.asked.at ? ` · ${esc(when(sp.asked.at))}` : ""}. It comes back here to read.`
       : `${last}, by ${esc(specBy(latest))}${sp.at ? ` · ${esc(when(sp.at))}` : ""}${specTarget(c) ? ` ·${specTarget(c)}` : ""}.${s === "waits" ? (c.size?.small ? " A developer reads it and sends it." : " A designer, a PM or a UI dev owner reads it and sends it.") : ""}`;
     const ico = rewriting ? `<span class="spin" aria-hidden="true"></span>` : `<svg viewBox="0 0 24 24" aria-hidden="true">${ICON_PATH.doc}</svg>`;
-    const read = `<button class="btn" data-spec-read aria-expanded="${shown}">${shown ? "Hide the spec" : rewriting ? "Read the last version" : "Read the spec"}</button>`;
+    const read = `<button class="btn ghost" data-spec-read aria-expanded="${shown}" aria-controls="spec-read">${shown ? "Hide the spec" : rewriting ? "Read the last version" : "Read the spec"}${XCHEV}</button>`;
     const acts = may && !rewriting && S.specEdit !== c.id ? `<button class="btn" data-spec-edit title="Change the text here; it becomes the newest version">✎ Edit</button><button class="btn" data-spec-changes title="Say what to change; Design Desk rewrites it and brings it back here">Ask for changes…</button>${asks ? "" : `<button class="btn primary" data-spec-send>Send to developers</button>`}` : "";
     return `<section class="spec-banner" id="spec" data-s="${s}" aria-label="The developer spec">
-      <div class="sb-row"><span class="sb-ico">${ico}</span><div class="sb-main"><b>${esc(title)}</b><p class="hint">${sub}</p></div><div class="sb-acts">${read}${acts}</div></div>
-      ${shown ? `<div class="sb-body">${specInner(c)}</div>` : ""}</section>`;
+      <div class="sb-row"><span class="sb-ico">${ico}</span><div class="sb-main"><b>${esc(title)}</b><p class="hint">${sub}</p></div></div>
+      <div class="sb-bar">${read}${acts ? `<div class="sb-acts">${acts}</div>` : ""}</div>
+      ${shown ? `<div class="sb-body" id="spec-read">${specInner(c)}</div>` : ""}</section>`;
   }
 
   // While the spec is edited, the text on the left reads on the right, pictures included.

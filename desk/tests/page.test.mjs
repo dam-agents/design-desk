@@ -1688,11 +1688,16 @@ test("a spec in draft waits for a person in a banner: read it, edit it, then sen
   assert.match(await desk.textContent("#detail .spec-banner"), /The developer spec is ready\. Read it, then send it to developers\./);
   for (const a of ["data-spec-read", "data-spec-edit", "data-spec-changes", "data-spec-send"]) assert.equal(await desk.locator(`#detail .spec-banner [${a}]`).count(), 1, `${a} on the banner`);
   assert.equal(await desk.locator("#detail .spec-banner [data-spec-send] svg.ico").count(), 1, "Send wears the paper plane");
+  assert.deepEqual(await desk.$eval("#detail .spec-banner > .sb-bar", (bar) => { const r = bar.querySelector(":scope > [data-spec-read]").getBoundingClientRect(), a = bar.querySelector(".sb-acts").getBoundingClientRect();
+    return [bar.nextElementSibling === null, bar.querySelector("[data-spec-read]").classList.contains("ghost"), Math.abs(r.top - a.top) < 4, r.right < a.left]; }), [true, true, true, true], "one row along its bottom: Read the spec, a ghost, on the left; the rest on the right");
+  assert.deepEqual(await desk.$$eval("#detail .spec-banner .sb-acts .btn", (xs) => xs.map((x) => x.textContent.trim())), ["✎ Edit", "Ask for changes…", "Send to developers"], "what moves it on sits on the right, Send last");
   assert.equal(await desk.locator("#detail #spec-body").count(), 0, "the spec stays closed: the page below keeps its place");
   assert.equal(await desk.locator("#detail details#spec").count(), 0, "no open fold");
+  assert.equal(await desk.$eval("#detail [data-spec-read]", (b) => [b.getAttribute("aria-expanded"), getComputedStyle(b.querySelector(".xchev")).transform].join(" ")), "false none", "Read the spec ends with a chevron pointing right: it opens in place");
   await desk.click("#detail [data-spec-read]");
   await desk.waitForFunction(() => /Grey header/.test(document.querySelector("#detail .spec-banner #spec-body")?.textContent || ""));
   assert.equal(await desk.textContent("#detail [data-spec-read]"), "Hide the spec");
+  assert.equal(await desk.$eval("#detail [data-spec-read]", (b) => [b.getAttribute("aria-expanded"), getComputedStyle(b.querySelector(".xchev")).transform !== "none"].join(" ")), "true true", "its chevron turns down as the spec opens in place");
   assert.match(await desk.textContent("#detail"), /Approved\s*the spec waits to be read/, "the state says the spec has not gone");
   await desk.click("#detail [data-spec-edit]");
   await desk.waitForFunction(() => /Grey header/.test(document.querySelector("#spec-text")?.value || ""), null, { timeout: 5000 });
