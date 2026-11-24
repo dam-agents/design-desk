@@ -302,7 +302,7 @@ async function viewerRoute(req, res, url, who) {
     const dev = b.dev === true && can(who.deskRole, "designs", s.prototypeRoles);
     return send(res, 201, withPing(store.openThread(p[2], actor, { kind, text, anchor, dev }), s, who));
   }
-  if (m === "POST" && p[1] === "cards" && p[3] === "drafts" && !p[4]) { need(b.work_in != null ? "change" : "comment"); return send(res, 201, store.addDraft(p[2], actor, { text: b.text, anchor: b.anchor || null, change: typeof b.change === "string" ? b.change : null, ok: b.ok === true, work_in: b.work_in ?? null })); }
+  if (m === "POST" && p[1] === "cards" && p[3] === "drafts" && !p[4]) { need(b.work_in != null ? "change" : "comment"); return send(res, 201, store.addDraft(p[2], actor, { text: b.text, anchor: b.anchor || null, change: typeof b.change === "string" ? b.change : null, ok: b.ok === true, work_in: b.work_in ?? null, figma: typeof b.figma === "string" ? b.figma : null, fine: b.fine === true, edited: b.edited === true })); }
   if (m === "DELETE" && p[1] === "cards" && p[3] === "drafts" && p[4]) return send(res, 200, store.removeDraft(p[2], actor, p[4]));
   // A review: the person's drafts sent with a verdict (docs/desk.md → Reviews). Changes asked of a
   // request are change notes; a change's verdict is the one who may mark it handled (the store checks the rest).
