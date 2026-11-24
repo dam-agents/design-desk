@@ -7,6 +7,13 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.113.0 — 2026-11-24
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): in simple mode, Submit feedback
+   asks **Which design?** for an approval of a request with more than one option, and its buttons stay
+   in view in a footer ([desk-page.md](docs/desk-page.md) → Submit feedback). No data migration.
+
 ## 1.112.0 — 2026-11-24
 
 **Upgrade:**

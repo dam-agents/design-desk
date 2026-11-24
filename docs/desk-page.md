@@ -432,8 +432,14 @@ head, in every dialog's head (a change's, a part's), and in full mode's **Your f
   of the changes to look at were looked at, a bar, and the ones not looked at as chips that open them
   (else "✓ All looked at"); each note and Looks good waiting (a Looks good on an unchanged screen is not counted), with what it is about (a change's opens
   it) and ✕; else a line saying where notes come from; the verdicts as one control, each with its
-  line under it; a note for the whole feedback; and the send button in the verdict's colour (`Request
-  changes · 2`, `Approve with 2 notes`, `Approve for dev`, `Send comments`).
+  line under it; in simple mode, for an approval of a request with more than one option (and no live
+  prototype naming it), **Which design?**: the options as one control, each by its number and name,
+  the one shown on the page picked first — the approval is for it, and its dialog asks for no option
+  (Request changes and Comment only show none: a comment on a design goes through the workspace or
+  an element); a note for the whole feedback; and, in a footer fixed to the panel's bottom that stays
+  in view while the notes scroll, the send button in the verdict's colour (`Request
+  changes · 2`, `Approve with 2 notes`, `Approve for dev`, `Send comments`) and **Keep drafting**,
+  each as tall as Submit feedback.
 - **The verdicts**, the viewer's own: **Request changes** (with options drawn on a request; on a
   change for who may handle it), the approval — **Approve** in Design review, **Approve for dev** in
   Dev review and, for the UI dev owner, before design — and **Comment only**. Look edits and comments

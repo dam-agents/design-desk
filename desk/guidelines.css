@@ -336,7 +336,14 @@
   .fb-vs button[aria-checked="true"] { font-weight: 600; background: var(--soft); }
   .fb-vs button[aria-checked="true"][data-v="ok"] { background: var(--approved-soft); color: var(--approved); } .fb-vs button[aria-checked="true"][data-v="rc"] { background: var(--warn-soft); color: var(--warn); }
   .fb-pop .fb-hint { margin: -4px 0 0; } .fb-pop textarea { width: 100%; min-height: 56px; }
-  .fb-pop .fb-send { display: flex; gap: 8px; } .fb-pop .fb-send .fbk { flex: 1; }
+  /* Its buttons are a footer fixed to the panel's bottom, in view while the notes scroll. */
+  .fb-pop .fb-send { position: sticky; bottom: 0; z-index: 1; display: flex; gap: 8px; padding: 12px 16px; background: var(--panel); border-top: 1px solid var(--line); }
+  .fb-pop .fb-send .fbk { flex: 1; } .fb-pop .fb-b { padding-bottom: 12px; }
+  /* Which design an approval is for: the options as the verdicts are, each by its number and name. */
+  .fb-pop .fb-opt { display: grid; gap: 8px; } .fb-pop .fb-opt > b { font-size: var(--fs-meta); font-weight: 600; }
+  .fb-os button { min-width: 0; padding: 8px; } .fb-os .fb-on { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .fb-os .fb-no { flex: none; min-width: 18px; line-height: 18px; padding: 0 4px; border-radius: var(--r-sm); background: var(--soft); color: var(--muted); font-size: var(--fs-micro); font-weight: 600; }
+  .fb-os button[aria-checked="true"] { background: var(--approved-soft); color: var(--approved); } .fb-os button[aria-checked="true"] .fb-no { background: var(--approved); color: var(--panel); }
   .elbar .el-acts .fb-pop { z-index: 6; }
   /* On a narrow screen the panel spans it, edge to edge, so none of it hangs off to the left. */
   @media (max-width: 560px) { .fb-pop { position: fixed; top: 64px; left: 8px; right: 8px; width: auto; max-height: calc(100vh - 80px); } }

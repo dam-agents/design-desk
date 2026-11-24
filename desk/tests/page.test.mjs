@@ -4501,6 +4501,65 @@ test("simple mode heads a request with its number, link, state, author and Submi
   assert.equal((await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/R-5/actions").body)).auto_send, true);
 }));
 
+// Which design an approval is for (docs/desk-page.md → Submit feedback): picked in the panel, the
+// option shown on the page first; the dialog after it asks for none. One option, or a verdict that
+// is no approval, shows no picker.
+const twoOptions = { ...drawn, variants: [{ id: "v1", name: "Calm", asset: "A-1", version: 1 }, { id: "v2", name: "Bold", asset: "A-1", version: 1 }] };
+test("simple mode: Submit feedback asks which design an approval is for, the shown option first; the dialog asks for none", (t) => open(t, HEAD_DESK(HEAD_ME, [twoOptions, slackDraft]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="R-5"]');
+  await desk.click('#list [data-card="R-5"]');
+  await desk.waitForSelector("#detail .shead");
+  await openFeedback(desk);
+  assert.equal(await picked(desk), "approve");
+  assert.equal((await desk.textContent(".fb-pop .fb-opt > b")).trim(), "Which design?");
+  const opts = () => desk.$$eval(".fb-pop [data-fb-opt]", (xs) => xs.map((x) => [x.dataset.fbOpt, x.textContent.trim(), x.getAttribute("aria-checked")]));
+  assert.deepEqual(await opts(), [["v1", "1Calm", "true"], ["v2", "2Bold", "false"]], "each option by its number and name, the one shown picked");
+  await desk.click('.fb-pop [data-fb-v="request-changes"]');
+  assert.equal(await desk.locator(".fb-pop [data-fb-opt]").count(), 0, "Request changes asks for no design");
+  await desk.click('.fb-pop [data-fb-v="comment"]');
+  assert.equal(await desk.locator(".fb-pop [data-fb-opt]").count(), 0, "nor does Comment only");
+  await desk.click('.fb-pop [data-fb-v="approve"]');
+  await desk.click('.fb-pop [data-fb-opt="v2"]');
+  assert.deepEqual((await opts()).map((x) => x[2]), ["false", "true"], "the pick moves");
+  await desk.click(".fb-pop [data-fb-send]");
+  await desk.waitForSelector("#confirm-dialog[open]");
+  assert.equal(await desk.locator("#cf-choices input").count(), 0, "the dialog asks for no option again");
+  assert.match(await desk.textContent("#cf-body"), /option 2, Bold/, "it names the one picked");
+  await desk.click("#cf-ok");
+  await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/R-5/actions"));
+  const sent = await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/R-5/actions").body);
+  assert.equal(sent.action, "approve");
+  assert.equal(sent.note, "v2", "the option picked is the one approved");
+}));
+
+test("simple mode: a request with one option shows no design picker in Submit feedback", (t) => open(t, HEAD_DESK(HEAD_ME, [drawn]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="R-5"]');
+  await desk.click('#list [data-card="R-5"]');
+  await desk.waitForSelector("#detail .shead");
+  await openFeedback(desk);
+  assert.equal(await picked(desk), "approve");
+  assert.equal(await desk.locator(".fb-pop .fb-opt").count(), 0);
+}));
+
+// Submit feedback's buttons are a footer fixed to the panel's bottom, as tall as Submit feedback.
+test("Submit feedback's buttons stay in view while many notes scroll, as tall as Submit feedback", (t) => open(t, REVIEW_DESK(HEAD_ME, [drawn]), async (desk) => {
+  await desk.setViewportSize({ width: 1200, height: 600 });
+  await desk.waitForSelector('#list [data-card="R-5"]');
+  await desk.evaluate(() => { drafts["R-5"] = Array.from({ length: 14 }, (_, i) => ({ id: `d${i}`, text: `Note ${i + 1}: a longer line about the design so the panel has to scroll.`, anchor: { variant: "v1" }, at: "2026-11-18T10:00:00Z" })); });
+  await desk.click('#list [data-card="R-5"]');
+  await desk.waitForSelector('#detail [data-fb="head"] .cnt');
+  await openFeedback(desk);
+  const look = () => desk.evaluate(() => { const r = (s) => document.querySelector(s).getBoundingClientRect(), pop = r(".fb-pop"), send = r(".fb-pop .fb-send");
+    return { scrolls: document.querySelector(".fb-pop").scrollHeight > document.querySelector(".fb-pop").clientHeight, inView: send.bottom <= pop.bottom + 1 && send.top >= pop.top,
+      heights: [r('#detail [data-fb="head"]').height, r(".fb-pop [data-fb-send]").height, r(".fb-pop [data-fb-close]").height] }; });
+  const top = await look();
+  assert.ok(top.scrolls, "the notes are more than the panel holds");
+  assert.ok(top.inView, "the buttons are in view before scrolling");
+  await desk.evaluate(() => { const p = document.querySelector(".fb-pop"); p.scrollTop = p.scrollHeight / 2; });
+  assert.ok((await look()).inView, "and while the notes scroll");
+  assert.equal(new Set(top.heights.map(Math.round)).size, 1, `the send button and Keep drafting are as tall as Submit feedback: ${top.heights}`);
+}));
+
 // Dev review after design opened: a For Developers request or change has the proposal's two moves,
 // Approve for dev (a change: Approve) and Send to design, the move to For Designers.
 test("simple mode: a For Developers item in Dev review offers Send to design, and Approve for dev in Submit feedback", (t) => open(t, HEAD_DESK({ ...HEAD_ME, role: "ui-dev-owner",
