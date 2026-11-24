@@ -7,6 +7,12 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.112.1 — 2026-11-24
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): a Request changes sent with
+   a note alone shows that note once, as its change note ([desk.md](docs/desk.md) → Reviews). No data migration.
+
 ## 1.112.0 — 2026-11-24
 
 **Upgrade:**
