@@ -5339,6 +5339,8 @@ test("a request that went to design folds what was said before it under Before d
   assert.equal(await desk.locator("#detail details.before-design #th-T-1").count(), 1, "the earlier one inside the fold");
   assert.equal(await desk.locator("#detail details.before-design #th-T-2").count(), 0, "the later one outside it");
   assert.equal(await desk.getAttribute("#detail details.before-design", "open"), null, "folded");
+  // Simple mode runs oldest first, so Before design leads the comments (docs/desk-page.md → Simple mode).
+  assert.ok(await desk.$eval("#detail details.before-design", (f) => Boolean(f.compareDocumentPosition(document.querySelector("#th-T-2")) & Node.DOCUMENT_POSITION_FOLLOWING)), "Before design comes first, above what was said after");
 }));
 
 test("Close on a draft is a plain close, for its author whatever their role, with no decision", (t) => open(t, HEAD_DESK({ ...HEAD_ME, role: "developer", can: { comment: true, request: true, "stage-propose": true } }, [{ ...drawn, ...STAGED[0], variants: drawn.variants }]), async (desk) => {
