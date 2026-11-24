@@ -288,8 +288,8 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   change's **Parts it changed** and **What changed and why**, and the impact's **Where else this shows up**, **Under the hood**, **Earlier
   decisions about it**), then **Comments** with their count, oldest first so the newest sits above
   the box to write in, each where it began: each conversation a card, its first message with the
-  replies hung under it on a thin line, each by an avatar, the name (in the reading size), the role in its
-  avatar's colour and a short date — the viewer's own on a faint accent tint, Design Desk's on a soft
+  replies hung under it on a thin line, each by an avatar, the name (in the reading size), a designer's role
+  (only theirs, in its colour) and a short date — the viewer's own on a faint accent tint, Design Desk's on a soft
   panel with its mark outlined, everyone else's on none —, a note on a
   design led by its option (and part) as a chip that opens the design workspace there; one resolved
   folds to one line where it falls (who wrote it and how it starts, who resolved it and when) that opens on

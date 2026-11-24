@@ -326,7 +326,7 @@
   .smsg .who { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin-bottom: 2px; font-size: var(--fs-meta); }
   .smsg .who b { font-size: var(--fs-ui); font-weight: 600; color: var(--ink); } .smsg .who .at { color: var(--muted); }
   .smsg .who .role { display: inline-flex; align-items: center; gap: 4px; font-weight: 500; color: var(--muted); }
-  .smsg .who .role:is([data-r="designer"], [data-r="admin"]) { color: var(--live); } .smsg .who .role:is([data-r="developer"], [data-r="ui-dev-owner"]) { color: var(--accent); }
+  .smsg .who .role[data-r="designer"] { color: var(--live); }
   .sthread .sreplies { margin: 8px 0 0 12px; padding-left: 24px; border-left: 2px solid var(--line); }
   .sthread .sreplies .smsg.re { margin-left: 0; } .sthread .sreplies .pending { padding: 4px 12px; }
   .sav { width: 28px; height: 28px; flex: none; border-radius: 50%; display: grid; place-items: center; font-size: var(--fs-meta); font-weight: 600; color: var(--ink); background: var(--soft); }

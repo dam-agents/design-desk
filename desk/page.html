@@ -338,7 +338,7 @@
   .smsg .who { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin-bottom: 2px; font-size: var(--fs-meta); }
   .smsg .who b { font-size: var(--fs-ui); font-weight: 600; color: var(--ink); } .smsg .who .at { color: var(--muted); }
   .smsg .who .role { display: inline-flex; align-items: center; gap: 4px; font-weight: 500; color: var(--muted); }
-  .smsg .who .role:is([data-r="designer"], [data-r="admin"]) { color: var(--live); } .smsg .who .role:is([data-r="developer"], [data-r="ui-dev-owner"]) { color: var(--accent); }
+  .smsg .who .role[data-r="designer"] { color: var(--live); }
   .sthread .sreplies { margin: 8px 0 0 12px; padding-left: 24px; border-left: 2px solid var(--line); }
   .sthread .sreplies .smsg.re { margin-left: 0; } .sthread .sreplies .pending { padding: 4px 12px; }
   .sav { width: 28px; height: 28px; flex: none; border-radius: 50%; display: grid; place-items: center; font-size: var(--fs-meta); font-weight: 600; color: var(--ink); background: var(--soft); }
@@ -3999,9 +3999,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const person = (by) => by?.agent ? { n: "Design Desk", r: "", k: "agent" }
       : { n: shortName(by?.email, by?.name) || "someone", r: by?.role && by.role !== "slack" ? by.role : "", k: by?.role || "" };
     const av = (p) => `<span class="sav" data-r="${esc(p.k)}" aria-hidden="true">${p.k === "agent" ? `<svg viewBox="0 0 24 24">${ICON_PATH.spark}</svg>` : esc((p.n === "you" ? S.me?.my_name || "Y" : p.n)[0].toUpperCase())}</span>`;
-    // Whose it is, quietly: the viewer's own on a faint tint, Design Desk's on a soft panel with its mark outlined.
+    // Whose it is, quietly: the viewer's own on a faint tint, Design Desk's on a soft panel with its mark
+    // outlined; only a designer's role is named, in its colour: theirs is the word on a design.
     const msg = (m, reply) => { const p = person(m.by), k = p.k === "agent" ? "agent" : p.n === "you" ? "mine" : "";
-      return `<div class="smsg${reply ? " re" : ""}"${k ? ` data-k="${k}"` : ""}>${av(p)}<div class="sm-b"><div class="who"><b>${esc(p.n === "you" ? "You" : p.n)}</b>${p.r ? `<span class="role" data-r="${esc(p.r)}">${roleIcon(p.r)}${esc(roleLabel(p.r))}</span>` : ""}<span class="at" title="${esc(when(m.at))}">${esc(sWhen(m.at))}</span></div>${md(m.text)}</div></div>`; };
+      return `<div class="smsg${reply ? " re" : ""}"${k ? ` data-k="${k}"` : ""}>${av(p)}<div class="sm-b"><div class="who"><b>${esc(p.n === "you" ? "You" : p.n)}</b>${p.r === "designer" ? `<span class="role" data-r="designer">${roleIcon(p.r)}${esc(roleLabel(p.r))}</span>` : ""}<span class="at" title="${esc(when(m.at))}">${esc(sWhen(m.at))}</span></div>${md(m.text)}</div></div>`; };
     const optionOf = (th) => { if (th.change && c.kind === "change") return changeChip(c, th); const v = th.anchor?.variant && (c.variants || []).find((x) => x.id === th.anchor.variant); return v ? `<button class="chip sjump" data-goto="${esc(th.id)}" title="Open the design at the part this is about">Option ${(c.variants || []).indexOf(v) + 1}: ${esc(v.name)}${th.anchor.label ? ` · ${esc(th.anchor.label)}` : ""}</button>` : ""; };
     const began = (th) => Date.parse(th.created || th.messages[0]?.at || 0) || 0;
     const order = (a, b) => began(a) - began(b);
@@ -6370,7 +6371,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const v = vs.find((x) => x.id === S.variant);
     const mine = myVote(c, v.id);
     return `<h3>Design options${locked(c) ? ` <span class="hint locked-note">🔒 Approved: this design no longer changes. To change it, ${can("request") ? `<button class="anchor-text" data-adjust>start a new request from this one</button>` : "start a new request from this one"}.</span>` : ""}</h3>
-      <div class="tabs vtabs vrow utabs" role="group" aria-label="Design options"><div class="vscroll">${splitTab(c)}${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${!splitOf(c)?.on && x.id === v.id}"${optionMark(c, x.id)}${x.asset ? ` draggable="true" title="Shows this design option; drag it onto the panel below to set it beside another"` : ""}><span class="ono">${vs.indexOf(x) + 1}</span><span class="vname" title="${esc(x.name)}">${esc(x.name)}</span>${(x.version || 1) > 1 ? ` <span class="chip" title="Design Desk changed this option ${x.version - 1} ${x.version === 2 ? "time" : "times"}; this is its latest version">version ${x.version}</span>` : ""}${c.live_pick?.variant === x.id && (["building", "live"].includes(c.prototype?.state) || working(c).includes("build")) ? ` <span class="chip info" title="The option the live prototype is built from">▶ Goes live</span>` : ""}${closeTab(c, x)}</button>`).join("")}${addOptionTab(c)}</div>${wsTab0(c)}</div>
+      <div class="tabs vtabs vrow utabs" role="group" aria-label="Design options"><div class="vscroll">${splitTab(c)}${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${!splitOf(c)?.on && x.id === v.id}"${optionMark(c, x.id)}${x.asset ? ` draggable="true" title="Shows this design option; drag it onto the panel below to set it beside another"` : ""}><span class="ono">${vs.indexOf(x) + 1}</span><span class="vname" title="${esc(x.name)}">${esc(x.name)}</span>${(x.version || 1) > 1 ? ` <span class="chip" title="Design Desk changed this option ${x.version - 1} ${x.version === 2 ? "time" : "times"}; this is its latest version, version ${x.version}" aria-label="version ${x.version}">v${x.version}</span>` : ""}${c.live_pick?.variant === x.id && (["building", "live"].includes(c.prototype?.state) || working(c).includes("build")) ? ` <span class="chip info" title="The option the live prototype is built from">▶ Goes live</span>` : ""}${closeTab(c, x)}</button>`).join("")}${addOptionTab(c)}</div>${wsTab0(c)}</div>
       ${splitOf(c)?.on ? `<div class="vpanel">${designBox(c, v)}${dropLayer(c)}</div>` : `<div class="vpanel">
       ${v.fidelity === "picture" ? `<p class="hint">Pictures added by ${v.by ? who(v.by) : "a person"}; Design Desk drew nothing.</p>` : ""}
       <div class="vbar">

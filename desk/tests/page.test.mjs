@@ -4771,6 +4771,7 @@ test("simple mode's request page with no summary: the request in full, designs, 
   assert.equal(await desk.locator("#th-T-1 .sreplies > .smsg.re").count(), 1, "a reply hangs under the first message, on its line");
   assert.equal(await desk.locator('#th-T-1 .smsg.re[data-k="agent"]').count(), 1, "Design Desk's reply is told apart");
   assert.equal(await desk.locator('#th-T-1 .smsg:not(.re)[data-k]').count(), 0, "someone else's message is on no tint");
+  assert.doesNotMatch(await desk.textContent("#th-T-2 .smsg .who"), /developer/i, "only a designer's role is named");
   assert.equal(await desk.locator("#th-T-3 [data-work-in]").count(), 1, "a comment on a design can be worked in");
   assert.match(await desk.textContent("#th-T-3 .sjump"), /Option 1: Calm · Title/, "its option and part, a jump to them");
   assert.equal(await desk.locator("#th-T-1 [data-work-in]").count(), 0, "one on no design cannot");
