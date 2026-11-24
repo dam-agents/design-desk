@@ -95,9 +95,42 @@ const piecesOfD = (ks) => ks.map((k) => `<path d="${PIECES_SMALL[k]}"/>`).join("
 // A group pivots on its own origin: move it to the pivot, turn it, move its drawing back.
 const pivot = (x, y, cls, inner) => `<g transform="translate(${x} ${y})"><g class="${cls}"><g transform="translate(${-x} ${-y})">${inner}</g></g></g>`;
 const svgOf = (css, body) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${box} ${box}"><style>g[class]{transform-origin:0 0;transform-box:view-box}${css}</style><g transform="translate(${pad} ${pad})">${body}</g></svg>`;
-export const SPIN_SVG = svgOf(
+export const SPIN_FLIP = svgOf(
   `.a,.l{animation:${LOOP}s ${EASE} infinite}.a{animation-name:t}.l{animation-name:l}@keyframes t{0%{transform:rotate(0)}${turnKeys}100%{transform:rotate(360deg)}}@keyframes l{0%{transform:scaleX(1)}${closeKeys}100%{transform:scaleX(1)}}@media (prefers-reduced-motion:reduce){.a,.l{animation-duration:${f(LOOP * 2)}s}}`,
   pivot(C, C, "a", pivot(lCx, C, "l", piecesOfD(["tl", "bl"])) + piecesOfD(["tr", "br"])),
+);
+
+// The two together (SPIN_SVG): each phrase bounces, flips and turns. Phrase p (0-3): the pieces on
+// top rise one after the other, then the lower ones dip (always up and down on the screen, whichever
+// pieces are where after the turns and flips so far); the first D turns round (closing the circle
+// in phrases 0 and 2, opening it in 1 and 3); the whole turns a quarter; a beat of rest.
+const J = { beats: 8, bounceAt: 0, flipAt: 3, turnAt: 5 }; // in beats of SPIN_BEAT
+const JB = J.beats * 4, JLOOP = f(JB * SPIN_BEAT);
+const jt = (sec) => f((sec * 100) / JLOOP); // seconds into the loop → per cent
+const jbeat = (b) => b * SPIN_BEAT;
+const UP = 1.9, STAGGER = 0.28, RISE = 0.38, FALL = 0.46; // bounce height and timing, s
+const centreOf = { tl: [-6, -6], bl: [-6, 6], tr: [6, -6], br: [6, 6] }; // each piece's side of the mark
+const turnPt = ([x, y], deg) => { const r = (deg * Math.PI) / 180, c = Math.round(Math.cos(r)), si = Math.round(Math.sin(r)); return [x * c - y * si, x * si + y * c]; };
+function jumpKeys(k) {
+  const left = k === "tl" || k === "bl", frames = ["0%{transform:translate(0,0)}"];
+  for (let p = 0; p < 4; p++) {
+    const turned = 90 * p, closed = p % 2 === 1;
+    const [sx, sy] = turnPt(centreOf[k], turned); // where the piece is on the screen now
+    // Its order: top left, top right, bottom left, bottom right; up on top, down below.
+    const order = (sy < 0 ? 0 : 2) + (sx < 0 ? 0 : 1), dir = sy < 0 ? -1 : 1;
+    // The screen's up or down, in the piece's own coordinates: undo the turn, then the flip.
+    let [lx, ly] = turnPt([0, dir * UP], -turned);
+    if (left && closed) lx = -lx;
+    const t0 = jbeat(J.beats * p + J.bounceAt) + order * STAGGER;
+    frames.push(`${jt(t0)}%{transform:translate(0,0)}`, `${jt(t0 + RISE)}%{transform:translate(${f(lx)}px,${f(ly)}px)}`, `${jt(t0 + RISE + FALL)}%{transform:translate(0,0)}`);
+  }
+  return frames.join("") + "100%{transform:translate(0,0)}";
+}
+const jFlip = [0, 1, 2, 3].map((p) => { const b = J.beats * p + J.flipAt, from = p % 2 ? -1 : 1; return `${jt(jbeat(b))}%{transform:scaleX(${from})}${jt(jbeat(b) + MOVE)}%{transform:scaleX(${-from})}`; }).join("");
+const jTurn = [0, 1, 2, 3].map((p) => { const b = J.beats * p + J.turnAt; return `${jt(jbeat(b))}%{transform:rotate(${90 * p}deg)}${jt(jbeat(b) + MOVE)}%{transform:rotate(${90 * (p + 1)}deg)}`; }).join("");
+export const SPIN_SVG = svgOf(
+  `.a,.l{animation:${JLOOP}s ${EASE} infinite}.a{animation-name:t}.l{animation-name:l}.p{animation:${JLOOP}s cubic-bezier(.45,0,.55,1) infinite}@keyframes t{0%{transform:rotate(0)}${jTurn}100%{transform:rotate(360deg)}}@keyframes l{0%{transform:scaleX(1)}${jFlip}100%{transform:scaleX(1)}}${ORDER.map((k) => `.${k}{animation-name:j${k}}@keyframes j${k}{${jumpKeys(k)}}`).join("")}@media (prefers-reduced-motion:reduce){.a,.l,.p{animation-duration:${f(JLOOP * 2)}s}}`,
+  pivot(C, C, "a", pivot(lCx, C, "l", ["tl", "bl"].map((k) => `<path class="p ${k}" d="${PIECES_SMALL[k]}"/>`).join("")) + ["tr", "br"].map((k) => `<path class="p ${k}" d="${PIECES_SMALL[k]}"/>`).join("")),
 );
 // Bounce: 2.4 s; top left rises, then top right; bottom left dips, then bottom right; a rest.
 const BOUNCE = 2.4, LIFT = 2.2;
@@ -109,6 +142,7 @@ export const SPIN_BOUNCE = svgOf(
 const dataUrl = (svg) => `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
 export const SPIN_MASK = dataUrl(SPIN_SVG);
 export const SPIN_BOUNCE_MASK = dataUrl(SPIN_BOUNCE);
+export const SPIN_FLIP_MASK = dataUrl(SPIN_FLIP);
 export const SPIN_STILL = dataUrl(svgOf("", piecesOfD(ORDER)));
 /** A mask in a JS string's single quotes (the prototype overlay's own copy). */
 export const sq = (s) => s.replace(/"/g, "'");
