@@ -735,7 +735,7 @@ Every change to the page keeps to one scale; `desk/tests/page.test.mjs` fails on
   gaps wider, for 32px and below (all of the Desk, the favicon, the avatar, GitHub);
   `mark.svg` from 48px. **At work** the mark moves: `.dd-spin` is the small mark in the spinner's brown
   (`--warn`), at text size (16px at least), simple: the first D turns round and the two close
-  into a circle, the circle turns once, and it opens into DD again (`SPIN_SVG`, 5 s); waiting, it
+  into a circle, the circle turns once, slowly, and it opens into DD again (`SPIN_SVG`, 6.4 s); waiting, it
   rests, faint. In the list it stands
   at a row's top right (the state's pill drops to the second line), in a request beside its buttons.
   Still when it speaks, moving when it works. The page carries one inline copy of the mark, in the

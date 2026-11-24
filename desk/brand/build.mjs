@@ -71,21 +71,23 @@ export const MARK_INLINE = `<svg class="dd-mark" viewBox="0 0 24 24" aria-hidden
 
 /**
  * The spinner (.dd-spin): the small mark, simple. At rest DD; the first D turns round and the two
- * close into a circle; the circle turns once; the D turns back and it opens into DD (5 s). The D
+ * close into a circle; the circle turns once, slowly; the D turns back and it opens into DD. The D
  * turns about its own fixed centre line and the circle about the mark's centre (groups moved
  * there), so nothing drifts.
  * The SVG carries its own motion and is the CSS mask of .dd-spin, whose colour is the page's;
  * SPIN_STILL is the mark at rest, for a spinner that waits (.queued). The mark fills SPIN_SIZE.
  */
 export const SPIN_SIZE = 0.8;
-const LOOP = 5, EASE = "cubic-bezier(.65,0,.35,1)";
+// In seconds: rest, the D turns round, a pause, the circle turns, a pause, the D turns back, rest.
+const T = { flip: 0.7, flipEnd: 1.3, turn: 1.6, turnEnd: 4.4, back: 4.8, backEnd: 5.4 }, LOOP = 6.4;
+const EASE = "cubic-bezier(.65,0,.35,1)", pc = (sec) => f((sec * 100) / LOOP);
 const box = f(24 / SPIN_SIZE), pad = f((box - 24) / 2);
 const lCx = f(C + leftMid(SMALL)); // the first D's own centre line
 const piece = (k) => `<path d="${PIECES_SMALL[k]}"/>`;
 const turning = (cx, cls, inner) => `<g transform="translate(${cx} ${C})"><g class="${cls}"><g transform="translate(${-cx} ${-C})">${inner}</g></g></g>`;
 const svgOf = (css, body) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${box} ${box}"><style>g[class]{transform-origin:0 0;transform-box:view-box}${css}</style><g transform="translate(${pad} ${pad})">${body}</g></svg>`;
 export const SPIN_SVG = svgOf(
-  `.a,.l{animation:${LOOP}s ${EASE} infinite}.a{animation-name:t}.l{animation-name:l}@keyframes t{0%,36%{transform:rotate(0)}62%,100%{transform:rotate(360deg)}}@keyframes l{0%,14%{transform:scaleX(1)}26%,70%{transform:scaleX(-1)}82%,100%{transform:scaleX(1)}}@media (prefers-reduced-motion:reduce){.a,.l{animation-duration:${LOOP * 2}s}}`,
+  `.a,.l{animation:${LOOP}s ${EASE} infinite}.a{animation-name:t}.l{animation-name:l}@keyframes t{0%,${pc(T.turn)}%{transform:rotate(0)}${pc(T.turnEnd)}%,100%{transform:rotate(360deg)}}@keyframes l{0%,${pc(T.flip)}%{transform:scaleX(1)}${pc(T.flipEnd)}%,${pc(T.back)}%{transform:scaleX(-1)}${pc(T.backEnd)}%,100%{transform:scaleX(1)}}@media (prefers-reduced-motion:reduce){.a,.l{animation-duration:${f(LOOP * 2)}s}}`,
   turning(C, "a", turning(lCx, "l", piece("tl") + piece("bl")) + piece("tr") + piece("br")),
 );
 const dataUrl = (svg) => `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
