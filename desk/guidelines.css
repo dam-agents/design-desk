@@ -317,6 +317,10 @@
   .btn.fbk { --v: var(--approved); background: var(--v); border-color: var(--v); color: var(--panel); font-weight: 600; gap: 8px; transition: background-color .2s, border-color .2s; }
   .btn.fbk[data-v="rc"] { --v: var(--warn); } .btn.fbk[data-v="c"] { --v: var(--ink); }
   .btn.fbk:hover { background: var(--v); opacity: .9; }
+  /* Request changes is the quiet amber: a pale fill, its words in amber (docs/desk-page.md → Submit feedback). */
+  .btn.fbk[data-v="rc"] { background: var(--warn-soft); color: var(--warn); border-color: color-mix(in srgb, var(--warn) 30%, transparent); }
+  .btn.fbk[data-v="rc"] .cnt { background: color-mix(in srgb, var(--warn) 14%, transparent); }
+  .btn.fbk[data-v="rc"]:hover { background: color-mix(in srgb, var(--warn) 18%, var(--warn-soft)); opacity: 1; }
   .btn.fbk .cnt { display: inline-flex; align-items: center; gap: 4px; padding: 0 8px; border-radius: 999px; font-size: var(--fs-micro); line-height: 18px; background: color-mix(in srgb, var(--panel) 24%, transparent); }
   .btn.fbk .cnt .ico { width: 11px; height: 11px; }
   .btn.fbk .chev { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2; opacity: .8; }
@@ -651,6 +655,31 @@
   .designbox { padding: 12px 16px; border-radius: var(--radius); border: 1px dashed var(--waiting); background: var(--waiting-soft); max-width: var(--measure); margin: 12px 0; }
   .designbox p { margin: 2px 0; }
   /* Where the product differs from its Figma frame: the warning's ink, one line per difference. */
+  /* A change's differences from Figma, proposed to whoever reviews it (docs/desk-page.md → Changes). */
+  .fig-ico { width: 13px; height: 13px; fill: currentColor; stroke: none; vertical-align: -2px; margin-right: 4px; }
+  .figprop { margin-top: 16px; padding: 12px 16px 16px; border-radius: var(--r-sm); background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--warn); display: grid; gap: 8px; }
+  .figprop .fp-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .figprop .fp-top .grow { flex: 1; }
+  .figprop .fp-top a { font-size: var(--fs-meta); color: var(--muted); }
+  .figprop .fp-lead { margin: -4px 0 0; }
+  .fp-r { display: grid; gap: 8px; padding: 8px 12px; border-radius: var(--r-sm); background: var(--warn-soft); }
+  .fp-r.done { background: var(--soft); grid-template-columns: 1fr auto; align-items: center; } .fp-r.done .fp-h b { color: var(--muted); font-weight: 500; }
+  .fp-r.fine { background: var(--ok-soft); }
+  .fp-h { display: flex; gap: 8px; align-items: center; }
+  .fp-what { margin: 0; }
+  .fp-vals { display: flex; align-items: flex-end; gap: 8px; flex-wrap: wrap; font-size: var(--fs-meta); }
+  .fp-vals > span:not(.arr) { display: grid; gap: 2px; } .fp-vals .k { color: var(--muted); font-size: var(--fs-micro); } .fp-vals .arr { color: var(--muted); padding-bottom: 2px; }
+  .fp-vals code { background: var(--panel); padding: 2px 8px; border-radius: var(--r-sm); }
+  .fp-acts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
+  .fp-acts .ck, .fp-done .ck { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.4; vertical-align: -2px; margin-right: 4px; }
+  .fp-done { display: inline-flex; align-items: center; gap: 8px; font-size: var(--fs-meta); color: var(--muted); } .fp-done.ok { color: var(--ok); }
+  .fp-done .link { margin-left: 4px; }
+  .fp-edit { display: grid; gap: 8px; } .fp-edit textarea { min-height: 64px; background: var(--panel); } .fp-edit .bar { display: flex; gap: 8px; } .fp-edit .bar .grow { flex: 1; }
+  .dbub.fig .about, .fig-about { color: var(--warn); }
+  .fig-about { display: block; font-size: var(--fs-micro); }
+  .fb-fig { display: grid; gap: 8px; padding: 8px 12px; border-radius: var(--r-sm); background: var(--warn-soft); font-size: var(--fs-meta); }
+  .fb-fig .fb-left { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip.fig-chip { display: inline-flex; align-items: center; }
+  .rv-fig { color: var(--muted); }
   .figbox { padding: 12px 16px; border-radius: var(--radius); background: var(--warn-soft); max-width: var(--measure); margin: 12px 0; }
   .figbox p { margin: 2px 0; }
   .figbox > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
