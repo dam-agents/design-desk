@@ -3409,12 +3409,16 @@ test("differences from Figma on a change: taken into the feedback or marked fine
   // Fine alone is feedback enough; a difference off the table before it is sent is left out.
   s.addDraft(chg.id, alice, { figma: "Pill colour", fine: true });
   assert.deepEqual(s.sendReview(chg.id, alice, { verdict: "comment" }).review.figma_fine.map((x) => x.part), ["Pill colour"]);
+  // One taken off the table meanwhile still goes with the review, and stays off as it is.
   s.addDraft(chg.id, alice, { figma: "Save button", fine: true });
   s.dismissFigma(chg.id, alice, "Save button");
-  assert.throws(() => s.sendReview(chg.id, alice, { verdict: "comment" }), /Write a comment or a note first/);
+  const off = s.sendReview(chg.id, alice, { verdict: "comment" }).review;
+  assert.deepEqual(off.figma_fine.map((x) => x.part), ["Save button"]);
+  assert.equal(s.card(chg.id).figma_check.dismissed.find((d) => d.part === "Save button").review, undefined, "the × that took it off stays the record");
   // A new screenshot gives the lone screen another key: nothing more is offered on the old one, but a
   // fine mark made before still goes, by its difference's part.
   s.dismissFigma(chg.id, alice, "Save button", false);
+  s.addDraft(chg.id, alice, { figma: "Save button", fine: true });
   const l1b = img("l1b");
   s.upsertCard({ id: chg.id, screens: [{ asset: b, stage: "before", pair: "Agents list" }, { asset: a, stage: "after", pair: "Agents list" }, { asset: l1b, caption: "The limit dialog" }] });
   assert.throws(() => s.addDraft(chg.id, alice, { figma: "Save button", text: "x" }), /on no change/);

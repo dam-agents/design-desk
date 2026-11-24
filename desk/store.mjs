@@ -966,7 +966,10 @@ export class Store {
     // Differences from Figma marked fine as it is: still in the table as it is sent (by part, wherever
     // its change went since), they leave it
     // for everyone, as the × takes one off, and the review names them. Only whoever may mark the change handled.
-    const fineOnes = c.kind === "change" ? drafts.filter((d) => d.fine && figmaOpen(c).some((x) => x.part === d.figma)) : [];
+    // Every fine mark is the person's judgement and goes with the review; only those still in the
+    // table are taken off it (one taken off meanwhile is off already).
+    const fineOnes = c.kind === "change" ? drafts.filter((d) => d.fine) : [];
+    const stillIn = fineOnes.filter((d) => figmaOpen(c).some((x) => x.part === d.figma));
     if (fineOnes.length) this.mayHandle(c, who);
     // Comments to work in: only Request changes on a request works them in; another verdict leaves them be.
     const worked = drafts.filter((d) => d.work_in).map((d) => own(this.db.threads, d.work_in)).filter((t) => t && t.card === c.id && !["private", "asks"].includes(t.kind));
@@ -1018,7 +1021,7 @@ export class Store {
       if (!request && verdict === "approve" && !c.handled) this.handle(c.id, who, true);
       const head = !request ? this.headOf(c) : null;
       this.db.reviews[id] = { id, card: c.id, by: person(who), at: this.clock(), verdict, note: words, threads, ...(looks.length ? { looks_good: looks.map(({ key, name }) => ({ key, name })) } : {}), ...(fineOnes.length ? { figma_fine: fineOnes.map((d) => ({ part: d.figma, change: d.change })) } : {}), ...(head ? { sha: head } : {}) };
-      if (fineOnes.length) { const k = c.figma_check; k.dismissed = [...(k.dismissed || []).filter((x) => !fineOnes.some((d) => d.figma === x.part)), ...fineOnes.map((d) => ({ part: d.figma, by: person(who), at: this.clock(), review: id }))]; }
+      if (stillIn.length) { const k = c.figma_check; k.dismissed = [...(k.dismissed || []).filter((x) => !stillIn.some((d) => d.figma === x.part)), ...stillIn.map((d) => ({ part: d.figma, by: person(who), at: this.clock(), review: id }))]; }
       c.reviews = [...(c.reviews || []), id];
       // With `review_post` on, a pull request's review goes to the pull request too: the agent posts it (docs/watch.md → Reviews on GitHub).
       if (post && !request && c.source?.pr && !c.source?.merged_at && c.status !== "archived") { const it = this.enqueue("review", c.id, null, who); it.review = id; item = it; }
