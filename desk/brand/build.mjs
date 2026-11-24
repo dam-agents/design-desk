@@ -3,7 +3,7 @@
 //   node desk/brand/build.mjs        writes mark.svg, favicon.svg, avatar.svg and their PNGs
 //
 // The mark is a disc with DD on it: two D's, a spark cut out of the second so the disc shows
-// through (the operator's drawing, dd-light.svg), the disc a pastel orange-red. Light mode: white
+// through (the operator's drawing, dd-light.svg), the disc orange. Light mode: white
 // D's. Dark mode: a lighter disc, near-black D's. The page, the guidelines and their tests import the shapes
 // from here, so there is one drawing.
 import { writeFileSync } from "node:fs";
@@ -13,36 +13,42 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 // In a 48-unit box: the disc fills it; the D's sit at 0.74 about its centre.
 const BOX = 48, C = 24, SCALE = 0.74;
 /** The two D's, the spark cut from the second (filled even-odd). */
-export const D_PATH = "M4 14H12A10 10 0 0 1 12 34H4Z M26 14H34A10 10 0 0 1 34 34H26Z M33.5 16.5C33.5 24 33.5 24 41 24C33.5 24 33.5 24 33.5 31.5C33.5 24 33.5 24 26.5 24C33.5 24 33.5 24 33.5 16.5Z";
+export const D1_PATH = "M4 14H12A10 10 0 0 1 12 34H4Z";
+export const D2_PATH = "M26 14H34A10 10 0 0 1 34 34H26Z M33.5 16.5C33.5 24 33.5 24 41 24C33.5 24 33.5 24 33.5 31.5C33.5 24 33.5 24 26.5 24C33.5 24 33.5 24 33.5 16.5Z";
+export const D_PATH = `${D1_PATH} ${D2_PATH}`;
 
-/** Its colours, light and dark mode: the disc (a gradient's two ends; one pastel orange-red for now) and the D's. Finalised here (#215). */
+/** Its colours, light and dark mode: the disc and the D's. Finalised here (#215). */
 export const COLORS = {
-  light: { from: "#ee7d5e", to: "#ee7d5e", d: "#ffffff" },
-  dark: { from: "#f6a58c", to: "#f6a58c", d: "#1b1b1a" },
+  light: { disc: "#f07a3a", d: "#ffffff" },
+  dark: { disc: "#f6a06a", d: "#1b1b1a" },
 };
 
-// The drawing; `id` names its gradient (unique in a document). Fixed colours for a mode, or
-// classes (mk-from, mk-to on the stops, mk-d on the D's) for the page's CSS.
-const drawing = (id, mode) => `<defs><linearGradient id="${id}" x1="6" y1="4" x2="42" y2="44" gradientUnits="userSpaceOnUse"><stop offset="0" ${mode ? `stop-color="${COLORS[mode].from}"` : `class="mk-from"`}/><stop offset="1" ${mode ? `stop-color="${COLORS[mode].to}"` : `class="mk-to"`}/></linearGradient></defs>`
-  + `<circle cx="${C}" cy="${C}" r="${C}" fill="url(#${id})"/>`
+// The drawing: fixed colours for a mode, or classes (mk-disc, mk-d) for the page's CSS.
+const drawing = (mode) => `<circle cx="${C}" cy="${C}" r="${C}" ${mode ? `fill="${COLORS[mode].disc}"` : `class="mk-disc"`}/>`
   + `<path transform="translate(${C} ${C}) scale(${SCALE}) translate(${-C} ${-C})" fill-rule="evenodd" d="${D_PATH}" ${mode ? `fill="${COLORS[mode].d}"` : `class="mk-d"`}/>`;
 const schemeCss = () => {
-  const css = (c) => `.mk-from{stop-color:${c.from}}.mk-to{stop-color:${c.to}}.mk-d{fill:${c.d}}`;
+  const css = (c) => `.mk-disc{fill:${c.disc}}.mk-d{fill:${c.d}}`;
   return `<style>${css(COLORS.light)}@media (prefers-color-scheme:dark){${css(COLORS.dark)}}</style>`;
 };
 const svg = (inner, attrs = "") => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${BOX} ${BOX}"${attrs}>${inner}</svg>`;
 
 /** mark.svg: the mark, its colours following the reader's light or dark mode. */
-export const MARK_SVG = svg(schemeCss() + drawing("ddm")) + "\n";
+export const MARK_SVG = svg(schemeCss() + drawing()) + "\n";
 
 /** The mark in fixed colours, for the PNGs and the avatar. */
-export const markIn = (mode, id = `ddm-${mode}`) => svg(drawing(id, mode)) + "\n";
+export const markIn = (mode) => svg(drawing(mode)) + "\n";
 
 /** avatar.svg: the agent's avatar is the mark itself, in its light colours. */
 export const AVATAR_SVG = markIn("light");
 
 /** The mark as the page draws it inline: classes only, its colours from the page's CSS. */
-export const MARK_INLINE = `<svg class="dd-mark" viewBox="0 0 ${BOX} ${BOX}" aria-hidden="true">${drawing("dd-mark-g")}</svg>`;
+export const MARK_INLINE = `<svg class="dd-mark" viewBox="0 0 ${BOX} ${BOX}" aria-hidden="true">${drawing()}</svg>`;
+
+/**
+ * The wordmark, for the Desk's head: the two D's alone, no disc — the first in the page's ink
+ * (mk-ink), the second, its spark cut out, in the mark's colour (mk-word).
+ */
+export const WORD_INLINE = `<svg class="dd-word" viewBox="4 14 40 20" aria-hidden="true"><path class="mk-ink" d="${D1_PATH}"/><path class="mk-word" fill-rule="evenodd" d="${D2_PATH}"/></svg>`;
 
 /** The favicon, as a data: URL the page links to (the page is one file). */
 export const FAVICON_HREF = `data:image/svg+xml,${encodeURIComponent(MARK_SVG.trim())}`;
