@@ -754,6 +754,35 @@
   .count-pick { display: grid; gap: 4px; } .count-pick .row2 { display: flex; gap: 12px; align-items: center; }
   .count-pick input[type=range] { flex: 1; accent-color: var(--accent); padding: 0; border: 0; background: none; }
   .count-pick output { min-width: 15ch; font-weight: 600; font-size: var(--fs-ui); }
+  /* The options as one row of buttons, in simple mode: Just check, then one to five, one pressed. */
+  .seg { display: inline-flex; width: fit-content; white-space: nowrap; border: 1px solid var(--line); border-radius: var(--r-sm); overflow: hidden; }
+  .seg button { font: inherit; font-size: var(--fs-ui); min-width: 44px; min-height: 36px; padding: 4px 12px; border: 0; border-left: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; }
+  .seg button:first-child { border-left: 0; } .seg button:hover { background: var(--soft); }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--panel); font-weight: 600; }
+  .seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  #request-dialog:not(.simple) .seg { display: none; }
+  /* New request's moves: bigger buttons, the main one split with its ways under the arrow. */
+  .btn.lg { min-height: 40px; padding: 8px 20px; font-weight: 600; }
+  .rq-actions { margin-top: 4px; gap: 12px; } .rq-actions .rq-keys { margin: 0 0 0 auto; font-size: var(--fs-micro); }
+  .splitbtn { display: inline-flex; } .splitbtn > .btn { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+  .splitbtn > details > summary.btn { padding: 8px 12px; border-top-left-radius: 0; border-bottom-left-radius: 0; border-left: 1px solid color-mix(in srgb, var(--panel) 35%, transparent); height: 100%; }
+  .splitbtn:not(.many) > details { display: none; } .splitbtn:not(.many) > .btn { border-radius: var(--r-sm); }
+  .splitbtn { position: relative; } .splitbtn details.more { position: static; } .splitbtn details.more .menu { top: auto; bottom: calc(100% + 6px); left: 0; right: auto; width: 320px; max-width: calc(100vw - 48px); white-space: normal; }
+  details.more .split-way, .split-way { display: grid; grid-template-columns: 20px 1fr; gap: 2px 8px; width: 100%; text-align: left; white-space: normal; padding: 8px 12px 8px 8px; border: 0; border-radius: var(--r-sm); background: none; color: var(--ink); font: inherit; cursor: pointer; }
+  .split-way:hover, .split-way:focus-visible { background: var(--soft); outline: none; }
+  .split-way .tick { grid-row: span 2; color: var(--accent); visibility: hidden; } .split-way[aria-checked="true"] .tick { visibility: visible; }
+  .split-way b { font-size: var(--fs-ui); font-weight: 600; } .split-way small { color: var(--muted); font-size: var(--fs-meta); line-height: 1.4; }
+  /* The pictures' box: its icon, its words, and each picture with a ✕ to take it out. */
+  .drop-say { display: flex; gap: 12px; align-items: center; } .drop-say > .ico { flex: none; width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .thumbs .thumb { position: relative; } .thumbs .thumb button { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; padding: 0; border-radius: 50%; border: 1px solid var(--line); background: var(--panel); color: var(--muted); font-size: var(--fs-micro); line-height: 1; cursor: pointer; display: grid; place-items: center; }
+  .thumbs .thumb button:hover { color: var(--ink); border-color: var(--ink); } .thumbs .thumb img { display: block; }
+  /* Simple mode: the words, the pictures and how many options; the rest stays in full mode. */
+  #request-dialog.simple :is(#type-choice, #rq-vision, #rq-screen, #rq-grill, #rq-skills, #rq-figma, .count-pick .row2) { display: none; }
+  #request-dialog.simple textarea[name=problem] { min-height: 160px; font-size: var(--fs-ui); line-height: 1.5; }
+  #request-dialog.simple #rq-problem-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  #request-dialog.simple .count-pick { grid-template-columns: max-content minmax(0, 1fr); align-items: center; column-gap: 16px; } #request-dialog.simple #rq-count-q { font-size: var(--fs-ui); color: var(--ink); } #request-dialog.simple #rq-count-hint { grid-column: 1 / -1; }
+  /* On a phone the label goes above the row and its six buttons share the dialog's width. */
+  @media (max-width: 560px) { #request-dialog.simple .count-pick { grid-template-columns: minmax(0, 1fr); row-gap: 8px; } .seg { display: flex; width: 100%; } .seg button { flex: 1 1 0; min-width: 0; padding: 4px 8px; } .seg button:first-child { flex: 0 0 auto; } }
   /* Where a request came from, and the requests a card started. */
   .linked { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--soft); font-size: var(--fs-meta); max-width: var(--measure); margin: 8px 0; }
   .linked .k { color: var(--muted); }

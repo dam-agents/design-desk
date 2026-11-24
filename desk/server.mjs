@@ -379,7 +379,15 @@ async function viewerRoute(req, res, url, who) {
     // A person's request starts as a draft unless a designer files it; an agent's over MCP opens
     // as the agent's own do (docs/desk.md → Draft and Proposal).
     const stage = who.peer ? null : stageFor(who.deskRole);
-    return send(res, 201, withPing(store.createRequest(actor, { title, problem, goal, screen, steps, type, from, screens, figma, vision, skills, options, grill, auto, audience, carry, stage }), s, who));
+    // Its author may send it straight on from New request: a proposal, or to design, as the draft's
+    // own move would (docs/desk.md → Draft and Proposal). Refused before anything is filed.
+    const start = stage === "draft" && ["proposal", "design"].includes(b.start) ? b.start : null;
+    if (b.start != null && b.start !== "" && !start) throw new DeskError(400, "start must be proposal or design, on a request that starts as a draft");
+    if (start && !can(who.deskRole, start === "proposal" ? "stage-propose" : "stage-design", s.prototypeRoles))
+      throw new DeskError(403, start === "proposal" ? "Only developers and the UI dev owner propose a request; send it to design instead." : "A developer's request goes to design as a proposal: pick Create proposal.");
+    const made = store.createRequest(actor, { title, problem, goal, screen, steps, type, from, screens, figma, vision, skills, options, grill, auto, audience, carry, stage });
+    if (start) made.card = store.moveStage(made.card.id, actor, start).card;
+    return send(res, 201, withPing(made, s, who));
   }
   // An admin asks for a new person on the list; the agent writes the row (docs/desk.md → People).
   // A person's GitHub username, an admin's to set on People (docs/desk.md → People).

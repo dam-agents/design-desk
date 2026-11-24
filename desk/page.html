@@ -766,6 +766,35 @@
   .count-pick { display: grid; gap: 4px; } .count-pick .row2 { display: flex; gap: 12px; align-items: center; }
   .count-pick input[type=range] { flex: 1; accent-color: var(--accent); padding: 0; border: 0; background: none; }
   .count-pick output { min-width: 15ch; font-weight: 600; font-size: var(--fs-ui); }
+  /* The options as one row of buttons, in simple mode: Just check, then one to five, one pressed. */
+  .seg { display: inline-flex; width: fit-content; white-space: nowrap; border: 1px solid var(--line); border-radius: var(--r-sm); overflow: hidden; }
+  .seg button { font: inherit; font-size: var(--fs-ui); min-width: 44px; min-height: 36px; padding: 4px 12px; border: 0; border-left: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; }
+  .seg button:first-child { border-left: 0; } .seg button:hover { background: var(--soft); }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--panel); font-weight: 600; }
+  .seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  #request-dialog:not(.simple) .seg { display: none; }
+  /* New request's moves: bigger buttons, the main one split with its ways under the arrow. */
+  .btn.lg { min-height: 40px; padding: 8px 20px; font-weight: 600; }
+  .rq-actions { margin-top: 4px; gap: 12px; } .rq-actions .rq-keys { margin: 0 0 0 auto; font-size: var(--fs-micro); }
+  .splitbtn { display: inline-flex; } .splitbtn > .btn { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+  .splitbtn > details > summary.btn { padding: 8px 12px; border-top-left-radius: 0; border-bottom-left-radius: 0; border-left: 1px solid color-mix(in srgb, var(--panel) 35%, transparent); height: 100%; }
+  .splitbtn:not(.many) > details { display: none; } .splitbtn:not(.many) > .btn { border-radius: var(--r-sm); }
+  .splitbtn { position: relative; } .splitbtn details.more { position: static; } .splitbtn details.more .menu { top: auto; bottom: calc(100% + 6px); left: 0; right: auto; width: 320px; max-width: calc(100vw - 48px); white-space: normal; }
+  details.more .split-way, .split-way { display: grid; grid-template-columns: 20px 1fr; gap: 2px 8px; width: 100%; text-align: left; white-space: normal; padding: 8px 12px 8px 8px; border: 0; border-radius: var(--r-sm); background: none; color: var(--ink); font: inherit; cursor: pointer; }
+  .split-way:hover, .split-way:focus-visible { background: var(--soft); outline: none; }
+  .split-way .tick { grid-row: span 2; color: var(--accent); visibility: hidden; } .split-way[aria-checked="true"] .tick { visibility: visible; }
+  .split-way b { font-size: var(--fs-ui); font-weight: 600; } .split-way small { color: var(--muted); font-size: var(--fs-meta); line-height: 1.4; }
+  /* The pictures' box: its icon, its words, and each picture with a ✕ to take it out. */
+  .drop-say { display: flex; gap: 12px; align-items: center; } .drop-say > .ico { flex: none; width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .thumbs .thumb { position: relative; } .thumbs .thumb button { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; padding: 0; border-radius: 50%; border: 1px solid var(--line); background: var(--panel); color: var(--muted); font-size: var(--fs-micro); line-height: 1; cursor: pointer; display: grid; place-items: center; }
+  .thumbs .thumb button:hover { color: var(--ink); border-color: var(--ink); } .thumbs .thumb img { display: block; }
+  /* Simple mode: the words, the pictures and how many options; the rest stays in full mode. */
+  #request-dialog.simple :is(#type-choice, #rq-vision, #rq-screen, #rq-grill, #rq-skills, #rq-figma, .count-pick .row2) { display: none; }
+  #request-dialog.simple textarea[name=problem] { min-height: 160px; font-size: var(--fs-ui); line-height: 1.5; }
+  #request-dialog.simple #rq-problem-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  #request-dialog.simple .count-pick { grid-template-columns: max-content minmax(0, 1fr); align-items: center; column-gap: 16px; } #request-dialog.simple #rq-count-q { font-size: var(--fs-ui); color: var(--ink); } #request-dialog.simple #rq-count-hint { grid-column: 1 / -1; }
+  /* On a phone the label goes above the row and its six buttons share the dialog's width. */
+  @media (max-width: 560px) { #request-dialog.simple .count-pick { grid-template-columns: minmax(0, 1fr); row-gap: 8px; } .seg { display: flex; width: 100%; } .seg button { flex: 1 1 0; min-width: 0; padding: 4px 8px; } .seg button:first-child { flex: 0 0 auto; } }
   /* Where a request came from, and the requests a card started. */
   .linked { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--soft); font-size: var(--fs-meta); max-width: var(--measure); margin: 8px 0; }
   .linked .k { color: var(--muted); }
@@ -1851,20 +1880,22 @@
     <input type="hidden" name="type" value="idea" />
     <label><span id="rq-problem-label">What would you change, and for whom?</span><textarea name="problem" maxlength="4000" required></textarea></label>
     <label id="rq-vision"><span>How do you picture it? (optional)</span><textarea name="vision" maxlength="4000" placeholder="e.g. calmer, like the cards in Settings; the main button on the right; less text"></textarea></label>
-    <label><span>Which screen? (optional)</span><input name="screen" maxlength="500" placeholder="e.g. the agents list" /></label>
+    <label id="rq-screen"><span>Which screen? (optional)</span><input name="screen" maxlength="500" placeholder="e.g. the agents list" /></label>
     <div id="rq-carry" hidden><span class="hint" style="margin:0">Carry over</span><div class="choices" id="rq-carry-list"></div></div>
     <div class="count-pick" id="rq-count"><span class="hint" style="margin:0" id="rq-count-q">How many design options should Design Desk draw?</span>
       <div class="row2"><input type="range" name="options" min="0" max="5" step="1" value="3" aria-label="How many design options to draw" /><output id="rq-count-say">3 options</output></div>
+      <div class="seg" id="rq-count-seg" role="group" aria-label="How many design options to draw"><button type="button" aria-pressed="false" data-n="0">Just check</button><button type="button" aria-pressed="false" data-n="1">1</button><button type="button" aria-pressed="false" data-n="2">2</button><button type="button" aria-pressed="false" data-n="3">3</button><button type="button" aria-pressed="false" data-n="4">4</button><button type="button" aria-pressed="false" data-n="5">5</button></div>
       <span class="hint" style="margin:0" id="rq-count-hint"></span></div>
     <label class="switch" id="rq-grill"><input type="checkbox" role="switch" name="grill" /><span>Ask me questions first<small>One question at a time, each with a suggested answer.</small></span></label>
     <details class="skills" id="rq-skills" hidden><summary>What Design Desk uses for the options</summary><div id="rq-skill-list"></div></details>
     <label id="rq-figma" hidden><span>Figma link (optional)</span><input name="figma" maxlength="500" placeholder="https://www.figma.com/design/…" /></label>
     <div class="drop" id="rq-drop">
-      <span>Screenshot (optional): drop it here, paste it with Ctrl+V or ⌘V, or <label style="display:inline;color:var(--accent);cursor:pointer">choose a file<input type="file" accept="image/png,image/jpeg,image/webp" id="rq-file" hidden multiple /></label>. Two at most.</span>
+      <span class="drop-say"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg><span>Screenshot (optional): drop it here, paste it with Ctrl+V or ⌘V, or <label style="display:inline;color:var(--accent);cursor:pointer">choose a file<input type="file" accept="image/png,image/jpeg,image/webp" id="rq-file" hidden multiple /></label>. Two at most.</span></span>
       <div class="thumbs" id="rq-thumbs"></div>
     </div>
     <input type="hidden" name="from" />
-    <div class="actions"><button type="button" class="btn primary" data-close="send">Send</button><button type="button" class="btn" data-close="cancel">Cancel</button></div>
+    <input type="hidden" name="start" />
+    <div class="actions rq-actions"><span class="splitbtn" id="rq-split"><button type="button" class="btn primary lg" data-close="send" id="rq-send">Send</button><details class="more" id="rq-start"><summary class="btn primary lg" aria-label="More ways to send"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary><div class="menu" role="menu" id="rq-start-menu"></div></details></span><button type="button" class="btn lg" data-close="cancel">Cancel</button><span class="hint rq-keys">Ctrl+Enter or ⌘+Enter sends</span></div>
     <button type="button" class="dlg-x" data-dlg-x aria-label="Close">✕</button>
   </form>
 </dialog>
@@ -8552,7 +8583,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     $("#of-draw").hidden = mode !== "draw"; $("#of-own").hidden = mode !== "own";
     $("#of-ok").textContent = mode === "own" ? "Add the option" : "Draw the option";
   };
-  const ofShowPictures = () => { $("#of-thumbs").innerHTML = ownPictures.map((p) => `<img alt="" src="${p.preview}" />`).join(""); };
+  const ofShowPictures = () => showThumbs(ownPictures, "#of-thumbs");
   const ofAdd = (file) => { if (ownPictures.length < 4 && /^image\//.test(file.type)) { ownPictures.push({ file, preview: URL.createObjectURL(file) }); ofShowPictures(); } };
   $("#of-file").addEventListener("change", guard(async (e) => { for (const f of e.target.files) ofAdd(f); e.target.value = ""; }));
   $("#option-dialog").addEventListener("paste", (e) => { if ($("#of-own").hidden) return; for (const it of e.clipboardData?.items || []) if (it.type.startsWith("image/")) { e.preventDefault(); ofAdd(it.getAsFile()); } });
@@ -9435,6 +9466,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // Enter in a dialog's field would submit its form (docs/desk.md → Where it works): it presses the dialog's own button.
     if (e.key === "Enter" && !e.isComposing && e.target.matches("dialog input")) { e.preventDefault(); e.target.closest("dialog").querySelector("[data-close]:not([data-close=cancel])")?.click(); return; }
     if (e.key === "Enter" && !e.isComposing && !e.shiftKey && e.target.matches("[data-reply]")) { e.preventDefault(); document.querySelector(`[data-send-reply="${CSS.escape(e.target.dataset.reply)}"]`)?.click(); }
+    if (e.key === "Enter" && !e.isComposing && (e.metaKey || e.ctrlKey) && e.target.matches("#request-form textarea")) { e.preventDefault(); $("#rq-send").click(); return; }
     if (e.key === "Enter" && !e.isComposing && (e.metaKey || e.ctrlKey) && e.target.id === "ws-text") { e.preventDefault(); $("[data-ws-send]")?.click(); }
   });
 
@@ -9453,16 +9485,35 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   document.addEventListener("click", (e) => { const b = e.target.closest("#type-choice button"); if (b) setType(b.dataset.type); });
 
   // The options slider says what it will do: none is a check of what can be done only.
-  const optionsSay = (n) => (n ? plural(n, "option", "options") : "None");
+  const optionsSay = (n) => (n ? plural(n, "option", "options") : "Just check");
   function sayCount() {
     const n = Number($("#request-form").options.value);
     $("#rq-count-say").textContent = optionsSay(n);
+    for (const b of document.querySelectorAll("#rq-count-seg button")) b.setAttribute("aria-pressed", String(Number(b.dataset.n) === n));
     const carried = !$("#rq-carry").hidden && $("#request-form").querySelector("input[name=carry]:checked");
     $("#rq-count-hint").textContent = carried ? ""
-      : !n ? "Design Desk only checks what can be done as a design change; a designer, PM or developer can still have options drawn later."
+      : !n ? (simple() ? "Design Desk only checks what can be done; options can be drawn later." : "Design Desk only checks what can be done as a design change; a designer, PM or developer can still have options drawn later.")
       : can("explore") ? "" :"A designer, PM or developer starts them after Design Desk checks what can be done.";
   }
   $("#request-form").options.addEventListener("input", sayCount);
+  $("#rq-count-seg").addEventListener("click", (e) => { const b = e.target.closest("button[data-n]"); if (!b) return; $("#request-form").options.value = b.dataset.n; sayCount(); });
+
+  // How a new request starts (docs/desk.md → Draft and Proposal): a draft, or straight on to the
+  // stage its author may move it to. A designer's opens at once, so it has one way: Send.
+  const startWays = () => !startsDraft() ? [{ to: "", label: "Send", say: "" }]
+    : [{ to: "", label: "Create draft", say: "Private: only you see it until you send it on." },
+      ...(can("stage-propose") ? [{ to: "proposal", label: "Create proposal", say: "Goes straight to the dev team for feedback; everyone on the Desk can read it." }]
+        : can("stage-design") ? [{ to: "design", label: "Send to design", say: "Goes straight to the designers; everyone on the Desk can read it." }] : [])];
+  // The way last picked stays the button's face, for this person in this browser.
+  const startKey = () => `desk-request-start:${S.me?.email || ""}`;
+  function setStart(to) {
+    const ways = startWays(), w = ways.find((x) => x.to === to) || ways[0];
+    $("#request-form").start.value = w.to;
+    $("#rq-send").textContent = w.label;
+    $("#rq-split").classList.toggle("many", ways.length > 1);
+    $("#rq-start-menu").innerHTML = ways.map((x) => `<button type="button" class="split-way" role="menuitemradio" aria-checked="${x === w}" data-start="${x.to}"><span class="tick" aria-hidden="true">✓</span><b>${esc(x.label)}</b><small>${esc(x.say)}</small></button>`).join("");
+  }
+  $("#rq-start-menu").addEventListener("click", (e) => { const b = e.target.closest("[data-start]"); if (!b) return; setStart(b.dataset.start); store.set(startKey(), b.dataset.start); $("#rq-send").focus(); });
 
   // A picture is shrunk in the browser before it is sent: 1600 px wide at most, JPEG.
   // A picture as a JPEG of at most `max` characters: lower quality first, then smaller.
@@ -9481,8 +9532,18 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   async function addPicture(file, list = pictures, thumbs = "#rq-thumbs", max = 2) {
     if (list.length >= max || !/^image\//.test(file.type)) return;
     list.push(await encodePicture(file));
-    $(thumbs).innerHTML = list.map((p) => `<img alt="" src="${p.preview}" />`).join("");
+    showThumbs(list, thumbs);
   }
+  const thumbLists = new Map();
+  function showThumbs(list, thumbs) {
+    thumbLists.set(thumbs, list);
+    $(thumbs).innerHTML = list.map((p, i) => `<span class="thumb"><img alt="" src="${p.preview}" /><button type="button" data-unpic="${i}" aria-label="Take this picture out" title="Take this picture out">✕</button></span>`).join("");
+  }
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest(".thumbs [data-unpic]"); if (!b) return;
+    const box = "#" + b.closest(".thumbs").id, list = thumbLists.get(box);
+    if (list) { list.splice(Number(b.dataset.unpic), 1); showThumbs(list, box); }
+  });
 
   const added = [];
   const addShot = (f) => addPicture(f, added, "#sh-thumbs", 4);
@@ -9503,9 +9564,14 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     f.reset(); pictures.length = 0; $("#rq-thumbs").innerHTML = "";
     $("#rq-skills").open = false;
     $("#rq-skill-list").innerHTML = (S.me?.skills || []).map((k) => `<label class="switch"><input type="checkbox" role="switch" data-skill="${esc(k.name)}"${k.on ? " checked" : ""} /><span>${esc(k.does || k.name)}<small>${esc(k.name)}</small></span></label>`).join("");
-    setType("idea"); sayCount();
+    // Simple mode asks for the words, the pictures and how many options; the rest is full mode's.
+    const plain = simple();
+    dlg.classList.toggle("simple", plain);
+    setType("idea");
+    if (plain) f.options.value = "1";
+    sayCount();
     // A draft takes its tab when it opens (docs/desk.md → Draft and Proposal); a designer's request is For Designers.
-    $("#request-form [data-close=send]").textContent = startsDraft() ? "Create draft" : "Send";
+    setStart(store.get(startKey()) || "");
     $("#type-choice").hidden = Boolean(from);
     $("#rq-figma").hidden = !figmaOn(); // only with Figma on for this person (their menu switch)
     const issue = from?.kind === "issue";
@@ -9518,16 +9584,18 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       : from
       ? "Tell Design Desk what should look different. It draws options; once a designer, a PM or a UI dev owner approves one (or a developer, on a request For Developers), the coding agent builds it into the product."
       : "Describe it in your own words. Design Desk first tells you what can be done as a design change and what needs a developer.";
-    if (startsDraft()) $("#rq-hint").textContent += " It starts as your draft: only you see it until you send it on.";
+    if (plain && !from) $("#rq-hint").textContent = "Report something broken, or say what you would change. Design Desk first checks what can be done as a design change.";
+    f.problem.placeholder = plain && !from ? "What's wrong, or what would you change, and where? e.g. On the agents list, Delete sits right next to Edit and is easy to press by mistake." : "";
     // From an approved request: tick the options to carry over, the approved one first.
     const vs = again ? from.variants || [] : [];
     $("#rq-carry").hidden = !vs.length;
     $("#rq-carry-list").innerHTML = vs.map((v) => `<label><input type="checkbox" name="carry" value="${esc(v.id)}"${v.id === from.approved?.variant ? " checked" : ""} /> ${esc(v.name)}${v.id === from.approved?.variant ? ` <span class="sub">approved</span>` : ""}</label>`).join("");
-    $("#rq-count-q").textContent = vs.length ? "New options besides them" : "How many design options should Design Desk draw?";
+    $("#rq-count-q").textContent = vs.length ? "New options besides them" : plain ? "Design options" : "How many design options should Design Desk draw?";
     if (vs.length) { f.options.value = "0"; sayCount(); }
+    if (plain && !from) $("#rq-problem-label").textContent = "What's wrong, or what would you change?";
     if (from) $("#rq-problem-label").textContent = issue ? `What should the design of “${from.title}” solve?` : again ? "What should change?" : `What should look different in “${from.title}”?`;
     f.from.value = from ? from.id : "";
-    dlg.returnValue = ""; dlg.showModal();
+    dlg.returnValue = ""; dlg.showModal(); f.problem.focus();
   }
   $("#new-request").addEventListener("click", () => openRequestDialog(null));
   $("#rq-carry-list").addEventListener("change", sayCount);
@@ -9745,9 +9813,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const body = { type: f.type.value, problem: f.problem.value, screen: f.screen.value, ...(f.figma.value.trim() ? { figma: f.figma.value.trim() } : {}),
       ...(design && f.vision.value.trim() ? { vision: f.vision.value } : {}), ...(Object.keys(skills).length ? { skills } : {}),
       ...(design ? { options: Number(f.options.value), grill: f.grill.checked } : {}),
-      ...(f.from.value ? { from: f.from.value } : {}), ...(!$("#rq-carry").hidden ? { carry: [...f.querySelectorAll("input[name=carry]:checked")].map((i) => i.value) } : {}), ...(pictures.length ? { images: pictures.map(({ contentType, data }) => ({ contentType, data })) } : {}) };
+      ...(f.from.value ? { from: f.from.value } : {}), ...(f.start.value ? { start: f.start.value } : {}), ...(!$("#rq-carry").hidden ? { carry: [...f.querySelectorAll("input[name=carry]:checked")].map((i) => i.value) } : {}), ...(pictures.length ? { images: pictures.map(({ contentType, data }) => ({ contentType, data })) } : {}) };
     const r = await sendOrReopen(e.target, () => api("POST", "/api/requests", body));
-    toast(r.card.stage ? "Your draft is made. Design Desk checks what can be done; only you see it until you send it on." : "Sent. Design Desk first checks what can be done; this page updates by itself.");
+    toast(r.card.stage === "draft" ? "Your draft is made. Design Desk checks what can be done; only you see it until you send it on."
+      : r.card.stage === "proposal" ? "Proposed: the dev team sees it now. Design Desk first checks what can be done; this page updates by itself."
+      : "Sent. Design Desk first checks what can be done; this page updates by itself.");
     S.tab = "requests"; S.reqFilter = "open"; S.reqFor = null; renderBanners(); await refreshList(); await openCard(r.card.id);
   }));
 

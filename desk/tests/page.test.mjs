@@ -191,7 +191,7 @@ test("✕ and Esc close a dialog; a form with something typed asks first", async
     // The confirmation dialog, through Close… on a request just filed (a draft): ✕ and Esc confirm nothing.
     await desk.click("#new-request");
     await desk.fill("#request-dialog textarea[name=problem]", "Make the send button bigger");
-    await desk.locator("#request-dialog .actions button", { hasText: "Create draft" }).click();
+    await desk.locator("#rq-send", { hasText: "Create draft" }).click();
     await desk.waitForFunction(() => calls.some((c) => c.path === "/api/cards/r1"));
     await desk.click('.next [data-act="close"]');
     await desk.click("#confirm-dialog .dlg-x");
@@ -212,7 +212,8 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
   try {
     const dialog = (id) => ({
       open: () => desk.evaluate((i) => document.getElementById(i).open, id),
-      button: (name) => desk.locator(`#${id} .actions button`, { hasText: name }),
+      // A dialog's own buttons; New request's split button holds its ways in a menu, not among them.
+      button: (name) => desk.locator(`#${id} .actions button:not([data-start])`, { hasText: name }),
       // A close with no value keeps the last one (as Escape does in some browsers).
       close: () => desk.evaluate((i) => document.getElementById(i).close(), id),
     });
@@ -1331,9 +1332,9 @@ test("the Issues tab lists the planned issues; Draw it and Design this act once"
     await desk.fill("#request-dialog input[name=options]", "5");
     assert.equal(await desk.textContent("#rq-count-say"), "5 options");
     await desk.fill("#request-dialog input[name=options]", "0");
-    assert.equal(await desk.textContent("#rq-count-say"), "None", "none: only a check of what can be done");
+    assert.equal(await desk.textContent("#rq-count-say"), "Just check", "none: only a check of what can be done");
     await desk.click("#rq-grill input");
-    await desk.locator("#request-dialog .actions button", { hasText: "Create draft" }).click();
+    await desk.locator("#rq-send", { hasText: "Create draft" }).click();
     await desk.waitForFunction(() => calls.some((c) => c.path === "/api/requests"));
     const body = JSON.parse((await posts("/api/requests"))[0].body);
     assert.deepEqual([body.from, body.options, body.grill], ["is1", 0, true], "from the issue, with no options and questions first");
@@ -5181,7 +5182,9 @@ test("New request makes a draft for anyone but a designer, and says who sees it"
   for (const [me, word] of [[DEV_ME, "Create draft"], [{ ...SIMPLE_ME, can: { request: true } }, "Send"]]) await open(t, DESK(me, []), async (desk) => {
     await desk.click("#new-request");
     assert.equal((await desk.textContent("#request-form [data-close=send]")).trim(), word, me.role);
-    assert.equal(/only you see it/.test(await desk.textContent("#rq-hint")), word === "Create draft");
+    // Who sees it is the split button's line under Create draft, not the hint (docs/desk-page.md → New request).
+    assert.equal(/only you see it/.test(await desk.textContent("#rq-hint")), false);
+    assert.equal(/only you see it/.test(await desk.textContent("#rq-start-menu")), word === "Create draft");
   });
 });
 
@@ -5428,4 +5431,104 @@ test("someone who is not an admin reads a GitHub username on People, with nothin
   await desk.waitForSelector("table.people");
   assert.equal(await desk.locator("[data-gh-login]").count(), 0);
   assert.match(await desk.textContent("table.people tbody"), /@pat-gh/);
+}));
+
+// New request (docs/desk-page.md → New request): simple mode asks for the words, the pictures and
+// Design options; the split button sends a draft, or straight on as the author may.
+const NEW_REQUEST = (me) => `<script>
+window.posts = [];
+window.platform = { async request({ method, path, body }) {
+  if (method === "POST") { posts.push({ path, body: JSON.parse(body || "{}") });
+    const b = JSON.parse(body || "{}"), stage = b.start === "proposal" ? "proposal" : b.start === "design" || ${JSON.stringify(me.role)} === "designer" ? undefined : "draft";
+    return { status: 200, contentType: "application/json", body: JSON.stringify(path === "/api/requests" ? { card: { id: "r1", kind: "request", title: "New", status: "triage", stage } } : {}) }; }
+  const answer = path === "/api/me" ? ${JSON.stringify(me)} : path === "/api/cards" ? { cards: [] } : path.startsWith("/api/cards/") ? { card: { id: "r1", kind: "request", title: "New", status: "triage" } }
+    : path === "/api/agenda" ? { agenda: [] } : path === "/api/people" ? ${PEOPLE} : {};
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
+</script>`;
+const ASKER = (role, simple, can = {}) => ({ role, email: "n@example.com", simple, can: { request: true, ...can } });
+const ways = (desk) => desk.$$eval("#rq-start-menu [data-start]", (bs) => bs.map((b) => [b.querySelector("b").textContent, b.querySelector("small").textContent]));
+
+test("simple mode's New request asks for the words, the pictures and Design options, 1 by default", (t) => open(t, NEW_REQUEST(ASKER("developer", true, { "stage-propose": true })), async (desk) => {
+  await desk.click("#new-request");
+  assert.equal(await desk.evaluate(() => document.activeElement?.name), "problem", "the words take the focus");
+  for (const id of ["#type-choice", "#rq-vision", "#rq-screen", "#rq-grill", "#rq-figma", "#request-dialog input[type=range]"]) assert.equal(await desk.isVisible(id), false, id);
+  assert.equal(await desk.isVisible("#rq-count-seg"), true);
+  assert.deepEqual(await desk.$$eval("#rq-count-seg button", (bs) => bs.map((b) => b.textContent)), ["Just check", "1", "2", "3", "4", "5"]);
+  assert.equal(await desk.textContent('#rq-count-seg [aria-pressed="true"]'), "1");
+  await desk.click('#rq-count-seg [data-n="0"]');
+  assert.equal(await desk.textContent("#rq-count-hint"), "Design Desk only checks what can be done; options can be drawn later.");
+  await desk.click('#rq-count-seg [data-n="2"]');
+  // A picture comes with a ✕ that takes it out.
+  const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==", "base64");
+  await desk.setInputFiles("#rq-file", { name: "a.png", mimeType: "image/png", buffer: png });
+  await desk.waitForSelector("#rq-thumbs .thumb");
+  await desk.click("#rq-thumbs [data-unpic]");
+  assert.equal(await desk.$$eval("#rq-thumbs .thumb", (x) => x.length), 0);
+
+  // The split button: a draft, or a proposal, each with its line; the pick is the button's face.
+  assert.equal(await desk.textContent("#rq-send"), "Create draft");
+  assert.equal(await desk.isVisible("#rq-start > summary"), true);
+  assert.deepEqual(await ways(desk), [["Create draft", "Private: only you see it until you send it on."], ["Create proposal", "Goes straight to the dev team for feedback; everyone on the Desk can read it."]]);
+  await desk.click("#rq-start > summary");
+  await desk.click('#rq-start-menu [data-start="proposal"]');
+  assert.equal(await desk.textContent("#rq-send"), "Create proposal");
+  assert.equal(await desk.evaluate(() => document.querySelector("#rq-start").open), false, "the pick closes the menu");
+  await desk.fill("#request-dialog textarea[name=problem]", "Delete sits next to Edit.");
+  await desk.press("#request-dialog textarea[name=problem]", "Control+Enter");
+  await desk.waitForFunction(() => posts.some((p) => p.path === "/api/requests"));
+  const sent = await desk.evaluate(() => posts.find((p) => p.path === "/api/requests").body);
+  assert.deepEqual([sent.type, sent.options, sent.start, "grill" in sent && sent.grill], ["idea", 2, "proposal", false]);
+  await desk.click("#new-request");
+  assert.equal(await desk.textContent("#rq-send"), "Create proposal", "the last pick stays the face");
+}));
+
+test("New request's ways are the author's: Send to design for a PM, one Send for a designer, the same in full mode", async (t) => {
+  await open(t, NEW_REQUEST(ASKER("pm", true, { "stage-design": true })), async (desk) => {
+    await desk.click("#new-request");
+    assert.deepEqual(await ways(desk), [["Create draft", "Private: only you see it until you send it on."], ["Send to design", "Goes straight to the designers; everyone on the Desk can read it."]]);
+  });
+  await open(t, NEW_REQUEST(ASKER("designer", true, { "stage-design": true })), async (desk) => {
+    await desk.click("#new-request");
+    assert.deepEqual([await desk.textContent("#rq-send"), await desk.isVisible("#rq-start > summary")], ["Send", false], "a designer's opens at once");
+    await desk.fill("#request-dialog textarea[name=problem]", "Rows are too airy.");
+    await desk.click("#rq-send");
+    await desk.waitForFunction(() => posts.some((p) => p.path === "/api/requests"));
+    assert.equal(await desk.evaluate(() => "start" in posts.find((p) => p.path === "/api/requests").body), false);
+  });
+  await open(t, NEW_REQUEST(ASKER("developer", false, { "stage-propose": true })), async (desk) => {
+    await desk.click("#new-request");
+    for (const id of ["#type-choice", "#rq-vision", "#rq-screen", "#request-dialog input[type=range]"]) assert.equal(await desk.isVisible(id), true, id);
+    assert.equal(await desk.isVisible("#rq-count-seg"), false, "full mode keeps its slider");
+    assert.equal(await desk.inputValue("#request-dialog input[type=range]"), "3");
+    assert.equal(await desk.textContent("#rq-count-say"), "3 options");
+    assert.deepEqual((await ways(desk)).map(([w]) => w), ["Create draft", "Create proposal"]);
+  });
+});
+
+test("on a phone, simple mode's New request keeps every Design options button inside the dialog", (t) => open(t, NEW_REQUEST(ASKER("developer", true, { "stage-propose": true })), async (desk) => {
+  for (const width of [320, 360, 375, 420, 560]) {
+    await desk.setViewportSize({ width, height: 740 });
+    await desk.click("#new-request");
+    const box = await desk.evaluate(() => {
+      const f = document.querySelector("#request-form"), r = f.getBoundingClientRect(), bs = [...document.querySelectorAll("#rq-count-seg button")].map((b) => b.getBoundingClientRect());
+      // A button's words stay inside it too: Just check never runs over 1.
+      const spill = [...document.querySelectorAll("#rq-count-seg button")].filter((x) => x.scrollWidth > x.clientWidth + 0.5).length;
+      return { sideways: f.scrollWidth > f.clientWidth, out: bs.filter((b) => b.right > r.right + 0.5 || b.left < r.left - 0.5).length, spill };
+    });
+    assert.deepEqual(box, { sideways: false, out: 0, spill: 0 }, `${width} px`);
+    await desk.click("#request-dialog [data-close=cancel]");
+  }
+}));
+
+test("Add a design option's own pictures each come with a ✕ that takes it out", (t) => open(t, NEW_REQUEST(ASKER("designer", false)), async (desk) => {
+  await desk.waitForSelector("#new-request");
+  await desk.evaluate(() => document.getElementById("option-dialog").showModal());
+  await desk.click('#option-dialog [data-of-mode="own"]');
+  const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==", "base64");
+  await desk.setInputFiles("#of-file", [{ name: "a.png", mimeType: "image/png", buffer: png }, { name: "b.png", mimeType: "image/png", buffer: png }]);
+  await desk.waitForFunction(() => document.querySelectorAll("#of-thumbs .thumb").length === 2);
+  await desk.click("#of-thumbs .thumb:first-child [data-unpic]");
+  assert.equal(await desk.$$eval("#of-thumbs .thumb", (x) => x.length), 1, "one taken out, one left");
 }));

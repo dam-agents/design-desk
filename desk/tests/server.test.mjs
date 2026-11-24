@@ -753,6 +753,28 @@ test("a designer's request opens; anyone else's is a draft that its author moves
   assert.deepEqual([approve.status, approve.body.error], [400, "This request is still a draft. That waits until it goes to design."]);
 });
 
+// New request's split button (docs/desk.md → Draft and Proposal): its author sends it straight on, as the draft's own move would.
+test("a new request may start straight on as a proposal or in design, by what its author may move a draft to", async (t) => {
+  const d = await desk(t);
+  const file = (email, start) => d.viewer(email, "/api/requests", { problem: "Rows are too airy.", options: 0, start });
+  const count = async () => (await d.viewer("lee@example.com", "/api/cards")).body.cards.length;
+  const proposed = (await file("bob@example.com", "proposal")).body.card;
+  assert.deepEqual([proposed.stage, proposed.staged.map((x) => [x.from, x.to, x.by.email])], ["proposal", [["draft", "proposal", "bob@example.com"]]], "a developer proposes it");
+  const sent = (await file("pat@example.com", "design")).body.card;
+  assert.deepEqual([sent.stage, Boolean(sent.opened_at), sent.size?.small ?? false], [undefined, true, false], "a PM sends it to design: open, For Designers");
+  assert.equal((await file("lee@example.com", "proposal")).body.card.stage, "proposal", "an admin proposes it");
+
+  // Refused before anything is filed: no stray draft behind a refusal.
+  const before = await count();
+  const pm = await file("pat@example.com", "proposal");
+  assert.deepEqual([pm.status, pm.body.error], [403, "Only developers and the UI dev owner propose a request; send it to design instead."]);
+  assert.equal((await file("bob@example.com", "design")).status, 403, "a developer's goes to design as a proposal");
+  assert.equal((await file("bob@example.com", "developers")).status, 400, "only proposal or design");
+  assert.equal((await file("alice@example.com", "proposal")).status, 400, "a designer's opens at once: it has no draft to move on");
+  assert.equal(await count(), before, "nothing was filed");
+  assert.equal((await file("alice@example.com", "")).body.card.stage, undefined, "an empty start is none");
+});
+
 test("a draft is not there, through any route, for whom it is not; a proposal is everyone's", async (t) => {
   const d = await desk(t);
   const id = (await d.viewer("bob@example.com", "/api/requests", { problem: "Rows are too airy.", options: 0 })).body.card.id;

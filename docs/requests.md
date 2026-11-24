@@ -10,7 +10,7 @@ and feedback before any live prototype ([prototype.md](prototype.md)) and the ha
 | --- | --- | --- | --- |
 | 1. Large and new | a GitHub issue with the `issue_label` label (the watch files it, [watch.md](watch.md)) | `feature` | the approved design written back into the issue; a developer builds it |
 | 2. Small, built first | a developer's pull request with a basic UI (a change card, open or merged) → **Adjust the design** | `adjustment` | the adjusted design sent to the coding agent (`implementer`) to build into the product |
-| 3. Reported | a UI bug, or something that looks wrong to someone (Desk or Slack) | `bug` | as flow 2 |
+| 3. Reported | a UI bug, or something that looks wrong to someone (Desk in full mode, or Slack; one reported in simple mode is an `idea`, [UI bugs](#ui-bugs)) | `bug` | as flow 2 |
 
 A request a person files on the Desk is a draft or a proposal before it goes to design
 ([desk.md](desk.md) → Draft and Proposal); you work on it as on any other. Ideas filed on the Desk or asked for in Slack (`idea`) and the agent's own proposals for new features
@@ -565,8 +565,9 @@ sent to developers too: the states document the approved design and change nothi
 ## UI bugs
 
 A UI bug is a request of type `bug`: something on a screen looks or behaves wrong. People
-file one on the Desk (**New request → Report something broken**) or tell you in Slack; either way it
-waits in the same queue and gets the same triage.
+file one on the Desk (**New request → Report something broken**, in full mode) or tell you in Slack;
+either way it waits in the same queue and gets the bug triage below. Simple mode's New request has no
+type: a bug reported there is filed as an idea and gets an idea's triage, not a bug's.
 
 ### From a channel
 
