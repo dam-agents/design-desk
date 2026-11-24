@@ -155,7 +155,10 @@ Sample data, made-up names and numbers do not count. At most 12 differences; gro
 
 **Writing it.** `figma_check` on the card with `design desk upsert`: `{verdict: matches|differs,
 frame: {url, name, version, edited, shot}, product_shot, differences: [{part, what, severity,
-figma, product, figma_shot, product_shot}]}`; on a request also `variant`, the option compared.
+figma, product, figma_shot, product_shot, change}]}`; on a request also `variant`, the option compared.
+On a pull request's change, each difference's `change` names the change of the card it is on — the
+`pair` of its screen pair, else its lone screen's `asset` — so whoever reviews that change is offered
+it there (docs/desk.md → Reviews); leave it out for one on no screen of the card.
 `version` is the `hash` `design figma frame` printed; `edited` the file's `edited`. A frame
 that goes against a decision in force (docs/desk.md → Decisions) also goes on that decision:
 `design desk decision-figma D-<n> <check.json>`, its differences only what the decision says.

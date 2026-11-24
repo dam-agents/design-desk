@@ -871,7 +871,7 @@ export class Store {
     const c = this.card(cardId), key = this.draftsFor(who);
     return { drafts: structuredClone(own(own(this.db.drafts, key) || {}, c.id) || []) };
   }
-  addDraft(cardId, who, { text, anchor = null, change = null, ok = false, work_in = null } = {}) {
+  addDraft(cardId, who, { text, anchor = null, change = null, ok = false, work_in = null, figma = null, fine = false, edited = false } = {}) {
     const c = this.card(cardId), key = this.draftsFor(who);
     if (!["request", "change"].includes(c.kind)) throw bad("Draft comments are kept on a request or a pull request's change.");
     const mine = own(this.db.drafts, key) || {};
@@ -897,6 +897,20 @@ export class Store {
     }
     // A change of a pull request with screens is named by its key; elsewhere `change` stays free words.
     const all = c.kind === "change" ? changesOf(c).map((x) => x.key) : [], keys = all.length ? all : null;
+    // A difference from Figma on one of the changes, proposed to whoever may mark the change handled:
+    // taken into the feedback (its words, as they are or the person's own), or marked fine as it is.
+    // One draft per difference: a second takes the place of the first (docs/desk.md → Reviews).
+    if (figma != null) {
+      if (c.kind !== "change") throw bad("Differences from Figma are proposed on a pull request's change.");
+      this.mayHandle(c, who);
+      const d = figmaOpen(c).find((x) => x.part === String(figma));
+      if (!d) throw bad("That difference from Figma is not in the table.");
+      if (!d.change || !keys?.includes(d.change)) throw bad("That difference from Figma is on no change of this pull request.");
+      list = list.filter((x) => x.figma !== d.part);
+      if (fine === true) return put({ id: randomUUID().slice(0, 8), figma: d.part, change: d.change, fine: true, at: this.clock() });
+      list = list.filter((x) => !(x.ok && x.change === d.change));
+      return put({ id: randomUUID().slice(0, 8), figma: d.part, change: d.change, text: clean(text, LIMITS.prompt, "text"), ...(edited === true ? { edited: true } : {}), anchor: null, at: this.clock() });
+    }
     if (change && keys && !keys.includes(String(change))) throw bad("That change is not on this pull request.");
     // Looks good: a mark with no words on one change, once per person (docs/desk.md → Reviews).
     if (ok === true) {
@@ -905,7 +919,7 @@ export class Store {
       if (!keys) throw bad("That change is not on this pull request.");
       if (text != null && String(text).trim()) throw bad("Looks good carries no words: add them as a comment instead.");
       if (list.some((d) => d.ok && d.change === String(change))) return { draft: list.find((d) => d.ok && d.change === String(change)), drafts: structuredClone(list) };
-      if (list.some((d) => !d.ok && d.change === String(change))) throw bad("You have notes on this change: remove them first, or send them.");
+      if (list.some((d) => !d.ok && !d.fine && d.change === String(change))) throw bad("You have notes on this change: remove them first, or send them.");
       return put({ id: randomUUID().slice(0, 8), ok: true, change: String(change), at: this.clock() });
     }
     // A note on a change takes back the person's Looks good on it.
@@ -948,7 +962,11 @@ export class Store {
     // Looks good marks make no conversation: the review keeps them, by key and name.
     const chs = c.kind === "change" ? changesOf(c) : [];
     const looks = drafts.filter((d) => d.ok).map((d) => chs.find((x) => x.key === d.change)).filter(Boolean);
-    const notes = drafts.filter((d) => !d.ok && !d.work_in);
+    const notes = drafts.filter((d) => !d.ok && !d.work_in && !d.fine);
+    // Differences from Figma marked fine as it is: still in the table as it is sent, they leave it
+    // for everyone, as the × takes one off, and the review names them. Only whoever may mark the change handled.
+    const fineOnes = c.kind === "change" ? drafts.filter((d) => d.fine && figmaOpen(c).some((x) => x.part === d.figma)) : [];
+    if (fineOnes.length) this.mayHandle(c, who);
     // Comments to work in: only Request changes on a request works them in; another verdict leaves them be.
     const worked = drafts.filter((d) => d.work_in).map((d) => own(this.db.threads, d.work_in)).filter((t) => t && t.card === c.id && !["private", "asks"].includes(t.kind));
     // Checked again as it is sent: still on one of the options, not a change note already, the design not locked.
@@ -956,7 +974,7 @@ export class Store {
       ? worked.filter((t) => (c.variants || []).some((v) => v.id === t.anchor?.variant) && !(t.kind === "change" && t.state !== "resolved")) : [];
     const skipped = worked.length - workIn.length;
     if (workIn.length && designLocked(c)) throw bad(LOCKED);
-    if (!notes.length && !looks.length && !workIn.length && !words) throw bad(worked.length ? "Comments to work in go only with Request changes: write a note too, or pick Request changes." : "Write a comment or a note first.");
+    if (!notes.length && !looks.length && !workIn.length && !fineOnes.length && !words) throw bad(worked.length ? "Comments to work in go only with Request changes: write a note too, or pick Request changes." : "Write a comment or a note first.");
     const request = c.kind === "request", changes = verdict === "request-changes";
     if (verdict !== "comment" && (request ? ["declined", "handed-off"].includes(c.status) : Boolean(c.source?.merged_at) || c.status === "archived"))
       throw bad(request ? "This request is closed or sent to developers: send your comments with Comment only." : "This pull request is merged: send your comments with Comment only.");
@@ -981,6 +999,7 @@ export class Store {
         const r = this.openThread(c.id, who, { kind: x.kind, text: x.d.text, anchor: x.anchor });
         r.thread.review = id;
         if (x.d.change) r.thread.change = x.d.change;
+        if (x.d.figma) r.thread.figma = x.d.figma;
         threads.push(r.thread.id);
         item = r.inbox || item;
       }
@@ -997,7 +1016,8 @@ export class Store {
       if (request && changes && !plan.length && !workIn.length) { const r = this.openThread(c.id, who, { kind: "change", text: words, anchor: { variant: first } }); r.thread.review = id; threads.push(r.thread.id); item = r.inbox; }
       if (!request && verdict === "approve" && !c.handled) this.handle(c.id, who, true);
       const head = !request ? this.headOf(c) : null;
-      this.db.reviews[id] = { id, card: c.id, by: person(who), at: this.clock(), verdict, note: words, threads, ...(looks.length ? { looks_good: looks.map(({ key, name }) => ({ key, name })) } : {}), ...(head ? { sha: head } : {}) };
+      this.db.reviews[id] = { id, card: c.id, by: person(who), at: this.clock(), verdict, note: words, threads, ...(looks.length ? { looks_good: looks.map(({ key, name }) => ({ key, name })) } : {}), ...(fineOnes.length ? { figma_fine: fineOnes.map((d) => ({ part: d.figma, change: d.change })) } : {}), ...(head ? { sha: head } : {}) };
+      if (fineOnes.length) { const k = c.figma_check; k.dismissed = [...(k.dismissed || []).filter((x) => !fineOnes.some((d) => d.figma === x.part)), ...fineOnes.map((d) => ({ part: d.figma, by: person(who), at: this.clock(), review: id }))]; }
       c.reviews = [...(c.reviews || []), id];
       // With `review_post` on, a pull request's review goes to the pull request too: the agent posts it (docs/watch.md → Reviews on GitHub).
       if (post && !request && c.source?.pr && !c.source?.merged_at && c.status !== "archived") { const it = this.enqueue("review", c.id, null, who); it.review = id; item = it; }
@@ -3862,7 +3882,9 @@ function cleanFigmaCheck(o, assets, at, variants) {
       if (!FIGMA_SEVERITIES.includes(x?.severity)) throw bad(`figma_check difference ${i + 1}: severity must be major or minor`);
       return { part: clean(x.part, 80, "part"), what: clean(x.what, 300, "what differs"), severity: x.severity,
         figma: optText(x.figma, 120, "figma value"), product: optText(x.product, 120, "product value"),
-        figma_shot: pic(x.figma_shot, "figma_shot"), product_shot: pic(x.product_shot, "product_shot") };
+        figma_shot: pic(x.figma_shot, "figma_shot"), product_shot: pic(x.product_shot, "product_shot"),
+        // On a pull request's change: the change it is on (a draft's `change` key), so its reviewer is offered it there.
+        ...(optText(x.change, 120, "change") ? { change: optText(x.change, 120, "change") } : {}) };
     }),
   };
 }
@@ -3883,6 +3905,14 @@ function numberOwner(cards, id) {
   if (/^F-\d+$/.test(s)) return Object.values(cards).find((c) => c.figma_check?.id === s) || null;
   if (/^G-\d+$/.test(s)) return Object.values(cards).find((c) => c.design_id === s || (c.sends || []).some((x) => x.design_id === s)) || null;
   return null;
+}
+
+// The differences of an item's comparison with Figma that nobody took off the table.
+function figmaOpen(c) {
+  const k = c.figma_check;
+  if (!k || k.verdict !== "differs") return [];
+  const off = new Set((k.dismissed || []).map((d) => d.part));
+  return (k.differences || []).filter((d) => !off.has(d.part));
 }
 
 function figmaRow(k) {

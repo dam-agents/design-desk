@@ -7,6 +7,18 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.113.0 — 2026-11-24
+
+**Upgrade:**
+1. Restart the Desk server ([desk.md](docs/desk.md) → Server) and republish the page
+   ([desk.md](docs/desk.md) → Publishing the page): on a pull request's change, its differences from
+   Figma are offered to whoever may mark it handled, to take into their feedback or mark fine as it is
+   (`figma` drafts; `figma` on a conversation, `figma_fine` on a review); a difference names its change
+   in `change`, which the watch run writes from now on (docs/watch.md, step 11); Submit feedback's
+   Request changes is a quiet amber ([desk-page.md](docs/desk-page.md) → Submit feedback). A comparison
+   written before names no change: its differences stay in the item's box until it is compared again.
+   No data migration.
+
 ## 1.112.0 — 2026-11-24
 
 **Upgrade:**

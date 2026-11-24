@@ -329,6 +329,10 @@
   .btn.fbk { --v: var(--approved); background: var(--v); border-color: var(--v); color: var(--panel); font-weight: 600; gap: 8px; transition: background-color .2s, border-color .2s; }
   .btn.fbk[data-v="rc"] { --v: var(--warn); } .btn.fbk[data-v="c"] { --v: var(--ink); }
   .btn.fbk:hover { background: var(--v); opacity: .9; }
+  /* Request changes is the quiet amber: a pale fill, its words in amber (docs/desk-page.md → Submit feedback). */
+  .btn.fbk[data-v="rc"] { background: var(--warn-soft); color: var(--warn); border-color: color-mix(in srgb, var(--warn) 30%, transparent); }
+  .btn.fbk[data-v="rc"] .cnt { background: color-mix(in srgb, var(--warn) 14%, transparent); }
+  .btn.fbk[data-v="rc"]:hover { background: color-mix(in srgb, var(--warn) 18%, var(--warn-soft)); opacity: 1; }
   .btn.fbk .cnt { display: inline-flex; align-items: center; gap: 4px; padding: 0 8px; border-radius: 999px; font-size: var(--fs-micro); line-height: 18px; background: color-mix(in srgb, var(--panel) 24%, transparent); }
   .btn.fbk .cnt .ico { width: 11px; height: 11px; }
   .btn.fbk .chev { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2; opacity: .8; }
@@ -663,6 +667,31 @@
   .designbox { padding: 12px 16px; border-radius: var(--radius); border: 1px dashed var(--waiting); background: var(--waiting-soft); max-width: var(--measure); margin: 12px 0; }
   .designbox p { margin: 2px 0; }
   /* Where the product differs from its Figma frame: the warning's ink, one line per difference. */
+  /* A change's differences from Figma, proposed to whoever reviews it (docs/desk-page.md → Changes). */
+  .fig-ico { width: 13px; height: 13px; fill: currentColor; stroke: none; vertical-align: -2px; margin-right: 4px; }
+  .figprop { margin-top: 16px; padding: 12px 16px 16px; border-radius: var(--r-sm); background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--warn); display: grid; gap: 8px; }
+  .figprop .fp-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .figprop .fp-top .grow { flex: 1; }
+  .figprop .fp-top a { font-size: var(--fs-meta); color: var(--muted); }
+  .figprop .fp-lead { margin: -4px 0 0; }
+  .fp-r { display: grid; gap: 8px; padding: 8px 12px; border-radius: var(--r-sm); background: var(--warn-soft); }
+  .fp-r.done { background: var(--soft); grid-template-columns: 1fr auto; align-items: center; } .fp-r.done .fp-h b { color: var(--muted); font-weight: 500; }
+  .fp-r.fine { background: var(--ok-soft); }
+  .fp-h { display: flex; gap: 8px; align-items: center; }
+  .fp-what { margin: 0; }
+  .fp-vals { display: flex; align-items: flex-end; gap: 8px; flex-wrap: wrap; font-size: var(--fs-meta); }
+  .fp-vals > span:not(.arr) { display: grid; gap: 2px; } .fp-vals .k { color: var(--muted); font-size: var(--fs-micro); } .fp-vals .arr { color: var(--muted); padding-bottom: 2px; }
+  .fp-vals code { background: var(--panel); padding: 2px 8px; border-radius: var(--r-sm); }
+  .fp-acts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
+  .fp-acts .ck, .fp-done .ck { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.4; vertical-align: -2px; margin-right: 4px; }
+  .fp-done { display: inline-flex; align-items: center; gap: 8px; font-size: var(--fs-meta); color: var(--muted); } .fp-done.ok { color: var(--ok); }
+  .fp-done .link { margin-left: 4px; }
+  .fp-edit { display: grid; gap: 8px; } .fp-edit textarea { min-height: 64px; background: var(--panel); } .fp-edit .bar { display: flex; gap: 8px; } .fp-edit .bar .grow { flex: 1; }
+  .dbub.fig .about, .fig-about { color: var(--warn); }
+  .fig-about { display: block; font-size: var(--fs-micro); }
+  .fb-fig { display: grid; gap: 8px; padding: 8px 12px; border-radius: var(--r-sm); background: var(--warn-soft); font-size: var(--fs-meta); }
+  .fb-fig .fb-left { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip.fig-chip { display: inline-flex; align-items: center; }
+  .rv-fig { color: var(--muted); }
   .figbox { padding: 12px 16px; border-radius: var(--radius); background: var(--warn-soft); max-width: var(--measure); margin: 12px 0; }
   .figbox p { margin: 2px 0; }
   .figbox > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -3744,7 +3773,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const who = ((n) => (n === "you" ? "You" : n))(r.by?.agent ? "Design Desk" : shortName(r.by?.email, r.by?.name) || "someone");
     const gh = r.posted?.url ? `<a class="rv-gh" href="${safeUrl(r.posted.url)}" target="_blank" rel="noopener noreferrer" title="This feedback on the pull request">On GitHub ↗</a>` : "";
     return `<article class="rvw" id="rv-${esc(r.id)}" data-v="${esc(r.verdict)}"><div class="rv-h"><b>${esc(who)}</b>${r.by?.role ? `<span class="hint">${esc(roleLabel(r.by.role))}</span>` : ""}<span class="rv-v" title="What this feedback says">${esc(REVIEW_SAYS[r.verdict] || r.verdict)}</span><span class="hint" title="${esc(when(r.at))}">${esc(sWhen(r.at))}</span>${gh}</div>
-      ${r.note ? `<div class="rv-note">${md(r.note)}</div>` : ""}${(r.looks_good || []).length ? `<p class="rv-ok">✓ Looks good: ${esc(r.looks_good.map((x) => x.name).join(", "))}</p>` : ""}${rows}</article>`;
+      ${r.note ? `<div class="rv-note">${md(r.note)}</div>` : ""}${(r.looks_good || []).length ? `<p class="rv-ok">✓ Looks good: ${esc(r.looks_good.map((x) => x.name).join(", "))}</p>` : ""}${(r.figma_fine || []).length ? `<p class="rv-ok rv-fig">${FIG_ICON}Fine as it is, from Figma: ${esc(r.figma_fine.map((x) => x.part).join(", "))}</p>` : ""}${rows}</article>`;
   }
   // A review in the making (docs/desk.md → Reviews): the viewer's drafts on an item, kept by the
   // Desk server for them alone. `addDraft` is the one way a box adds one, here and in the item's other views.
@@ -3755,11 +3784,12 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const r = await api("GET", `/api/cards/${encodeURIComponent(c.id)}/drafts`).catch(() => null);
     if (Array.isArray(r?.drafts)) S.drafts[c.id] = r.drafts; else delete S.drafts[c.id];
   }
-  async function addDraft(c, { text = null, anchor = null, change = null, ok = false, work_in = null }, { quiet = false } = {}) {
-    const r = await api("POST", `/api/cards/${encodeURIComponent(c.id)}/drafts`, work_in ? { work_in } : ok ? { ok: true, change } : { text, ...(anchor ? { anchor } : {}), ...(change ? { change } : {}) });
+  async function addDraft(c, { text = null, anchor = null, change = null, ok = false, work_in = null, figma = null, fine = false, edited = false }, { quiet = false } = {}) {
+    const r = await api("POST", `/api/cards/${encodeURIComponent(c.id)}/drafts`, figma ? { figma, change, ...(fine ? { fine: true } : { text, edited }) } : work_in ? { work_in } : ok ? { ok: true, change } : { text, ...(anchor ? { anchor } : {}), ...(change ? { change } : {}) });
     S.drafts[c.id] = r.drafts;
     if (quiet) return;
     renderDetail();
+    if (fine) { toast("Marked fine as it is. It goes with your feedback, and leaves the Figma table once you send it."); return; }
     if (ok) { toast("Marked as good. It goes with your feedback."); return; }
     toast(`Added to your feedback (${plural(r.drafts.filter((d) => !d.ok).length, "comment", "comments")}). Nobody sees it until you send it.`);
   }
@@ -3774,7 +3804,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const st = v && a.state && (v.states || []).find((x) => x.id === a.state);
     return [v ? `Option ${(c.variants || []).indexOf(v) + 1} · ${v.name}` : "", st ? st.name || st.id : "", a?.label || "", change ? (c.kind === "change" ? changeName(c, change) : change) : ""].filter(Boolean).join(" · ");
   }
-  const draftBubble = (c, d, remove = true) => `<div class="dbub"><div class="db-b">${draftAbout(c, d) ? `<span class="about">${esc(draftAbout(c, d))}</span>` : ""}${d.ok ? "✓ Looks good" : d.work_in ? esc(workInWords(c, d)) : esc(d.text)}</div>${remove ? `<button class="x" data-draft-del="${esc(d.id)}" aria-label="Remove this comment from your feedback" title="Remove from your feedback">✕</button>` : ""}</div>`;
+  const draftBubble = (c, d, remove = true) => d.fine ? "" : `<div class="dbub${d.figma ? " fig" : ""}"><div class="db-b">${draftAbout(c, d) || d.figma ? `<span class="about">${d.figma ? `${FIG_TAG}${d.edited ? " · your words" : ""}` : ""}${d.figma && draftAbout(c, d) ? " · " : ""}${esc(draftAbout(c, d))}</span>` : ""}${d.ok ? "✓ Looks good" : d.work_in ? esc(workInWords(c, d)) : esc(d.text)}</div>${remove ? `<button class="x" data-draft-del="${esc(d.id)}" aria-label="Remove this comment from your feedback" title="Remove from your feedback">✕</button>` : ""}</div>`;
   // Look edits added to the feedback (the workspace's look palette): kept in this browser, per
   // drawing, until the feedback is sent; each becomes a note with its values then (docs/desk.md → Reviews).
   const lookFeedback = (c) => c?.kind === "request" ? Object.entries(S.ws.looks || {}).filter(([k]) => k.startsWith(`${c.id}|`))
@@ -3795,9 +3825,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const VERDICT_TONE = { approve: "ok", "approve-dev": "ok", "request-changes": "rc", comment: "c" };
   const FB_ICON = { "request-changes": "pen", approve: "checkOnly", "approve-dev": "code", comment: "chat" };
   const fbSvg = (k) => `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">${ICON_PATH[k]}</svg>`;
-  const notesWaiting = (c) => draftsOf(c).filter((d) => !d.ok).length + lookFeedback(c).length;
+  const notesWaiting = (c) => draftsOf(c).filter((d) => !d.ok && !d.fine).length + lookFeedback(c).length;
   // A Looks good on a screen that looks the same as before is no mark: it is not counted.
-  const marksWaiting = (c) => { const same = new Set(c?.kind === "change" ? changesOf(c).filter((x) => x.unchanged).map((x) => x.key) : []); return draftsOf(c).filter((d) => d.ok && !same.has(d.change)).length; };
+  const marksWaiting = (c) => { const same = new Set(c?.kind === "change" ? changesOf(c).filter((x) => x.unchanged).map((x) => x.key) : []); return draftsOf(c).filter((d) => (d.ok && !same.has(d.change)) || d.fine).length; };
   // The verdict it sends: the one picked in its panel, else Request changes while notes wait, else
   // the approval, else Comment only.
   function fbPick(c) {
@@ -3820,7 +3850,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   function fbItem(c, d) {
     const about = draftAbout(c, d), jump = d.change && c.kind === "change" && changesOf(c).some((x) => x.key === d.change);
     const head = about ? (jump ? `<button class="link about" data-chg-open="${esc(d.change)}" title="Opens this change">${esc(about)}</button>` : `<span class="about">${esc(about)}</span>`) : "";
-    return `<div class="dbub${d.ok ? " ok" : ""}"><div class="db-b">${head}${d.ok ? "✓ Looks good" : d.work_in ? esc(workInWords(c, d)) : esc(d.text)}</div><button class="x" data-draft-del="${esc(d.id)}" aria-label="${d.ok ? "Take back this Looks good" : "Remove this comment from your feedback"}" title="${d.ok ? "Takes back your Looks good" : "Remove from your feedback"}">✕</button></div>`;
+    const fig = d.figma ? `<span class="about fig-about">${FIG_TAG}${d.fine ? " · fine as it is" : d.edited ? " · in your words" : ""}</span>` : "";
+    const words = d.fine ? `<b>${esc(d.figma)}</b>: ${esc(figDiff(c, d.figma)?.what || "")}` : d.ok ? "✓ Looks good" : d.work_in ? esc(workInWords(c, d)) : esc(d.text);
+    return `<div class="dbub${d.ok || d.fine ? " ok" : ""}${d.figma ? " fig" : ""}"><div class="db-b">${head}${fig}${words}</div><button class="x" data-draft-del="${esc(d.id)}" aria-label="${d.ok ? "Take back this Looks good" : d.fine ? "Take back Fine as it is" : "Remove this comment from your feedback"}" title="${d.ok ? "Takes back your Looks good" : d.fine ? "Takes back Fine as it is: the difference waits on its change again" : "Remove from your feedback"}">✕</button></div>`;
   }
   function fbPanel(c, v) {
     const ds = draftsOf(c), looks = lookFeedback(c), vs = verdictsFor(c), x = vs.find((y) => y.id === v) || vs[0], n = notesWaiting(c);
@@ -3832,11 +3864,14 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // Look edits and comments to work in are drawn only with Request changes: said where another choice is offered.
     const onlyChanges = (looks.length || ds.some((d) => d.work_in)) && vs.some((y) => y.id !== "request-changes")
       ? `<p class="hint">Look edits and comments to work in are drawn only with Request changes; with another choice look edits go as comments and comments stay as they are.</p>` : "";
-    const pr = S.me?.review_post && c.kind === "change" && c.source?.pr && !c.source?.merged_at ? `<p class="hint">It goes to the pull request on GitHub too, as a comment.</p>` : "";
+    const open = figOpen(c), openChs = [...new Set(open.map((d) => d.change))];
+    const figLeft = open.length ? `<div class="fb-fig"><span>${FIG_ICON}<b>${esc(plural(open.length, "difference", "differences"))} from Figma</b> not taken or marked fine yet</span><div class="fb-left">${openChs.map((k) => `<button class="chip" data-chg-open="${esc(k)}" title="Opens this change and its differences from Figma">${esc(changeName(c, k))} · ${open.filter((d) => d.change === k).length}</button>`).join("")}</div><span class="hint">Sending leaves them as they are: they stay on their changes for the next review.</span></div>` : "";
+    const fines = ds.filter((d) => d.fine).length;
+    const pr = S.me?.review_post && c.kind === "change" && c.source?.pr && !c.source?.merged_at ? `<p class="hint">It goes to the pull request on GitHub too, as a comment${figTaken(c).length || fines ? `: the Figma differences you took, each with Figma's value and the product's${fines ? `, and the ${fines === 1 ? "one" : fines} you marked fine as it is` : ""}` : ""}.</p>` : "";
     const label = { "request-changes": n ? `Request changes · ${n}` : "Request changes", approve: n ? `${x.name} with ${plural(n, "note", "notes")}` : x.name, "approve-dev": n ? `Approve for dev with ${plural(n, "note", "notes")}` : "Approve for dev", comment: "Send comments" }[x.id];
     return `<div class="fb-pop" role="dialog" aria-label="Your feedback">
       <div class="fb-h"><b>Your feedback</b><span class="hint">${ds.length || looks.length ? "not sent yet · only you see it" : "nothing yet"}</span></div>
-      <div class="fb-b">${prog}${items}${onlyChanges}
+      <div class="fb-b">${prog}${figLeft}${items}${onlyChanges}
         <div class="fb-vs" role="radiogroup" aria-label="What your feedback says">${vs.map((y) => `<button type="button" role="radio" aria-checked="${y.id === x.id}" data-fb-v="${y.id}" data-v="${VERDICT_TONE[y.id]}" title="${esc(y.hint)}">${fbSvg(FB_ICON[y.id])}${esc(y.name)}</button>`).join("")}</div>
         <p class="hint fb-hint">${esc(x.hint)}</p>${pr}
         <textarea id="fb-note" placeholder="A note for the whole feedback (optional)" aria-label="A note for the whole feedback">${esc(S.fb?.note || "")}</textarea>
@@ -3948,7 +3983,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const av = (p) => `<span class="sav" data-r="${esc(p.k)}" aria-hidden="true">${p.k === "agent" ? `<svg viewBox="0 0 24 24">${ICON_PATH.spark}</svg>` : esc((p.n === "you" ? S.me?.my_name || "Y" : p.n)[0].toUpperCase())}</span>`;
     const msg = (m, reply) => { const p = person(m.by);
       return `<div class="smsg${reply ? " re" : ""}">${av(p)}<div class="sm-b"><div class="who"><b>${esc(p.n === "you" ? "You" : p.n)}</b>${p.r ? `<span class="role">${roleIcon(p.r)}${esc(roleLabel(p.r))}</span>` : ""}<span class="at" title="${esc(when(m.at))}">${esc(sWhen(m.at))}</span></div>${md(m.text)}</div></div>`; };
-    const optionOf = (th) => { if (th.change && c.kind === "change") return changeChip(c, th); const v = th.anchor?.variant && (c.variants || []).find((x) => x.id === th.anchor.variant); return v ? `<button class="chip sjump" data-goto="${esc(th.id)}" title="Open the design at the part this is about">Option ${(c.variants || []).indexOf(v) + 1}: ${esc(v.name)}${th.anchor.label ? ` · ${esc(th.anchor.label)}` : ""}</button>` : ""; };
+    const optionOf = (th) => { if (th.change && c.kind === "change") return `${changeChip(c, th)}${th.figma ? `<span class="chip fig-chip" title="This comment started from a difference Design Desk found between the change and its Figma frame">${FIG_TAG}</span>` : ""}`; const v = th.anchor?.variant && (c.variants || []).find((x) => x.id === th.anchor.variant); return v ? `<button class="chip sjump" data-goto="${esc(th.id)}" title="Open the design at the part this is about">Option ${(c.variants || []).indexOf(v) + 1}: ${esc(v.name)}${th.anchor.label ? ` · ${esc(th.anchor.label)}` : ""}</button>` : ""; };
     const order = (a, b) => (a.state === "resolved") - (b.state === "resolved") || last(b) - last(a);
     const one = (th) => {
       const [first, ...replies] = th.messages;
@@ -5332,11 +5367,13 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     : `<span class="chip" title="Only a picture from after: there is none from before">No picture from before</span>`;
   const MARK_CHIP = { ok: `<span class="chip ok">✓ Looks good</span>`, changes: `<span class="chip warn-line">Changes asked</span>`, "": `<span class="chip todo">Not looked at</span>` };
   function changeTile(c, x, k) {
-    const m = markOf(c, x.key), n = draftsOf(c).filter((d) => d.change === x.key && !d.ok).length;
+    const m = markOf(c, x.key), n = draftsOf(c).filter((d) => d.change === x.key && !d.ok && !d.fine).length;
     const mine = n ? `<span class="chip warn-line">${esc(plural(n, "note", "notes"))}</span>` : x.unchanged ? "" : MARK_CHIP[m] || "";
+    const fo = figOpen(c).filter((d) => d.change === x.key), fmaj = fo.some((d) => sevOf(d) === "major");
+    const figChip = fo.length ? `<span class="chip ${fmaj ? "bad" : ""} fig-chip" title="${esc(`${plural(fo.length, "difference", "differences")} from Figma not taken or marked fine yet`)}">${FIG_ICON}${fo.length} from Figma</span>` : "";
     const pic = x.after || x.before;
     return `<div class="eltile chg-tile"${changeMark(c, x.key)}><button class="elopen" data-chg-open="${esc(x.key)}" title="${esc(`Open ${x.name}: before and after, its comments and Looks good`)}"><span class="elpic">${x.unchanged ? "" : `<span class="ono">${k + 1}</span>`}${pic ? `<img alt="" data-asset="${esc(pic.asset)}" />` : ""}</span><span class="elname">${esc(x.name)}</span>
-      <span class="elmeta">${CHG_PILL(x)}${mine}</span></button></div>`;
+      <span class="elmeta">${CHG_PILL(x)}${mine}${figChip}</span></button></div>`;
   }
   function changeView(c) {
     const all = changesOf(c), xs = all.filter((x) => !x.unchanged), same = all.filter((x) => x.unchanged);
@@ -5382,6 +5419,48 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // Under the change shown: the viewer's notes on it waiting in their feedback, a box, Add to
   // feedback and Looks good. No comment for the team here: what is written is for the developer.
   const CHECK = `<svg class="ck" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`;
+  // ---------- differences from Figma, a reviewer's starting point (docs/desk.md → Reviews) ----------
+  // Each difference Design Desk found names the change it is on (`change`). To whoever may approve
+  // the change or ask for changes on it, it waits on that change as a proposed comment: they take it
+  // into their feedback as it is or in their own words, or mark it fine as it is (an intended
+  // difference). Fine goes with their feedback and, once sent, takes it off the table as the × does.
+  const FIG_ICON = `<svg class="ico fig-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h3v6H9a3 3 0 0 1 0-6Zm3 0h3a3 3 0 0 1 0 6h-3V3Zm-3 6h3v6H9a3 3 0 0 1 0-6Zm3 3a3 3 0 1 0 6 0 3 3 0 0 0-6 0Zm-3 3h3v3a3 3 0 1 1-3-3Z"/></svg>`;
+  const FIG_TAG = `${FIG_ICON}From Figma`;
+  const figReviewer = (c) => c?.kind === "change" && figmaOn() && c.figma_check?.verdict === "differs" && mayHandle(c) && !closed(c) && !c.source?.merged_at;
+  const figDiff = (c, part) => (c.figma_check?.differences || []).find((d) => d.part === part) || null;
+  const figOnChange = (c, key) => figReviewer(c) ? figShown(c.figma_check).filter((d) => d.change === key) : [];
+  const figDraft = (c, part) => draftsOf(c).find((d) => d.figma === part) || null;
+  const figTaken = (c) => draftsOf(c).filter((d) => d.figma && !d.fine);
+  // Taken in feedback already sent: its conversation, still open.
+  const figSent = (c, part) => (c.threads || []).find((th) => th.figma === part && th.state !== "resolved") || null;
+  // Not taken and not marked fine yet: what the reviewer has still to decide on.
+  const figOpen = (c) => figReviewer(c) ? figShown(c.figma_check).filter((d) => d.change && !figDraft(c, d.part) && !figSent(c, d.part)) : [];
+  // The words a difference goes into the feedback with, as it is.
+  const figWords = (d) => `${d.part}: ${d.what} In Figma: ${d.figma}; in the product: ${d.product}.`;
+  const figVal = (v) => `<code>${swatched(v || "—")}</code>`;
+  function figProposals(c, x) {
+    const ds = figOnChange(c, x.key);
+    if (!ds.length) return "";
+    const k = c.figma_check, left = ds.filter((d) => !figDraft(c, d.part) && !figSent(c, d.part)).length;
+    const row = (d) => {
+      const sent = !figDraft(c, d.part) && figSent(c, d.part);
+      if (sent) { const r = (c.reviews || []).find((y) => y.id === sent.review), by = r?.by?.email && isMe(r.by.email) ? "your" : `${esc(shortName(r?.by?.email, r?.by?.name) || "someone")}'s`;
+        return `<div class="fp-r done"><div class="fp-h">${sevChip(sevOf(d))}<b>${esc(d.part)}</b></div><span class="fp-done">${CHECK}Sent in ${by} feedback${r?.posted?.url || S.me?.review_post ? ", on the pull request too" : ""}<button class="link" data-chg-talk="${esc(sent.id)}" title="Shows the comment it became">See the comment ↓</button></span></div>`; }
+      const dr = figDraft(c, d.part), editing = S.figEdit?.card === c.id && S.figEdit.part === d.part;
+      const state = dr?.fine ? `<span class="fp-done ok">${CHECK}Fine as it is · goes with your feedback<button class="link" data-draft-del="${esc(dr.id)}" title="Takes it back: the difference waits here again">Undo</button></span>`
+        : dr ? `<span class="fp-done">${CHECK}In your feedback${dr.edited ? ", in your words" : ""}<button class="link" data-draft-del="${esc(dr.id)}" title="Takes it out of your feedback: the difference waits here again">Undo</button></span>` : "";
+      const acts = dr ? state : editing ? "" : `<div class="fp-acts"><button class="btn small primary" data-fig-take="${esc(d.part)}" title="Adds it to your feedback as it is, Figma's value and the product's included">Add to feedback</button><button class="btn small" data-fig-edit="${esc(d.part)}" title="Opens it in a box: say it in your own words, then add it">Edit, then add</button><button class="btn small" data-fig-fine="${esc(d.part)}" title="An intended difference: it goes with your feedback as fine, and leaves the Figma table once you send it">${CHECK}Fine as it is</button></div>`;
+      const edit = editing ? `<div class="fp-edit"><textarea data-fig-text aria-label="${esc(`Your words about ${d.part}`)}">${esc(S.figEdit.text ?? figWords(d))}</textarea><div class="bar"><span class="grow"></span><button class="btn small" data-fig-edit-cancel>Cancel</button><button class="btn small primary" data-fig-edit-add="${esc(d.part)}">Add to feedback</button></div></div>` : "";
+      return `<div class="fp-r${dr ? " done" : ""}${dr?.fine ? " fine" : ""}">
+        <div class="fp-h">${sevChip(sevOf(d))}<b>${esc(d.part)}</b></div>
+        ${dr ? "" : `<p class="fp-what">${txt(d.what)}</p><div class="fp-vals"><span><span class="k">In Figma</span>${figVal(d.figma)}</span><span class="arr" aria-hidden="true">→</span><span><span class="k">In the product</span>${figVal(d.product)}</span></div>`}
+        ${edit}${acts}</div>`;
+    };
+    return `<section class="figprop" aria-label="Differences from Figma on this change">
+      <div class="fp-top"><span class="fp-t">${FIG_ICON}<b>${esc(plural(ds.length, "difference", "differences"))} from Figma</b></span>${k.frame?.url ? `<a href="${safeUrl(k.frame.url)}" target="_blank" rel="noopener noreferrer" title="Opens the frame in Figma">${esc(k.frame.name || "the frame")}&nbsp;↗</a>` : ""}<span class="grow"></span><span class="hint">${left ? `${left} to decide` : "All decided"}</span></div>
+      ${left ? "" : "<!--"}<p class="hint fp-lead">Design Desk compared this change with its Figma frame. Nobody has judged these yet: take each into your feedback, or mark it fine if it is meant to differ.</p>${left ? "" : "-->"}
+      ${ds.map(row).join("")}</section>`;
+  }
   // With no screens, the box is about the whole pull request: Add to feedback alone.
   function changeBox(c, x) {
     if (!x) return can("comment") && !c.send && !closed(c) ? `<div class="composer rbox chg-foot" data-rbox data-change="">${draftsOf(c).filter((d) => !d.change && !d.ok).map((d) => draftBubble(c, d)).join("")}
@@ -5390,9 +5469,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const sent = (c.threads || []).filter((th) => th.change === x.key && th.state !== "resolved");
     const talk = sent.length ? `<button class="link chg-talk" data-chg-talk="${esc(sent[0].id)}" title="Shows the conversations about this change">${plural(sent.length, "comment", "comments")} on this change ↓</button>` : "";
     if (!can("comment") || c.send || closed(c)) return talk ? `<div class="chg-foot">${talk}</div>` : "";
-    const ds = draftsOf(c).filter((d) => d.change === x.key), ok = ds.find((d) => d.ok), notes = ds.filter((d) => !d.ok);
+    // A difference from Figma taken into the feedback shows in its own box above, but is a note all the same.
+    const ds = draftsOf(c).filter((d) => d.change === x.key), ok = ds.find((d) => d.ok), notes = ds.filter((d) => !d.ok && !d.fine), typed = notes.filter((d) => !d.figma);
     const said = ok ? `<span class="chg-ok">${CHECK}You marked it as good<button class="link" data-draft-del="${esc(ok.id)}" title="Takes your Looks good back">Undo</button></span>` : "";
-    return `<div class="composer rbox chg-foot" data-rbox data-change="${esc(x.key)}">${talk}${notes.map((d) => draftBubble(c, d)).join("")}
+    return `${figProposals(c, x)}<div class="composer rbox chg-foot" data-rbox data-change="${esc(x.key)}">${talk}${typed.map((d) => draftBubble(c, d)).join("")}
       <textarea placeholder="What should change here?" aria-label="${esc(`A comment on ${x.name}`)}"></textarea>
       <div class="bar">${said}<span class="grow"></span><button class="btn primary" data-draft-add>Add to feedback</button>${ok || notes.length || x.unchanged ? "" : `<button class="btn cv-ok" data-draft-ok>${CHECK}Looks good</button>`}</div></div>`;
   }
@@ -5402,7 +5482,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const ds = draftsOf(c).filter((d) => d.change === key);
     // Notes sent on it keep it amber while the developer owes the next version.
     const owed = c.responsible?.who === "developer" && (c.threads || []).some((th) => th.change === key && th.state !== "resolved");
-    return ds.some((d) => !d.ok) || owed ? "changes" : ds.some((d) => d.ok) || (c.looks_good || []).includes(key) ? "ok" : "";
+    return ds.some((d) => !d.ok && !d.fine) || owed ? "changes" : ds.some((d) => d.ok) || (c.looks_good || []).includes(key) ? "ok" : "";
   }
   const MARK_TIP = { ok: "Looks good", changes: "Changes asked here: a note of yours waits to be sent, or one sent waits for the developer's next version", "": "Not looked at yet" };
   const changeMark = (c, key) => { const m = markOf(c, key); return `${m ? ` data-m="${m}"` : ""} title="${esc(MARK_TIP[m])}"`; };
@@ -8952,6 +9032,12 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       await openCard(S.card.id); return;
     }
     if (ds.draftDel) { await removeDraft(S.card, ds.draftDel); return; }
+    // A difference from Figma taken as it is, in the person's own words, or marked fine as it is.
+    if (ds.figTake) { const d = figDiff(S.card, ds.figTake); if (d) await addDraft(S.card, { figma: d.part, change: d.change, text: figWords(d) }); return; }
+    if (ds.figFine) { const d = figDiff(S.card, ds.figFine); if (d) await addDraft(S.card, { figma: d.part, change: d.change, fine: true }); return; }
+    if (ds.figEdit) { S.figEdit = { card: S.card.id, part: ds.figEdit }; renderDetail(); $("#el-body [data-fig-text]")?.focus(); return; }
+    if ("figEditCancel" in ds) { S.figEdit = null; renderDetail(); return; }
+    if (ds.figEditAdd) { const d = figDiff(S.card, ds.figEditAdd), t = el.closest(".fp-r")?.querySelector("[data-fig-text]")?.value.trim(); if (!d || !t) return; S.figEdit = null; await addDraft(S.card, { figma: d.part, change: d.change, text: t, edited: t !== figWords(d) }); return; }
     if ("review" in ds) { await reviewDialog(S.card, ds.review || null); return; }
     // Submit feedback and its panel (docs/desk-page.md → Submit feedback).
     if (ds.fb && S.card) { fbToggle(S.card, ds.fb); return; }
