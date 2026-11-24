@@ -4767,6 +4767,13 @@ test("simple mode's request page with no summary: the request in full, designs, 
   await desk.click("#th-T-3 [data-reply-open]");
   assert.equal(await desk.locator("#detail .sreply:visible").count(), 1, "one reply box open");
   assert.equal(await desk.locator("#th-T-1 [data-reply-open]").isVisible(), true, "the first conversation's Reply is back");
+  // What is typed in the open box stays through a redraw (Submit feedback's panel redraws the page).
+  await desk.fill("#th-T-3 [data-reply]", "Warmer, yes.");
+  await desk.click('#detail [data-fb="head"]');
+  await desk.waitForSelector(".fb-pop");
+  assert.equal(await desk.inputValue("#th-T-3 [data-reply]"), "Warmer, yes.", "the reply's words survive the redraw");
+  assert.equal(await desk.locator("#th-T-3 .sreply").isVisible(), true, "and its box stays open");
+  await desk.keyboard.press("Escape");
   assert.match(await desk.textContent("#th-T-1 .smsg:not(.re) .who"), /pat\.lee[\s\S]*designer/i, "who by name (the part before the @) and role");
   assert.equal(await desk.locator("#th-T-1 .sreplies > .smsg.re").count(), 1, "a reply hangs under the first message, on its line");
   assert.equal(await desk.locator('#th-T-1 .smsg.re[data-k="agent"]').count(), 1, "Design Desk's reply is told apart");

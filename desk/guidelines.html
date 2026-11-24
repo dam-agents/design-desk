@@ -403,12 +403,15 @@
   <div class="gl-item">
     <div class="gl-rule">
       <h3 class="gl-h3">A thread, a resolved thread</h3>
-      <p class="gl-p">Replies indent under the first message. Who wrote it shows by role: a designer, a developer, Design Desk. A resolved thread folds to one line.</p>
+      <p class="gl-p">Replies hang under the first message on a line. Only a designer's role is named. Your own messages sit on a faint tint, Design Desk's on a soft panel. Reply and Resolve are quiet words. A resolved thread folds to one line.</p>
     </div>
     <div class="gl-ex gl-wide">
       <article class="sthread">
-        <div class="smsg"><span class="sav" data-r="designer">AN</span><div class="sm-b"><div class="who"><b>Alice Novak</b><span class="role">Designer</span><span class="at">Today, 9:12 AM</span></div><p>Can the empty state say what to do next?</p></div></div>
-        <div class="smsg re"><span class="sav" data-r="agent">DD</span><div class="sm-b"><div class="who"><b>Design Desk</b><span class="at">Today, 9:14 AM</span></div><p>Version 2 adds a button that opens the new-request form.</p></div></div>
+        <div class="smsg"><span class="sav" data-r="designer">AN</span><div class="sm-b"><div class="who"><b>Alice Novak</b><span class="role" data-r="designer">Designer</span><span class="at">Today, 9:12 AM</span></div><p>Can the empty state say what to do next?</p></div></div>
+        <div class="sreplies">
+          <div class="smsg re" data-k="agent"><span class="sav" data-r="agent">DD</span><div class="sm-b"><div class="who"><b>Design Desk</b><span class="at">Today, 9:14 AM</span></div><p>Version 2 adds a button that opens the new-request form.</p></div></div>
+        </div>
+        <div class="sacts"><button class="slk">Reply</button><button class="slk">Resolve</button></div>
       </article>
       <details class="sthread done"><summary><span class="q">Pat Lee: The spacing under the header looks off</span><span class="hint">Resolved · Mon 2 Nov</span></summary><p>The spacing is back on the scale.</p></details>
     </div>

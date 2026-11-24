@@ -276,8 +276,9 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   and when (no name: the head has it), its words, and for one in another language `Written in
   <language>` beside a small **Show in English** button (**Show original** and `Translated from …
   by Design Desk` back); a request with no `gist` shows its words in full instead, open. Its words,
-  every fold and the comments keep one readable width (800 px) however wide the screen, on one left
-  edge; the designs and pictures take it all.
+  every fold of words and the comments keep one readable width (800 px) however wide the screen, on one left
+  edge; the designs and pictures take it all, as do the folds that hold them (a live prototype's
+  options) and the developer spec, a document of its own.
   Then the designs (a request's
   options, with no votes: only the count of open notes) or **Changes** (below), then the folds, alike: first **What Design Desk
   found** (the decisions in force it goes against, a change's reasons to look at it, how it
