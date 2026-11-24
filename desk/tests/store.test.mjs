@@ -3371,10 +3371,11 @@ test("differences from Figma on a change: taken into the feedback or marked fine
       { part: "Spend label", change: "Agents list", severity: "major", what: "Slash, not words.", figma: "$4.60 / $5.00", product: "$4.60 of $5" },
       { part: "Pill colour", change: "Agents list", severity: "minor", what: "Green in Figma.", figma: "#1f7a4d", product: "#2f5bd3" },
       { part: "Save button", change: l1, severity: "major", what: "Filled in Figma.", figma: "Filled", product: "Tinted" },
-      { part: "Footer", severity: "minor", what: "On no change.", figma: "8px", product: "4px" },
-      { part: "Old picture", change: "A-gone", severity: "major", what: "On a screenshot replaced since.", figma: "a", product: "b" }] } }).card;
+      { part: "Footer", severity: "minor", what: "On no change.", figma: "8px", product: "4px" }] } }).card;
   assert.equal(s.card(chg.id).figma_check.differences[0].change, "Agents list", "a difference keeps the change it is on");
-  assert.throws(() => s.addDraft(chg.id, alice, { figma: "Old picture", fine: true }), /on no change/, "a change key the card no longer has offers nothing");
+  assert.throws(() => s.upsertCard({ id: chg.id, figma_check: { verdict: "differs", frame, differences: [{ part: "X", change: "A-gone", severity: "minor", what: "x" }] } }), /not one of the card's changes/, "a change it does not have is refused");
+  const scr = s.upsertCard({ kind: "screen", title: "Agents", path: "/agents" }).card;
+  assert.throws(() => s.upsertCard({ id: scr.id, figma_check: { verdict: "differs", frame, differences: [{ part: "X", change: "Agents list", severity: "minor", what: "x" }] } }), /only a pull request's change/);
   assert.equal(s.card(chg.id).figma_check.differences[3].change, undefined);
   const req = s.upsertCard({ kind: "request", title: "Calmer" }).card;
   assert.throws(() => s.addDraft(req.id, alice, { figma: "Spend label" }), /pull request's change/);
@@ -3411,6 +3412,14 @@ test("differences from Figma on a change: taken into the feedback or marked fine
   s.addDraft(chg.id, alice, { figma: "Save button", fine: true });
   s.dismissFigma(chg.id, alice, "Save button");
   assert.throws(() => s.sendReview(chg.id, alice, { verdict: "comment" }), /Write a comment or a note first/);
+  // A new screenshot gives the lone screen another key: nothing more is offered on the old one, but a
+  // fine mark made before still goes, by its difference's part.
+  s.dismissFigma(chg.id, alice, "Save button", false);
+  const l1b = img("l1b");
+  s.upsertCard({ id: chg.id, screens: [{ asset: b, stage: "before", pair: "Agents list" }, { asset: a, stage: "after", pair: "Agents list" }, { asset: l1b, caption: "The limit dialog" }] });
+  assert.throws(() => s.addDraft(chg.id, alice, { figma: "Save button", text: "x" }), /on no change/);
+  assert.deepEqual(s.sendReview(chg.id, alice, { verdict: "comment" }).review.figma_fine, [{ part: "Save button", change: l1 }]);
+  assert.ok(s.card(chg.id).figma_check.dismissed.some((d) => d.part === "Save button"));
 });
 
 test("add to my feedback: a comment worked in when the feedback is sent with Request changes, as itself; look values ride on a note", () => {

@@ -5461,7 +5461,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     };
     return `<section class="figprop" aria-label="Differences from Figma on this change">
       <div class="fp-top"><span class="fp-t">${FIG_ICON}<b>${esc(plural(ds.length, "difference", "differences"))} from Figma</b></span>${k.frame?.url ? `<a href="${safeUrl(k.frame.url)}" target="_blank" rel="noopener noreferrer" title="Opens the frame in Figma">${esc(k.frame.name || "the frame")}&nbsp;↗</a>` : ""}<span class="grow"></span><span class="hint">${left ? `${left} to decide` : "All decided"}</span></div>
-      ${left ? "" : "<!--"}<p class="hint fp-lead">Design Desk compared this change with its Figma frame. Nobody has judged these yet: take each into your feedback, or mark it fine if it is meant to differ.</p>${left ? "" : "-->"}
+      ${left ? `<p class="hint fp-lead">Design Desk compared this change with its Figma frame. Nobody has judged these yet: take each into your feedback, or mark it fine if it is meant to differ.</p>` : ""}
       ${ds.map(row).join("")}</section>`;
   }
   // With no screens, the box is about the whole pull request: Add to feedback alone.

@@ -146,9 +146,8 @@ Figma link field either.
   **✓ Matches Figma** with the frame.
 - **Severity.** **Major**: a person would notice it in use (layout, a state, words,
   behaviour on screen). **Minor**: a value a little apart (a shade, a few pixels).
-- **On a pull request's change**, each difference names the change it is on (`change`, the key of a
-  screen pair or a lone screen, `changesOf`), and whoever may mark the change handled is offered it
-  there, to take into their feedback or mark fine as it is ([Reviews](#reviews)).
+- **On a pull request's change**, each difference names the change it is on (`change`) and is offered
+  to its reviewer there ([Reviews](#reviews)).
 - **×** at the end of a row (whoever may mark items handled) takes that difference off the
   table for everyone (`POST /api/cards/<id>/figma-dismiss {part}`, a decision's under
   `/api/decisions/`); it stays off while the frame is the same and comes back once the

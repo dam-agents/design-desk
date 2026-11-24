@@ -4951,6 +4951,24 @@ test("differences from Figma: someone who may not mark the change handled is off
   await desk.waitForSelector("#element-dialog[open] .cv-pair");
   assert.equal(await desk.locator("#element-dialog .figprop").count(), 0);
 }));
+// Feedback sent already: the taken one became a comment, the fine one left the table and the review names it.
+const figSent = { ...figChanges, reviews: [{ id: "U-1", by: { email: "d@example.com", role: "designer" }, at: "2026-11-18T11:00:00Z", verdict: "request-changes", note: "", threads: ["T-1"], figma_fine: [{ part: "Pill colour", change: "Agents list" }] }],
+  figma_check: { ...figChanges.figma_check, dismissed: [{ part: "Pill colour", by: { email: "d@example.com" }, at: "2026-11-18T11:00:00Z", review: "U-1" }] },
+  threads: [{ id: "T-1", kind: "comment", state: "open", review: "U-1", change: "Agents list", figma: "Spend label", may: { reply: true, resolve: true }, messages: [{ by: { email: "d@example.com", role: "designer" }, at: "2026-11-18T11:00:00Z", text: "Use the slash." }] }] };
+test("differences from Figma: one sent shows as sent with its comment, tagged; the review names those marked fine", (t) => open(t, FIG_DESK(FIG_ME).replace(JSON.stringify(figChanges), JSON.stringify(figSent)), async (desk) => {
+  await desk.waitForSelector("#list");
+  await desk.evaluate(() => { location.hash = "#P-7"; });
+  await desk.waitForSelector("#detail .chg-tiles");
+  assert.deepEqual(await desk.locator("#detail .chg-tiles .fig-chip").allTextContents(), ["1 from Figma"], "nothing left to decide on Agents list");
+  assert.match(await desk.textContent("#detail .rvw"), /Fine as it is, from Figma: Pill colour/);
+  assert.match(await desk.textContent("#detail .rvw"), /From Figma[\s\S]*Use the slash\./, "the comment carries its tag");
+  await desk.click('#detail [data-chg-open="Agents list"]');
+  await desk.waitForSelector("#element-dialog[open] .figprop");
+  assert.equal(await desk.locator("#element-dialog .figprop .fp-r").count(), 1, "the one marked fine is off the table");
+  assert.match(await desk.textContent("#element-dialog .fp-r.done"), /Sent in your feedback[\s\S]*See the comment/);
+  assert.equal(await desk.getAttribute("#element-dialog .fp-r.done [data-chg-talk]", "data-chg-talk"), "T-1");
+  assert.equal(await desk.locator("#element-dialog .fp-lead").count(), 0, "all decided: no line asking for a judgement");
+}));
 test("differences from Figma: Submit feedback names the changes with some still to decide, and sends anyway", (t) => open(t, FIG_DESK(FIG_ME), async (desk) => {
   await desk.waitForSelector("#list");
   await desk.evaluate(() => { location.hash = "#P-7"; });

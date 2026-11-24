@@ -963,9 +963,10 @@ export class Store {
     const chs = c.kind === "change" ? changesOf(c) : [];
     const looks = drafts.filter((d) => d.ok).map((d) => chs.find((x) => x.key === d.change)).filter(Boolean);
     const notes = drafts.filter((d) => !d.ok && !d.work_in && !d.fine);
-    // Differences from Figma marked fine as it is: still in the table as it is sent, they leave it
+    // Differences from Figma marked fine as it is: still in the table as it is sent (by part, wherever
+    // its change went since), they leave it
     // for everyone, as the × takes one off, and the review names them. Only whoever may mark the change handled.
-    const fineOnes = c.kind === "change" ? drafts.filter((d) => d.fine && figmaOffered(c).some((x) => x.part === d.figma)) : [];
+    const fineOnes = c.kind === "change" ? drafts.filter((d) => d.fine && figmaOpen(c).some((x) => x.part === d.figma)) : [];
     if (fineOnes.length) this.mayHandle(c, who);
     // Comments to work in: only Request changes on a request works them in; another verdict leaves them be.
     const worked = drafts.filter((d) => d.work_in).map((d) => own(this.db.threads, d.work_in)).filter((t) => t && t.card === c.id && !["private", "asks"].includes(t.kind));
@@ -2752,7 +2753,7 @@ export class Store {
         if (!FIGMA_KINDS.includes(next.kind)) throw bad(`figma_check belongs to a ${FIGMA_KINDS.join(", ")} card`);
         // A comparison is an item of its own on Product → Differences, with its own number (F-n);
         // comparing the same card again keeps it.
-        next.figma_check = fields.figma_check === null ? null : { id: c?.figma_check?.id || this.nextOf("figma"), ...keepDismissed(c?.figma_check, cleanFigmaCheck(fields.figma_check, this.db.assets, this.clock(), next.kind === "request" ? next.variants || [] : null)) };
+        next.figma_check = fields.figma_check === null ? null : { id: c?.figma_check?.id || this.nextOf("figma"), ...keepDismissed(c?.figma_check, cleanFigmaCheck(fields.figma_check, this.db.assets, this.clock(), next.kind === "request" ? next.variants || [] : null, next.kind === "change" ? changesOf(next).map((x) => x.key) : null)) };
       }
       else if (["bucket", "needs", "sketches", "style", "draw"].includes(k)) {
         if (next.kind !== "issue") throw bad(`${k} belongs to an issue`);
@@ -3855,7 +3856,9 @@ function cleanDesignCheck(o, cards, assets, at) {
 // value and picture. On a request it names the option it was made for.
 const FIGMA_KINDS = ["change", "screen", "element", "request"];
 export const FIGMA_SEVERITIES = ["major", "minor"];
-function cleanFigmaCheck(o, assets, at, variants) {
+// `changes`: on a pull request's change, the keys of its changes as the card holds them now, one of
+// which a difference may name; elsewhere none.
+function cleanFigmaCheck(o, assets, at, variants, changes = null) {
   if (typeof o !== "object" || !o || Array.isArray(o)) throw bad("figma_check must be an object");
   if (!["matches", "differs"].includes(o.verdict)) throw bad("figma_check.verdict must be matches or differs");
   const f = o.frame;
@@ -3874,6 +3877,13 @@ function cleanFigmaCheck(o, assets, at, variants) {
   const parts = list.map((x) => String(x?.part ?? "").trim());
   const twice = parts.find((x, i) => parts.indexOf(x) !== i);
   if (twice !== undefined) throw bad(`figma_check: "${twice}" is named twice; give each difference its own part`);
+  // A change named is one the card has: a wrong key would be offered on no change and counted nowhere.
+  const changeOf = (x, i) => {
+    const k = optText(x?.change, 120, "change");
+    if (k && !changes) throw bad(`figma_check difference ${i + 1}: only a pull request's change names the change a difference is on`);
+    if (k && !changes.includes(k)) throw bad(`figma_check difference ${i + 1}: "${k}" is not one of the card's changes (${changes.join(", ") || "it has no screens"}); name a screen pair's pair or a lone screen's asset, or leave change out`);
+    return k || null;
+  };
   return {
     verdict: o.verdict, checked: at, ...(variant ? { variant } : {}),
     frame: { url: String(f.url), name: clean(f.name, 120, "frame name"), version: optText(f.version, 40, "frame version") || null, edited: when(f.edited, "frame.edited"), shot: pic(f.shot, "frame.shot") },
@@ -3884,7 +3894,7 @@ function cleanFigmaCheck(o, assets, at, variants) {
         figma: optText(x.figma, 120, "figma value"), product: optText(x.product, 120, "product value"),
         figma_shot: pic(x.figma_shot, "figma_shot"), product_shot: pic(x.product_shot, "product_shot"),
         // On a pull request's change: the change it is on (a draft's `change` key), so its reviewer is offered it there.
-        ...(optText(x.change, 120, "change") ? { change: optText(x.change, 120, "change") } : {}) };
+        ...(changeOf(x, i) ? { change: changeOf(x, i) } : {}) };
     }),
   };
 }

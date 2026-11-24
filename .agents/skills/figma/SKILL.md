@@ -158,7 +158,8 @@ frame: {url, name, version, edited, shot}, product_shot, differences: [{part, wh
 figma, product, figma_shot, product_shot, change}]}`; on a request also `variant`, the option compared.
 On a pull request's change, each difference's `change` names the change of the card it is on — the
 `pair` of its screen pair, else its lone screen's `asset` — so whoever reviews that change is offered
-it there (docs/desk.md → Reviews); leave it out for one on no screen of the card.
+it there (docs/desk.md → Reviews); leave it out for one on no screen of the card. The store refuses
+a key the card does not have, and a `change` on any other kind of card.
 `version` is the `hash` `design figma frame` printed; `edited` the file's `edited`. A frame
 that goes against a decision in force (docs/desk.md → Decisions) also goes on that decision:
 `design desk decision-figma D-<n> <check.json>`, its differences only what the decision says.
