@@ -179,6 +179,10 @@ Merged and closed pull requests are never touched: their checks no longer matter
   `-f target_url=<the card's link>` when `desk_link` is set ([desk.md](desk.md) → Links to an
   item); a pass is `-f state=success -f description="Seen on the Design Desk"`. Then upsert
   `{id, ci: {state: "failing" | "passing", sha: <headRefOid>}}`.
+- **The mark line.** What Design Desk writes on GitHub opens its bold **Design Desk** with its mark,
+  16 px: `<img src="https://raw.githubusercontent.com/dam-agents/design-desk/c6eee16ceae409c172db1483764dcd4f1d93aae3/desk/brand/mark.png" width="16" height="16" alt="">`. The image is this repository's `desk/brand/mark.png` pinned to a commit, never a
+  branch that moves; a GitHub comment cannot carry an inline SVG. The hidden markers and the
+  `design-desk` status context never change for it.
 - **Comment on the PR**, after each status write: one comment per PR, found by its first line
   `<!-- design-desk ci=<card id> -->` on a comment of the agent's own account (`gh api repos/<owner>/<name>/issues/<pr>/comments
   --paginate`), edited in place (`PATCH …/issues/comments/<id>`), else created; a failed
@@ -187,7 +191,7 @@ Merged and closed pull requests are never touched: their checks no longer matter
 
   ```markdown
   <!-- design-desk ci=<card id> -->
-  **Design Desk: this UI change needs approval**
+  <img src="https://raw.githubusercontent.com/dam-agents/design-desk/c6eee16ceae409c172db1483764dcd4f1d93aae3/desk/brand/mark.png" width="16" height="16" alt=""> **Design Desk: this UI change needs approval**
 
   The `design-desk` check fails until <a designer | a UI dev owner> marks the change handled on the Design Desk.
 
@@ -199,7 +203,7 @@ Merged and closed pull requests are never touched: their checks no longer matter
   This is not a code review. It asks for no change to the code or the design.
   ```
 
-  On **pass**, only when the comment exists: its first line, then "**Design Desk:** the
+  On **pass**, only when the comment exists: its first line, then the mark line's image and "**Design Desk:** the
   `design-desk` check passes — <cause>", the cause in the Desk's words: "marked handled on the
   Design Desk", "nothing differs any more" (now `fyi`) or "the check no longer holds pull
   requests" (`ci_gate` off). No comment is created for a pass. Facts only: the
@@ -242,7 +246,8 @@ repos/<owner>/<name>/pulls/<pr>/reviews --paginate`) whose body starts with this
 → step 3 with its `html_url`, never a second post; a failed search posts nothing
 and is logged and reported as below. Else:
 
-1. Write the body to a file: first line `<!-- design-desk review=<U-n> -->`, then "**<name>** (<role>)
+1. Write the body to a file: first line `<!-- design-desk review=<U-n> -->`, then the mark line's
+   image ([CI gate](#ci-gate) → The mark line) and "**<name>** (<role>)
    gave feedback on this UI change on the Design Desk: **Changes requested** | **Approved** | **Comments**",
    the note, then each comment as a bullet led by what it is about in bold (the change or part
    it names, else nothing), then "✓ Looks good: <name>, <name>" from its `looks_good`, then `[Open on the Design Desk](<card link>)` when `desk_link` is

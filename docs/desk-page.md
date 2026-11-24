@@ -724,8 +724,17 @@ Every change to the page keeps to one scale; `desk/tests/page.test.mjs` fails on
   step goes where: the guidelines (Space).
 - **Labels:** a label before its value (*Next:*, *Turn:*, *Created:*, *By:*) is grey; how a label
   is worded, its case included, is the guidelines' (Text). A role alone as a label is
-  capitalised (*Designer*), inside a sentence as written. Design Desk's mark is the spark of its
-  actions, never letters.
+  capitalised (*Designer*), inside a sentence as written.
+- **The mark:** Design Desk's mark is the DD pair, `desk/brand/mark.svg`, drawn by
+  `desk/brand/build.mjs`: two D's of two quarter circles each, their gaps opening into a small
+  spark, a colour per piece (`--mk-*`). It stands for Design Desk wherever it speaks or acts, never
+  for the product: the favicon, the head (left of the tabs, back to Requests), the agent's avatar
+  in every thread, the ask panel, What's already known and the bell (on an ink circle,
+  `.mk-on-ink`), the `from:` of what it filed or drew, How it works, the offline banner (greyed).
+  Never letters. The spark alone is the icon of **Draw options**. **At work** the mark moves:
+  `.dd-spin` is the same DD in one colour, two tones; the first D turns round, the two close into a
+  disc, it turns and opens into DD. Still when it speaks, moving when it works. The page carries one
+  inline copy, in the head; a test keeps it equal to `mark.svg`.
 - **A request's box** keeps two rows above its stages: the state and Turn with Approve, Close and
   ⋯; then the ways on (sent: when and where on the left, the ways on at the right).
 - **Buttons:** `.btn` 32px high, `.btn.small` 26px; which one is primary, and which green: the

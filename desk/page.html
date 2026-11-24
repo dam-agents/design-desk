@@ -1890,7 +1890,7 @@
 <body>
 <div class="app">
   <header>
-    <a class="brand" href="#" data-tab="requests" title="Design Desk: back to Requests" aria-label="Design Desk, Requests"><svg class="dd-mark" viewBox="0 0 24 24" aria-hidden="true"><path class="mk-tl" d="M11.4 11.4A10.9 10.9 0 0 0 0.5 0.5L0.5 7C0.5 11 0.9 11.4 4.9 11.4Z"/><path class="mk-bl" d="M0.5 23.5A10.9 10.9 0 0 0 11.4 12.6L4.9 12.6C0.9 12.6 0.5 13 0.5 17Z"/><path class="mk-tr" d="M12.6 0.5A10.9 10.9 0 0 1 23.5 11.4L17 11.4C13 11.4 12.6 11 12.6 7Z"/><path class="mk-br" d="M23.5 12.6A10.9 10.9 0 0 1 12.6 23.5L12.6 17C12.6 13 13 12.6 17 12.6Z"/></svg></a>
+    <a class="brand" href="#" data-home title="Design Desk: back to Requests" aria-label="Design Desk, Requests"><svg class="dd-mark" viewBox="0 0 24 24" aria-hidden="true"><path class="mk-tl" d="M11.4 11.4A10.9 10.9 0 0 0 0.5 0.5L0.5 7C0.5 11 0.9 11.4 4.9 11.4Z"/><path class="mk-bl" d="M0.5 23.5A10.9 10.9 0 0 0 11.4 12.6L4.9 12.6C0.9 12.6 0.5 13 0.5 17Z"/><path class="mk-tr" d="M12.6 0.5A10.9 10.9 0 0 1 23.5 11.4L17 11.4C13 11.4 12.6 11 12.6 7Z"/><path class="mk-br" d="M23.5 12.6A10.9 10.9 0 0 1 12.6 23.5L12.6 17C12.6 13 13 12.6 17 12.6Z"/></svg></a>
     <nav id="nav" aria-label="Desk"></nav>
     <span class="sep head-sep" id="new-request-sep" aria-hidden="true" hidden></span>
     <button class="btn primary" id="new-request" hidden>+ New request</button>
@@ -8815,12 +8815,14 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     renderList();
   });
   document.addEventListener("click", guard(async (e) => {
-    const el = e.target.closest("[data-drop-option], [data-split-end], button, a[data-tab], a[data-ref], [data-zoom], [data-zoom-snip], [data-ws-note], [data-reason]")
+    const el = e.target.closest("[data-drop-option], [data-split-end], button, a[data-tab], a[data-home], a[data-ref], [data-zoom], [data-zoom-snip], [data-ws-note], [data-reason]")
       || e.target.closest(".row.item > .meta")?.parentElement.querySelector(":scope > .open");
     if (!el) return;
     const ds = el.dataset;
     if (ds.hit) { await openHit(ds.hit); return; }
     if (ds.tab) { e.preventDefault(); await showTab(ds.tab); return; }
+    // The mark in the head: home, which is Requests.
+    if ("home" in ds) { e.preventDefault(); await showTab("requests"); return; }
     if (ds.ref) { e.preventDefault(); await goTo(target(ds.ref)); return; }
     // A sent request and its design open each other: Requests ↔ Designs.
     if (ds.showDesign) { await goTo({ id: ds.showDesign, tab: "designs" }); return; }

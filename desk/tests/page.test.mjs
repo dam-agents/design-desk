@@ -4774,10 +4774,11 @@ test("simple mode's request page with no summary: the request in full, designs, 
 test("in full mode Design Desk's messages carry its mark, people's none", (t) => open(t, HEAD_DESK({ ...HEAD_ME, simple: false }, [talked, drawn]), async (desk) => {
   await desk.waitForSelector('#list [data-card="R-7"]');
   await desk.click('#list [data-card="R-7"]');
-  await desk.waitForSelector("#th-T-1");
-  await desk.$eval("#th-T-1", (x) => { if (x.tagName === "DETAILS") x.open = true; });
+  await desk.waitForSelector("#th-T-1", { state: "attached" });
   assert.equal(await desk.locator("#th-T-1 .msg.agent .who .msg-av.mk-on-ink svg.dd-mark").count(), 1, "the agent's message opens with the mark");
   assert.equal(await desk.locator("#th-T-1 .msg:not(.agent) .msg-av").count(), 0, "a person's message keeps its name alone");
+  await desk.click("header .brand");
+  assert.equal(await desk.getAttribute('#nav [data-tab="requests"]', "aria-current"), "true", "the mark in the head goes home, to Requests");
 }));
 
 // Design Desk's mark (#215): one drawing, desk/brand/build.mjs, wherever it stands.
@@ -4791,6 +4792,7 @@ test("the mark on the page is desk/brand/mark.svg, and the spark is Draw options
   assert.equal(head[1], brand.MARK_INLINE, "the head's copy is build.mjs's");
   assert.deepEqual(ds(head[1]), ds(file), "the same four pieces as mark.svg");
   assert.equal(page.match(/<svg class="dd-mark"/g).length, 1, "one inline copy; the script reuses it");
+  assert.match(page, /<a class="brand" href="#" data-home /, "the mark in the head goes home");
   assert.ok(page.includes(`<link rel="icon" href="${brand.FAVICON_HREF}" />`), "the favicon is the mark");
   assert.ok(page.includes(`mask: ${brand.D_MASK} center`), "the spinner's D's are the mark's");
   assert.ok(page.includes(`mask:${brand.D_MASK_SQ} center`), "and so are the prototype overlay's");
