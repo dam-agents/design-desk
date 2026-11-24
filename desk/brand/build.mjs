@@ -3,8 +3,8 @@
 //   node desk/brand/build.mjs        writes mark.svg, favicon.svg, avatar.svg and their PNGs
 //
 // The mark is a disc with DD on it: two D's, a spark cut out of the second so the disc shows
-// through (the operator's drawing, dd-light.svg), the disc orange. Light mode: white
-// D's. Dark mode: a lighter disc, near-black D's. The page, the guidelines and their tests import the shapes
+// through (the operator's drawing, dd-light.svg), the disc in DAM's avatar orange, the D's white,
+// in light and dark mode alike, as DAM's avatars are. The page, the guidelines and their tests import the shapes
 // from here, so there is one drawing.
 import { writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -19,8 +19,8 @@ export const D_PATH = `${D1_PATH} ${D2_PATH}`;
 
 /** Its colours, light and dark mode: the disc and the D's. Finalised here (#215). */
 export const COLORS = {
-  light: { disc: "#f07a3a", d: "#ffffff" },
-  dark: { disc: "#f6a06a", d: "#1b1b1a" },
+  light: { disc: "#de9950", d: "#ffffff" }, // DAM's avatar orange
+  dark: { disc: "#de9950", d: "#ffffff" },
 };
 
 // The drawing: fixed colours for a mode, or classes (mk-disc, mk-d) for the page's CSS.
@@ -43,12 +43,6 @@ export const AVATAR_SVG = markIn("light");
 
 /** The mark as the page draws it inline: classes only, its colours from the page's CSS. */
 export const MARK_INLINE = `<svg class="dd-mark" viewBox="0 0 ${BOX} ${BOX}" aria-hidden="true">${drawing()}</svg>`;
-
-/**
- * The wordmark, for the Desk's head: the two D's alone, no disc — the first in the page's ink
- * (mk-ink), the second, its spark cut out, in the mark's colour (mk-word).
- */
-export const WORD_INLINE = `<svg class="dd-word" viewBox="4 14 40 20" aria-hidden="true"><path class="mk-ink" d="${D1_PATH}"/><path class="mk-word" fill-rule="evenodd" d="${D2_PATH}"/></svg>`;
 
 /** The favicon, as a data: URL the page links to (the page is one file). */
 export const FAVICON_HREF = `data:image/svg+xml,${encodeURIComponent(MARK_SVG.trim())}`;

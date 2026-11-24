@@ -1,7 +1,7 @@
 /* desk/page.html's own <style>, copied by `node desk/dev/guidelines.mjs` for desk/guidelines.html; never edit it here. */
   :root {
     /* Design Desk's mark (desk/brand/mark.svg): its disc and its D's. */
-    --mk-disc: #f07a3a; --mk-d: #ffffff;
+    --mk-disc: #de9950; --mk-d: #ffffff;
     --bg: #fcfbfc; --panel: #ffffff; --ink: #1b1b1a; --muted: #6b6b66; --line: #e4e3df; --soft: #f0efeb;
     --tip-opens: #6fd3a0; --accent: #2f5bd3; --accent-ink: #ffffff; --ok: #1f7a4d; --ok-soft: #e3f3ea; --warn: #9a6200; --warn-soft: #fbf0d9;
     --bad: #b3261e; --bad-soft: #fbe5e3; --info-soft: #e7edfc; --live: #6b3fc4; --live-soft: #efe8fb; --why: #0d7d78; --why-soft: #e0f3f1; --r-sm: 6px; --radius: 12px; --shadow: 0 1px 2px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.04);
@@ -17,12 +17,12 @@
   @media (min-width: 2200px) { :root { --measure: 150ch; --pad-x: 64px; --list-w: 550px; --side-w: 520px; --shot-w: 400px; --shot-h: 440px; } }
   /* Night follows the system unless the header switch chose a mode (data-theme). */
   @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) { --mk-disc: #f6a06a; --mk-d: #1b1b1a;
+    :root:not([data-theme="light"]) { --mk-disc: #de9950; --mk-d: #ffffff;
       --bg: #151514; --panel: #1e1e1c; --ink: #ecebe7; --muted: #a09f99; --line: #33332f; --soft: #262624;
       --tip-opens: #1f7a4d; --accent: #8aa8ff; --accent-ink: #10142a; --ok: #6fd3a0; --ok-soft: #1c2f25; --warn: #f0c060; --warn-soft: #34291a;
       --bad: #ff8a80; --bad-soft: #3a1f1d; --info-soft: #1f2640; --live: #c3a6ff; --live-soft: #2a2140; --why: #62d2c8; --why-soft: #16302e; --shadow: none; --float: 0 0 0 1px rgba(255,255,255,.10), 0 14px 36px rgba(0,0,0,.6), 0 36px 90px rgba(0,0,0,.7); color-scheme: dark; }
   }
-  :root[data-theme="dark"] { --mk-disc: #f6a06a; --mk-d: #1b1b1a;
+  :root[data-theme="dark"] { --mk-disc: #de9950; --mk-d: #ffffff;
     --bg: #151514; --panel: #1e1e1c; --ink: #ecebe7; --muted: #a09f99; --line: #33332f; --soft: #262624;
     --tip-opens: #1f7a4d; --accent: #8aa8ff; --accent-ink: #10142a; --ok: #6fd3a0; --ok-soft: #1c2f25; --warn: #f0c060; --warn-soft: #34291a;
     --bad: #ff8a80; --bad-soft: #3a1f1d; --info-soft: #1f2640; --live: #c3a6ff; --live-soft: #2a2140; --why: #62d2c8; --why-soft: #16302e; --shadow: none; --float: 0 0 0 1px rgba(255,255,255,.10), 0 14px 36px rgba(0,0,0,.6), 0 36px 90px rgba(0,0,0,.7); color-scheme: dark; }
@@ -1894,7 +1894,7 @@
   .mk-on-ink { background: none; }
   /* As an avatar the mark fills its circle: 28px (.sav, .ask-avatar, the bell), 24px (.face), 18px (.msg-av). */
   .mk-on-ink svg.dd-mark { width: 28px; height: 28px; } .brief-k .face.mk-on-ink svg.dd-mark { width: 24px; height: 24px; } .msg .who .msg-av svg.dd-mark { width: 18px; height: 18px; }
-  header .brand { display: inline-grid; place-items: center; margin-right: 8px; border-radius: var(--r-sm); } header .brand svg.dd-word { width: 32px; height: 16px; } svg.dd-word .mk-ink { fill: var(--ink); } svg.dd-word .mk-word { fill: var(--mk-disc); }
+  header .brand { display: inline-grid; place-items: center; margin-right: 8px; border-radius: var(--r-sm); } header .brand svg.dd-mark { width: 32px; height: 32px; }
   .msg .who .msg-av { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; vertical-align: -4px; margin-right: 8px; }
   .prov svg.dd-mark { width: 12px; height: 12px; }
   .banner .mk-off { display: inline-block; vertical-align: -3px; margin-right: 8px; filter: grayscale(1); opacity: .55; } .banner .mk-off svg.dd-mark { width: 16px; height: 16px; }

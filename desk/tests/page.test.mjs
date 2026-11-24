@@ -4823,12 +4823,9 @@ test("the mark on the page is desk/brand/mark.svg, and the spark is Draw options
   const brand = await import("../brand/build.mjs");
   const brandFile = (name) => readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "brand", name), "utf8");
   assert.equal(brandFile("mark.svg"), brand.MARK_SVG, "desk/brand/mark.svg is stale: run node desk/brand/build.mjs");
-  const word = page.match(/<a class="brand"[^>]*>(<svg class="dd-word"[\s\S]*?<\/svg>)<\/a>/);
-  assert.ok(word, "the head carries the wordmark");
-  assert.equal(word[1], brand.WORD_INLINE, "the head's wordmark is build.mjs's");
-  const head = page.match(/<template id="dd-mark">(<svg class="dd-mark"[\s\S]*?<\/svg>)<\/template>/);
-  assert.ok(head, "the head keeps the mark, for the script to copy");
-  assert.equal(head[1], brand.MARK_INLINE, "the copy is build.mjs's");
+  const head = page.match(/<a class="brand"[^>]*>(<svg class="dd-mark"[\s\S]*?<\/svg>)<\/a>/);
+  assert.ok(head, "the head carries the mark inline");
+  assert.equal(head[1], brand.MARK_INLINE, "the head's copy is build.mjs's");
   assert.ok(head[1].includes(`d="${brand.D_PATH}"`) && brand.MARK_SVG.includes(`d="${brand.D_PATH}"`), "the same DD and spark as mark.svg");
   assert.equal(page.match(/<svg class="dd-mark"/g).length, 1, "one inline copy; the script reuses it");
   assert.match(page, /<a class="brand" href="#" data-home /, "the mark in the head goes home");

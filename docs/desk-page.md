@@ -755,9 +755,9 @@ Every change to the page keeps to one scale; `desk/tests/page.test.mjs` fails on
   is worded, its case included, is the guidelines' (Text). A role alone as a label is
   capitalised (*Designer*), inside a sentence as written.
 - **The mark:** Design Desk's mark is DD on a disc, `desk/brand/mark.svg`, drawn by
-  `desk/brand/build.mjs`: the disc orange (`--mk-disc`), two D's on it
-  (`--mk-d`: white in light mode, near black in dark), a spark cut out of the second. It stands for Design Desk wherever it speaks or acts, never for the product: the favicon,
-  the head (as the wordmark: the D's without the disc, the second in colour; back to Requests), the agent's avatar in every thread, the ask panel,
+  `desk/brand/build.mjs`: the disc in DAM's avatar orange (`--mk-disc`), two white D's
+  on it (`--mk-d`), in light and dark mode alike, a spark cut out of the second. It stands for Design Desk wherever it speaks or acts, never for the product: the favicon,
+  the head (left of the tabs, back to Requests), the agent's avatar in every thread, the ask panel,
   What's already known and the bell (the disc is the avatar's circle, `.mk-on-ink`; the head shows it
   at 32px, as tall as its buttons and tabs), the `from:` of
   what it filed or drew, How it works, the offline banner (greyed). Never letters. The Desk's spark
