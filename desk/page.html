@@ -322,18 +322,28 @@
   details.sthread.done[open] > summary .chev { transform: rotate(90deg); }
   details.sthread.done[open] > summary { margin-bottom: 12px; }
   /* A conversation's moves are quiet words under it; Reply opens its box. */
-  .sthread .sacts { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; margin: 12px 0 0 40px; }
+  .sthread .sacts { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; margin: 8px 0 0 48px; }
   .sthread .slk { border: 0; background: none; padding: 0; font: inherit; font-size: var(--fs-meta); font-weight: 500; color: var(--muted); cursor: pointer; }
   .sthread .slk:hover { color: var(--ink); text-decoration: underline; } .sthread .slk:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--r-sm); }
   .sthread .sacts .chip { margin: 0; }
-  .sthread .reply.sreply { margin: 12px 0 0 40px; padding: 0; border: 0; } .sthread .reply.sreply[hidden] { display: none; }
-  .smsg { display: flex; gap: 12px; align-items: flex-start; } .smsg + .smsg { margin-top: 12px; } .smsg.re { margin-left: 40px; }
-  .smsg .sm-b { min-width: 0; flex: 1; } .smsg .sm-b > p:first-of-type { margin-top: 4px; }
-  .smsg .who { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: var(--fs-meta); } .smsg .who .role, .smsg .who .at { color: var(--muted); }
-  .smsg .who .role { display: inline-flex; align-items: center; gap: 4px; }
+  .sthread .reply.sreply { margin: 12px 0 0 36px; padding: 0; border: 0; } .sthread .reply.sreply[hidden] { display: none; }
+  /* A message: the name in the reading size, the role in its avatar's colour, the time muted; the
+     words a little larger and looser than the meta. The viewer's own sit on a faint accent tint,
+     Design Desk's on a soft panel; everyone else's on none, aligned the same. */
+  .smsg { display: flex; gap: 8px; align-items: flex-start; } .smsg + .smsg { margin-top: 8px; }
+  .smsg .sm-b { min-width: 0; flex: 1; padding: 4px 12px 8px; border-radius: var(--r-sm); line-height: 1.5; }
+  .smsg .sm-b > p { margin: 0; } .smsg .sm-b > p + p { margin-top: 8px; }
+  .smsg[data-k="mine"] .sm-b { background: color-mix(in srgb, var(--accent) 6%, var(--panel)); }
+  .smsg[data-k="agent"] .sm-b { background: color-mix(in srgb, var(--soft) 70%, var(--panel)); }
+  .smsg .who { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin-bottom: 2px; font-size: var(--fs-meta); }
+  .smsg .who b { font-size: var(--fs-ui); font-weight: 600; color: var(--ink); } .smsg .who .at { color: var(--muted); }
+  .smsg .who .role { display: inline-flex; align-items: center; gap: 4px; font-weight: 500; color: var(--muted); }
+  .smsg .who .role:is([data-r="designer"], [data-r="admin"]) { color: var(--live); } .smsg .who .role:is([data-r="developer"], [data-r="ui-dev-owner"]) { color: var(--accent); }
+  .sthread .sreplies { margin: 8px 0 0 12px; padding-left: 24px; border-left: 2px solid var(--line); }
+  .sthread .sreplies .smsg.re { margin-left: 0; } .sthread .sreplies .pending { padding: 4px 12px; }
   .sav { width: 28px; height: 28px; flex: none; border-radius: 50%; display: grid; place-items: center; font-size: var(--fs-meta); font-weight: 600; color: var(--ink); background: var(--soft); }
   .sav[data-r="designer"], .sav[data-r="admin"] { background: var(--live-soft); color: var(--live); } .sav[data-r="developer"], .sav[data-r="ui-dev-owner"] { background: var(--info-soft); color: var(--accent); }
-  .sav[data-r="agent"] { background: var(--ink); color: var(--bg); } .sav svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+  .sav[data-r="agent"] { background: var(--ink); color: var(--bg); } .smsg .sav[data-r="agent"] { background: var(--panel); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); } .sav svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; }
   .sthread .chip { margin-bottom: 8px; } .sthread .reply { margin-top: 12px; margin-left: 40px; }
   .sh-after { margin-top: 4px; font-size: var(--fs-meta); color: var(--muted); } .sh-after a { color: inherit; }
   /* A review in the making: the person's drafts, seen by them alone (docs/desk.md → Reviews). */
@@ -3735,16 +3745,23 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // designer should look at and why, the approved design, Figma (when on), its check on GitHub —
   // each with its source; "Nothing to flag" without any (docs/desk-page.md → Simple mode).
   function simpleFound(c) {
-    const decisions = [againstBox(c), ...(c.variants || []).map((v) => againstBox(c, v.id))].join("");
-    const look = c.kind === "change" && c.attention?.level === "designer" && (c.attention.reasons || []).length
-      ? `<h4>What to look at</h4><ul>${c.attention.reasons.map((x) => `<li>${txt(x)}</li>`).join("")}</ul>` : "";
-    const ci = c.kind === "change" && c.ci?.state === "failing" ? `<p>Design Desk's check on GitHub holds the pull request until a designer approves it.</p>` : "";
-    const body = [decisions, look, c.kind === "change" ? designCheckBox(c) : "", ci, figmaBox(c)].filter((x) => x && x.trim()).join("");
-    // A fold like the others; its head says the answer. What a person should check: each decision
-    // it goes against, each reason to look, a difference from the approved design or from Figma.
-    const n = (c.conflicts || []).filter((x) => x.status === "active").length + (look ? c.attention.reasons.length : 0)
-      + (c.kind === "change" && c.design_check && c.design_check.verdict !== "matches" ? 1 : 0)
-      + (figmaOn() && c.figma_check?.verdict === "differs" && figShown(c.figma_check).length ? 1 : 0);
+    // A fold like the others; its head says the answer. One list makes both: each part what the body
+    // shows and how many things in it a person should check — each decision it goes against (on the
+    // item, or an option still there), each reason to look, a difference from the approved design,
+    // the check holding the pull request, a difference from Figma. A match is shown and counts none.
+    const ids = new Set((c.variants || []).map((v) => v.id));
+    const against = (c.conflicts || []).filter((x) => x.status === "active" && (!x.variant || ids.has(x.variant)));
+    const reasons = c.kind === "change" && c.attention?.level === "designer" ? c.attention.reasons || [] : [];
+    const ci = c.kind === "change" && c.ci?.state === "failing";
+    const check = c.kind === "change" ? c.design_check : null;
+    const parts = [
+      [against.length, [againstBox(c), ...(c.variants || []).map((v) => againstBox(c, v.id))].join("")],
+      [reasons.length, reasons.length ? `<h4>What to look at</h4><ul>${reasons.map((x) => `<li>${txt(x)}</li>`).join("")}</ul>` : ""],
+      [check && check.verdict !== "matches" ? 1 : 0, check ? designCheckBox(c) : ""],
+      [ci ? 1 : 0, ci ? `<p>Design Desk's check on GitHub holds the pull request until a designer approves it.</p>` : ""],
+      [figmaOn() && c.figma_check?.verdict === "differs" && figShown(c.figma_check).length ? 1 : 0, figmaBox(c)]];
+    const body = parts.map(([, html]) => html).filter((x) => x && x.trim()).join("");
+    const n = parts.reduce((sum, [k, html]) => sum + (html && html.trim() ? k : 0), 0);
     const say = n ? `<span class="sf-say" data-k="warn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9.5 17h-19z"/><path d="M12 10v4M12 17h.01"/></svg>${esc(plural(n, "thing", "things"))} to check</span>`
       : `<span class="sf-say" data-k="ok"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>Nothing to flag</span>`;
     const open = S.folds.found ?? n > 0;
@@ -3878,6 +3895,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   function fbClose() { if (!S.fb) return false; S.fb = { card: S.fb.card, where: null, pick: S.fb.pick, note: S.fb.note }; fbRedraw(); return true; }
   function fbRedraw() { renderDetail(); }
   document.addEventListener("input", (e) => { if (e.target.id === "fb-note" && S.fb) S.fb.note = e.target.value; });
+  document.addEventListener("input", (e) => { if (e.target.closest?.(".sreply") && e.target.dataset.reply === S.replyOpen) S.replyText = e.target.value; });
   document.addEventListener("click", (e) => { if (S.fb?.where && !e.target.closest?.(".fbw")) fbClose(); }, true);
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && S.fb?.where) { e.preventDefault(); e.stopPropagation(); fbClose(); } }, true);
   // Sends the drafts with a verdict: an approval with nothing drafted is the approval alone; Approve
@@ -3978,16 +3996,20 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const person = (by) => by?.agent ? { n: "Design Desk", r: "", k: "agent" }
       : { n: shortName(by?.email, by?.name) || "someone", r: by?.role && by.role !== "slack" ? by.role : "", k: by?.role || "" };
     const av = (p) => `<span class="sav" data-r="${esc(p.k)}" aria-hidden="true">${p.k === "agent" ? `<svg viewBox="0 0 24 24">${ICON_PATH.spark}</svg>` : esc((p.n === "you" ? S.me?.my_name || "Y" : p.n)[0].toUpperCase())}</span>`;
-    const msg = (m, reply) => { const p = person(m.by);
-      return `<div class="smsg${reply ? " re" : ""}">${av(p)}<div class="sm-b"><div class="who"><b>${esc(p.n === "you" ? "You" : p.n)}</b>${p.r ? `<span class="role">${roleIcon(p.r)}${esc(roleLabel(p.r))}</span>` : ""}<span class="at" title="${esc(when(m.at))}">${esc(sWhen(m.at))}</span></div>${md(m.text)}</div></div>`; };
+    // Whose it is, quietly: the viewer's own on a faint tint, Design Desk's on a soft panel with its mark outlined.
+    const msg = (m, reply) => { const p = person(m.by), k = p.k === "agent" ? "agent" : p.n === "you" ? "mine" : "";
+      return `<div class="smsg${reply ? " re" : ""}"${k ? ` data-k="${k}"` : ""}>${av(p)}<div class="sm-b"><div class="who"><b>${esc(p.n === "you" ? "You" : p.n)}</b>${p.r ? `<span class="role" data-r="${esc(p.r)}">${roleIcon(p.r)}${esc(roleLabel(p.r))}</span>` : ""}<span class="at" title="${esc(when(m.at))}">${esc(sWhen(m.at))}</span></div>${md(m.text)}</div></div>`; };
     const optionOf = (th) => { if (th.change && c.kind === "change") return changeChip(c, th); const v = th.anchor?.variant && (c.variants || []).find((x) => x.id === th.anchor.variant); return v ? `<button class="chip sjump" data-goto="${esc(th.id)}" title="Open the design at the part this is about">Option ${(c.variants || []).indexOf(v) + 1}: ${esc(v.name)}${th.anchor.label ? ` · ${esc(th.anchor.label)}` : ""}</button>` : ""; };
     const began = (th) => Date.parse(th.created || th.messages[0]?.at || 0) || 0;
     const order = (a, b) => began(a) - began(b);
     const one = (th) => {
       const [first, ...replies] = th.messages;
-      const body = `${optionOf(th)}${msg(first, false)}${replies.map((m) => msg(m, true)).join("")}${th.needs_agent ? `<div class="smsg re"><span class="pending">Waiting for Design Desk…</span></div>` : ""}`;
+      // The replies hang from the first message on a thin line, so a conversation reads as one.
+      const after = `${replies.map((m) => msg(m, true)).join("")}${th.needs_agent ? `<div class="smsg re"><span class="pending">Waiting for Design Desk…</span></div>` : ""}`;
+      const body = `${optionOf(th)}${msg(first, false)}${after ? `<div class="sreplies">${after}</div>` : ""}`;
       const id = esc(th.id), replying = S.replyOpen === th.id, may = mayIn(th, "reply");
-      const box = th.state !== "resolved" && may ? `<div class="reply sreply"${replying ? "" : " hidden"}><input placeholder="Reply…" aria-label="Your reply" data-reply="${id}" /><button class="btn small primary" data-send-reply="${id}">Reply</button><button class="slk" data-reply-close="${id}">Cancel</button></div>` : "";
+      // One box open at a time; what is typed in it stays through a redraw.
+      const box = th.state !== "resolved" && may ? `<div class="reply sreply"${replying ? "" : " hidden"}><input placeholder="Reply…" aria-label="Your reply" data-reply="${id}"${replying && S.replyText ? ` value="${esc(S.replyText)}"` : ""} /><button class="btn small primary" data-send-reply="${id}">Reply</button><button class="slk" data-reply-close="${id}">Cancel</button></div>` : "";
       const moves = th.state !== "resolved"
         ? [may ? `<button class="slk" data-reply-open="${id}"${replying ? " hidden" : ""}>Reply</button>` : "", mayIn(th, "resolve") ? `<button class="slk" data-resolve="${id}" title="Closes this conversation">Resolve</button>` : "", workable(c, th) ? workInBtn(c, th, "slk") : ""]
         : [may ? `<button class="slk" data-reopen="${id}">Reopen</button>` : ""];
@@ -8394,7 +8416,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       card = { ...card, id, base: card.id, send: past.k, status: "handed-off", approved: s.approved, spec: s.spec, dev_summary: s.dev_summary, built: s.built, closed: s.closed, threads: (card.threads || []).filter((th) => s.threads.includes(th.id)) };
     }
     const before = S.card;
-    if (before?.id !== card.id) { endSplit(false); S.folds.card = null; S.replyOpen = null; S.variant = null; S.story = null; S.look = "now"; S.lookSide = false; S.lookWith = "now"; S.lookGone = false; S.lookMiss = null; S.ws = { ...S.ws, open: false, selected: null, edit: null, version: null, note: null, view: null, state: null, alt: null, check: false, reason: null }; }
+    if (before?.id !== card.id) { endSplit(false); S.folds.card = null; S.replyOpen = null; S.replyText = ""; S.variant = null; S.story = null; S.look = "now"; S.lookSide = false; S.lookWith = "now"; S.lookGone = false; S.lookMiss = null; S.ws = { ...S.ws, open: false, selected: null, edit: null, version: null, note: null, view: null, state: null, alt: null, check: false, reason: null }; }
     const changed = !before || before.id !== card.id || JSON.stringify(before) !== JSON.stringify(card);
     const wsChanged = S.ws.open && (!before || wsFingerprint(before) !== wsFingerprint(card));
     // A redraw arrived: say so and show the latest version.
@@ -9068,7 +9090,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // Simple mode's Reply opens the conversation's box, its cursor in it; Cancel folds it away again.
     if (ds.replyOpen || ds.replyClose) {
       const id = ds.replyOpen || ds.replyClose, th = el.closest(".sthread"), box = th?.querySelector(".sreply"), link = th?.querySelector("[data-reply-open]");
-      S.replyOpen = ds.replyOpen || null;
+      // One box open at a time: Reply on another conversation folds the one open before.
+      for (const b of document.querySelectorAll("#detail .sreply:not([hidden])")) if (b !== box) { b.hidden = true; const l = b.closest(".sthread")?.querySelector("[data-reply-open]"); if (l) l.hidden = false; }
+      S.replyOpen = ds.replyOpen || null; S.replyText = "";
       if (box) box.hidden = !ds.replyOpen; if (link) link.hidden = Boolean(ds.replyOpen);
       if (ds.replyOpen) box?.querySelector(`[data-reply="${CSS.escape(id)}"]`)?.focus(); else link?.focus();
       return;
@@ -9077,7 +9101,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       // The workspace and the card both show a note's reply box: the one next to this button.
       const input = (el.closest("#ws-pop") || el.parentElement).querySelector(`[data-reply="${CSS.escape(ds.sendReply)}"]`); const text = input?.value.trim(); if (!text) return;
       const r = await api("POST", `/api/threads/${ds.sendReply}/messages`, { text });
-      S.replyOpen = null;
+      S.replyOpen = null; S.replyText = "";
       if (r.inbox) toast("Sent. Design Desk is on it.");
       await refreshList(); await openCard(S.card.id); return;
     }

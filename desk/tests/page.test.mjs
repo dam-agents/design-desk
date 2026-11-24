@@ -4762,8 +4762,15 @@ test("simple mode's request page with no summary: the request in full, designs, 
   assert.equal(await desk.locator("#th-T-1 [data-reply-open]").isHidden(), true);
   await desk.click("#th-T-1 [data-reply-close]");
   assert.equal(await desk.locator("#th-T-1 .sreply").isHidden(), true, "Cancel folds it away");
+  // One box at a time: Reply on another conversation folds the one open before.
+  await desk.click("#th-T-1 [data-reply-open]");
+  await desk.click("#th-T-3 [data-reply-open]");
+  assert.equal(await desk.locator("#detail .sreply:visible").count(), 1, "one reply box open");
+  assert.equal(await desk.locator("#th-T-1 [data-reply-open]").isVisible(), true, "the first conversation's Reply is back");
   assert.match(await desk.textContent("#th-T-1 .smsg:not(.re) .who"), /pat\.lee[\s\S]*designer/i, "who by name (the part before the @) and role");
-  assert.equal(await desk.locator("#th-T-1 .smsg.re").count(), 1, "a reply is indented under the first message");
+  assert.equal(await desk.locator("#th-T-1 .sreplies > .smsg.re").count(), 1, "a reply hangs under the first message, on its line");
+  assert.equal(await desk.locator('#th-T-1 .smsg.re[data-k="agent"]').count(), 1, "Design Desk's reply is told apart");
+  assert.equal(await desk.locator('#th-T-1 .smsg:not(.re)[data-k]').count(), 0, "someone else's message is on no tint");
   assert.equal(await desk.locator("#th-T-3 [data-work-in]").count(), 1, "a comment on a design can be worked in");
   assert.match(await desk.textContent("#th-T-3 .sjump"), /Option 1: Calm · Title/, "its option and part, a jump to them");
   assert.equal(await desk.locator("#th-T-1 [data-work-in]").count(), 0, "one on no design cannot");
@@ -4855,6 +4862,22 @@ test("simple mode's change page: lead, the changes, what to look at, comments; N
   await desk.evaluate(() => { location.hash = "#P-4"; });
   await desk.waitForFunction(() => /Quiet/.test(document.querySelector("#detail .shead h2")?.textContent || ""));
   assert.match(await desk.textContent("#detail .sfound"), /Nothing to flag/);
+}));
+
+// What Design Desk found counts what its body shows, and nothing it does not.
+test("simple mode: What Design Desk found counts the check holding a pull request, and never a decision on an option that is gone", (t) => open(t, HEAD_DESK(HEAD_ME, [
+  { ...prChange, id: "P-5", title: "Held", attention: { level: "fyi", reasons: [] }, ci: { state: "failing" } },
+  { ...drawn, id: "R-9", title: "Option gone", conflicts: [{ decision: "D-3", status: "active", variant: "v9", text: "Two primaries.", why: "One primary button per screen." }] }]), async (desk) => {
+  await desk.waitForSelector("#list .row");
+  await desk.evaluate(() => { location.hash = "#P-5"; });
+  await desk.waitForFunction(() => /Held/.test(document.querySelector("#detail .shead h2")?.textContent || ""));
+  assert.equal((await desk.textContent("#detail details.sfound > summary .sf-say")).trim(), "1 thing to check", "the check holding the pull request is one");
+  assert.match(await desk.textContent("#detail details.sfound .section"), /holds the pull request/);
+  assert.equal(await desk.locator("#detail details.sfound[open]").count(), 1);
+  await desk.evaluate(() => { location.hash = "#R-9"; });
+  await desk.waitForFunction(() => /Option gone/.test(document.querySelector("#detail .shead h2")?.textContent || ""));
+  assert.equal((await desk.textContent("#detail details.sfound > summary .sf-say")).trim(), "Nothing to flag", "a decision on a removed option is not shown, so not counted");
+  assert.match(await desk.textContent("#detail details.sfound .section"), /goes against no decision in force/);
 }));
 
 // The options' tabs (docs/desk-page.md → the options' tabs): one row that never scrolls sideways;

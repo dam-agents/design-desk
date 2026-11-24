@@ -282,13 +282,15 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   options, with no votes: only the count of open notes) or **Changes** (below), then the folds, alike: first **What Design Desk
   found** (the decisions in force it goes against, a change's reasons to look at it, how it
   differs from the approved design, Figma when on, its check holding the pull request), whose head
-  carries Design Desk's mark and its answer — **n things to check** in amber (each decision it goes
-  against, each reason to look, a difference from the approved design or from Figma), open, or
+  carries Design Desk's mark and its answer, counted from the same parts its body shows — **n things to check** in amber (each decision it goes
+  against, on the item or an option still there, each reason to look, a difference from the approved design, its check holding the pull request, a difference from Figma), open, or
   **Nothing to flag** in green, folded — then the long reads (**What's already known**, **Details**, a
   change's **Parts it changed** and **What changed and why**, and the impact's **Where else this shows up**, **Under the hood**, **Earlier
   decisions about it**), then **Comments** with their count, oldest first so the newest sits above
   the box to write in, each where it began: each conversation a card, its first message with the
-  replies indented under it, each by an avatar, the name, the role and a short date, a note on a
+  replies hung under it on a thin line, each by an avatar, the name (in the reading size), the role in its
+  avatar's colour and a short date — the viewer's own on a faint accent tint, Design Desk's on a soft
+  panel with its mark outlined, everyone else's on none —, a note on a
   design led by its option (and part) as a chip that opens the design workspace there; one resolved
   folds to one line where it falls (who wrote it and how it starts, who resolved it and when) that opens on
   a click. Its moves are quiet words under it: **Reply** opens its box, the cursor in it (**Cancel**
@@ -402,7 +404,7 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
 - **Done conversations fold.** A conversation marked done, on any item, folds to one line: its
   kind, who started it and their first words, then *done*; a click opens it with the option it is
   on, its jump to the part and Reopen. The order
-  stays newest first.
+  stays newest first in full mode; simple mode runs oldest first (Simple mode above).
 
 ## New request
 

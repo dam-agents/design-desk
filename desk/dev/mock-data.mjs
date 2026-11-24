@@ -146,9 +146,10 @@ put("A-compact-1", design({ title: "Compact", dense: true, radius: 4, change: "b
 // R-2: one option, a request that waits for a new option being drawn.
 put("A-r2-1", design({ title: "Plain", state: "empty" }));
 
-const ALICE = { name: "Alice Novak", email: "alice@example.com" };
-const PAT = { name: "Pat Lee", email: "pat@example.com" };
-const DEV = { name: "Dana Kim", email: "dana@example.com" };
+// Each with the role the Desk records on what they write, as the server does.
+const ALICE = { name: "Alice Novak", email: "alice@example.com", role: "designer" };
+const PAT = { name: "Pat Lee", email: "pat@example.com", role: "pm" };
+const DEV = { name: "Dana Kim", email: "dana@example.com", role: "developer" };
 const AGENT = { agent: true };
 const may = { reply: true, resolve: true };
 const anchor = (variant, selector, label, extra = {}) => ({ variant, selector, label, text: label, tag: "button", ...extra });
