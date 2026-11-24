@@ -322,7 +322,9 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   two lines (in full on hover), a pill in the elements' words, **Changed** (a before and an after),
   **New** (a screen the change adds, `new`) or grey **No picture from before** (an after alone not
   known to be new), and where the viewer stands: *Not looked at*, *n notes*, *Changes asked* (a note
-  sent on it while the developer owes the next version) or *✓ Looks good*, the tile's edge in the same colour. A
+  sent on it while the developer owes the next version) or *✓ Looks good*, the tile's edge in the same colour,
+  and for whoever may mark the change handled, with the Figma switch on, **n from Figma** (red when
+  one of them is major): its differences from Figma not taken or marked fine yet. A
   change is a screen pair (`pair`, its pictures by `stage`) or a screen with no `stage`, in that order
   (`changesOf`, [desk.md](desk.md) → Reviews); one tile even for a single change. Beside **Changes**,
   its count, a bar and "n of m looked at", or "✓ All looked at". A screen Design Desk found looks the
@@ -343,6 +345,19 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   counts notes, never marks. With no screens, a line says how they come: Design Desk's own copy of
   the product while one is free (`screens` on), else when the pull request merges; **Add screenshots**
   stays, and a box with **Add to feedback** alone takes notes on the whole pull request.
+- **Differences from Figma on a change** ([desk.md](desk.md) → Reviews): for whoever may mark it
+  handled, with the Figma switch on, on an open pull request, the differences of its `figma_check`
+  that name this change (`change`) and are still in the table sit above the box: **n differences from
+  Figma**, the frame's link, "n to decide" (else "All decided"), and a line saying nobody judged
+  them yet. Each one: its severity and part, what differs, **In Figma** → **In the product** (a
+  colour with its swatch), then **Add to feedback** (primary: its words as Design Desk wrote them,
+  with both values), **Edit, then add** (a box holding those words, to say it in one's own) and
+  **Fine as it is** (an intended difference). Decided, the row folds to its part and "In your
+  feedback" (", in your words"), or green "Fine as it is · goes with your feedback", with **Undo**;
+  one already sent and its conversation still open, "Sent in <whose> feedback" and **See the
+  comment ↓**. A taken one is a note like any other, so no Looks good stands beside it; it shows
+  once, there, not again over the box. Someone else sees the differences only in the item's box
+  ([desk.md](desk.md) → Differences from Figma).
 - **Motion.** Short, soft animations, in the `@media (prefers-reduced-motion: no-preference)`
   block of `desk/page.html`'s style, so a person whose system asks for less motion gets none:
   dialogs rise in and fade out with their backdrop, More and the menu under a name pop open,
@@ -421,23 +436,28 @@ One button holds a person's review of an item ([desk.md](desk.md) → Reviews): 
 head, in every dialog's head (a change's, a part's), and in full mode's **Your feedback**.
 
 - **Its colour is the verdict it sends:** Approved's green for an approval (Approve, Approve for
-  dev), also with nothing drafted yet; amber for **Request changes**; ink for **Comment only**. Inside
-  it, its counts, each only when there is one: notes waiting (a pen) and changes marked Looks good (a
-  check). The verdict is the one picked in its panel, else Request changes while notes wait, else the
+  dev), also with nothing drafted yet; a quiet amber for **Request changes** — the pale amber fill,
+  its words and icons in amber, a thin amber edge, so a note drafted never shouts from the head; ink
+  for **Comment only**. Inside it, its counts, each only when there is one: notes waiting (a pen) and
+  changes marked Looks good or differences from Figma marked fine (a check). The verdict is the one picked in its panel, else Request changes while notes wait, else the
   approval the viewer may send, else Comment only; it follows each note added or removed.
 - **Who gets it:** whoever may send a verdict on the item (`verdictsFor`); someone who may only
   comment, once something of theirs waits to be sent.
 - **Its panel** opens under it and never moves the page; one is open at a time, closed by Esc, a
   click outside it or **Keep drafting**, and kept through the page's redraws: on a change, how many
   of the changes to look at were looked at, a bar, and the ones not looked at as chips that open them
-  (else "✓ All looked at"); each note and Looks good waiting (a Looks good on an unchanged screen is not counted), with what it is about (a change's opens
+  (else "✓ All looked at"); for whoever may mark it handled, the differences from Figma not taken or
+  marked fine yet, as chips of their changes with how many ("Sending leaves them as they are"); each
+  note and Looks good waiting (a Looks good on an unchanged screen is not counted), a difference taken
+  or marked fine tagged **From Figma**, with what it is about (a change's opens
   it) and ✕; else a line saying where notes come from; the verdicts as one control, each with its
   line under it; a note for the whole feedback; and the send button in the verdict's colour (`Request
   changes · 2`, `Approve with 2 notes`, `Approve for dev`, `Send comments`).
 - **The verdicts**, the viewer's own: **Request changes** (with options drawn on a request; on a
   change for who may handle it), the approval — **Approve** in Design review, **Approve for dev** in
   Dev review and, for the UI dev owner, before design — and **Comment only**. Look edits and comments
-  to work in say they go only with Request changes; a change whose review goes to GitHub says so.
+  to work in say they go only with Request changes; a change whose review goes to GitHub says so,
+  and that the differences from Figma taken and marked fine go with it.
 - **Sending:** an approval with nothing drafted and no note is the approval alone (a request's asks
   its questions; a change's marks it handled). Approving a request is the usual approval first, its
   own questions included, then the feedback; Approve for dev is the approval sent For Developers, the

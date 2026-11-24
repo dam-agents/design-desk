@@ -3360,6 +3360,72 @@ test("looks good: a mark with no words on one change of a pull request, kept by 
   assert.deepEqual(s.getCard(chg.id).looks_good, []);
 });
 
+test("differences from Figma on a change: taken into the feedback or marked fine, by whoever may mark it handled", () => {
+  const s = fresh();
+  const img = (n) => s.addAsset({ kind: "screen", name: n, contentType: "image/svg+xml", data: "<svg xmlns='http://www.w3.org/2000/svg'/>", encoding: "utf8" }).asset.id;
+  const [b, a, l1] = [img("b"), img("a"), img("l1")];
+  const frame = { url: "https://www.figma.com/design/abc/Agents?node-id=1-2", name: "Agents", version: "7" };
+  const chg = s.upsertCard({ kind: "change", title: "Spend", source: { repo: "acme/widgets", pr: 7 },
+    screens: [{ asset: b, stage: "before", pair: "Agents list" }, { asset: a, stage: "after", pair: "Agents list" }, { asset: l1, caption: "The limit dialog" }],
+    figma_check: { verdict: "differs", frame, differences: [
+      { part: "Spend label", change: "Agents list", severity: "major", what: "Slash, not words.", figma: "$4.60 / $5.00", product: "$4.60 of $5" },
+      { part: "Pill colour", change: "Agents list", severity: "minor", what: "Green in Figma.", figma: "#1f7a4d", product: "#2f5bd3" },
+      { part: "Save button", change: l1, severity: "major", what: "Filled in Figma.", figma: "Filled", product: "Tinted" },
+      { part: "Footer", severity: "minor", what: "On no change.", figma: "8px", product: "4px" }] } }).card;
+  assert.equal(s.card(chg.id).figma_check.differences[0].change, "Agents list", "a difference keeps the change it is on");
+  assert.throws(() => s.upsertCard({ id: chg.id, figma_check: { verdict: "differs", frame, differences: [{ part: "X", change: "A-gone", severity: "minor", what: "x" }] } }), /not one of the card's changes/, "a change it does not have is refused");
+  const scr = s.upsertCard({ kind: "screen", title: "Agents", path: "/agents" }).card;
+  assert.throws(() => s.upsertCard({ id: scr.id, figma_check: { verdict: "differs", frame, differences: [{ part: "X", change: "Agents list", severity: "minor", what: "x" }] } }), /only a pull request's change/);
+  assert.equal(s.card(chg.id).figma_check.differences[3].change, undefined);
+  const req = s.upsertCard({ kind: "request", title: "Calmer" }).card;
+  assert.throws(() => s.addDraft(req.id, alice, { figma: "Spend label" }), /pull request's change/);
+  assert.throws(() => s.addDraft(chg.id, bob, { figma: "Spend label", text: "x" }), /Only designers/, "only whoever may mark it handled");
+  assert.throws(() => s.addDraft(chg.id, alice, { figma: "Nope", text: "x" }), /not in the table/);
+  assert.throws(() => s.addDraft(chg.id, alice, { figma: "Footer", text: "x" }), /on no change/);
+  // Taken: a note on its change, which takes back a Looks good there; a second draft of the same difference replaces the first.
+  s.addDraft(chg.id, alice, { ok: true, change: "Agents list" });
+  s.addDraft(chg.id, alice, { figma: "Spend label", text: "Spend label: slash, not words." });
+  let ds = s.addDraft(chg.id, alice, { figma: "Spend label", text: "Use the slash, as in Figma.", edited: true }).drafts;
+  assert.deepEqual(ds.map((d) => [d.figma, d.change, d.text, d.edited || false, d.ok || false]), [["Spend label", "Agents list", "Use the slash, as in Figma.", true, false]]);
+  // Fine as it is: no words, and no note: a Looks good may stand beside it.
+  ds = s.addDraft(chg.id, alice, { figma: "Save button", fine: true }).drafts;
+  assert.equal(ds.find((d) => d.figma === "Save button").fine, true);
+  assert.equal(s.addDraft(chg.id, alice, { ok: true, change: l1 }).drafts.filter((d) => d.ok).length, 1, "fine is no note");
+  s.dismissFigma(chg.id, alice, "Pill colour");
+  assert.throws(() => s.addDraft(chg.id, alice, { figma: "Pill colour", fine: true }), /not in the table/, "one taken off the table is no longer offered");
+  s.dismissFigma(chg.id, alice, "Pill colour", false);
+  const r = s.sendReview(chg.id, alice, { verdict: "request-changes" }).review;
+  // The taken one is a comment on its change, tagged with its difference; the fine one leaves the table for everyone, named by the review.
+  assert.deepEqual(r.threads.map((id) => [s.thread(id).change, s.thread(id).figma, s.thread(id).messages[0].text]), [["Agents list", "Spend label", "Use the slash, as in Figma."]]);
+  assert.deepEqual(r.figma_fine, [{ part: "Save button", change: l1 }]);
+  const k = s.card(chg.id).figma_check;
+  assert.deepEqual(k.dismissed.map((d) => [d.part, d.by.email, d.review]), [["Save button", alice.email, r.id]]);
+  assert.deepEqual(s.drafts(chg.id, alice).drafts, [], "everything went");
+  // The same frame compared again keeps it off; a new version of the frame brings it back.
+  s.upsertCard({ id: chg.id, figma_check: { verdict: "differs", frame, differences: k.differences } });
+  assert.deepEqual(s.card(chg.id).figma_check.dismissed.map((d) => d.part), ["Save button"]);
+  s.upsertCard({ id: chg.id, figma_check: { verdict: "differs", frame: { ...frame, version: "8" }, differences: k.differences } });
+  assert.equal(s.card(chg.id).figma_check.dismissed, undefined);
+  // Fine alone is feedback enough; a difference off the table before it is sent is left out.
+  s.addDraft(chg.id, alice, { figma: "Pill colour", fine: true });
+  assert.deepEqual(s.sendReview(chg.id, alice, { verdict: "comment" }).review.figma_fine.map((x) => x.part), ["Pill colour"]);
+  // One taken off the table meanwhile still goes with the review, and stays off as it is.
+  s.addDraft(chg.id, alice, { figma: "Save button", fine: true });
+  s.dismissFigma(chg.id, alice, "Save button");
+  const off = s.sendReview(chg.id, alice, { verdict: "comment" }).review;
+  assert.deepEqual(off.figma_fine.map((x) => x.part), ["Save button"]);
+  assert.equal(s.card(chg.id).figma_check.dismissed.find((d) => d.part === "Save button").review, undefined, "the × that took it off stays the record");
+  // A new screenshot gives the lone screen another key: nothing more is offered on the old one, but a
+  // fine mark made before still goes, by its difference's part.
+  s.dismissFigma(chg.id, alice, "Save button", false);
+  s.addDraft(chg.id, alice, { figma: "Save button", fine: true });
+  const l1b = img("l1b");
+  s.upsertCard({ id: chg.id, screens: [{ asset: b, stage: "before", pair: "Agents list" }, { asset: a, stage: "after", pair: "Agents list" }, { asset: l1b, caption: "The limit dialog" }] });
+  assert.throws(() => s.addDraft(chg.id, alice, { figma: "Save button", text: "x" }), /on no change/);
+  assert.deepEqual(s.sendReview(chg.id, alice, { verdict: "comment" }).review.figma_fine, [{ part: "Save button", change: l1 }]);
+  assert.ok(s.card(chg.id).figma_check.dismissed.some((d) => d.part === "Save button"));
+});
+
 test("add to my feedback: a comment worked in when the feedback is sent with Request changes, as itself; look values ride on a note", () => {
   const s = fresh();
   const a = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: "<p>v</p>", encoding: "utf8" }).asset;
