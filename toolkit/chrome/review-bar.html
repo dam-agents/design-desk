@@ -20,6 +20,9 @@
   #review{position:sticky;top:0;z-index:9999;height:var(--review-h);box-sizing:border-box;display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 16px;font:500 12px/1.4 "IBM Plex Sans",system-ui,sans-serif;background:#f2f4f8;color:#161616;border-bottom:1px dashed #a2a9b0;}
   .dark #review{background:#262626;color:#f4f4f4;border-color:#525252;}
   #review b{font-weight:600;margin-right:4px;}
+  /* Design Desk's credit: its mark (desk/brand/mark.svg), at the bar's left — the chrome is the Desk's, not the product's. */
+  #review-credit{display:inline-flex;align-items:center;gap:6px;padding-right:10px;border-right:1px solid #c1c7cd;}
+  .dark #review-credit{border-color:#525252;}.dark #review-credit .mk-tl{fill:#e0a640;}.dark #review-credit .mk-bl{fill:#eaa889;}.dark #review-credit .mk-tr{fill:#9fcc86;}.dark #review-credit .mk-br{fill:#8eb1ec;}
   #review .style{opacity:.65;font-weight:400;margin-left:auto;}
   #review .seg{display:inline-flex;gap:2px;padding:2px;border-radius:8px;border:1px solid #c1c7cd;}
   #review .seg button{all:unset;cursor:pointer;padding:4px 10px;border-radius:6px;opacity:.7;}
@@ -49,6 +52,7 @@
   html.review-hot :is([data-goto-view],[data-menu-trigger],[onclick],[data-clickable]):not(#review *){outline:2px solid rgba(15,98,254,.75) !important;outline-offset:1px;}
 </style>
 <div id="review">
+  <span id="review-credit" title="A prototype from Design Desk"><svg class="dd-credit" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path class="mk-tl" fill="#9a6200" d="M11.4 11.4A10.9 10.9 0 0 0 0.5 0.5L0.5 7C0.5 11 0.9 11.4 4.9 11.4Z"/><path class="mk-bl" fill="#d98f6c" d="M0.5 23.5A10.9 10.9 0 0 0 11.4 12.6L4.9 12.6C0.9 12.6 0.5 13 0.5 17Z"/><path class="mk-tr" fill="#82ad68" d="M12.6 0.5A10.9 10.9 0 0 1 23.5 11.4L17 11.4C13 11.4 12.6 11 12.6 7Z"/><path class="mk-br" fill="#6a90cc" d="M23.5 12.6A10.9 10.9 0 0 1 12.6 23.5L12.6 17C12.6 13 13 12.6 17 12.6Z"/></svg><span style="opacity:.7">Design Desk</span></span>
   <b id="review-title"></b>
   <span class="seg" id="review-back" hidden><button data-review-back>← Back</button></span>
   <span class="seg" id="review-views"></span>
