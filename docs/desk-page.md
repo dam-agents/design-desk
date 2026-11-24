@@ -725,21 +725,17 @@ Every change to the page keeps to one scale; `desk/tests/page.test.mjs` fails on
 - **Labels:** a label before its value (*Next:*, *Turn:*, *Created:*, *By:*) is grey; how a label
   is worded, its case included, is the guidelines' (Text). A role alone as a label is
   capitalised (*Designer*), inside a sentence as written.
-- **The mark:** Design Desk's mark is the DD pair, `desk/brand/mark.svg`, drawn by
-  `desk/brand/build.mjs`: two D's of two perfect quarter circles each, one even gap between
-  every two, a colour per piece (`--mk-*`). It stands for Design Desk wherever it speaks or acts, never
-  for the product: the favicon, the head (left of the tabs, back to Requests), the agent's avatar
-  in every thread, the ask panel, What's already known and the bell (on an ink circle,
-  `.mk-on-ink`), the `from:` of what it filed or drew, How it works, the offline banner (greyed).
-  Never letters. The spark alone is the icon of **Draw options**. Two cuts: `mark-small.svg`, its
-  gaps wider, for 32px and below (all of the Desk, the favicon, the avatar, GitHub);
-  `mark.svg` from 48px. **At work** the mark moves: `.dd-spin` is the small mark in its own colours, at
-  text size (16px at least): the first D turns round to close a circle, it turns once (2 s), the
-  second D opens it; then the second closes, it turns, the first opens into DD (`SPIN_COLOR`, 9.4 s).
-  Waiting, it rests, faint; on a comment pin, white. In the list it stands
-  at a row's top right (the state's pill drops to the second line), in a request beside its buttons.
-  Still when it speaks, moving when it works. The page carries one inline copy of the mark, in the
-  head; a test keeps it equal to `mark-small.svg`.
+- **The mark:** Design Desk's mark is DD on a disc, `desk/brand/mark.svg`, drawn by
+  `desk/brand/build.mjs`: the disc in a cool gradient (teal, blue, violet, pink; `--mk-s0`…`3`),
+  two D's on it (`--mk-d`: white in light mode, near black in dark), a thin spark cut out of the
+  second. It stands for Design Desk wherever it speaks or acts, never for the product: the favicon,
+  the head (left of the tabs, back to Requests), the agent's avatar in every thread, the ask panel,
+  What's already known and the bell (the disc is the avatar's circle, `.mk-on-ink`), the `from:` of
+  what it filed or drew, How it works, the offline banner (greyed). Never letters. The Desk's spark
+  icon alone is **Draw options**'. **At work:** `.dd-spin`, the DD pair as before, in the mark's
+  blue (`--accent`); in the list at a row's top right (the state's pill drops to the second line),
+  in a request beside its buttons. The page carries one inline copy of the mark, in the head; a
+  test keeps it equal to `mark.svg`.
 - **A request's box** keeps two rows above its stages: the state and Turn with Approve, Close and
   ⋯; then the ways on (sent: when and where on the left, the ways on at the right).
 - **Buttons:** `.btn` 32px high, `.btn.small` 26px; which one is primary, and which green: the

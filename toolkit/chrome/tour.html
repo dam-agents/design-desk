@@ -41,7 +41,7 @@
   #tour-style{font-size:11.5px;opacity:.55;}
   /* Design Desk's credit at the sidebar's foot: its mark (desk/brand/mark.svg); the tour is the Desk's chrome. */
   #tour-credit{display:flex;align-items:center;gap:6px;font-size:11.5px;}#tour-credit span{opacity:.65;}
-.dark #tour-credit .mk-tl{fill:#e0a640;}.dark #tour-credit .mk-bl{fill:#eaa889;}.dark #tour-credit .mk-tr{fill:#9fcc86;}.dark #tour-credit .mk-br{fill:#8eb1ec;}
+
 </style>
 <script>
   addEventListener("DOMContentLoaded", () => {
@@ -59,7 +59,7 @@
       <nav id="tour-steps"></nav><div id="tour-notes"></div>
       <div id="tour-foot"><button id="tour-prev">← Back</button><button id="tour-next">Next →</button>
       <span class="theme"><button data-theme="light" class="on"><span>Light</span></button><button data-theme="dark"><span>Dark</span></button></span></div>
-      <div id="tour-style">${esc(de.dataset.reviewStyle || "")}</div><div id="tour-credit"><svg class="dd-credit" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path class="mk-tl" fill="#9a6200" d="M11.4 11.4A10.9 10.9 0 0 0 0.5 0.5L0.5 7C0.5 11 0.9 11.4 4.9 11.4Z"/><path class="mk-bl" fill="#d98f6c" d="M0.5 23.5A10.9 10.9 0 0 0 11.4 12.6L4.9 12.6C0.9 12.6 0.5 13 0.5 17Z"/><path class="mk-tr" fill="#82ad68" d="M12.6 0.5A10.9 10.9 0 0 1 23.5 11.4L17 11.4C13 11.4 12.6 11 12.6 7Z"/><path class="mk-br" fill="#6a90cc" d="M23.5 12.6A10.9 10.9 0 0 1 12.6 23.5L12.6 17C12.6 13 13 12.6 17 12.6Z"/></svg><span>Design Desk</span></div>`;
+      <div id="tour-style">${esc(de.dataset.reviewStyle || "")}</div><div id="tour-credit"><svg class="dd-credit" width="14" height="14" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><defs><linearGradient id="ddc-t" x1="3" y1="2" x2="21" y2="22" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#139a9c"/><stop offset="0.38" stop-color="#2f5bd3"/><stop offset="0.68" stop-color="#7a45d0"/><stop offset="1" stop-color="#c94a98"/></linearGradient></defs><circle cx="12" cy="12" r="12" fill="url(#ddc-t)"/><path d="M4.47 8.28H7.61A3.72 3.72 0 0 1 7.61 15.72H4.47ZM12.67 8.28H15.81A3.72 3.72 0 0 1 15.81 15.72H12.67ZM15.62 9.55Q16.07 11.55 17.17 12Q16.07 12.45 15.62 14.45Q15.17 12.45 14.07 12Q15.17 11.55 15.62 9.55Z" fill-rule="evenodd" fill="#ffffff"/></svg><span>Design Desk</span></div>`;
     wrap.append(side);
     const nav = side.querySelector("#tour-steps"), notes = side.querySelector("#tour-notes");
     steps.forEach((s, i) => { const b = document.createElement("button"); b.innerHTML = `<span class="sn"><span>${i + 1}</span></span>${esc(s.dataset.stepTitle || "Step " + (i + 1))}`; b.onclick = () => go(i); nav.append(b); });
