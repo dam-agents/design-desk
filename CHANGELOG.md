@@ -7,13 +7,20 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
-## 1.114.1 — 2026-11-24
+## 1.115.1 — 2026-11-24
 
 **Upgrade:**
 1. Restart the Desk server ([desk.md](docs/desk.md) → Server) and republish the page
    ([desk.md](docs/desk.md) → Publishing the page): a change whose pull request merged before anyone
    approved it can be approved from Submit feedback, which marks it handled; nothing is posted to the
    pull request ([desk.md](docs/desk.md) → Reviews). No data migration.
+
+## 1.115.0 — 2026-11-24
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): in simple mode, Submit feedback
+   asks **Which design?** for an approval of a request with more than one option, and its buttons stay
+   in view in a footer ([desk-page.md](docs/desk-page.md) → Submit feedback). No data migration.
 
 ## 1.114.0 — 2026-11-24
 
