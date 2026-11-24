@@ -211,8 +211,8 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   words, never broken across lines (a change its pull request's, `PR#812`; a request, or a change
   with no pull request, its own on the Desk, `R-12` or `P-3`), who asked and where from in the same
   words (`by Pat Lee, from Slack`: the person behind a Slack message or an issue, never the Desk; a
-  change's pull request author), the Desk's spinner while Design Desk works on it, and its state's
-  pill on every row, in a column of its own on the right as high as the row, the rest narrowing for
+  change's pull request author), and its state's
+  pill on every row (while Design Desk works on it, the spinner at its top right and the pill under it), in a column of its own on the right as high as the row, the rest narrowing for
   it (on a screen under 400 px, where a long date has no room beside it, on a line of its own under
   the date, at the right); a long name is cut with an ellipsis. A title is in English, here and in the head: Design Desk's translation, unless a person
   renamed it. The
@@ -232,7 +232,7 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   For Designers / For Developers switch. An opened request or change starts with one head that
   stays in view while the page scrolls: the kind's icon, the title on one line (cut with an
   ellipsis, its full words on hover) with its number and the link icon close after it, the buttons
-  beside it alone; under them, across the whole width, its state's pill a size larger than a row's, Design Desk's work in words beside the spinner, a change's pull request
+  beside it alone; under them, across the whole width, its state's pill a size larger than a row's, Design Desk's work in words (the spinner beside the buttons), a change's pull request
   as a pill in GitHub's inks as tall as the state's, as full mode's dot (`#812 Draft` grey, `#812 Open` green, `#812 Merged`
   purple), a link to GitHub, a reported bug's **Bug** chip (with
   its severity), who asked and where from in the row's words, and when (a person by their name on
@@ -731,10 +731,14 @@ Every change to the page keeps to one scale; `desk/tests/page.test.mjs` fails on
   for the product: the favicon, the head (left of the tabs, back to Requests), the agent's avatar
   in every thread, the ask panel, What's already known and the bell (on an ink circle,
   `.mk-on-ink`), the `from:` of what it filed or drew, How it works, the offline banner (greyed).
-  Never letters. The spark alone is the icon of **Draw options**. **At work** the mark moves:
-  `.dd-spin` is the same DD in one colour, two tones; the first D turns round, the two close into a
-  disc, it turns and opens into DD. Still when it speaks, moving when it works. The page carries one
-  inline copy, in the head; a test keeps it equal to `mark.svg`.
+  Never letters. The spark alone is the icon of **Draw options**. Two cuts: `mark-small.svg`, its
+  gaps and spark wider, for 32px and below (all of the Desk, the favicon, the avatar, GitHub);
+  `mark.svg` from 48px. **At work** the mark moves: `.dd-spin` is the small mark in the accent, text
+  size (16px at least), its pieces turning over one by one on a beat (`SPIN_SVG`: four, the pairs
+  back, two beats of rest), never the whole of it; waiting, it rests, faint. In the list it stands
+  at a row's top right (the state's pill drops to the second line), in a request beside its buttons.
+  Still when it speaks, moving when it works. The page carries one inline copy of the mark, in the
+  head; a test keeps it equal to `mark-small.svg`.
 - **A request's box** keeps two rows above its stages: the state and Turn with Approve, Close and
   ⋯; then the ways on (sent: when and where on the left, the ways on at the right).
 - **Buttons:** `.btn` 32px high, `.btn.small` 26px; which one is primary, and which green: the

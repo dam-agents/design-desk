@@ -71,15 +71,28 @@ export const AVATAR_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 
 export const MARK_INLINE = `<svg class="dd-mark" viewBox="0 0 24 24" aria-hidden="true">${paths(PIECES_SMALL)}</svg>`;
 
 /**
- * The spinner (.dd-spin): the small mark in one colour. Each D is a mask over the spinner's whole
- * box, so both sit exactly where the mark's do and the box turns about its own centre; the first
- * D turns round about its own centre line, SPIN_FLIP_X across the box.
+ * The spinner (.dd-spin): the small mark, its pieces flipping one by one on a beat. Eight beats of
+ * 0.6 s: the four pieces turn over in turn, clockwise from the top left (beats 1-4); the pairs
+ * across the middle turn back together (5, 6); two beats of rest (7, 8). Nothing turns as a whole.
+ * The SVG carries its own animation and is the CSS mask of .dd-spin, whose colour is the page's.
+ * SPIN_STILL is the mark at rest, for a spinner that waits (.queued).
  */
-const dMask = (keys) => `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">${keys.map((k) => `<path d="${PIECES_SMALL[k]}"/>`).join("")}</svg>`)}")`;
-export const SPIN_MASK_LEFT = dMask(["tl", "bl"]);
-export const SPIN_MASK_RIGHT = dMask(["tr", "br"]);
-export const SPIN_FLIP_X = `${f(((C + leftMid(SMALL)) / 24) * 100)}%`;
-/** The same masks in a JS string's single quotes (the prototype overlay's own copy). */
+export const SPIN_BEAT = 0.6;
+const BEATS = 8, FLIP = 0.36; // a flip takes 0.36 s of its 0.6 s beat
+const pcT = (beat) => f((beat * 100) / BEATS);
+const flipKeys = (out, back) => {
+  const o = pcT(out - 1), oe = f(o + (FLIP * 100) / (BEATS * SPIN_BEAT)), b = pcT(back - 1), be = f(b + (FLIP * 100) / (BEATS * SPIN_BEAT));
+  return `0%,${o}%{transform:scale(1,1)}${oe}%,${b}%{transform:var(--t)}${be}%,100%{transform:scale(1,1)}`;
+};
+// Which beat each piece turns over and back on, and which way: the first D's pieces across, the
+// second's up and down, so the four never move alike.
+const SPIN_PLAN = { tl: [1, 5, "scale(-1,1)"], tr: [2, 6, "scale(1,-1)"], br: [3, 5, "scale(1,-1)"], bl: [4, 6, "scale(-1,1)"] };
+const spinCss = ORDER.map((k) => { const [o, b, t] = SPIN_PLAN[k]; return `@keyframes ${k}{${flipKeys(o, b)}}.${k}{--t:${t};animation:${k} ${f(BEATS * SPIN_BEAT)}s cubic-bezier(.45,0,.2,1.25) infinite}`; }).join("");
+export const SPIN_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><style>path{transform-box:fill-box;transform-origin:center}${spinCss}@media (prefers-reduced-motion:reduce){path{animation-duration:${f(BEATS * SPIN_BEAT * 2.5)}s}}</style>${ORDER.map((k) => `<path class="${k}" d="${PIECES_SMALL[k]}"/>`).join("")}</svg>`;
+const dataUrl = (svg) => `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+export const SPIN_MASK = dataUrl(SPIN_SVG);
+export const SPIN_STILL = dataUrl(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">${ORDER.map((k) => `<path d="${PIECES_SMALL[k]}"/>`).join("")}</svg>`);
+/** A mask in a JS string's single quotes (the prototype overlay's own copy). */
 export const sq = (s) => s.replace(/"/g, "'");
 
 /** The favicon, as a data: URL the page links to (the page is one file). */
