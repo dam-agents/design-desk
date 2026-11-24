@@ -403,14 +403,17 @@
   <div class="gl-item">
     <div class="gl-rule">
       <h3 class="gl-h3">A thread, a resolved thread</h3>
-      <p class="gl-p">Replies indent under the first message. Who wrote it shows by role: a designer, a developer, Design Desk. A resolved thread folds to one line.</p>
+      <p class="gl-p">Replies hang on a line; only a designer's role shows; yours are tinted, Design Desk's grey. A resolved one folds.</p>
     </div>
     <div class="gl-ex gl-wide">
       <article class="sthread">
-        <div class="smsg"><span class="sav" data-r="designer">AN</span><div class="sm-b"><div class="who"><b>Alice Novak</b><span class="role">Designer</span><span class="at">Today, 9:12 AM</span></div><p>Can the empty state say what to do next?</p></div></div>
-        <div class="smsg re"><span class="sav" data-r="agent">DD</span><div class="sm-b"><div class="who"><b>Design Desk</b><span class="at">Today, 9:14 AM</span></div><p>Version 2 adds a button that opens the new-request form.</p></div></div>
+        <div class="smsg"><span class="sav" data-r="designer">AN</span><div class="sm-b"><div class="who"><b>Alice Novak</b><span class="role" data-r="designer">Designer</span><span class="at">Today, 9:12 AM</span></div><p>Can the empty state say what to do next?</p></div></div>
+        <div class="sreplies">
+          <div class="smsg re" data-k="agent"><span class="sav" data-r="agent">DD</span><div class="sm-b"><div class="who"><b>Design Desk</b><span class="at">Today, 9:14 AM</span></div><p>Version 2 adds a button for it.</p></div></div>
+        </div>
+        <div class="sacts"><button class="slk">Reply</button><button class="slk">Resolve</button></div>
       </article>
-      <details class="sthread done"><summary><span class="q">Pat Lee: The spacing under the header looks off</span><span class="hint">Resolved · Mon 2 Nov</span></summary><p>The spacing is back on the scale.</p></details>
+      <details class="sthread done"><summary><svg class="chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg><svg class="ok" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg><span class="q"><b>Pat Lee</b>: The spacing under the header looks off</span><span class="hint">Resolved · Mon 2 Nov</span></summary><p>The spacing is back on the scale.</p></details>
     </div>
   </div>
   <div class="gl-item">
@@ -431,7 +434,7 @@
       </section>
       <article class="rvw" data-v="request-changes"><div class="rv-h"><b>Alice Novak</b><span class="hint">Designer</span><span class="rv-v">Changes requested</span><span class="hint">Today, 10:02 AM</span></div>
         <div class="rv-note"><p>Close, two things to fix before it goes on.</p></div><p class="rv-ok">✓ Looks good: Agents list</p>
-        <article class="sthread"><div class="smsg"><span class="sav" data-r="designer">AN</span><div class="sm-b"><div class="who"><b>Alice Novak</b><span class="role">Designer</span><span class="at">Today, 10:02 AM</span></div><p>The button should say what it sends.</p></div></div></article>
+        <article class="sthread"><div class="smsg"><span class="sav" data-r="designer">AN</span><div class="sm-b"><div class="who"><b>Alice Novak</b><span class="role" data-r="designer">Designer</span><span class="at">Today, 10:02 AM</span></div><p>The button should say what it sends.</p></div></div></article>
       </article>
     </div>
   </div>
