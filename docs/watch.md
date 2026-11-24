@@ -137,8 +137,8 @@ steps say; the decision notes of step 4 are always yours to read.
     With `figma: enabled`, also compare the change with its frames in Figma: the frame of the
     request it builds, else a figma.com link in the PR or the issue it closes, else those of
     the screens and elements it touched (the `figma` skill →
-    Compare with the product), and put `figma_check` on the change card, each difference naming the
-    change it is on (the skill → Writing it). At most 10 Figma
+    Compare with the product), and put `figma_check` on the change card, a difference on one of its
+    screens naming that change (the skill → Writing it). At most 10 Figma
     reads per run; a Figma failure skips the comparison and never fails the change or its
     ledger entry (the skill → Failures).
 12. **Propose** (`proposals: enabled`): when the change adds a new feature or a new screen —

@@ -146,8 +146,8 @@ Figma link field either.
   **✓ Matches Figma** with the frame.
 - **Severity.** **Major**: a person would notice it in use (layout, a state, words,
   behaviour on screen). **Minor**: a value a little apart (a shade, a few pixels).
-- **On a pull request's change**, each difference names the change it is on (`change`) and is offered
-  to its reviewer there ([Reviews](#reviews)).
+- **On a pull request's change**, a difference on one of its screens names that change (`change`;
+  none for one on no screen) and is offered to its reviewer there ([Reviews](#reviews)).
 - **×** at the end of a row (whoever may mark items handled) takes that difference off the
   table for everyone (`POST /api/cards/<id>/figma-dismiss {part}`, a decision's under
   `/api/decisions/`); it stays off while the frame is the same and comes back once the
@@ -529,9 +529,9 @@ their own (`edited`) — a note on that change like any other, which takes back 
 `{figma: <part>, fine: true}` marks it **fine as it is**, an intended difference, with no words and no
 note. One draft per person and difference (a second replaces the first); refused for anyone else, for
 a part not in the table or on no change. Sent, a taken one is a comment on its change tagged with its
-difference (`figma` on the conversation); the review names those marked fine (`figma_fine: [{part,
-change}]`) and they leave the table for everyone, as the × takes one off (`dismissed`, with the
-review), until the frame in Figma changes; one taken off the table meanwhile is left out. A
+difference (`figma` on the conversation); the review names every one marked fine (`figma_fine: [{part,
+change}]`), and those still in the table leave it for everyone, as the × takes one off (`dismissed`,
+with the review), until the frame in Figma changes; one taken off meanwhile keeps that removal. A
 difference nobody decided on stays on its change for the next review: nothing holds the feedback
 back for it. Nothing goes to GitHub before a person looked: Design Desk's own check comment names the
 differences as its reason ([watch.md](watch.md) → CI gate), and its findings reach the pull request
