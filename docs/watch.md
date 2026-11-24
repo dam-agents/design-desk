@@ -180,7 +180,7 @@ Merged and closed pull requests are never touched: their checks no longer matter
   item); a pass is `-f state=success -f description="Seen on the Design Desk"`. Then upsert
   `{id, ci: {state: "failing" | "passing", sha: <headRefOid>}}`.
 - **The mark line.** What Design Desk writes on GitHub opens its bold **Design Desk** with its mark,
-  16 px: `<img src="https://raw.githubusercontent.com/dam-agents/design-desk/1cc498d24dc92daa85e550683b5c138c9d73d669/desk/brand/mark.png" width="16" height="16" alt="">`. The image is this repository's `desk/brand/mark.png` pinned to a commit, never a
+  16 px: `<img src="https://raw.githubusercontent.com/dam-agents/design-desk/a0c075c5d4a05ef3ae8e2c6302aab3dd9de5cba3/desk/brand/mark.png" width="16" height="16" alt="">`. The image is this repository's `desk/brand/mark.png` pinned to a commit, never a
   branch that moves; a GitHub comment cannot carry an inline SVG. The hidden markers and the
   `design-desk` status context never change for it.
 - **Comment on the PR**, after each status write: one comment per PR, found by its first line
@@ -191,7 +191,7 @@ Merged and closed pull requests are never touched: their checks no longer matter
 
   ```markdown
   <!-- design-desk ci=<card id> -->
-  <img src="https://raw.githubusercontent.com/dam-agents/design-desk/1cc498d24dc92daa85e550683b5c138c9d73d669/desk/brand/mark.png" width="16" height="16" alt=""> **Design Desk: this UI change needs approval**
+  <img src="https://raw.githubusercontent.com/dam-agents/design-desk/a0c075c5d4a05ef3ae8e2c6302aab3dd9de5cba3/desk/brand/mark.png" width="16" height="16" alt=""> **Design Desk: this UI change needs approval**
 
   The `design-desk` check fails until <a designer | a UI dev owner> marks the change handled on the Design Desk.
 
