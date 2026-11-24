@@ -71,27 +71,31 @@ export const AVATAR_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 
 export const MARK_INLINE = `<svg class="dd-mark" viewBox="0 0 24 24" aria-hidden="true">${paths(PIECES_SMALL)}</svg>`;
 
 /**
- * The spinner (.dd-spin): the small mark, its pieces flipping one by one on a beat. Eight beats of
- * 0.6 s: the four pieces turn over in turn, clockwise from the top left (beats 1-4); the pairs
- * across the middle turn back together (5, 6); two beats of rest (7, 8). Nothing turns as a whole.
- * The SVG carries its own animation and is the CSS mask of .dd-spin, whose colour is the page's.
+ * The spinner (.dd-spin): the small mark, calm. Four phrases of four beats (BEAT s each): a D turns
+ * round — the first one in the 1st and 3rd phrase (DD closes into a disc), the second in the 2nd
+ * and 4th (the D's face each other) — and back; the mark turns a quarter; a beat of rest. After the
+ * four phrases it has turned once and stands as it began. The mark fills SPIN_SIZE of the box.
+ * The SVG carries its own motion and is the CSS mask of .dd-spin, whose colour is the page's.
  * SPIN_STILL is the mark at rest, for a spinner that waits (.queued).
  */
-export const SPIN_BEAT = 0.6;
-const BEATS = 8, FLIP = 0.36; // a flip takes 0.36 s of its 0.6 s beat
-const pcT = (beat) => f((beat * 100) / BEATS);
-const flipKeys = (out, back) => {
-  const o = pcT(out - 1), oe = f(o + (FLIP * 100) / (BEATS * SPIN_BEAT)), b = pcT(back - 1), be = f(b + (FLIP * 100) / (BEATS * SPIN_BEAT));
-  return `0%,${o}%{transform:scale(1,1)}${oe}%,${b}%{transform:var(--t)}${be}%,100%{transform:scale(1,1)}`;
+export const SPIN_BEAT = 0.7;
+export const SPIN_SIZE = 0.8;
+const BEATS = 16, MOVE = 0.55; // each move takes 0.55 s of its beat
+const at = (beat) => f((beat * 100) / BEATS), end = (beat) => f(((beat + MOVE / SPIN_BEAT) * 100) / BEATS);
+// A D turns round on the first beat of the phrases it moves in and back on the second.
+const flipKeys = (phrases) => {
+  const k = ["0%{transform:scaleX(1)}"];
+  for (const p of phrases) k.push(`${at(4 * p)}%{transform:scaleX(1)}`, `${end(4 * p)}%,${at(4 * p + 1)}%{transform:scaleX(-1)}`, `${end(4 * p + 1)}%{transform:scaleX(1)}`);
+  return k.join("") + "100%{transform:scaleX(1)}";
 };
-// Which beat each piece turns over and back on, and which way: the first D's pieces across, the
-// second's up and down, so the four never move alike.
-const SPIN_PLAN = { tl: [1, 5, "scale(-1,1)"], tr: [2, 6, "scale(1,-1)"], br: [3, 5, "scale(1,-1)"], bl: [4, 6, "scale(-1,1)"] };
-const spinCss = ORDER.map((k) => { const [o, b, t] = SPIN_PLAN[k]; return `@keyframes ${k}{${flipKeys(o, b)}}.${k}{--t:${t};animation:${k} ${f(BEATS * SPIN_BEAT)}s cubic-bezier(.45,0,.2,1.25) infinite}`; }).join("");
-export const SPIN_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><style>path{transform-box:fill-box;transform-origin:center}${spinCss}@media (prefers-reduced-motion:reduce){path{animation-duration:${f(BEATS * SPIN_BEAT * 2.5)}s}}</style>${ORDER.map((k) => `<path class="${k}" d="${PIECES_SMALL[k]}"/>`).join("")}</svg>`;
+const turnKeys = [0, 1, 2, 3].map((p) => `${at(4 * p + 2)}%{transform:rotate(${90 * p}deg)}${end(4 * p + 2)}%{transform:rotate(${90 * (p + 1)}deg)}`).join("");
+const LOOP = f(BEATS * SPIN_BEAT), EASE = "cubic-bezier(.65,0,.35,1)";
+const pad = f((24 / SPIN_SIZE - 24) / 2);
+const spinPaths = (cls) => `<g class="${cls}">${(cls === "l" ? ["tl", "bl"] : ["tr", "br"]).map((k) => `<path d="${PIECES_SMALL[k]}"/>`).join("")}</g>`;
+export const SPIN_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${-pad} ${-pad} ${f(24 + 2 * pad)} ${f(24 + 2 * pad)}"><style>g{transform-box:fill-box;transform-origin:center;animation:${LOOP}s ${EASE} infinite}.a{animation-name:t}.l{animation-name:l}.r{animation-name:r}@keyframes t{0%{transform:rotate(0)}${turnKeys}100%{transform:rotate(360deg)}}@keyframes l{${flipKeys([0, 2])}}@keyframes r{${flipKeys([1, 3])}}@media (prefers-reduced-motion:reduce){g{animation-duration:${f(LOOP * 2)}s}}</style><g class="a">${spinPaths("l")}${spinPaths("r")}</g></svg>`;
 const dataUrl = (svg) => `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
 export const SPIN_MASK = dataUrl(SPIN_SVG);
-export const SPIN_STILL = dataUrl(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">${ORDER.map((k) => `<path d="${PIECES_SMALL[k]}"/>`).join("")}</svg>`);
+export const SPIN_STILL = dataUrl(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${-pad} ${-pad} ${f(24 + 2 * pad)} ${f(24 + 2 * pad)}">${ORDER.map((k) => `<path d="${PIECES_SMALL[k]}"/>`).join("")}</svg>`);
 /** A mask in a JS string's single quotes (the prototype overlay's own copy). */
 export const sq = (s) => s.replace(/"/g, "'");
 
