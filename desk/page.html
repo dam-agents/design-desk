@@ -3501,9 +3501,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // An approved request whose spec draft waits for a person to send it is theirs to move: in its review.
   // As full mode reads it: a spec draft waits until a person sends it, unless its approver asked it to go by itself.
   const specWaits = (c) => c.status === "spec" && c.spec?.review === "draft" && !c.approved?.auto_send;
-  // A spec sent back for changes is still not with developers: it stays in its review while Design
-  // Desk rewrites it, and comes back as a draft to read (docs/desk-page.md → A request's state in the list).
-  const specInReview = (c) => specWaits(c) || (c.status === "spec" && c.spec?.review === "changes" && !c.approved?.auto_send);
+  // A spec sent back for changes is still not with developers, whatever its approver asked: it stays
+  // in its review while Design Desk rewrites it, and comes back as a draft to read (docs/desk-page.md
+  // → A request's state in the list).
+  const specInReview = (c) => specWaits(c) || (c.status === "spec" && c.spec?.review === "changes");
   // Its review, by its side: Dev review (key `proposal`) For Developers, Design review (key `open`) For Designers.
   // In Dev review a request not yet approved says Proposal on its pill; a change, or a spec draft waiting, Dev review.
   const reviewOf = (c) => (forOf(c) !== "developers" ? { state: "open", pill: null }
@@ -3894,7 +3895,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       // In Dev review after design opened, the approval is Approve for dev; before design, the UI dev
       // owner's Approve for dev is the only one (docs/desk.md → Draft and Proposal).
       const dev = simpleState(c, true)?.state === "proposal";
-      if (open && !preDesign(c) && !specWaits(c) && canApprove(c) && (c.triage || (c.variants || []).length) && !closed(c)) out.push({ id: "approve", name: dev ? "Approve for dev" : "Approve", hint: dev ? "It goes to In dev, without a designer; your comments go with it." : "You approve the request; your comments go with it." });
+      if (open && !preDesign(c) && !specInReview(c) && canApprove(c) && (c.triage || (c.variants || []).length) && !closed(c)) out.push({ id: "approve", name: dev ? "Approve for dev" : "Approve", hint: dev ? "It goes to In dev, without a designer; your comments go with it." : "You approve the request; your comments go with it." });
       if (preDesign(c) && !closed(c) && stageMoves(c)[2]) out.push({ id: "approve-dev", name: "Approve for dev", hint: "It goes to In dev at once, without a designer; your comments go with it." });
     } else if (mayHandle(c) && !c.source?.merged_at && c.status !== "archived") {
       out.push({ id: "request-changes", name: "Request changes", hint: S.me?.review_post ? "The developer makes the next version; your feedback goes to the pull request." : "The developer makes the next version." });
@@ -5987,13 +5988,13 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     return repo ? ` for a GitHub issue in ${a(repo, name)}` : " for a GitHub issue";
   }
   // The spec's versions, its text (or the editor) and the version line; the fold below and the banner share it.
-  function specInner(c, tools = "") {
+  function specInner(c) {
     const sp = c.spec;
     const versions = [...(sp.history || []), { asset: sp.asset, at: sp.at, by: sp.by }];
     const shown = versions.find((x) => x.asset === S.specView) || versions[versions.length - 1];
     const list = versions.length > 1 ? `<p class="hint spec-versions">Versions: ${versions.map((x, i) => `<button data-spec-view="${esc(x.asset)}" aria-pressed="${x === shown}">${i + 1} · ${esc(specBy(x))}</button>`).join(", ")}</p>` : "";
     const edit = S.specEdit === c.id ? `<div class="spec-edit"><textarea id="spec-text" class="spec-text" rows="24" aria-label="The developer spec"></textarea><div class="spec-preview" id="spec-preview" aria-label="How it reads"></div></div><div class="actions"><button class="btn primary" data-spec-save>Save this version</button><button class="btn" data-spec-cancel>Cancel</button></div>` : "";
-    return `<div class="spec-head"><p class="hint">Version ${versions.indexOf(shown) + 1} of ${versions.length}, by ${esc(specBy(shown))}${shown.at ? ` · ${esc(when(shown.at))}` : ""}.</p>${tools}</div>${list}
+    return `<div class="spec-head"><p class="hint">Version ${versions.indexOf(shown) + 1} of ${versions.length}, by ${esc(specBy(shown))}${shown.at ? ` · ${esc(when(shown.at))}` : ""}.</p></div>${list}
       ${edit || `<div id="spec-body" data-asset="${esc(shown.asset)}">…</div>`}`;
   }
   const specWho = (e) => e && e === S.me?.email ? "you" : e || "someone";

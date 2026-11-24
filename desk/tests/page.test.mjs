@@ -5044,7 +5044,8 @@ test("simple mode's head says, muted, who approved it and where it went; a bug s
 test("a spec sent back for changes keeps its review, not In dev", (t) => open(t, HEAD_DESK(HEAD_ME, [
   { ...drawn, id: "R-7", title: "Rewritten for design", status: "spec", approved: { by: { email: "d@example.com" }, at: "2026-11-18T09:00:00Z" }, spec: { review: "changes", asset: "A-2", asked: { by: { email: "d@example.com" }, at: "2026-11-18T10:00:00Z", note: "Bigger prices." } } },
   { ...drawn, id: "R-8", title: "Rewritten for dev", status: "spec", for: "developers", approved: { by: { email: "d@example.com" }, at: "2026-11-18T09:00:00Z" }, spec: { review: "changes", asset: "A-2" } },
-  { ...drawn, id: "R-9", title: "Sent on", status: "spec", approved: { by: { email: "d@example.com" }, at: "2026-11-18T09:00:00Z" }, spec: { review: "sent", asset: "A-2" } }]), async (desk) => {
+  { ...drawn, id: "R-9", title: "Sent on", status: "spec", approved: { by: { email: "d@example.com" }, at: "2026-11-18T09:00:00Z" }, spec: { review: "sent", asset: "A-2" } },
+  { ...drawn, id: "R-10", title: "Asked to go by itself", status: "spec", approved: { by: { email: "d@example.com" }, at: "2026-11-18T09:00:00Z", auto_send: true }, spec: { review: "changes", asset: "A-2" } }]), async (desk) => {
   await desk.waitForSelector("#list");
   const pill = async (id, title) => {
     await desk.evaluate((h) => { location.hash = h; }, `#${id}`);
@@ -5053,12 +5054,14 @@ test("a spec sent back for changes keeps its review, not In dev", (t) => open(t,
   };
   assert.match(await pill("R-8", "Rewritten for dev"), /Dev review/, "For Developers: still in Dev review");
   assert.match(await pill("R-9", "Sent on"), /In dev/, "only a sent spec is In dev");
+  assert.match(await pill("R-10", "Asked to go by itself"), /Design review/, "sent back for changes, whatever its approver asked");
   assert.match(await pill("R-7", "Rewritten for design"), /Design review/, "For Designers: still in Design review");
   await desk.waitForSelector('#detail .spec-banner[data-s="rewriting"]');
   assert.match(await desk.textContent("#detail .spec-banner"), /Design Desk is rewriting the spec as you asked\.\s*Asked by you/);
   assert.match(await desk.textContent("#detail .sh-line .spill"), /Design review/);
   assert.equal(await desk.locator("#detail [data-spec-send]").count(), 0, "no send while it is rewritten");
   assert.equal(await desk.locator("#detail .spec-banner [data-spec-read]").count(), 1, "the last version still reads");
+  assert.equal(await desk.locator('#detail [data-fb="head"]').count(), 0, "no Submit feedback offering Approve again: it is approved, and nothing waits to be sent");
 }));
 
 // Ask for changes takes a note of any length: the dialog sets no limit, and the note goes whole.

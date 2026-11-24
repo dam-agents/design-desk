@@ -1176,6 +1176,9 @@ test("before a build the agent asks a form; the answer resumes the build with it
   const { thread: big } = s.openThread(card.id, { agent: true }, { kind: "asks", text: "Six.", step: "build", questions: Array(6).fill({ text: long, options: opts }) });
   s.answerForm(big.id, alice, Array(6).fill({ choice: opts[0], note: "n".repeat(500) }));
   assert.equal(s.thread(big.id).state, "answered", "six full answers fit in the reply");
+  const { thread: long6 } = s.openThread(card.id, { agent: true }, { kind: "asks", text: "Six more.", step: "build", questions: Array(6).fill({ text: long, options: opts }) });
+  s.answerForm(long6.id, alice, Array(6).fill({ choice: opts[0], note: "n".repeat(8000) }));
+  assert.equal(s.thread(long6.id).state, "answered", "six long answers, past the old 40,000 together, fit too");
 });
 
 test("straight to implementation survives the handoff's questions", () => {
@@ -3046,6 +3049,10 @@ test("a request in another language keeps its English beside the asker's words",
   const c = s.card(card.id);
   assert.deepEqual([c.translation.lang, c.translation.problem, c.translation.title], ["cs", "The table overflows on a phone.", "Overflows"]);
   assert.equal(c.request.problem, "Tabulka přetéká na mobilu.", "the asker's words stay as written");
+  const longCs = "Tabulka přetéká. ".repeat(400).trim(), longEn = "The table overflows. ".repeat(400).trim();
+  const { card: wordy } = s.createRequest({ agent: true }, { title: "Dlouhé", problem: longCs });
+  s.upsertCard({ id: wordy.id, translation: { lang: "cs", problem: longEn } });
+  assert.equal(s.card(wordy.id).translation.problem, longEn, "a long request's English goes whole too");
   assert.throws(() => s.upsertCard({ id: card.id, translation: { lang: "en", problem: "X." } }), /not en/);
   assert.throws(() => s.upsertCard({ id: card.id, translation: { lang: "cs" } }), /problem/);
   assert.throws(() => s.upsertCard({ id: card.id, translation: { lang: "cs", problem: "X.", vision: "Y." } }), /no vision/, "no English for words the request does not have");

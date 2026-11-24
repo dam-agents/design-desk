@@ -260,7 +260,7 @@ function cleanTranslation(t, request, at) {
   for (const k of ["title", "problem", "vision", "goal", "steps"]) {
     if (t[k] == null || t[k] === "") continue;
     if (k !== "title" && !request[k]) throw bad(`translation.${k}: the request has no ${k}`);
-    out[k] = clean(t[k], k === "title" ? LIMITS.title : LIMITS.text, `translation.${k}`);
+    out[k] = clean(t[k], k === "title" ? LIMITS.title : LIMITS.prompt, `translation.${k}`);
   }
   if (!out.problem) throw bad("translation.problem is empty");
   return { ...out, at };
@@ -1478,9 +1478,9 @@ export class Store {
       if (choice !== null && !q.options.includes(choice)) throw bad(`"${choice}" is not an option of question ${i + 1}`);
       return { choice, note: optText(a.note, LIMITS.prompt, "note") };
     });
-    // Six full questions with notes stay under twice the text limit; the reply takes that.
     const text = t.questions.map((q, i) => { const a = given[i]; return `**${q.text}**\n${a.choice ?? "Leave it to Design Desk"}${a.note ? ` — ${a.note}` : ""}`; }).join("\n\n");
-    const out = this.reply(threadId, who, text, LIMITS.prompt * 2);
+    // Each answer may take the whole bound; the questions and their choices ride beside them.
+    const out = this.reply(threadId, who, text, (LIMITS.prompt + LIMITS.text) * t.questions.length);
     t.answers = given;
     this.save();
     return out;
