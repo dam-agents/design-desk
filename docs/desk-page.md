@@ -433,7 +433,7 @@ head, in every dialog's head (a change's, a part's), and in full mode's **Your f
   (else "✓ All looked at"); each note and Looks good waiting (a Looks good on an unchanged screen is not counted), with what it is about (a change's opens
   it) and ✕; else a line saying where notes come from; the verdicts as one control, each with its
   line under it; in simple mode, for an approval of a request with more than one option (and no live
-  prototype naming it), **Which design?**: the options as one control, each by its number and name,
+  prototype naming it), **Which design?**: the options as one control, each by its number and name, picked in neutral (no colour: the verdict carries it),
   the one shown on the page picked first — the approval is for it, and its dialog asks for no option
   (Request changes and Comment only show none: a comment on a design goes through the workspace or
   an element); a note for the whole feedback; and, in a footer fixed to the panel's bottom that stays
