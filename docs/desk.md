@@ -546,7 +546,9 @@ draft becomes its own conversation tagged `review`, all or none. The verdicts:
   note alone becomes one, and the page shows its words there only, not again as the review's note. On a change, by whoever may mark it handled: the drafts are comments,
   and the review keeps the pull request's head commit (`sha`) the Desk last read, or the first it
   reads, until its post names the last commit from before it (judged by the next read, never the post).
-- **Approve** — on a change, by whoever may mark it handled: it is marked handled. On a request,
+- **Approve** — on a change, by whoever may mark it handled: it is marked handled; a change whose
+  pull request is merged before anyone approved it is approved the same way, as long as nobody
+  handled it, and nothing goes to its pull request. On a request,
   only after the same person approved it: the review goes with that approval.
 - **Comment only** — by whoever may comment: comments, nothing else changes.
 
@@ -555,8 +557,8 @@ next version: `design-desk` on a request until an option is drawn after it, `dev
 change until its pull request's head is no longer `sha` (`next_at`; a later approval, a merge or the
 handled mark ends it too). A review never holds Design Desk's check on GitHub: Request changes
 leaves the handled mark and the check as they are; Approve marks the change handled, which passes
-a held check as the mark always does. Only Comment only is sent on a closed or sent request or a
-merged change. A draft about an option no longer drawn goes on the option shown under Request changes, and as one
+a held check as the mark always does. Only Comment only is sent on a closed or sent request, an archived change, or a merged change
+already handled; a merged change takes no Request changes, having no next version to ask for. A draft about an option no longer drawn goes on the option shown under Request changes, and as one
 about the whole request otherwise. What exists stays as it is: a vote
 is not a verdict and counts on its own; **Add to my feedback** (once Work it in) on a comment is a
 draft `{work_in: <thread>}` (whoever may write a change note; once per comment; on a request's

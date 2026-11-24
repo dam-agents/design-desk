@@ -3999,8 +3999,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       const dev = simpleState(c, true)?.state === "proposal";
       if (open && !preDesign(c) && !specInReview(c) && canApprove(c) && (c.triage || (c.variants || []).length) && !closed(c)) out.push({ id: "approve", name: dev ? "Approve for dev" : "Approve", hint: dev ? "It goes to In dev, without a designer; your comments go with it." : "You approve the request; your comments go with it." });
       if (preDesign(c) && !closed(c) && stageMoves(c)[2]) out.push({ id: "approve-dev", name: "Approve for dev", hint: "It goes to In dev at once, without a designer; your comments go with it." });
-    } else if (mayHandle(c) && !c.source?.merged_at && c.status !== "archived") {
-      out.push({ id: "request-changes", name: "Request changes", hint: S.me?.review_post ? "The developer makes the next version; your feedback goes to the pull request." : "The developer makes the next version." });
+    } else if (mayHandle(c) && c.status !== "archived") {
+      // Merged: no next version to ask for, but a change nobody handled yet may still be approved.
+      if (!c.source?.merged_at) out.push({ id: "request-changes", name: "Request changes", hint: S.me?.review_post ? "The developer makes the next version; your feedback goes to the pull request." : "The developer makes the next version." });
       if (!c.handled) out.push({ id: "approve", name: "Approve", hint: "Design is done with this change." });
     }
     if (can("comment")) out.push({ id: "comment", name: "Comment only", hint: "Your comments, with nothing else changed." });

@@ -980,8 +980,14 @@ export class Store {
     if (workIn.length && designLocked(c)) throw bad(LOCKED);
     if (!notes.length && !looks.length && !workIn.length && !fineOnes.length && !words) throw bad(worked.length ? "Comments to work in go only with Request changes: write a note too, or pick Request changes." : "Write a comment or a note first.");
     const request = c.kind === "request", changes = verdict === "request-changes";
-    if (verdict !== "comment" && (request ? ["declined", "handed-off"].includes(c.status) : Boolean(c.source?.merged_at) || c.status === "archived"))
-      throw bad(request ? "This request is closed or sent to developers: send your comments with Comment only." : "This pull request is merged: send your comments with Comment only.");
+    // A merged change nobody handled yet may still be approved, which marks it handled as Mark
+    // handled does; there is no next version to ask for, and nothing goes to its pull request.
+    const merged = !request && Boolean(c.source?.merged_at);
+    if (verdict !== "comment" && (request ? ["declined", "handed-off"].includes(c.status) : c.status === "archived" || (merged && (changes || c.handled))))
+      throw bad(request ? "This request is closed or sent to developers: send your comments with Comment only."
+        : c.status === "archived" ? "This change is archived: send your comments with Comment only."
+        : changes ? "This pull request is merged: there is no next version to ask for. Approve it, or send your comments with Comment only."
+        : "This pull request is merged and its change is handled: send your comments with Comment only.");
     if (request && changes && !(c.variants || []).length) throw bad("Changes are asked of a design once its options are drawn.");
     if (request && verdict === "approve") notStaged(c);
     if (request && verdict === "approve" && !(c.approved && addressesOf(who).includes(String(c.approved.by?.email || "").toLowerCase())))

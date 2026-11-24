@@ -4623,6 +4623,46 @@ test("simple mode: a change's review offers Request changes and Approve to who m
   assert.equal((await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/P-3/reviews").body)).verdict, "comment");
 }));
 
+// A change merged before anyone approved it (docs/desk.md → Reviews): Approve closes it out, Request changes is gone.
+const mergedChange = { ...prChange, id: "P-12", title: "Merged before review", source: { ...prChange.source, draft: false, merged_at: "2026-11-18T09:00:00Z" } };
+
+test("simple mode: a merged change nobody handled offers Approve, never Request changes, and Approve with nothing drafted marks it handled", (t) => open(t, REVIEW_DESK({ ...HEAD_ME, review_post: true }, [mergedChange]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="P-12"]');
+  await desk.click('#list [data-card="P-12"]');
+  await desk.waitForSelector('#detail [data-fb="head"]');
+  assert.equal(await desk.getAttribute('#detail [data-fb="head"]', "data-v"), "ok", "with nothing drafted, it approves");
+  await openFeedback(desk);
+  assert.deepEqual(await verdicts(desk), ["approve", "comment"]);
+  assert.equal(await picked(desk), "approve");
+  assert.equal((await desk.textContent(".fb-pop .fb-hint")).trim(), "Design is done with this change.");
+  assert.doesNotMatch(await desk.textContent(".fb-pop"), /pull request on GitHub/, "nothing goes to a merged pull request");
+  await desk.click(".fb-pop [data-fb-send]");
+  await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/P-12/handled"));
+  assert.deepEqual((await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/P-12/handled").body)), { handled: true });
+}));
+
+test("simple mode: Approve with notes on a merged change sends them as one review", (t) => open(t, REVIEW_DESK(HEAD_ME, [mergedChange]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="P-12"]');
+  await desk.evaluate(() => { drafts["P-12"] = [{ id: "d1", text: "Label a bit long.", anchor: null, at: "2026-11-18T10:00:00Z" }]; });
+  await desk.click('#list [data-card="P-12"]');
+  await desk.waitForSelector('#detail [data-fb="head"] .cnt');
+  await openFeedback(desk);
+  assert.deepEqual(await verdicts(desk), ["approve", "comment"]);
+  assert.equal(await picked(desk), "approve", "with notes waiting and no Request changes, the approval is picked");
+  await desk.click(".fb-pop [data-fb-send]");
+  await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/P-12/reviews"));
+  assert.equal((await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/P-12/reviews").body)).verdict, "approve");
+}));
+
+test("simple mode: a merged change already handled offers no Approve", (t) => open(t, REVIEW_DESK({ ...HEAD_ME, simFilter: null }, [{ ...mergedChange, status: "handled", handled: { by: { email: "d@example.com" }, at: "2026-11-18T10:00:00Z" } }]), async (desk) => {
+  await desk.evaluate(() => localStorage.setItem("desk-simFilter", JSON.stringify({ states: ["open", "dev", "closed"], kinds: ["request", "change"] })));
+  await desk.reload();
+  await desk.waitForSelector('#list [data-card="P-12"]');
+  await desk.click('#list [data-card="P-12"]');
+  await desk.waitForSelector("#detail .sh-line");
+  assert.equal(await desk.locator('#detail [data-fb="head"]').count(), 0, "nothing of theirs waits, and Comment only alone shows no Submit feedback");
+}));
+
 // A sent review (docs/desk.md → Reviews): one block, its comments under it, in both modes.
 const reviewed = { ...prChange, id: "P-8", title: "Reviewed", responsible: { who: "developer", review: "U-1", since: "2026-11-18T10:00:00Z" },
   reviews: [{ id: "U-1", by: { email: "d.k@example.com", name: "Dana Kim", role: "designer" }, at: "2026-11-18T10:00:00Z", verdict: "request-changes", note: "Two things.", threads: ["T-21", "T-22"], posted: { url: "https://github.com/o/r/pull/812#pullrequestreview-1" } }],
