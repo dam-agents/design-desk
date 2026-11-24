@@ -1,4 +1,4 @@
-// Exploration marks for #215, round 7, and their sheet.
+// Exploration marks for #215, round 8, and their sheet.
 // At rest the mark is DD: two D's facing right, each cut by half of a soft spark.
 // At work the left D flips back, the two close into a disc with the whole spark
 // in it, and the disc turns — then it opens back into DD.
@@ -41,10 +41,10 @@ function sharpQuarter(k, mx = null) {
 // A spark grows from the centre: the channel runs straight from the rim to `reach` from the
 // centre, then curves into the corner (controls at `ctl`). reach <= G is the plain quarter.
 const G = 0.6, QR = R - G, QMID = (-G - R) / 2;
-function stagedQuarter(k, mx, reach, ctl) {
-  const m = mx === null ? (p) => p : ([x, y]) => [2 * mx - x, y];
+function stagedQuarter(k, mx, reach, ctl, shift = [0, 0]) {
+  const m = mx === null ? ([x, y]) => [x + shift[0], y + shift[1]] : ([x, y]) => [2 * mx - x, y];
   const P = (p) => pt(m(rot(p, k)));
-  const arc = `M${P([G, -R])}A${QR} ${QR} 0 0 ${mx === null ? 1 : 0} ${P([R, -G])}`;
+  const arc = `M${P([G, -R])}A${f(QR)} ${f(QR)} 0 0 ${mx === null ? 1 : 0} ${P([R, -G])}`;
   if (reach <= G) return `${arc}L${P([G, -G])}Z`;
   const toCorner = reach >= R ? "" : `L${P([reach, -G])}`;
   return `${arc}${toCorner}C${P([ctl, -G])} ${P([G, -ctl])} ${P([G, Math.max(-reach, -R)])}Z`;
@@ -67,20 +67,28 @@ const EARTH = { light: ["#d98f6c", BROWN.light, "#a3b98a", "#8fa8c6"], dark: ["#
 const FULLER = { light: ["#d98f6c", BROWN.light, "#82ad68", "#6a90cc"], dark: ["#eaa889", "#e0a640", "#9fcc86", "#8eb1ec"] };
 const variants = [
   {
-    id: "quarters", name: "Quarters", geo: ddQuarters, ...FULLER,
-    note: "Stage 1, no spark: four perfect quarter circles, the same even gap between every two. The colours of round 6's Quarters, fuller.",
-  },
-  {
-    id: "quarters-spark-subtle", name: "Subtle spark", geo: staged(5, 1),
-    note: "Stage 2: the gaps stay straight from the rim most of the way in, then open into a small spark at the centre. At rest each D carries a small notch at its back; closed, the disc shows a spark you notice second.",
-    ...FULLER,
-  },
-  {
-    id: "quarters-spark", name: "Spark", geo: staged(R, 1.2),
-    note: "Stage 3: the soft spark of round 2's Mirror, cut from the same quarter circles — the gaps curve from the rim all the way in.",
-    ...FULLER,
+    id: "subtle", name: "Subtle spark", geo: staged(5, 1), ...FULLER,
+    note: "The mark: four quarter circles whose gaps open into a small spark at the centre. Clay, the Desk's brown, green and blue.",
   },
 ];
+
+// The spinner: the same two D's in one colour, four tones. One D shape serves both halves
+// (the left D at rest is the right one, moved); each D is a CSS mask, its two tones a gradient.
+const D_SHAPE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${f(R - G)} ${f(2 * R)}">${[0, 1]
+  .map((k) => `<path d="${stagedQuarter(k, null, 5, 1, [-G, R])}"/>`).join("")}</svg>`;
+const D_URI = `url("data:image/svg+xml,${encodeURIComponent(D_SHAPE).replace(/'/g, "%27")}")`;
+const pc = (n) => `${f((n / 24) * 100)}%`;
+export const SPIN_CSS = `
+  .dd-spin { position: relative; display: inline-block; width: 1.25em; height: 1.25em; flex: none; vertical-align: -0.25em; color: var(--warn); animation: dd-spin-turn 5s cubic-bezier(.65,0,.35,1) infinite; }
+  .dd-spin::before, .dd-spin::after { content: ""; position: absolute; top: ${pc(12 - R)}; width: ${pc(R - G)}; height: ${pc(2 * R)}; -webkit-mask: ${D_URI} center / 100% 100% no-repeat; mask: ${D_URI} center / 100% 100% no-repeat; }
+  .dd-spin::before { left: ${pc(12 - R)}; background: linear-gradient(currentColor 50%, color-mix(in srgb, currentColor 62%, transparent) 50%); animation: dd-spin-left 5s cubic-bezier(.65,0,.35,1) infinite; }
+  .dd-spin::after { left: ${pc(12 + G)}; background: linear-gradient(color-mix(in srgb, currentColor 45%, transparent) 50%, color-mix(in srgb, currentColor 80%, transparent) 50%); }
+  .dd-spin.queued, .dd-spin.queued::before { animation: none; }
+  .dd-spin.queued { opacity: .5; }
+  .dd-spin.light { color: var(--bg); }
+  @keyframes dd-spin-turn { 0%, 36% { transform: rotate(0); } 62%, 100% { transform: rotate(360deg); } }
+  @keyframes dd-spin-left { 0%, 14% { transform: scaleX(1); } 26%, 70% { transform: scaleX(-1); } 82%, 100% { transform: scaleX(1); } }
+  @media (prefers-reduced-motion: reduce) { .dd-spin, .dd-spin::before { animation-duration: 10s; } }`;
 
 // Peek: the DD shrinks and drops to leave DAM's eye line above it (eye r .072, spacing .2, line .2 of the box).
 const PEEK = { s: 0.66, dy: 3.8, r: 1.72, dx: 2.42, cy: -7.2 };
@@ -127,7 +135,11 @@ const tile = (v, mode) => `<div class="mode ${mode}">
     </div>
   </div>`;
 
-const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Design Desk mark — round 7</title>
+const spinRow = () => `<div class="sizes">${[13, 16, 20, 26, 40].map((px) => `<figure><span style="font-size:${px}px;line-height:1"><span class="dd-spin"></span></span><figcaption>${px} px text</figcaption></figure>`).join("")}
+  <figure><span style="font-size:16px"><span class="dd-spin queued"></span></span><figcaption>queued</figcaption></figure>
+  <figure><span class="pinn"><span class="dd-spin light"></span></span><figcaption>.light, on a pin</figcaption></figure>
+  <figure><span style="font-size:40px;line-height:1"><span class="dd-spin still"></span></span><figcaption>at rest</figcaption></figure></div>`;
+const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Design Desk mark — round 8</title>
 <style>
   :root { --bg:#fcfbfc; --ink:#1b1b1a; --muted:#6b6b66; --line:#e4e3df; --dbg:#151514; --dink:#ecebe7; --dline:#33332f; }
   * { box-sizing: border-box; }
@@ -167,10 +179,17 @@ const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>
   @keyframes flip-left { 0%, 12% { transform: scaleX(1); } 20%, 34% { transform: scaleX(-1); } 42%, 100% { transform: scaleX(1); } }
   @keyframes flip-right { 0%, 40% { transform: scaleX(1); } 48%, 58% { transform: scaleX(-1); } 66%, 100% { transform: scaleX(1); } }
   @media (prefers-reduced-motion: reduce) { .spin svg, .spin g { animation-duration: 10s !important; } }
+${SPIN_CSS}
+  .dd-spin.still, .dd-spin.still::before { animation: none; }
+  .pinn { display:inline-grid; place-items:center; width: 22px; height: 22px; border-radius: 50%; background: var(--warn); font-size: 13px; }
 </style></head><body>
-<header><h1>Design Desk mark — round 7</h1>
+<header><h1>Design Desk mark — round 8</h1>
 <p>At rest the mark is <b>DD</b>: two D's facing right, each split in two. At work the first D turns round, the two close into a disc, the disc turns once, and it opens back into DD. The big animated mark beside each one shows it; so does "at work" in each row.</p>
-<p>Round 7: three stages from quarters to spark, in the colours of Quarters, fuller. The spark twinkle is gone; at work the D's close into the disc and turn, as before. Shown at 16, 24, 32 and 48 px on the Desk's light and dark background, in a browser tab, as the agent's avatar in a thread, and on a GitHub comment line.</p></header>
+<p>Round 8: the chosen mark, Subtle spark, and the spinner drawn from it in one colour, four tones. Shown at 16, 24, 32 and 48 px on the Desk's light and dark background, in a browser tab, as the agent's avatar in a thread, and on a GitHub comment line.</p></header>
+<section class="spinner"><div class="hero"><h2>Spinner <small>.dd-spin</small></h2>
+  <p>The same DD in one colour, four tones — the spinner's own colour (<code>--warn</code>) at full, 80, 62 and 45 per cent. It rests as the mark does, closes into the disc and turns. <code>.light</code> and <code>.queued</code> work as today.</p></div>
+  <div class="modes"><div class="mode light" style="--warn:#9a6200;--bg:#fcfbfc">${spinRow()}</div><div class="mode dark" style="--warn:#f0c060;--bg:#151514">${spinRow()}</div></div>
+</section>
 ${variants.map((v, i) => `<section>
   <div class="hero"><h2>${i + 1}. ${v.name}<small>mark-${v.id}.svg</small></h2>
     <div class="pair"><div class="big">${svg(v, v.light)}</div><div class="bigspin spin close">${svg(v, v.light)}</div></div>
