@@ -903,9 +903,9 @@ export class Store {
     if (figma != null) {
       if (c.kind !== "change") throw bad("Differences from Figma are proposed on a pull request's change.");
       this.mayHandle(c, who);
-      const d = figmaOpen(c).find((x) => x.part === String(figma));
-      if (!d) throw bad("That difference from Figma is not in the table.");
-      if (!d.change || !keys?.includes(d.change)) throw bad("That difference from Figma is on no change of this pull request.");
+      if (!figmaOpen(c).some((x) => x.part === String(figma))) throw bad("That difference from Figma is not in the table.");
+      const d = figmaOffered(c).find((x) => x.part === String(figma));
+      if (!d) throw bad("That difference from Figma is on no change of this pull request.");
       list = list.filter((x) => x.figma !== d.part);
       if (fine === true) return put({ id: randomUUID().slice(0, 8), figma: d.part, change: d.change, fine: true, at: this.clock() });
       list = list.filter((x) => !(x.ok && x.change === d.change));
@@ -965,7 +965,7 @@ export class Store {
     const notes = drafts.filter((d) => !d.ok && !d.work_in && !d.fine);
     // Differences from Figma marked fine as it is: still in the table as it is sent, they leave it
     // for everyone, as the × takes one off, and the review names them. Only whoever may mark the change handled.
-    const fineOnes = c.kind === "change" ? drafts.filter((d) => d.fine && figmaOpen(c).some((x) => x.part === d.figma)) : [];
+    const fineOnes = c.kind === "change" ? drafts.filter((d) => d.fine && figmaOffered(c).some((x) => x.part === d.figma)) : [];
     if (fineOnes.length) this.mayHandle(c, who);
     // Comments to work in: only Request changes on a request works them in; another verdict leaves them be.
     const worked = drafts.filter((d) => d.work_in).map((d) => own(this.db.threads, d.work_in)).filter((t) => t && t.card === c.id && !["private", "asks"].includes(t.kind));
@@ -3913,6 +3913,13 @@ function figmaOpen(c) {
   if (!k || k.verdict !== "differs") return [];
   const off = new Set((k.dismissed || []).map((d) => d.part));
   return (k.differences || []).filter((d) => !off.has(d.part));
+}
+
+// Those offered to a change's reviewer: on one of the changes the card has now, by its key
+// (a new screenshot gives a lone screen another key; one on the old key is offered nowhere).
+function figmaOffered(c) {
+  const keys = new Set(changesOf(c).map((x) => x.key));
+  return figmaOpen(c).filter((d) => keys.has(d.change));
 }
 
 function figmaRow(k) {

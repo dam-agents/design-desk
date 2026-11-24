@@ -4896,8 +4896,9 @@ const figChanges = { ...threeChanges, attention: { level: "designer", reasons: [
   figma_check: { id: "F-1", verdict: "differs", checked: "2026-11-18T09:00:00Z", frame: { url: "https://www.figma.com/design/abc/Agents?node-id=1-2", name: "Agents" },
     differences: [{ part: "Spend label", change: "Agents list", severity: "major", what: "A slash in Figma.", figma: "$4.60 / $5.00", product: "$4.60 of $5" },
       { part: "Pill colour", change: "Agents list", severity: "minor", what: "Green in Figma.", figma: "#1f7a4d", product: "#2f5bd3" },
-      { part: "Save button", change: "S-1", severity: "major", what: "Filled in Figma.", figma: "Filled", product: "Tinted" },
-      { part: "Footer", severity: "minor", what: "On no change.", figma: "8px", product: "4px" }] } };
+      { part: "Save button", change: "S-1", severity: "major", what: "Filled in Figma.", figma: "Filled", product: "" },
+      { part: "Footer", severity: "minor", what: "On no change.", figma: "8px", product: "4px" },
+      { part: "Old picture", change: "S-gone", severity: "major", what: "On a screenshot replaced since.", figma: "a", product: "b" }] } };
 // Its drafts keep what the page sends: a difference taken (its words) or marked fine.
 const FIG_DESK = (me) => CHANGES_DESK(me).replace(JSON.stringify(threeChanges), JSON.stringify(figChanges))
   .replace("drafts[id] = [...(drafts[id] || []), b.ok ?", "drafts[id] = [...(drafts[id] || []).filter((d) => !b.figma || d.figma !== b.figma), b.figma ? { id: \"d\" + posts.length, ...b, at: \"2026-11-18T10:00:00Z\" } : b.ok ?");
@@ -4927,7 +4928,7 @@ test("differences from Figma wait on their changes for whoever may mark them han
   await desk.waitForFunction(() => document.querySelector("#element-dialog .elbar h2")?.textContent === "The limit dialog");
   await desk.click('#element-dialog [data-fig-edit="Save button"]');
   await desk.waitForSelector("#element-dialog [data-fig-text]");
-  assert.match(await desk.inputValue("#element-dialog [data-fig-text]"), /^Save button: Filled in Figma\./, "it starts from Design Desk's words");
+  assert.equal(await desk.inputValue("#element-dialog [data-fig-text]"), "Save button: Filled in Figma. In Figma: Filled; in the product: —.", "it starts from Design Desk's words, a missing value a dash");
   await desk.fill("#element-dialog [data-fig-text]", "Fill the Save button, as in Figma.");
   await desk.click('#element-dialog [data-fig-edit-add="Save button"]');
   await desk.waitForSelector("#element-dialog .fp-r.done");

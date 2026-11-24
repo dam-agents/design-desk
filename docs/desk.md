@@ -523,7 +523,7 @@ empties it.
 
 **Differences from Figma** on a change are the reviewer's starting point: findings of Design Desk,
 not anyone's feedback, until a person takes one. Each difference of the change's `figma_check` that
-names a change (`change`, its key) and is still in the table is offered, on that change, to whoever
+names one of the changes the card has now (`change`, its key) and is still in the table is offered, on that change, to whoever
 may mark the change handled ([desk-page.md](desk-page.md) → Changes). A draft `{figma: <part>, text,
 edited}` takes it into their feedback — Design Desk's words with Figma's value and the product's, or
 their own (`edited`) — a note on that change like any other, which takes back their Looks good on it;

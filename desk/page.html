@@ -3842,7 +3842,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // Someone who may only comment gets it only once something of theirs waits to be sent.
     if (!vs.length || (!n && !g && vs.every((x) => x.id === "comment"))) return "";
     const v = fbPick(c), open = S.fb?.card === c.id && S.fb.where === where;
-    const counts = `${n ? `<span class="cnt" title="${esc(plural(n, "note waits", "notes wait"))} to be sent">${fbSvg("pen")}${n}</span>` : ""}${g ? `<span class="cnt" title="${esc(plural(g, "change", "changes"))} marked Looks good">${fbSvg("checkOnly")}${g}</span>` : ""}`;
+    const counts = `${n ? `<span class="cnt" title="${esc(plural(n, "note waits", "notes wait"))} to be sent">${fbSvg("pen")}${n}</span>` : ""}${g ? `<span class="cnt" title="${esc(plural(g, "mark", "marks"))}: changes marked Looks good, differences from Figma marked fine as it is">${fbSvg("checkOnly")}${g}</span>` : ""}`;
     const says = { ok: "approves it", rc: "asks for changes", c: "only comments" }[VERDICT_TONE[v]];
     return `<span class="fbw"><button type="button" class="btn fbk" data-fb="${where}" data-v="${VERDICT_TONE[v]}" aria-expanded="${open}" aria-haspopup="dialog" title="Your feedback: what waits to be sent, and the verdict it goes with. As it is now, it ${says}.">${fbSvg("chat")}Submit feedback${counts}<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>${open ? fbPanel(c, v) : ""}</span>`;
   }
@@ -5428,15 +5428,18 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const FIG_TAG = `${FIG_ICON}From Figma`;
   const figReviewer = (c) => c?.kind === "change" && figmaOn() && c.figma_check?.verdict === "differs" && mayHandle(c) && !closed(c) && !c.source?.merged_at;
   const figDiff = (c, part) => (c.figma_check?.differences || []).find((d) => d.part === part) || null;
-  const figOnChange = (c, key) => figReviewer(c) ? figShown(c.figma_check).filter((d) => d.change === key) : [];
+  // The differences offered: still in the table and on one of the changes the card has now (a new
+  // screenshot gives a lone screen another key: one on the old one is offered nowhere).
+  const figOffered = (c) => { if (!figReviewer(c)) return []; const keys = new Set(changesOf(c).map((x) => x.key)); return figShown(c.figma_check).filter((d) => keys.has(d.change)); };
+  const figOnChange = (c, key) => figOffered(c).filter((d) => d.change === key);
   const figDraft = (c, part) => draftsOf(c).find((d) => d.figma === part) || null;
   const figTaken = (c) => draftsOf(c).filter((d) => d.figma && !d.fine);
   // Taken in feedback already sent: its conversation, still open.
   const figSent = (c, part) => (c.threads || []).find((th) => th.figma === part && th.state !== "resolved") || null;
   // Not taken and not marked fine yet: what the reviewer has still to decide on.
-  const figOpen = (c) => figReviewer(c) ? figShown(c.figma_check).filter((d) => d.change && !figDraft(c, d.part) && !figSent(c, d.part)) : [];
+  const figOpen = (c) => figOffered(c).filter((d) => !figDraft(c, d.part) && !figSent(c, d.part));
   // The words a difference goes into the feedback with, as it is.
-  const figWords = (d) => `${d.part}: ${d.what} In Figma: ${d.figma}; in the product: ${d.product}.`;
+  const figWords = (d) => `${d.part}: ${d.what} In Figma: ${d.figma || "—"}; in the product: ${d.product || "—"}.`;
   const figVal = (v) => `<code>${swatched(v || "—")}</code>`;
   function figProposals(c, x) {
     const ds = figOnChange(c, x.key);

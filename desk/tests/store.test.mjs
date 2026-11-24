@@ -3371,8 +3371,10 @@ test("differences from Figma on a change: taken into the feedback or marked fine
       { part: "Spend label", change: "Agents list", severity: "major", what: "Slash, not words.", figma: "$4.60 / $5.00", product: "$4.60 of $5" },
       { part: "Pill colour", change: "Agents list", severity: "minor", what: "Green in Figma.", figma: "#1f7a4d", product: "#2f5bd3" },
       { part: "Save button", change: l1, severity: "major", what: "Filled in Figma.", figma: "Filled", product: "Tinted" },
-      { part: "Footer", severity: "minor", what: "On no change.", figma: "8px", product: "4px" }] } }).card;
+      { part: "Footer", severity: "minor", what: "On no change.", figma: "8px", product: "4px" },
+      { part: "Old picture", change: "A-gone", severity: "major", what: "On a screenshot replaced since.", figma: "a", product: "b" }] } }).card;
   assert.equal(s.card(chg.id).figma_check.differences[0].change, "Agents list", "a difference keeps the change it is on");
+  assert.throws(() => s.addDraft(chg.id, alice, { figma: "Old picture", fine: true }), /on no change/, "a change key the card no longer has offers nothing");
   assert.equal(s.card(chg.id).figma_check.differences[3].change, undefined);
   const req = s.upsertCard({ kind: "request", title: "Calmer" }).card;
   assert.throws(() => s.addDraft(req.id, alice, { figma: "Spend label" }), /pull request's change/);
