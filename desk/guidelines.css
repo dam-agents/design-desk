@@ -889,7 +889,10 @@
   /* An option's tab shrinks to fit, its name cut with an ellipsis (on the baseline: "Desk Ellipsis");
      what still does not fit folds into +n at the row's end (docs/desk-page.md → The page, "The options' tabs"). */
   .tabs.vtabs .vscroll button[data-variant] { flex: 0 1 auto; min-width: 0; max-width: 320px; }
-  .tabs.vtabs .vscroll button[data-variant] .vname { min-width: 64px; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* A tab's parts sit one gap apart: a short name takes only its own width (the fold reads 64 px as a
+     name's least width before it cuts one), the number and ✕ add no margin of their own. */
+  .tabs.vtabs .vscroll button[data-variant] .vname { min-width: 0; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tabs.vtabs .vscroll button[data-variant] .ono { margin-right: 0; } .tabs.vtabs .vscroll button[data-variant] .vclose { margin-left: 0; }
   .tabs.vtabs .vscroll button[data-variant] > :not(.vname) { flex: none; }
   .tabs.vtabs .vscroll button[data-variant][hidden] { display: none; }
   .vtabs .vmore { position: relative; flex: none; align-self: center; } .vtabs .vmore > summary { min-height: 26px; padding: 0 8px; border-radius: 999px; font-size: var(--fs-meta); color: var(--muted); }
