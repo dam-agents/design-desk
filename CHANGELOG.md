@@ -7,19 +7,45 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
-## 1.113.0 — 2026-11-24
+## 1.115.0 — 2026-11-24
 
 **Upgrade:**
 1. Restart the Desk server ([desk.md](docs/desk.md) → Server) and republish the page
-   ([desk.md](docs/desk.md) → Publishing the page): Design Desk has one mark, `desk/brand/mark.svg`,
-   wherever it speaks or acts — the head, the favicon, its avatar in every thread, the ask panel, the
-   bell — and the spinner is that mark moving ([desk-page.md](docs/desk-page.md) → The mark). No data
-   migration.
+   ([desk.md](docs/desk.md) → Publishing the page): Design Desk has one mark, `desk/brand/mark.svg` —
+   DD on a gradient disc — wherever it speaks or acts: the head, the favicon, its avatar in every
+   thread, the ask panel, the bell; the spinner is in the mark's blue ([desk-page.md](docs/desk-page.md)
+   → The mark). No data migration.
 2. **Set the agent's avatar by hand.** A Kit Update never changes an agent's avatar: the operator
    uploads `desk/brand/avatar.png` in the agent's avatar picker. New agents start with it
    (`kit.yaml` `avatar`). It is also what Slack shows beside the agent's replies where the install
    has `chat:write.customize`. The GitHub account's avatar and the Slack app's own icon are the
    platform's and the operator's, not this repository's.
+
+## 1.114.0 — 2026-11-24
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): simple mode's request page has
+   no comment box under the designs and no vote pills; What Design Desk found is a fold with its answer
+   in its head; every fold and the comments keep one 800 px width; comments run oldest first, Reply
+   and Resolve as words ([desk-page.md](docs/desk-page.md) → Simple mode). No data migration.
+
+## 1.113.0 — 2026-11-24
+
+**Upgrade:**
+1. Restart the Desk server ([desk.md](docs/desk.md) → Server) and republish the page
+   ([desk.md](docs/desk.md) → Publishing the page): on a pull request's change, its differences from
+   Figma are offered to whoever may mark it handled, to take into their feedback or mark fine as it is
+   (`figma` drafts; `figma` on a conversation, `figma_fine` on a review); a difference names its change
+   in `change`, which the watch run writes from now on (docs/watch.md, step 11); Submit feedback's
+   Request changes is a quiet amber ([desk-page.md](docs/desk-page.md) → Submit feedback). A comparison
+   written before names no change: its differences stay in the item's box until it is compared again.
+   No data migration.
+
+## 1.112.1 — 2026-11-24
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): a Request changes sent with
+   a note alone shows that note once, as its change note ([desk.md](docs/desk.md) → Reviews). No data migration.
 
 ## 1.112.0 — 2026-11-24
 

@@ -137,7 +137,8 @@ steps say; the decision notes of step 4 are always yours to read.
     With `figma: enabled`, also compare the change with its frames in Figma: the frame of the
     request it builds, else a figma.com link in the PR or the issue it closes, else those of
     the screens and elements it touched (the `figma` skill →
-    Compare with the product), and put `figma_check` on the change card. At most 10 Figma
+    Compare with the product), and put `figma_check` on the change card, a difference on one of its
+    screens naming that change (the skill → Writing it). At most 10 Figma
     reads per run; a Figma failure skips the comparison and never fails the change or its
     ledger entry (the skill → Failures).
 12. **Propose** (`proposals: enabled`): when the change adds a new feature or a new screen —
@@ -250,7 +251,9 @@ and is logged and reported as below. Else:
    image ([CI gate](#ci-gate) → The mark line) and "**<name>** (<role>)
    gave feedback on this UI change on the Design Desk: **Changes requested** | **Approved** | **Comments**",
    the note, then each comment as a bullet led by what it is about in bold (the change or part
-   it names, else nothing), then "✓ Looks good: <name>, <name>" from its `looks_good`, then `[Open on the Design Desk](<card link>)` when `desk_link` is
+   it names, else nothing) — one that started from a difference from Figma (`figma` on its
+   conversation) led by "**<change>** · from Figma:" — then "✓ Looks good: <name>, <name>" from its
+   `looks_good`, then "Fine as it is (from Figma): <part>, <part>" from its `figma_fine`, then `[Open on the Design Desk](<card link>)` when `desk_link` is
    set. The person by their roster name, else the part of the address before the @; never an
    address. Their words as written; nothing of yours ([desk.md](desk.md) → Writing on the Desk).
    At most 60,000 characters, under GitHub's limit: past it, the last comments are left out and

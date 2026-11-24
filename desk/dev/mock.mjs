@@ -5,6 +5,7 @@
 //   open "http://localhost:5610/?role=designer#R-1"        (designer; also admin, pm, developer, ui-dev-owner, guest)
 //   open "http://localhost:5610/?role=designer&ws=1#R-1"   (opens the design workspace at once)
 // The Desk shows light by default; &theme=dark shows it dark; every role starts in simple mode, &simple=0 in full mode.
+// &figma=1 starts with the person's Figma switch on (P-6's changes differ from Figma); &post=1 has reviews posted on GitHub.
 // &github=<username> is this person's GitHub username, as an admin sets it on People: their pull requests are theirs.
 // The person menu's switches (simple mode, Figma, day or night) are kept while the mock runs, as the server keeps them.
 // What a person sends changes the made-up Desk until the page reloads; a change note is
@@ -28,6 +29,9 @@ function shim() {
   me.link = "https://desk.example.com/a/mock"; // the Desk's own link: the title's link icon copies an item's link from it
   if (q.get("simple")) me.simple = q.get("simple") === "1";
   me.github = q.get("github") || null;
+  // &figma=1 turns this person's Figma switch on; &post=1 posts reviews on the pull request (review_post).
+  if (q.get("figma")) me.figma_pref = q.get("figma") === "1";
+  if (q.get("post") === "1") me.review_post = true;
   // People (docs/desk.md → People): the roster, and each person's GitHub username while the mock runs.
   const logins = me.github ? { [me.email]: me.github } : {};
   const people = () => ({ people: [{ email: me.email, also: me.emails.slice(1), role, name: me.name }, { email: "pat@example.com", also: [], role: "pm", name: "Pat Lee" }, { email: "dana@example.com", also: [], role: "developer", name: "Dana Kim" }],
@@ -108,6 +112,8 @@ function shim() {
     if ((x = m(/^\/api\/cards\/([^/]+)\/drafts$/))) {
       const c = card(decodeURIComponent(x[1]));
       // Looks good: a mark with no words on one change, once; a note on the change takes it back.
+      // A difference from Figma taken into the feedback (`figma`, with its words), or marked fine as it is (`fine`).
+      if (method === "POST" && body.figma) { c.drafts = (c.drafts || []).filter((d) => d.figma !== body.figma); (c.drafts ||= []).push({ id: `d${++n}`, figma: body.figma, change: body.change, ...(body.fine ? { fine: true } : { text: body.text, edited: Boolean(body.edited) }), at: now() }); return { drafts: c.drafts }; }
       if (method === "POST" && body.work_in) { if (!(c.drafts || []).some((d) => d.work_in === body.work_in)) (c.drafts ||= []).push({ id: `d${++n}`, work_in: body.work_in, at: now() }); }
       else if (method === "POST" && body.ok === true) { if (!(c.drafts || []).some((d) => d.ok && d.change === body.change)) (c.drafts ||= []).push({ id: `d${++n}`, ok: true, change: body.change, at: now() }); }
       else if (method === "POST") { if (body.change) c.drafts = (c.drafts || []).filter((d) => !(d.ok && d.change === body.change)); (c.drafts ||= []).push({ id: `d${++n}`, text: body.text, anchor: body.anchor || null, ...(body.change ? { change: body.change } : {}), at: now() }); }
@@ -115,17 +121,19 @@ function shim() {
     }
     if ((x = m(/^\/api\/cards\/([^/]+)\/drafts\/([^/]+)$/))) { const c = card(decodeURIComponent(x[1])); c.drafts = (c.drafts || []).filter((d) => d.id !== x[2]); return { drafts: c.drafts }; }
     if ((x = m(/^\/api\/cards\/([^/]+)\/reviews$/))) {
-      const c = card(decodeURIComponent(x[1])), all = c.drafts || [], ds = all.filter((d) => !d.ok && !d.work_in), oks = all.filter((d) => d.ok), wis = all.filter((d) => d.work_in), id = `U-${++n}`;
+      const c = card(decodeURIComponent(x[1])), all = c.drafts || [], fines = all.filter((d) => d.fine), ds = all.filter((d) => !d.ok && !d.work_in && !d.fine), oks = all.filter((d) => d.ok), wis = all.filter((d) => d.work_in), id = `U-${++n}`;
       if (!all.length && !body.note) return { error: "Write a comment or a note first." };
       const request = c.kind === "request", changes = body.verdict === "request-changes", first = body.variant || c.variants[0]?.id;
       const notes = ds.length ? ds : request && changes ? [{ text: body.note, anchor: null }] : [];
-      const ts = notes.map((d) => ({ id: `T-${++n}`, kind: request && changes ? "change" : "comment", state: "open", review: id, may: { reply: true, resolve: true }, anchor: request && changes && !d.anchor?.variant ? { ...(d.anchor || {}), variant: first } : d.anchor, ...(d.change ? { change: d.change } : {}), messages: [{ by: { name: me.name, email: me.email, role }, at: now(), text: d.text }] }));
+      const ts = notes.map((d) => ({ id: `T-${++n}`, kind: request && changes ? "change" : "comment", state: "open", review: id, may: { reply: true, resolve: true }, anchor: request && changes && !d.anchor?.variant ? { ...(d.anchor || {}), variant: first } : d.anchor, ...(d.change ? { change: d.change } : {}), ...(d.figma ? { figma: d.figma } : {}), messages: [{ by: { name: me.name, email: me.email, role }, at: now(), text: d.text }] }));
       c.threads.push(...ts); c.drafts = [];
       // Comments to work in: only with Request changes on a request, the same conversation turned into a change note.
       if (request && changes) for (const d of wis) { const t = c.threads.find((x) => x.id === d.work_in); if (t) { t.was = t.kind; t.kind = "change"; t.state = "open"; t.review = id; t.needs_agent = true; ts.push(t); } }
       // The mock has no head commit: a Looks good holds until the page reloads.
       const named = (k) => { const sh = (c.screens || []).find((x) => x.pair === k || x.asset === k); return sh?.pair || sh?.caption || k; };
-      (c.reviews ||= []).push({ id, by: { name: me.name, email: me.email, role }, at: now(), verdict: body.verdict, note: body.note || "", threads: ts.map((t) => t.id), ...(oks.length ? { looks_good: oks.map((d) => ({ key: d.change, name: named(d.change) })) } : {}) });
+      (c.reviews ||= []).push({ id, by: { name: me.name, email: me.email, role }, at: now(), verdict: body.verdict, note: body.note || "", threads: ts.map((t) => t.id), ...(oks.length ? { looks_good: oks.map((d) => ({ key: d.change, name: named(d.change) })) } : {}), ...(fines.length ? { figma_fine: fines.map((d) => ({ part: d.figma, change: d.change })) } : {}) });
+      // Marked fine: off the Figma table for everyone, as the × takes one off, until the frame changes.
+      if (fines.length && c.figma_check) c.figma_check.dismissed = [...(c.figma_check.dismissed || []), ...fines.map((d) => ({ part: d.figma, by: { email: me.email, name: me.name }, at: now(), review: id }))];
       if (oks.length) c.looks_good = [...new Set([...(c.looks_good || []), ...oks.map((d) => d.change)])];
       if (request && changes) work(c, ts);
       if (!request && body.verdict === "approve") c.handled = { by: { email: me.email }, at: now() };

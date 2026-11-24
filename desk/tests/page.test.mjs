@@ -4578,22 +4578,16 @@ window.platform = { async request({ method, path, body }) {
 try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
 </script>`;
 
-test("simple mode: Add to feedback keeps a comment for the feedback, Comment posts it; Submit feedback counts, lists and removes them; no box under the head", (t) => open(t, REVIEW_DESK(HEAD_ME, [drawn, prChange]), async (desk) => {
+test("simple mode: no comment box under the designs; Submit feedback counts, lists and removes what waits in the feedback; no box under the head", (t) => open(t, REVIEW_DESK(HEAD_ME, [drawn, prChange]), async (desk) => {
   await desk.waitForSelector('#list [data-card="R-5"]');
+  // Comments for the feedback come from the design workspace and an element's dialog; here they wait already.
+  await desk.evaluate(() => { drafts["R-5"] = [{ id: "d1", text: "Tighter rows.", anchor: { variant: "v1" }, at: "2026-11-18T10:00:00Z" }, { id: "d2", text: "Second.", anchor: { variant: "v1" }, at: "2026-11-18T10:01:00Z" }]; });
   await desk.click('#list [data-card="R-5"]');
-  await desk.waitForSelector("#detail .rbox");
-  assert.match(await desk.getAttribute("#detail .rbox textarea", "placeholder"), /Option 1 · Calm/, "the box is about the option shown");
-  assert.deepEqual(await desk.locator("#detail .rbox .bar button").allTextContents(), ["Add to feedback", "Comment"], "the box's two buttons, in the words people read");
-  await desk.fill("#detail .rbox textarea", "Tighter rows.");
-  await desk.click("#detail .rbox [data-draft-add]");
   await desk.waitForSelector('#detail [data-fb="head"] .cnt');
-  assert.deepEqual(await desk.evaluate(() => posts.find((p) => /drafts$/.test(p.path)).body), { text: "Tighter rows.", anchor: { variant: "v1" } });
+  assert.equal(await desk.locator("#detail .rbox").count(), 0, "no comment box under the designs");
   assert.equal(await desk.locator("#detail .yreview").count(), 0, "no box under the head: nothing moves the page");
-  assert.match(await desk.textContent('#detail [data-fb="head"]'), /Submit feedback\s*1/, "the head counts the note");
+  assert.match(await desk.textContent('#detail [data-fb="head"]'), /Submit feedback\s*2/, "the head counts the notes");
   assert.equal(await desk.getAttribute('#detail [data-fb="head"]', "data-v"), "rc", "amber: it asks for changes");
-  await desk.fill("#detail .rbox textarea", "Second.");
-  await desk.click("#detail .rbox [data-draft-add]");
-  await desk.waitForFunction(() => /2/.test(document.querySelector('#detail [data-fb="head"] .cnt')?.textContent || ""));
   await openFeedback(desk);
   assert.match(await desk.textContent(".fb-pop"), /Option 1 · Calm[\s\S]*Tighter rows\.[\s\S]*Second\./);
   await desk.click(".fb-pop .dbub:last-child [data-draft-del]");
@@ -4601,11 +4595,6 @@ test("simple mode: Add to feedback keeps a comment for the feedback, Comment pos
   assert.ok(await desk.evaluate(() => posts.some((p) => p.method === "DELETE" && /\/drafts\/d/.test(p.path))), "removed, and the panel stays open");
   await desk.click(".fb-pop [data-fb-close]");
   await desk.waitForFunction(() => !document.querySelector(".fb-pop"));
-  // Comment: a comment on the Desk at once, not in the feedback.
-  await desk.fill("#detail .rbox textarea", "Looks calm.");
-  await desk.click("#detail .rbox [data-draft-now]");
-  await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/R-5/threads"));
-  assert.deepEqual(await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/R-5/threads").body), { kind: "comment", text: "Looks calm.", anchor: { variant: "v1" } });
   // Send: the drafts go as one review.
   await openFeedback(desk);
   assert.equal(await picked(desk), "request-changes", "with notes waiting, Request changes is picked");
@@ -4656,6 +4645,24 @@ test("simple mode: a sent review is one block with its comments; a change that w
   assert.match(await desk.textContent("#detail .rvw .rv-note"), /Two things\./);
   assert.equal(await desk.locator("#detail .sthreads > .sthread").count(), 1, "the other comment stays on its own");
 }));
+
+// Request changes with a note alone: the note is the change note, its words shown once (#221).
+const noteAlone = { ...drawn, id: "R-9", title: "Note alone",
+  reviews: [{ id: "U-2", by: { email: "d.k@example.com", name: "Dana Kim", role: "designer" }, at: "2026-11-18T10:00:00Z", verdict: "request-changes", note: "Remove the coloured bars.\n\nTone down the warning.", threads: ["T-31"] }],
+  threads: [{ id: "T-31", kind: "change", review: "U-2", state: "resolved", anchor: { variant: "v1" }, may: { reply: true, resolve: true }, messages: [{ by: { email: "d.k@example.com", role: "designer" }, at: "2026-11-18T10:00:00Z", text: "Remove the coloured bars.\n\nTone down the warning." }] }] };
+
+for (const simple of [true, false])
+  test(`${simple ? "simple" : "full"} mode shows a Request changes note sent alone once, as its change note; a note with comments stays above them`, (t) => open(t, REVIEW_DESK({ ...HEAD_ME, simple, simFilter: null }, [noteAlone, reviewed]), async (desk) => {
+    await desk.evaluate(() => localStorage.setItem("desk-simFilter", JSON.stringify({ states: ["open", "dev", "closed"], kinds: ["request", "change"] })));
+    await desk.evaluate(() => { location.hash = "#R-9"; });
+    await desk.waitForSelector("#detail .rvw", { state: "attached" });
+    assert.equal(await desk.locator("#detail .rvw .rv-note").count(), 0, "no note above its own change note");
+    assert.equal(await desk.locator("#detail .rvw :is(.sthread, .thread)").count(), 1, "its change note");
+    assert.match(await desk.textContent("#detail .rvw :is(.sthread, .thread)"), /Remove the coloured bars/, "the words in the change note");
+    await desk.evaluate(() => { location.hash = "#P-8"; });
+    await desk.waitForFunction(() => document.querySelector("#detail .rvw")?.id === "rv-U-1");
+    assert.match(await desk.textContent("#detail .rvw .rv-note"), /Two things\./, "a note with its own comments stays");
+  }));
 
 test("full mode shows a sent review as one block in the conversation", (t) => open(t, REVIEW_DESK({ ...HEAD_ME, simple: false }, [{ ...reviewed, status: "new" }]), async (desk) => {
   await desk.evaluate(() => { location.hash = "#P-8"; });
@@ -4753,13 +4760,43 @@ test("simple mode's request page with no summary: the request in full, designs, 
   await desk.waitForSelector('#list [data-card="R-7"]');
   await desk.click('#list [data-card="R-7"]');
   await desk.waitForSelector("#detail .sthreads");
-  const order = await desk.$$eval("#detail .slead, #detail .vtabs, #detail .sfound, #detail details.fold.big:not(.vpanel details), #detail .sthreads", (xs) => xs.map((x) => x.className.split(" ")[0] === "fold" ? x.querySelector("summary").textContent.trim() : x.className.split(" ").find((k) => ["slead", "vtabs", "sfound", "sthreads"].includes(k))));
-  assert.deepEqual(order, ["vtabs", "sfound", "Where else this shows up", "sthreads"], "no summary yet: no lead and no fold");
+  const order = await desk.$$eval("#detail .slead, #detail .vtabs, #detail details.fold.big:not(.vpanel details), #detail .sthreads", (xs) => xs.map((x) => x.className.split(" ")[0] === "fold" ? x.querySelector("summary h3").textContent.trim() : x.className.split(" ").find((k) => ["slead", "vtabs", "sthreads"].includes(k))));
+  assert.deepEqual(order, ["vtabs", "What Design Desk found", "Where else this shows up", "sthreads"], "no summary yet: no lead and no Original request; what Design Desk found is the first fold");
   assert.match(await desk.textContent("#detail .sfull"), /First paragraph\.[\s\S]*Second paragraph\./, "the request in full leads instead, open");
-  assert.match(await desk.textContent("#detail .sfound"), /Goes against D-3/);
-  assert.equal(await desk.locator("#detail .votes button.vote").count(), 0, "no vote buttons in simple mode");
+  // What Design Desk found: a fold, its answer in its head, open while there is something to check.
+  assert.equal(await desk.locator("#detail details.sfound.sfold[open]").count(), 1, "open: it goes against a decision");
+  assert.equal((await desk.textContent("#detail details.sfound > summary .sf-say")).trim(), "1 thing to check");
+  assert.equal(await desk.getAttribute("#detail details.sfound > summary .sf-say", "data-k"), "warn");
+  assert.match(await desk.textContent("#detail .sfound .section"), /Goes against D-3/);
+  assert.equal(await desk.locator("#detail .votes .vote").count(), 0, "no vote pills in simple mode, not even as counts");
+  assert.equal(await desk.locator("#detail .rbox").count(), 0, "no comment box under the designs: the workspace, an element and Submit feedback take comments");
+  // Comments: their count, oldest first, the resolved one where it falls; the moves are words.
+  assert.match(await desk.textContent("#detail .sthreads > h3"), /^Comments\s*3$/);
+  assert.deepEqual(await desk.$$eval("#detail .sthreads > .sthread", (xs) => xs.map((x) => x.id)), ["th-T-3", "th-T-2", "th-T-1"], "oldest first, the newest above the box");
+  assert.deepEqual(await desk.locator("#th-T-1 .sacts button").allTextContents(), ["Reply", "Resolve"], "Reply and Resolve, as words");
+  assert.equal(await desk.locator("#th-T-1 .sreply").isHidden(), true, "the reply box waits for Reply");
+  await desk.click("#th-T-1 [data-reply-open]");
+  assert.equal(await desk.evaluate(() => document.activeElement?.dataset.reply), "T-1", "Reply opens the box, the cursor in it");
+  assert.equal(await desk.locator("#th-T-1 [data-reply-open]").isHidden(), true);
+  await desk.click("#th-T-1 [data-reply-close]");
+  assert.equal(await desk.locator("#th-T-1 .sreply").isHidden(), true, "Cancel folds it away");
+  // One box at a time: Reply on another conversation folds the one open before.
+  await desk.click("#th-T-1 [data-reply-open]");
+  await desk.click("#th-T-3 [data-reply-open]");
+  assert.equal(await desk.locator("#detail .sreply:visible").count(), 1, "one reply box open");
+  assert.equal(await desk.locator("#th-T-1 [data-reply-open]").isVisible(), true, "the first conversation's Reply is back");
+  // What is typed in the open box stays through a redraw (Submit feedback's panel redraws the page).
+  await desk.fill("#th-T-3 [data-reply]", "Warmer, yes.");
+  await desk.click('#detail [data-fb="head"]');
+  await desk.waitForSelector(".fb-pop");
+  assert.equal(await desk.inputValue("#th-T-3 [data-reply]"), "Warmer, yes.", "the reply's words survive the redraw");
+  assert.equal(await desk.locator("#th-T-3 .sreply").isVisible(), true, "and its box stays open");
+  await desk.keyboard.press("Escape");
   assert.match(await desk.textContent("#th-T-1 .smsg:not(.re) .who"), /pat\.lee[\s\S]*designer/i, "who by name (the part before the @) and role");
-  assert.equal(await desk.locator("#th-T-1 .smsg.re").count(), 1, "a reply is indented under the first message");
+  assert.equal(await desk.locator("#th-T-1 .sreplies > .smsg.re").count(), 1, "a reply hangs under the first message, on its line");
+  assert.equal(await desk.locator('#th-T-1 .smsg.re[data-k="agent"]').count(), 1, "Design Desk's reply is told apart");
+  assert.equal(await desk.locator('#th-T-1 .smsg:not(.re)[data-k]').count(), 0, "someone else's message is on no tint");
+  assert.doesNotMatch(await desk.textContent("#th-T-2 .smsg .who"), /developer/i, "only a designer's role is named");
   assert.equal(await desk.locator("#th-T-1 .smsg.re .sav.mk-on-ink svg.dd-mark").count(), 1, "Design Desk's avatar is its mark (#215)");
   assert.doesNotMatch(await desk.textContent("#th-T-1 .smsg.re .sav"), /\S/, "never letters");
   assert.equal(await desk.locator("#th-T-3 [data-work-in]").count(), 1, "a comment on a design can be worked in");
@@ -4858,13 +4895,16 @@ test("simple mode's head keeps the English title on one line with an ellipsis an
   assert.match(await desk.textContent("#detail .so-body"), /A new agent shows an empty page\./);
 }));
 
-test("simple mode's words keep a readable width on a wide screen; the designs take the whole width", (t) => open(t, HEAD_DESK(HEAD_ME, [czech, drawn]), async (desk) => {
+test("simple mode's words keep one readable width on a wide screen, every fold and the comments alike; the designs take the whole width", (t) => open(t, HEAD_DESK(HEAD_ME, [{ ...czech, impact: talked.impact }, drawn]), async (desk) => {
   await desk.setViewportSize({ width: 2000, height: 900 });
   await desk.waitForSelector('#list [data-card="R-8"]');
   await desk.click('#list [data-card="R-8"]');
   await desk.waitForSelector("#detail .slead");
   const w = (sel) => desk.$eval(sel, (x) => x.getBoundingClientRect().width);
-  for (const sel of ["#detail .slead", "#detail details.sorig", "#detail .sfound"]) assert.ok(await w(sel) <= 680, `${sel} keeps to 680 px`);
+  for (const sel of ["#detail .slead", "#detail details.sorig", "#detail .sfound", "#detail .sthreads"]) assert.ok(await w(sel) <= 800, `${sel} keeps to 800 px`);
+  const folds = await desk.$$eval("#detail details.fold.big:not(.vpanel details)", (xs) => xs.map((x) => [x.querySelector("summary h3").textContent.trim(), Math.round(x.getBoundingClientRect().width)]));
+  assert.ok(folds.some(([t]) => t === "Where else this shows up"), "the impact's folds are there");
+  assert.deepEqual(folds.map(([, x]) => x), folds.map(() => 800), `every fold is as wide as the others: ${JSON.stringify(folds)}`);
   assert.ok(await w("#detail .vtabs") > 900, "the designs are wider");
 }));
 
@@ -4877,6 +4917,22 @@ test("simple mode's change page: lead, the changes, what to look at, comments; N
   await desk.evaluate(() => { location.hash = "#P-4"; });
   await desk.waitForFunction(() => /Quiet/.test(document.querySelector("#detail .shead h2")?.textContent || ""));
   assert.match(await desk.textContent("#detail .sfound"), /Nothing to flag/);
+}));
+
+// What Design Desk found counts what its body shows, and nothing it does not.
+test("simple mode: What Design Desk found counts the check holding a pull request, and never a decision on an option that is gone", (t) => open(t, HEAD_DESK(HEAD_ME, [
+  { ...prChange, id: "P-5", title: "Held", attention: { level: "fyi", reasons: [] }, ci: { state: "failing" } },
+  { ...drawn, id: "R-9", title: "Option gone", conflicts: [{ decision: "D-3", status: "active", variant: "v9", text: "Two primaries.", why: "One primary button per screen." }] }]), async (desk) => {
+  await desk.waitForSelector("#list .row");
+  await desk.evaluate(() => { location.hash = "#P-5"; });
+  await desk.waitForFunction(() => /Held/.test(document.querySelector("#detail .shead h2")?.textContent || ""));
+  assert.equal((await desk.textContent("#detail details.sfound > summary .sf-say")).trim(), "1 thing to check", "the check holding the pull request is one");
+  assert.match(await desk.textContent("#detail details.sfound .section"), /holds the pull request/);
+  assert.equal(await desk.locator("#detail details.sfound[open]").count(), 1);
+  await desk.evaluate(() => { location.hash = "#R-9"; });
+  await desk.waitForFunction(() => /Option gone/.test(document.querySelector("#detail .shead h2")?.textContent || ""));
+  assert.equal((await desk.textContent("#detail details.sfound > summary .sf-say")).trim(), "Nothing to flag", "a decision on a removed option is not shown, so not counted");
+  assert.match(await desk.textContent("#detail details.sfound .section"), /goes against no decision in force/);
 }));
 
 // The options' tabs (docs/desk-page.md → the options' tabs): one row that never scrolls sideways;
@@ -4920,6 +4976,96 @@ const CHANGES_DESK = (me) => REVIEW_DESK(me, [threeChanges, { ...prChange, id: "
   const answer = path ===`);
 // The same pull request with a screen Design Desk found unchanged, and one it knows the change adds.
 const fourScreens = { ...threeChanges, screens: [...threeChanges.screens.map((x) => (x.asset === "S-1" ? { ...x, new: true } : x)), { asset: "S-3", caption: "The settings page", source: "pr", unchanged: true }] };
+// The same pull request compared with its Figma frame: each difference names the change it is on (docs/desk.md → Reviews).
+const figChanges = { ...threeChanges, attention: { level: "designer", reasons: ["2 major differences from Figma."] },
+  figma_check: { id: "F-1", verdict: "differs", checked: "2026-11-18T09:00:00Z", frame: { url: "https://www.figma.com/design/abc/Agents?node-id=1-2", name: "Agents" },
+    differences: [{ part: "Spend label", change: "Agents list", severity: "major", what: "A slash in Figma.", figma: "$4.60 / $5.00", product: "$4.60 of $5" },
+      { part: "Pill colour", change: "Agents list", severity: "minor", what: "Green in Figma.", figma: "#1f7a4d", product: "#2f5bd3" },
+      { part: "Save button", change: "S-1", severity: "major", what: "Filled in Figma.", figma: "Filled", product: "" },
+      { part: "Footer", severity: "minor", what: "On no change.", figma: "8px", product: "4px" },
+      { part: "Old picture", change: "S-gone", severity: "major", what: "On a screenshot replaced since.", figma: "a", product: "b" }] } };
+// Its drafts keep what the page sends: a difference taken (its words) or marked fine.
+const FIG_DESK = (me) => CHANGES_DESK(me).replace(JSON.stringify(threeChanges), JSON.stringify(figChanges))
+  .replace("drafts[id] = [...(drafts[id] || []), b.ok ?", "drafts[id] = [...(drafts[id] || []).filter((d) => !b.figma || d.figma !== b.figma), b.figma ? { id: \"d\" + posts.length, ...b, at: \"2026-11-18T10:00:00Z\" } : b.ok ?");
+const FIG_ME = { ...HEAD_ME, figma: true, figma_pref: true };
+test("differences from Figma wait on their changes for whoever may mark them handled: taken as they are or in one's own words, or marked fine", (t) => open(t, FIG_DESK(FIG_ME), async (desk) => {
+  await desk.waitForSelector("#list");
+  await desk.evaluate(() => { location.hash = "#P-7"; });
+  await desk.waitForSelector("#detail .chg-tiles");
+  assert.deepEqual(await desk.locator("#detail .chg-tiles .fig-chip").allTextContents(), ["2 from Figma", "1 from Figma"], "each change counts what is still to decide on it");
+  await desk.click('#detail [data-chg-open="Agents list"]');
+  await desk.waitForSelector("#element-dialog[open] .figprop");
+  assert.equal(await desk.locator("#element-dialog .figprop .fp-r").count(), 2, "only this change's differences");
+  assert.match(await desk.textContent("#element-dialog .figprop"), /2 differences from Figma[\s\S]*2 to decide[\s\S]*Spend label[\s\S]*\$4\.60 \/ \$5\.00[\s\S]*\$4\.60 of \$5/);
+  await desk.click('#element-dialog [data-fig-take="Spend label"]');
+  await desk.waitForSelector("#element-dialog .fp-r.done");
+  assert.deepEqual(await desk.evaluate(() => posts.filter((p) => /drafts$/.test(p.path)).at(-1).body),
+    { figma: "Spend label", change: "Agents list", text: "Spend label: A slash in Figma. In Figma: $4.60 / $5.00; in the product: $4.60 of $5.", edited: false });
+  assert.match(await desk.textContent("#element-dialog .fp-r.done"), /In your feedback/);
+  assert.equal(await desk.locator("#element-dialog .chg-foot .dbub").count(), 0, "shown once, in its own box");
+  assert.equal(await desk.locator("#element-dialog .chg-foot [data-draft-ok]").count(), 0, "a note: no Looks good beside it");
+  await desk.click('#element-dialog [data-fig-fine="Pill colour"]');
+  await desk.waitForSelector("#element-dialog .fp-r.fine");
+  assert.deepEqual(await desk.evaluate(() => posts.filter((p) => /drafts$/.test(p.path)).at(-1).body), { figma: "Pill colour", change: "Agents list", fine: true });
+  assert.match(await desk.textContent("#element-dialog .figprop .fp-top"), /All decided/);
+  // The next change: in one's own words.
+  await desk.click('#element-dialog [data-chg-nav="1"]');
+  await desk.waitForFunction(() => document.querySelector("#element-dialog .elbar h2")?.textContent === "The limit dialog");
+  await desk.click('#element-dialog [data-fig-edit="Save button"]');
+  await desk.waitForSelector("#element-dialog [data-fig-text]");
+  assert.equal(await desk.inputValue("#element-dialog [data-fig-text]"), "Save button: Filled in Figma. In Figma: Filled; in the product: —.", "it starts from Design Desk's words, a missing value a dash");
+  await desk.fill("#element-dialog [data-fig-text]", "Fill the Save button, as in Figma.");
+  await desk.click('#element-dialog [data-fig-edit-add="Save button"]');
+  await desk.waitForSelector("#element-dialog .fp-r.done");
+  assert.deepEqual(await desk.evaluate(() => posts.filter((p) => /drafts$/.test(p.path)).at(-1).body), { figma: "Save button", change: "S-1", text: "Fill the Save button, as in Figma.", edited: true });
+  assert.match(await desk.textContent("#element-dialog .fp-r.done"), /in your words/);
+  // Submit feedback: what was taken and marked fine, the quiet amber of Request changes.
+  await openFeedback(desk, "dlg");
+  assert.match(await desk.textContent(".fb-pop .fb-items"), /From Figma[\s\S]*Spend label: A slash[\s\S]*From Figma · fine as it is[\s\S]*Pill colour/);
+  assert.equal(await desk.locator(".fb-pop .fb-fig").count(), 0, "nothing left to decide");
+  const bg = await desk.evaluate(() => { const b = document.querySelector(".fb-pop [data-fb-send]"), c = document.createElement("span"); c.className = "chip warn"; document.body.append(c); const r = [b.dataset.v, getComputedStyle(b).backgroundColor, getComputedStyle(c).backgroundColor]; c.remove(); return r; });
+  assert.equal(bg[0], "rc");
+  assert.equal(bg[1], bg[2], "Request changes is the pale amber, not the solid one");
+}));
+test("differences from Figma: someone who may not mark the change handled is offered none on its changes", (t) => open(t, FIG_DESK({ ...FIG_ME, can: { ...FIG_ME.can, handle: false } }), async (desk) => {
+  await desk.waitForSelector("#list");
+  await desk.evaluate(() => { location.hash = "#P-7"; });
+  await desk.waitForSelector("#detail .chg-tiles");
+  assert.equal(await desk.locator("#detail .fig-chip").count(), 0);
+  await desk.click('#detail [data-chg-open="Agents list"]');
+  await desk.waitForSelector("#element-dialog[open] .cv-pair");
+  assert.equal(await desk.locator("#element-dialog .figprop").count(), 0);
+}));
+// Feedback sent already: the taken one became a comment, the fine one left the table and the review names it.
+const figSent = { ...figChanges, reviews: [{ id: "U-1", by: { email: "d@example.com", role: "designer" }, at: "2026-11-18T11:00:00Z", verdict: "request-changes", note: "", threads: ["T-1"], figma_fine: [{ part: "Pill colour", change: "Agents list" }] }],
+  figma_check: { ...figChanges.figma_check, dismissed: [{ part: "Pill colour", by: { email: "d@example.com" }, at: "2026-11-18T11:00:00Z", review: "U-1" }] },
+  threads: [{ id: "T-1", kind: "comment", state: "open", review: "U-1", change: "Agents list", figma: "Spend label", may: { reply: true, resolve: true }, messages: [{ by: { email: "d@example.com", role: "designer" }, at: "2026-11-18T11:00:00Z", text: "Use the slash." }] }] };
+test("differences from Figma: one sent shows as sent with its comment, tagged; the review names those marked fine", (t) => open(t, FIG_DESK(FIG_ME).replace(JSON.stringify(figChanges), JSON.stringify(figSent)), async (desk) => {
+  await desk.waitForSelector("#list");
+  await desk.evaluate(() => { location.hash = "#P-7"; });
+  await desk.waitForSelector("#detail .chg-tiles");
+  assert.deepEqual(await desk.locator("#detail .chg-tiles .fig-chip").allTextContents(), ["1 from Figma"], "nothing left to decide on Agents list");
+  assert.match(await desk.textContent("#detail .rvw"), /Fine as it is, from Figma: Pill colour/);
+  assert.match(await desk.textContent("#detail .rvw"), /From Figma[\s\S]*Use the slash\./, "the comment carries its tag");
+  await desk.click('#detail [data-chg-open="Agents list"]');
+  await desk.waitForSelector("#element-dialog[open] .figprop");
+  assert.equal(await desk.locator("#element-dialog .figprop .fp-r").count(), 1, "the one marked fine is off the table");
+  assert.match(await desk.textContent("#element-dialog .fp-r.done"), /Sent in your feedback[\s\S]*See the comment/);
+  assert.equal(await desk.getAttribute("#element-dialog .fp-r.done [data-chg-talk]", "data-chg-talk"), "T-1");
+  assert.equal(await desk.locator("#element-dialog .fp-lead").count(), 0, "all decided: no line asking for a judgement");
+}));
+test("differences from Figma: Submit feedback names the changes with some still to decide, and sends anyway", (t) => open(t, FIG_DESK(FIG_ME), async (desk) => {
+  await desk.waitForSelector("#list");
+  await desk.evaluate(() => { location.hash = "#P-7"; });
+  await desk.waitForSelector("#detail .chg-tiles");
+  await desk.click('#detail [data-chg-open="Agents list"]');
+  await desk.waitForSelector("#element-dialog[open] .figprop");
+  await desk.click('#element-dialog [data-fig-take="Spend label"]');
+  await desk.waitForSelector("#element-dialog .fp-r.done");
+  await openFeedback(desk, "dlg");
+  assert.match(await desk.textContent(".fb-pop .fb-fig"), /2 differences from Figma not taken or marked fine yet[\s\S]*Agents list · 1[\s\S]*The limit dialog · 1/);
+}));
+
 for (const simple of [true, false]) {
   test(`${simple ? "simple" : "full"} mode: a pull request's changes are tiles; one opens in the element's dialog with the cursor in its box; Add to feedback and Looks good name the change`, (t) => open(t, CHANGES_DESK({ ...HEAD_ME, simple }).replace(JSON.stringify(threeChanges), JSON.stringify(fourScreens)), async (desk) => {
     await desk.waitForSelector("#list");
@@ -5312,6 +5458,8 @@ test("a request that went to design folds what was said before it under Before d
   assert.equal(await desk.locator("#detail details.before-design #th-T-1").count(), 1, "the earlier one inside the fold");
   assert.equal(await desk.locator("#detail details.before-design #th-T-2").count(), 0, "the later one outside it");
   assert.equal(await desk.getAttribute("#detail details.before-design", "open"), null, "folded");
+  // Simple mode runs oldest first, so Before design leads the comments (docs/desk-page.md → Simple mode).
+  assert.ok(await desk.$eval("#detail details.before-design", (f) => Boolean(f.compareDocumentPosition(document.querySelector("#th-T-2")) & Node.DOCUMENT_POSITION_FOLLOWING)), "Before design comes first, above what was said after");
 }));
 
 test("Close on a draft is a plain close, for its author whatever their role, with no decision", (t) => open(t, HEAD_DESK({ ...HEAD_ME, role: "developer", can: { comment: true, request: true, "stage-propose": true } }, [{ ...drawn, ...STAGED[0], variants: drawn.variants }]), async (desk) => {

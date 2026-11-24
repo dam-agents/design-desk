@@ -146,9 +146,10 @@ put("A-compact-1", design({ title: "Compact", dense: true, radius: 4, change: "b
 // R-2: one option, a request that waits for a new option being drawn.
 put("A-r2-1", design({ title: "Plain", state: "empty" }));
 
-const ALICE = { name: "Alice Novak", email: "alice@example.com" };
-const PAT = { name: "Pat Lee", email: "pat@example.com" };
-const DEV = { name: "Dana Kim", email: "dana@example.com" };
+// Each with the role the Desk records on what they write, as the server does.
+const ALICE = { name: "Alice Novak", email: "alice@example.com", role: "designer" };
+const PAT = { name: "Pat Lee", email: "pat@example.com", role: "pm" };
+const DEV = { name: "Dana Kim", email: "dana@example.com", role: "developer" };
 const AGENT = { agent: true };
 const may = { reply: true, resolve: true };
 const anchor = (variant, selector, label, extra = {}) => ({ variant, selector, label, text: label, tag: "button", ...extra });
@@ -211,6 +212,8 @@ const r1 = {
   ],
   waiting: [{ kind: "revise", state: "claimed", created: ago(4), started: ago(3), usual_min: 12, variant: "v2" }],
   prototype: { state: "none" },
+  impact: { concept: "the daily limit", places: [{ where: "Usage", kind: "screen", how: "Shows the same limit beside the workspace limit." }, { where: "Slack alert", kind: "message", how: "Says the agent stopped at its limit." }],
+    behind: { text: "The limit that stops first is worked out from the agent's own limit and the workspace limit; the card only shows it." } },
   // The parts every option shows, and each as it was before the design (docs/requests.md).
   shared_elements: [{ id: "change", name: "Change button" }, { id: "bar", name: "Limit bar" }, { id: "text", name: "Limit amount" }, { id: "providers", name: "Provider list" }],
   now: { asset: "A-now", name: "Providers", at: ago(60 * 20), elements: [{ id: "change", selector: "#limit-change", view: null, view_name: null }, { id: "bar", selector: "#limit-bar", view: null, view_name: null }, { id: "text", selector: "#limit-text", view: null, view_name: null }] },
@@ -232,6 +235,8 @@ put("A-r3-1", '<body><h1>List</h1><button id="kit">Kit</button></body>');
 const r3 = {
   id: "R-3", kind: "request", title: "A bare design", status: "feedback", created: ago(60 * 30), updated: ago(30),
   by: PAT, triage: { verdict: "design", reasons: [] }, request: { type: "idea", problem: "A design with no review bar." },
+  // What Design Desk found: something to check, so the fold opens with its amber answer.
+  conflicts: [{ decision: "D-12", status: "active", variant: "q1", text: "Kit is a second primary button on the screen.", why: "One primary button per screen." }],
   variants: [{ id: "q1", name: "Quiet", asset: "A-r3-1", version: 1 }],
   threads: [{ id: "T-30", kind: "comment", state: "open", may, anchor: { variant: "q1", selector: "#kit", text: "Kit", label: "Text" }, messages: [{ by: PAT, at: ago(40), text: "Too bright here." }] }],
   waiting: [], prototype: { state: "none" },
@@ -300,7 +305,15 @@ const p6 = pr("P-6", 815, "Agents: spend shown in the list", 12, { merged: false
     { asset: "A-agents-after", stage: "after", pair: "Agents list", caption: "Each row shows its spend", source: "instance", marks: [{ x: 0.78, y: 0.17, w: 0.18, h: 0.38 }] },
     { asset: "A-limit-dialog", caption: "The weekly limit dialog", source: "instance", new: true },
     { asset: "A-usage", caption: "The usage page", source: "pr" },
-    { asset: "A-agents-before", caption: "The agent's settings", source: "pr", unchanged: true }] });
+    { asset: "A-agents-before", caption: "The agent's settings", source: "pr", unchanged: true }],
+  // Compared with its Figma frame (docs/desk.md → Differences from Figma): each difference names the change it is on.
+  attention: { level: "designer", reasons: ["2 major differences from its Figma frame (Agents — spend)."] }, ci: { state: "failing", sha: "abc1234" },
+  figma_check: { id: "F-3", verdict: "differs", checked: ago(10), frame: { url: "https://www.figma.com/design/abc/Agents?node-id=12-3", name: "Agents — spend", edited: ago(60 * 26) },
+    differences: [
+      { part: "Spend label", change: "Agents list", severity: "major", what: "Figma shows spend against the limit with a slash; the product writes it out.", figma: "$4.60 / $5.00", product: "$4.60 of $5" },
+      { part: "Spend pill colour", change: "Agents list", severity: "minor", what: "The pill under the limit is green in Figma, blue in the product.", figma: "#1f7a4d", product: "#2f5bd3" },
+      { part: "Save button", change: "A-limit-dialog", severity: "major", what: "Figma has a filled primary button; the product shows a tinted pill.", figma: "Primary button, filled", product: "Tinted pill" },
+      { part: "Dialog padding", change: "A-limit-dialog", severity: "minor", what: "A little tighter in the product.", figma: "24px", product: "16px" }] } });
 
 // Before design (docs/desk.md → Draft and Proposal): the mock's person's own draft, and Pat's
 // proposal; the page shows them to the roles that see them (?role=developer, ui-dev-owner, admin).

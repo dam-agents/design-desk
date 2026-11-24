@@ -240,7 +240,7 @@
   <div class="gl-item">
     <div class="gl-rule">
       <h3 class="gl-h3">One primary action in a view</h3>
-      <p class="gl-p">The dark primary is the next step. Green is only what approves an item: Approve, Approve for dev, Send to developers, and Looks good. Propose and Send to design only send it on to the next review: outlined, with a paper plane. <b>Submit feedback</b> wears the colour of the verdict it sends: green an approval, amber Request changes, ink Comment only. Everything else is neutral. Red only for what deletes.</p>
+      <p class="gl-p">The dark primary is the next step. Green is only what approves an item: Approve, Approve for dev, Send to developers, and Looks good. Propose and Send to design only send it on to the next review: outlined, with a paper plane. <b>Submit feedback</b> wears the colour of the verdict it sends: green an approval, a quiet amber Request changes (a pale fill, amber words), ink Comment only. Everything else is neutral. Red only for what deletes.</p>
       <p class="gl-p">An action keeps its name everywhere: “Request changes” in the header, in its dialog, and in the message that follows.</p>
       <p class="gl-p">Small buttons sit inside a row, a card or a toolbar; the full size stands on its own.</p>
       <p class="gl-p">A <b>ghost</b> (<code>.btn.ghost</code>, no fill and no edge until hovered) is a quiet move beside the real ones, one that only shows something, such as Read the spec; it never sends, approves or changes anything.</p>
@@ -421,14 +421,17 @@
   <div class="gl-item">
     <div class="gl-rule">
       <h3 class="gl-h3">A thread, a resolved thread</h3>
-      <p class="gl-p">Replies indent under the first message. Who wrote it shows by role: a designer, a developer; Design Desk by its mark. A resolved thread folds to one line.</p>
+      <p class="gl-p">Replies hang on a line; only a designer's role shows; yours are tinted, Design Desk's grey, with its mark. A resolved one folds.</p>
     </div>
     <div class="gl-ex gl-wide">
       <article class="sthread">
-        <div class="smsg"><span class="sav" data-r="designer">AN</span><div class="sm-b"><div class="who"><b>Alice Novak</b><span class="role">Designer</span><span class="at">Today, 9:12 AM</span></div><p>Can the empty state say what to do next?</p></div></div>
-        <div class="smsg re"><span class="sav mk-on-ink" title="Design Desk"><svg class="dd-mark" viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="gl-mk-g" x1="3" y1="2" x2="21" y2="22" gradientUnits="userSpaceOnUse"><stop offset="0" class="mk-s0"/><stop offset="0.38" class="mk-s1"/><stop offset="0.68" class="mk-s2"/><stop offset="1" class="mk-s3"/></linearGradient></defs><circle cx="12" cy="12" r="12" fill="url(#gl-mk-g)"/><path d="M4.47 8.28H7.61A3.72 3.72 0 0 1 7.61 15.72H4.47ZM12.67 8.28H15.81A3.72 3.72 0 0 1 15.81 15.72H12.67ZM15.62 9.55Q16.07 11.55 17.17 12Q16.07 12.45 15.62 14.45Q15.17 12.45 14.07 12Q15.17 11.55 15.62 9.55Z" fill-rule="evenodd" class="mk-d"/></svg></span><div class="sm-b"><div class="who"><b>Design Desk</b><span class="at">Today, 9:14 AM</span></div><p>Version 2 adds a button that opens the new-request form.</p></div></div>
+        <div class="smsg"><span class="sav" data-r="designer">AN</span><div class="sm-b"><div class="who"><b>Alice Novak</b><span class="role" data-r="designer">Designer</span><span class="at">Today, 9:12 AM</span></div><p>Can the empty state say what to do next?</p></div></div>
+        <div class="sreplies">
+          <div class="smsg re" data-k="agent"><span class="sav mk-on-ink" title="Design Desk"><svg class="dd-mark" viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="gl-mk-g" x1="3" y1="2" x2="21" y2="22" gradientUnits="userSpaceOnUse"><stop offset="0" class="mk-s0"/><stop offset="0.38" class="mk-s1"/><stop offset="0.68" class="mk-s2"/><stop offset="1" class="mk-s3"/></linearGradient></defs><circle cx="12" cy="12" r="12" fill="url(#gl-mk-g)"/><path d="M4.47 8.28H7.61A3.72 3.72 0 0 1 7.61 15.72H4.47ZM12.67 8.28H15.81A3.72 3.72 0 0 1 15.81 15.72H12.67ZM15.62 9.55Q16.07 11.55 17.17 12Q16.07 12.45 15.62 14.45Q15.17 12.45 14.07 12Q15.17 11.55 15.62 9.55Z" fill-rule="evenodd" class="mk-d"/></svg></span><div class="sm-b"><div class="who"><b>Design Desk</b><span class="at">Today, 9:14 AM</span></div><p>Version 2 adds a button for it.</p></div></div>
+        </div>
+        <div class="sacts"><button class="slk">Reply</button><button class="slk">Resolve</button></div>
       </article>
-      <details class="sthread done"><summary><span class="q">Pat Lee: The spacing under the header looks off</span><span class="hint">Resolved · Mon 2 Nov</span></summary><p>The spacing is back on the scale.</p></details>
+      <details class="sthread done"><summary><svg class="chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg><svg class="ok" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg><span class="q"><b>Pat Lee</b>: The spacing under the header looks off</span><span class="hint">Resolved · Mon 2 Nov</span></summary><p>The spacing is back on the scale.</p></details>
     </div>
   </div>
   <div class="gl-item">
@@ -449,7 +452,7 @@
       </section>
       <article class="rvw" data-v="request-changes"><div class="rv-h"><b>Alice Novak</b><span class="hint">Designer</span><span class="rv-v">Changes requested</span><span class="hint">Today, 10:02 AM</span></div>
         <div class="rv-note"><p>Close, two things to fix before it goes on.</p></div><p class="rv-ok">✓ Looks good: Agents list</p>
-        <article class="sthread"><div class="smsg"><span class="sav" data-r="designer">AN</span><div class="sm-b"><div class="who"><b>Alice Novak</b><span class="role">Designer</span><span class="at">Today, 10:02 AM</span></div><p>The button should say what it sends.</p></div></div></article>
+        <article class="sthread"><div class="smsg"><span class="sav" data-r="designer">AN</span><div class="sm-b"><div class="who"><b>Alice Novak</b><span class="role" data-r="designer">Designer</span><span class="at">Today, 10:02 AM</span></div><p>The button should say what it sends.</p></div></div></article>
       </article>
     </div>
   </div>
