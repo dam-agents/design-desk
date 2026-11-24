@@ -1,5 +1,7 @@
 /* desk/page.html's own <style>, copied by `node desk/dev/guidelines.mjs` for desk/guidelines.html; never edit it here. */
   :root {
+    /* Design Desk's mark (desk/brand/mark.svg): a colour per piece; --mk-inv-* on the ink circle of its avatar. */
+    --mk-tl: #9a6200; --mk-bl: #d98f6c; --mk-tr: #82ad68; --mk-br: #6a90cc; --mk-inv-tl: #e0a640; --mk-inv-bl: #eaa889; --mk-inv-tr: #9fcc86; --mk-inv-br: #8eb1ec;
     --bg: #fcfbfc; --panel: #ffffff; --ink: #1b1b1a; --muted: #6b6b66; --line: #e4e3df; --soft: #f0efeb;
     --tip-opens: #6fd3a0; --accent: #2f5bd3; --accent-ink: #ffffff; --ok: #1f7a4d; --ok-soft: #e3f3ea; --warn: #9a6200; --warn-soft: #fbf0d9;
     --bad: #b3261e; --bad-soft: #fbe5e3; --info-soft: #e7edfc; --live: #6b3fc4; --live-soft: #efe8fb; --why: #0d7d78; --why-soft: #e0f3f1; --r-sm: 6px; --radius: 12px; --shadow: 0 1px 2px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.04);
@@ -15,11 +17,13 @@
   @media (min-width: 2200px) { :root { --measure: 150ch; --pad-x: 64px; --list-w: 550px; --side-w: 520px; --shot-w: 400px; --shot-h: 440px; } }
   /* Night follows the system unless the header switch chose a mode (data-theme). */
   @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) { --bg: #151514; --panel: #1e1e1c; --ink: #ecebe7; --muted: #a09f99; --line: #33332f; --soft: #262624;
+    :root:not([data-theme="light"]) { --mk-tl: #e0a640; --mk-bl: #eaa889; --mk-tr: #9fcc86; --mk-br: #8eb1ec; --mk-inv-tl: #9a6200; --mk-inv-bl: #d98f6c; --mk-inv-tr: #82ad68; --mk-inv-br: #6a90cc;
+      --bg: #151514; --panel: #1e1e1c; --ink: #ecebe7; --muted: #a09f99; --line: #33332f; --soft: #262624;
       --tip-opens: #1f7a4d; --accent: #8aa8ff; --accent-ink: #10142a; --ok: #6fd3a0; --ok-soft: #1c2f25; --warn: #f0c060; --warn-soft: #34291a;
       --bad: #ff8a80; --bad-soft: #3a1f1d; --info-soft: #1f2640; --live: #c3a6ff; --live-soft: #2a2140; --why: #62d2c8; --why-soft: #16302e; --shadow: none; --float: 0 0 0 1px rgba(255,255,255,.10), 0 14px 36px rgba(0,0,0,.6), 0 36px 90px rgba(0,0,0,.7); color-scheme: dark; }
   }
-  :root[data-theme="dark"] { --bg: #151514; --panel: #1e1e1c; --ink: #ecebe7; --muted: #a09f99; --line: #33332f; --soft: #262624;
+  :root[data-theme="dark"] { --mk-tl: #e0a640; --mk-bl: #eaa889; --mk-tr: #9fcc86; --mk-br: #8eb1ec; --mk-inv-tl: #9a6200; --mk-inv-bl: #d98f6c; --mk-inv-tr: #82ad68; --mk-inv-br: #6a90cc;
+    --bg: #151514; --panel: #1e1e1c; --ink: #ecebe7; --muted: #a09f99; --line: #33332f; --soft: #262624;
     --tip-opens: #1f7a4d; --accent: #8aa8ff; --accent-ink: #10142a; --ok: #6fd3a0; --ok-soft: #1c2f25; --warn: #f0c060; --warn-soft: #34291a;
     --bad: #ff8a80; --bad-soft: #3a1f1d; --info-soft: #1f2640; --live: #c3a6ff; --live-soft: #2a2140; --why: #62d2c8; --why-soft: #16302e; --shadow: none; --float: 0 0 0 1px rgba(255,255,255,.10), 0 14px 36px rgba(0,0,0,.6), 0 36px 90px rgba(0,0,0,.7); color-scheme: dark; }
   :root[data-theme="light"] { color-scheme: light; }
@@ -84,6 +88,7 @@
   #notes .note.unread { border-left-color: var(--accent); background: color-mix(in srgb, var(--info-soft) 55%, transparent); }
   #notes .note .ic { grid-row: 1 / span 2; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); }
   #notes .note .ic svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  #notes .note .ic.mk-on-ink { background: var(--ink); } #notes .note .ic.mk-on-ink svg { width: 17px; height: 17px; }
   /* A row is at most three lines: what and who, the item, what was said; each line cuts with … */
   #notes .note .ev { font-weight: 600; color: var(--ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #notes .note .ev span { font-weight: 400; color: var(--muted); }
@@ -302,7 +307,7 @@
   .smsg .who .role { display: inline-flex; align-items: center; gap: 4px; }
   .sav { width: 28px; height: 28px; flex: none; border-radius: 50%; display: grid; place-items: center; font-size: var(--fs-meta); font-weight: 600; color: var(--ink); background: var(--soft); }
   .sav[data-r="designer"], .sav[data-r="admin"] { background: var(--live-soft); color: var(--live); } .sav[data-r="developer"], .sav[data-r="ui-dev-owner"] { background: var(--info-soft); color: var(--accent); }
-  .sav[data-r="agent"] { background: var(--ink); color: var(--bg); } .sav svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+  .sav svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; }
   .sthread .chip { margin-bottom: 8px; } .sthread .reply { margin-top: 12px; margin-left: 40px; }
   .sh-after { margin-top: 4px; font-size: var(--fs-meta); color: var(--muted); } .sh-after a { color: inherit; }
   /* A review in the making: the person's drafts, seen by them alone (docs/desk.md → Reviews). */
@@ -929,7 +934,6 @@
   .ask-row { display: flex; gap: 8px; align-items: flex-start; align-self: flex-start; max-width: 92%; }
   .ask-row .ask-msg { max-width: none; }
   .ask-avatar { flex: none; width: 28px; height: 28px; border-radius: 50%; background: var(--ink); color: var(--panel); display: grid; place-items: center; font-size: var(--fs-micro); font-weight: 600; line-height: 1; }
-  .dd-mark svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .ask-name { display: block; font-size: var(--fs-micro); font-weight: 600; color: var(--muted); margin-bottom: 2px; }
   .ask-msg.agent { align-self: flex-start; background: var(--soft); border-bottom-left-radius: 4px; }
   /* Design Desk is answering: a typing bubble, three dots that rise in turn. */
@@ -1804,17 +1808,32 @@
   /* Design Desk at work: the DD pair. The Ds flip one at a time and rest in three ways: as DD, with the
      round sides out, with the round sides in; back as DD, the pair turns once round. Its size follows the
      font size, its color the text color. Queued: still and faint. */
+  /* Design Desk at work: its mark, DD, in one colour and two tones. The first D turns round, the two
+     close into a disc, the disc turns once and opens into DD again. Each D is the mark's own shape
+     (desk/brand/build.mjs D_MASK); the first one flips. */
   .dd-spin { position: relative; display: inline-block; width: 1.25em; height: 1.25em; flex: none; vertical-align: -0.25em; color: var(--warn); animation: dd-spin-turn 5s cubic-bezier(.65,0,.35,1) infinite; }
-  .dd-spin::before, .dd-spin::after { content: ""; position: absolute; top: 29.167%; width: 37.5%; height: 41.667%; background: currentColor; border-radius: 0 999px 999px 0; animation: dd-spin-left 5s cubic-bezier(.65,0,.35,1) infinite; }
-  .dd-spin::before { left: 7.5%; }
-  .dd-spin::after { left: 55%; animation-name: dd-spin-right; }
-  .dd-spin.queued, .dd-spin.queued::before, .dd-spin.queued::after { animation: none; }
+  .dd-spin::before, .dd-spin::after { content: ""; position: absolute; top: 15.5%; width: 32.7%; height: 69%; background: currentColor; -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2010.9%2023%22%3E%3Cpath%20d%3D%22M0%200A10.9%2010.9%200%200%201%2010.9%2010.9L4.4%2010.9C0.4%2010.9%200%2010.5%200%206.5Z%22%2F%3E%3Cpath%20d%3D%22M10.9%2012.1A10.9%2010.9%200%200%201%200%2023L0%2016.5C0%2012.5%200.4%2012.1%204.4%2012.1Z%22%2F%3E%3C%2Fsvg%3E") center / 100% 100% no-repeat; mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2010.9%2023%22%3E%3Cpath%20d%3D%22M0%200A10.9%2010.9%200%200%201%2010.9%2010.9L4.4%2010.9C0.4%2010.9%200%2010.5%200%206.5Z%22%2F%3E%3Cpath%20d%3D%22M10.9%2012.1A10.9%2010.9%200%200%201%200%2023L0%2016.5C0%2012.5%200.4%2012.1%204.4%2012.1Z%22%2F%3E%3C%2Fsvg%3E") center / 100% 100% no-repeat; }
+  .dd-spin::before { left: 15.5%; animation: dd-spin-left 5s cubic-bezier(.65,0,.35,1) infinite; }
+  .dd-spin::after { left: 51.8%; opacity: .5; }
+  .dd-spin.queued, .dd-spin.queued::before { animation: none; }
   .dd-spin.queued { opacity: .5; }
   .dd-spin.light { color: var(--bg); }
-  @keyframes dd-spin-turn { 0%, 72% { transform: rotate(0); } 94%, 100% { transform: rotate(360deg); } }
-  @keyframes dd-spin-left { 0%, 12% { transform: scaleX(1); } 20%, 34% { transform: scaleX(-1); } 42%, 100% { transform: scaleX(1); } }
-  @keyframes dd-spin-right { 0%, 40% { transform: scaleX(1); } 48%, 58% { transform: scaleX(-1); } 66%, 100% { transform: scaleX(1); } }
-  @media (prefers-reduced-motion: reduce) { .dd-spin, .dd-spin::before, .dd-spin::after { animation-duration: 10s; } }
+  @keyframes dd-spin-turn { 0%, 36% { transform: rotate(0); } 62%, 100% { transform: rotate(360deg); } }
+  @keyframes dd-spin-left { 0%, 14% { transform: scaleX(1); } 26%, 70% { transform: scaleX(-1); } 82%, 100% { transform: scaleX(1); } }
+  @media (prefers-reduced-motion: reduce) { .dd-spin, .dd-spin::before { animation-duration: 10s; } }
+  /* Design Desk's mark, wherever it speaks or acts (docs/desk-page.md → The mark). Its colours follow
+     the mode; on the ink circle of its avatar (.mk-on-ink) it takes the other mode's. */
+  svg.dd-mark { display: block; flex: none; }
+  svg.dd-mark path { stroke: none; }
+  svg.dd-mark .mk-tl { fill: var(--mk-tl); } svg.dd-mark .mk-bl { fill: var(--mk-bl); } svg.dd-mark .mk-tr { fill: var(--mk-tr); } svg.dd-mark .mk-br { fill: var(--mk-br); }
+  .mk-on-ink { --mk-tl: var(--mk-inv-tl); --mk-bl: var(--mk-inv-bl); --mk-tr: var(--mk-inv-tr); --mk-br: var(--mk-inv-br); background: var(--ink); }
+  /* The mark fills 60 % of its circle: 28 px avatars (.sav, .ask-avatar, the bell), 24 px (.face), 18 px (.msg-av). */
+  .mk-on-ink svg.dd-mark { width: 17px; height: 17px; } .brief-k .face.mk-on-ink svg.dd-mark { width: 15px; height: 15px; } .msg .who .msg-av svg.dd-mark { width: 11px; height: 11px; }
+  header .brand { display: inline-grid; place-items: center; border-radius: var(--r-sm); } header .brand svg.dd-mark { width: 22px; height: 22px; }
+  .msg .who .msg-av { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; vertical-align: -4px; margin-right: 6px; }
+  .prov svg.dd-mark { width: 12px; height: 12px; }
+  .banner .mk-off { display: inline-block; vertical-align: -3px; margin-right: 8px; filter: grayscale(1); opacity: .55; } .banner .mk-off svg.dd-mark { width: 16px; height: 16px; }
+  h2.with-mark { display: flex; align-items: center; gap: 10px; } h2.with-mark svg.dd-mark { width: 28px; height: 28px; }
   .ws-sub { min-height: 40px; padding: 4px 16px; }
   .ws-sub .step-by { display: inline-flex; align-items: center; gap: 2px; } .ws-sub .step-by .hint { margin: 0; min-width: 8ch; text-align: center; font-variant-numeric: tabular-nums; }
   .ws-canvas { flex-direction: column; gap: 8px; background: color-mix(in srgb, var(--ink) 9%, var(--bg)); }

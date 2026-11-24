@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Design Desk — interface guidelines</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cstyle%3E.mk-tl%7Bfill%3A%239a6200%7D.mk-bl%7Bfill%3A%23d98f6c%7D.mk-tr%7Bfill%3A%2382ad68%7D.mk-br%7Bfill%3A%236a90cc%7D%40media%20(prefers-color-scheme%3Adark)%7B.mk-tl%7Bfill%3A%23e0a640%7D.mk-bl%7Bfill%3A%23eaa889%7D.mk-tr%7Bfill%3A%239fcc86%7D.mk-br%7Bfill%3A%238eb1ec%7D%7D%3C%2Fstyle%3E%3Cpath%20class%3D%22mk-tl%22%20d%3D%22M11.4%2011.4A10.9%2010.9%200%200%200%200.5%200.5L0.5%207C0.5%2011%200.9%2011.4%204.9%2011.4Z%22%2F%3E%3Cpath%20class%3D%22mk-bl%22%20d%3D%22M0.5%2023.5A10.9%2010.9%200%200%200%2011.4%2012.6L4.9%2012.6C0.9%2012.6%200.5%2013%200.5%2017Z%22%2F%3E%3Cpath%20class%3D%22mk-tr%22%20d%3D%22M12.6%200.5A10.9%2010.9%200%200%201%2023.5%2011.4L17%2011.4C13%2011.4%2012.6%2011%2012.6%207Z%22%2F%3E%3Cpath%20class%3D%22mk-br%22%20d%3D%22M23.5%2012.6A10.9%2010.9%200%200%201%2012.6%2023.5L12.6%2017C12.6%2013%2013%2012.6%2017%2012.6Z%22%2F%3E%3C%2Fsvg%3E">
 <!-- What the Desk's interface is made of, when each piece is used and what it means. Every
      example below is the Desk's own component in the Desk's own stylesheet: guidelines.css is
      desk/page.html's <style>, copied by `node desk/dev/guidelines.mjs`; never edit it by hand.
@@ -49,6 +50,12 @@
   .gl-palette { width: 340px; max-width: 100%; }
   .gl-static { position: relative; margin: 0; }
   .gl-no { color: var(--bad); }
+  .gl-brand { display: flex; align-items: center; gap: 12px; }
+  .gl-brand svg.dd-mark { width: 28px; height: 28px; }
+  .gl-marks { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 24px; }
+  .gl-mk { display: grid; justify-items: center; gap: 4px; font-size: var(--fs-micro); color: var(--muted); }
+  .gl-mk-space { padding: 6px; box-shadow: inset 0 0 0 1px var(--line), inset 0 0 0 6px var(--soft); }
+  .gl-mk-av { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; }
   @media (max-width: 760px) { .gl-item { grid-template-columns: minmax(0, 1fr); } }
 </style>
 </head>
@@ -56,7 +63,7 @@
 <div class="gl-page">
 
 <header class="gl-top">
-  <h1 class="gl-h1">Interface guidelines</h1>
+  <div class="gl-brand"><svg class="dd-mark" viewBox="0 0 24 24" aria-hidden="true"><path class="mk-tl" d="M11.4 11.4A10.9 10.9 0 0 0 0.5 0.5L0.5 7C0.5 11 0.9 11.4 4.9 11.4Z"/><path class="mk-bl" d="M0.5 23.5A10.9 10.9 0 0 0 11.4 12.6L4.9 12.6C0.9 12.6 0.5 13 0.5 17Z"/><path class="mk-tr" d="M12.6 0.5A10.9 10.9 0 0 1 23.5 11.4L17 11.4C13 11.4 12.6 11 12.6 7Z"/><path class="mk-br" d="M23.5 12.6A10.9 10.9 0 0 1 12.6 23.5L12.6 17C12.6 13 13 12.6 17 12.6Z"/></svg><h1 class="gl-h1">Interface guidelines</h1></div>
   <div class="filters" role="group" aria-label="Light or dark">
     <button class="btn small on" data-gl-theme="light" aria-pressed="true">Light</button>
     <button class="btn small" data-gl-theme="dark" aria-pressed="false">Dark</button>
@@ -64,11 +71,40 @@
 </header>
 <p class="gl-lead">What the Desk's interface is made of, when each piece is used, and what it means. Build a new screen from these pieces; do not invent another look for a job one of them already does. Every example here is the Desk's own component in its own stylesheet, so this page is what the Desk looks like.</p>
 <ul class="gl-toc">
-  <li><a href="#tabs">Tabs and switchers</a></li><li><a href="#buttons">Buttons</a></li><li><a href="#state">State</a></li>
+  <li><a href="#mark">The mark</a></li><li><a href="#tabs">Tabs and switchers</a></li><li><a href="#buttons">Buttons</a></li><li><a href="#state">State</a></li>
   <li><a href="#colour">Colour</a></li><li><a href="#chips">Chips</a></li><li><a href="#folds">Folds</a></li><li><a href="#text">Text</a></li>
   <li><a href="#comments">Comments</a></li><li><a href="#dialogs">Dialogs and forms</a></li><li><a href="#tiles">Tiles and empty states</a></li>
   <li><a href="#toast">The toast</a></li><li><a href="#tokens">Tokens</a></li>
 </ul>
+
+<section class="gl-sect" id="mark">
+  <h2 class="gl-h2">The mark</h2>
+  <div class="gl-item">
+    <div class="gl-rule">
+      <h3 class="gl-h3">Design Desk speaking or acting</h3>
+      <p class="gl-p">DD: two D's, each two quarter circles, their gaps opening into a small spark. It stands for Design Desk wherever it speaks or acts: its avatar, its line on what it filed or drew, the head, the favicon. It never stands for the product; the product's look is the brand skill's. The spark alone is the icon of Draw options, never Design Desk; no letters "DD" stand for it either.</p>
+      <ul class="gl-ul">
+        <li>Sizes: 16 px at the smallest (the favicon, a GitHub line); 22 px in the head; 28 px in a heading.</li>
+        <li>Clear space: a quarter of its size on every side; nothing touches it.</li>
+        <li>Colours: one per piece, the first D's top the Desk's brown. Dark mode lifts each one. On the ink circle of the avatar it takes the other mode's colours. Never recoloured, never one colour.</li>
+        <li>Source: <code>desk/brand/mark.svg</code>, drawn by <code>desk/brand/build.mjs</code>; every copy here is that one.</li>
+      </ul>
+    </div>
+    <div class="gl-ex gl-wide">
+      <div class="gl-marks"><span class="gl-mk"><span style="width:16px;height:16px;display:block"><svg class="dd-mark" style="width:100%;height:100%" viewBox="0 0 24 24" aria-hidden="true"><path class="mk-tl" d="M11.4 11.4A10.9 10.9 0 0 0 0.5 0.5L0.5 7C0.5 11 0.9 11.4 4.9 11.4Z"/><path class="mk-bl" d="M0.5 23.5A10.9 10.9 0 0 0 11.4 12.6L4.9 12.6C0.9 12.6 0.5 13 0.5 17Z"/><path class="mk-tr" d="M12.6 0.5A10.9 10.9 0 0 1 23.5 11.4L17 11.4C13 11.4 12.6 11 12.6 7Z"/><path class="mk-br" d="M23.5 12.6A10.9 10.9 0 0 1 12.6 23.5L12.6 17C12.6 13 13 12.6 17 12.6Z"/></svg></span>16 px</span><span class="gl-mk"><span style="width:24px;height:24px;display:block"><svg class="dd-mark" style="width:100%;height:100%" viewBox="0 0 24 24" aria-hidden="true"><path class="mk-tl" d="M11.4 11.4A10.9 10.9 0 0 0 0.5 0.5L0.5 7C0.5 11 0.9 11.4 4.9 11.4Z"/><path class="mk-bl" d="M0.5 23.5A10.9 10.9 0 0 0 11.4 12.6L4.9 12.6C0.9 12.6 0.5 13 0.5 17Z"/><path class="mk-tr" d="M12.6 0.5A10.9 10.9 0 0 1 23.5 11.4L17 11.4C13 11.4 12.6 11 12.6 7Z"/><path class="mk-br" d="M23.5 12.6A10.9 10.9 0 0 1 12.6 23.5L12.6 17C12.6 13 13 12.6 17 12.6Z"/></svg></span>24 px</span><span class="gl-mk"><span style="width:32px;height:32px;display:block"><svg class="dd-mark" style="width:100%;height:100%" viewBox="0 0 24 24" aria-hidden="true"><path class="mk-tl" d="M11.4 11.4A10.9 10.9 0 0 0 0.5 0.5L0.5 7C0.5 11 0.9 11.4 4.9 11.4Z"/><path class="mk-bl" d="M0.5 23.5A10.9 10.9 0 0 0 11.4 12.6L4.9 12.6C0.9 12.6 0.5 13 0.5 17Z"/><path class="mk-tr" d="M12.6 0.5A10.9 10.9 0 0 1 23.5 11.4L17 11.4C13 11.4 12.6 11 12.6 7Z"/><path class="mk-br" d="M23.5 12.6A10.9 10.9 0 0 1 12.6 23.5L12.6 17C12.6 13 13 12.6 17 12.6Z"/></svg></span>32 px</span><span class="gl-mk"><span style="width:48px;height:48px;display:block"><svg class="dd-mark" style="width:100%;height:100%" viewBox="0 0 24 24" aria-hidden="true"><path class="mk-tl" d="M11.4 11.4A10.9 10.9 0 0 0 0.5 0.5L0.5 7C0.5 11 0.9 11.4 4.9 11.4Z"/><path class="mk-bl" d="M0.5 23.5A10.9 10.9 0 0 0 11.4 12.6L4.9 12.6C0.9 12.6 0.5 13 0.5 17Z"/><path class="mk-tr" d="M12.6 0.5A10.9 10.9 0 0 1 23.5 11.4L17 11.4C13 11.4 12.6 11 12.6 7Z"/><path class="mk-br" d="M23.5 12.6A10.9 10.9 0 0 1 12.6 23.5L12.6 17C12.6 13 13 12.6 17 12.6Z"/></svg></span>48 px</span>
+        <span class="gl-mk"><span class="gl-mk-space"><svg class="dd-mark" style="width:32px;height:32px" viewBox="0 0 24 24" aria-hidden="true"><path class="mk-tl" d="M11.4 11.4A10.9 10.9 0 0 0 0.5 0.5L0.5 7C0.5 11 0.9 11.4 4.9 11.4Z"/><path class="mk-bl" d="M0.5 23.5A10.9 10.9 0 0 0 11.4 12.6L4.9 12.6C0.9 12.6 0.5 13 0.5 17Z"/><path class="mk-tr" d="M12.6 0.5A10.9 10.9 0 0 1 23.5 11.4L17 11.4C13 11.4 12.6 11 12.6 7Z"/><path class="mk-br" d="M23.5 12.6A10.9 10.9 0 0 1 12.6 23.5L12.6 17C12.6 13 13 12.6 17 12.6Z"/></svg></span>clear space</span>
+        <span class="gl-mk"><span class="gl-mk-av mk-on-ink"><svg class="dd-mark" viewBox="0 0 24 24" aria-hidden="true"><path class="mk-tl" d="M11.4 11.4A10.9 10.9 0 0 0 0.5 0.5L0.5 7C0.5 11 0.9 11.4 4.9 11.4Z"/><path class="mk-bl" d="M0.5 23.5A10.9 10.9 0 0 0 11.4 12.6L4.9 12.6C0.9 12.6 0.5 13 0.5 17Z"/><path class="mk-tr" d="M12.6 0.5A10.9 10.9 0 0 1 23.5 11.4L17 11.4C13 11.4 12.6 11 12.6 7Z"/><path class="mk-br" d="M23.5 12.6A10.9 10.9 0 0 1 12.6 23.5L12.6 17C12.6 13 13 12.6 17 12.6Z"/></svg></span>avatar</span>
+      </div>
+    </div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-rule">
+      <h3 class="gl-h3">At work</h3>
+      <p class="gl-p">The spinner is the mark in motion, one colour in two tones: the first D turns round, the two close into a disc, it turns once and opens into DD. Still when it speaks, moving when it works.</p>
+    </div>
+    <div class="gl-ex"><div class="gl-row"><span class="dd-spin"></span> Design Desk is drawing options <span class="dd-spin queued"></span> queued</div></div>
+  </div>
+</section>
 
 <section class="gl-sect" id="tabs">
   <h2 class="gl-h2">Tabs and switchers</h2>
@@ -403,12 +439,12 @@
   <div class="gl-item">
     <div class="gl-rule">
       <h3 class="gl-h3">A thread, a resolved thread</h3>
-      <p class="gl-p">Replies indent under the first message. Who wrote it shows by role: a designer, a developer, Design Desk. A resolved thread folds to one line.</p>
+      <p class="gl-p">Replies indent under the first message. Who wrote it shows by role: a designer, a developer; Design Desk by its mark, never letters. A resolved thread folds to one line.</p>
     </div>
     <div class="gl-ex gl-wide">
       <article class="sthread">
         <div class="smsg"><span class="sav" data-r="designer">AN</span><div class="sm-b"><div class="who"><b>Alice Novak</b><span class="role">Designer</span><span class="at">Today, 9:12 AM</span></div><p>Can the empty state say what to do next?</p></div></div>
-        <div class="smsg re"><span class="sav" data-r="agent">DD</span><div class="sm-b"><div class="who"><b>Design Desk</b><span class="at">Today, 9:14 AM</span></div><p>Version 2 adds a button that opens the new-request form.</p></div></div>
+        <div class="smsg re"><span class="sav mk-on-ink" title="Design Desk" aria-hidden="true"><svg class="dd-mark" viewBox="0 0 24 24" aria-hidden="true"><path class="mk-tl" d="M11.4 11.4A10.9 10.9 0 0 0 0.5 0.5L0.5 7C0.5 11 0.9 11.4 4.9 11.4Z"/><path class="mk-bl" d="M0.5 23.5A10.9 10.9 0 0 0 11.4 12.6L4.9 12.6C0.9 12.6 0.5 13 0.5 17Z"/><path class="mk-tr" d="M12.6 0.5A10.9 10.9 0 0 1 23.5 11.4L17 11.4C13 11.4 12.6 11 12.6 7Z"/><path class="mk-br" d="M23.5 12.6A10.9 10.9 0 0 1 12.6 23.5L12.6 17C12.6 13 13 12.6 17 12.6Z"/></svg></span><div class="sm-b"><div class="who"><b>Design Desk</b><span class="at">Today, 9:14 AM</span></div><p>Version 2 adds a button that opens the new-request form.</p></div></div>
       </article>
       <details class="sthread done"><summary><span class="q">Pat Lee: The spacing under the header looks off</span><span class="hint">Resolved · Mon 2 Nov</span></summary><p>The spacing is back on the scale.</p></details>
     </div>
