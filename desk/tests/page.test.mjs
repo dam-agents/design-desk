@@ -4947,6 +4947,96 @@ const CHANGES_DESK = (me) => REVIEW_DESK(me, [threeChanges, { ...prChange, id: "
   const answer = path ===`);
 // The same pull request with a screen Design Desk found unchanged, and one it knows the change adds.
 const fourScreens = { ...threeChanges, screens: [...threeChanges.screens.map((x) => (x.asset === "S-1" ? { ...x, new: true } : x)), { asset: "S-3", caption: "The settings page", source: "pr", unchanged: true }] };
+// The same pull request compared with its Figma frame: each difference names the change it is on (docs/desk.md → Reviews).
+const figChanges = { ...threeChanges, attention: { level: "designer", reasons: ["2 major differences from Figma."] },
+  figma_check: { id: "F-1", verdict: "differs", checked: "2026-11-18T09:00:00Z", frame: { url: "https://www.figma.com/design/abc/Agents?node-id=1-2", name: "Agents" },
+    differences: [{ part: "Spend label", change: "Agents list", severity: "major", what: "A slash in Figma.", figma: "$4.60 / $5.00", product: "$4.60 of $5" },
+      { part: "Pill colour", change: "Agents list", severity: "minor", what: "Green in Figma.", figma: "#1f7a4d", product: "#2f5bd3" },
+      { part: "Save button", change: "S-1", severity: "major", what: "Filled in Figma.", figma: "Filled", product: "" },
+      { part: "Footer", severity: "minor", what: "On no change.", figma: "8px", product: "4px" },
+      { part: "Old picture", change: "S-gone", severity: "major", what: "On a screenshot replaced since.", figma: "a", product: "b" }] } };
+// Its drafts keep what the page sends: a difference taken (its words) or marked fine.
+const FIG_DESK = (me) => CHANGES_DESK(me).replace(JSON.stringify(threeChanges), JSON.stringify(figChanges))
+  .replace("drafts[id] = [...(drafts[id] || []), b.ok ?", "drafts[id] = [...(drafts[id] || []).filter((d) => !b.figma || d.figma !== b.figma), b.figma ? { id: \"d\" + posts.length, ...b, at: \"2026-11-18T10:00:00Z\" } : b.ok ?");
+const FIG_ME = { ...HEAD_ME, figma: true, figma_pref: true };
+test("differences from Figma wait on their changes for whoever may mark them handled: taken as they are or in one's own words, or marked fine", (t) => open(t, FIG_DESK(FIG_ME), async (desk) => {
+  await desk.waitForSelector("#list");
+  await desk.evaluate(() => { location.hash = "#P-7"; });
+  await desk.waitForSelector("#detail .chg-tiles");
+  assert.deepEqual(await desk.locator("#detail .chg-tiles .fig-chip").allTextContents(), ["2 from Figma", "1 from Figma"], "each change counts what is still to decide on it");
+  await desk.click('#detail [data-chg-open="Agents list"]');
+  await desk.waitForSelector("#element-dialog[open] .figprop");
+  assert.equal(await desk.locator("#element-dialog .figprop .fp-r").count(), 2, "only this change's differences");
+  assert.match(await desk.textContent("#element-dialog .figprop"), /2 differences from Figma[\s\S]*2 to decide[\s\S]*Spend label[\s\S]*\$4\.60 \/ \$5\.00[\s\S]*\$4\.60 of \$5/);
+  await desk.click('#element-dialog [data-fig-take="Spend label"]');
+  await desk.waitForSelector("#element-dialog .fp-r.done");
+  assert.deepEqual(await desk.evaluate(() => posts.filter((p) => /drafts$/.test(p.path)).at(-1).body),
+    { figma: "Spend label", change: "Agents list", text: "Spend label: A slash in Figma. In Figma: $4.60 / $5.00; in the product: $4.60 of $5.", edited: false });
+  assert.match(await desk.textContent("#element-dialog .fp-r.done"), /In your feedback/);
+  assert.equal(await desk.locator("#element-dialog .chg-foot .dbub").count(), 0, "shown once, in its own box");
+  assert.equal(await desk.locator("#element-dialog .chg-foot [data-draft-ok]").count(), 0, "a note: no Looks good beside it");
+  await desk.click('#element-dialog [data-fig-fine="Pill colour"]');
+  await desk.waitForSelector("#element-dialog .fp-r.fine");
+  assert.deepEqual(await desk.evaluate(() => posts.filter((p) => /drafts$/.test(p.path)).at(-1).body), { figma: "Pill colour", change: "Agents list", fine: true });
+  assert.match(await desk.textContent("#element-dialog .figprop .fp-top"), /All decided/);
+  // The next change: in one's own words.
+  await desk.click('#element-dialog [data-chg-nav="1"]');
+  await desk.waitForFunction(() => document.querySelector("#element-dialog .elbar h2")?.textContent === "The limit dialog");
+  await desk.click('#element-dialog [data-fig-edit="Save button"]');
+  await desk.waitForSelector("#element-dialog [data-fig-text]");
+  assert.equal(await desk.inputValue("#element-dialog [data-fig-text]"), "Save button: Filled in Figma. In Figma: Filled; in the product: —.", "it starts from Design Desk's words, a missing value a dash");
+  await desk.fill("#element-dialog [data-fig-text]", "Fill the Save button, as in Figma.");
+  await desk.click('#element-dialog [data-fig-edit-add="Save button"]');
+  await desk.waitForSelector("#element-dialog .fp-r.done");
+  assert.deepEqual(await desk.evaluate(() => posts.filter((p) => /drafts$/.test(p.path)).at(-1).body), { figma: "Save button", change: "S-1", text: "Fill the Save button, as in Figma.", edited: true });
+  assert.match(await desk.textContent("#element-dialog .fp-r.done"), /in your words/);
+  // Submit feedback: what was taken and marked fine, the quiet amber of Request changes.
+  await openFeedback(desk, "dlg");
+  assert.match(await desk.textContent(".fb-pop .fb-items"), /From Figma[\s\S]*Spend label: A slash[\s\S]*From Figma · fine as it is[\s\S]*Pill colour/);
+  assert.equal(await desk.locator(".fb-pop .fb-fig").count(), 0, "nothing left to decide");
+  const bg = await desk.evaluate(() => { const b = document.querySelector(".fb-pop [data-fb-send]"), c = document.createElement("span"); c.className = "chip warn"; document.body.append(c); const r = [b.dataset.v, getComputedStyle(b).backgroundColor, getComputedStyle(c).backgroundColor]; c.remove(); return r; });
+  assert.equal(bg[0], "rc");
+  assert.equal(bg[1], bg[2], "Request changes is the pale amber, not the solid one");
+}));
+test("differences from Figma: someone who may not mark the change handled is offered none on its changes", (t) => open(t, FIG_DESK({ ...FIG_ME, can: { ...FIG_ME.can, handle: false } }), async (desk) => {
+  await desk.waitForSelector("#list");
+  await desk.evaluate(() => { location.hash = "#P-7"; });
+  await desk.waitForSelector("#detail .chg-tiles");
+  assert.equal(await desk.locator("#detail .fig-chip").count(), 0);
+  await desk.click('#detail [data-chg-open="Agents list"]');
+  await desk.waitForSelector("#element-dialog[open] .cv-pair");
+  assert.equal(await desk.locator("#element-dialog .figprop").count(), 0);
+}));
+// Feedback sent already: the taken one became a comment, the fine one left the table and the review names it.
+const figSent = { ...figChanges, reviews: [{ id: "U-1", by: { email: "d@example.com", role: "designer" }, at: "2026-11-18T11:00:00Z", verdict: "request-changes", note: "", threads: ["T-1"], figma_fine: [{ part: "Pill colour", change: "Agents list" }] }],
+  figma_check: { ...figChanges.figma_check, dismissed: [{ part: "Pill colour", by: { email: "d@example.com" }, at: "2026-11-18T11:00:00Z", review: "U-1" }] },
+  threads: [{ id: "T-1", kind: "comment", state: "open", review: "U-1", change: "Agents list", figma: "Spend label", may: { reply: true, resolve: true }, messages: [{ by: { email: "d@example.com", role: "designer" }, at: "2026-11-18T11:00:00Z", text: "Use the slash." }] }] };
+test("differences from Figma: one sent shows as sent with its comment, tagged; the review names those marked fine", (t) => open(t, FIG_DESK(FIG_ME).replace(JSON.stringify(figChanges), JSON.stringify(figSent)), async (desk) => {
+  await desk.waitForSelector("#list");
+  await desk.evaluate(() => { location.hash = "#P-7"; });
+  await desk.waitForSelector("#detail .chg-tiles");
+  assert.deepEqual(await desk.locator("#detail .chg-tiles .fig-chip").allTextContents(), ["1 from Figma"], "nothing left to decide on Agents list");
+  assert.match(await desk.textContent("#detail .rvw"), /Fine as it is, from Figma: Pill colour/);
+  assert.match(await desk.textContent("#detail .rvw"), /From Figma[\s\S]*Use the slash\./, "the comment carries its tag");
+  await desk.click('#detail [data-chg-open="Agents list"]');
+  await desk.waitForSelector("#element-dialog[open] .figprop");
+  assert.equal(await desk.locator("#element-dialog .figprop .fp-r").count(), 1, "the one marked fine is off the table");
+  assert.match(await desk.textContent("#element-dialog .fp-r.done"), /Sent in your feedback[\s\S]*See the comment/);
+  assert.equal(await desk.getAttribute("#element-dialog .fp-r.done [data-chg-talk]", "data-chg-talk"), "T-1");
+  assert.equal(await desk.locator("#element-dialog .fp-lead").count(), 0, "all decided: no line asking for a judgement");
+}));
+test("differences from Figma: Submit feedback names the changes with some still to decide, and sends anyway", (t) => open(t, FIG_DESK(FIG_ME), async (desk) => {
+  await desk.waitForSelector("#list");
+  await desk.evaluate(() => { location.hash = "#P-7"; });
+  await desk.waitForSelector("#detail .chg-tiles");
+  await desk.click('#detail [data-chg-open="Agents list"]');
+  await desk.waitForSelector("#element-dialog[open] .figprop");
+  await desk.click('#element-dialog [data-fig-take="Spend label"]');
+  await desk.waitForSelector("#element-dialog .fp-r.done");
+  await openFeedback(desk, "dlg");
+  assert.match(await desk.textContent(".fb-pop .fb-fig"), /2 differences from Figma not taken or marked fine yet[\s\S]*Agents list · 1[\s\S]*The limit dialog · 1/);
+}));
+
 for (const simple of [true, false]) {
   test(`${simple ? "simple" : "full"} mode: a pull request's changes are tiles; one opens in the element's dialog with the cursor in its box; Add to feedback and Looks good name the change`, (t) => open(t, CHANGES_DESK({ ...HEAD_ME, simple }).replace(JSON.stringify(threeChanges), JSON.stringify(fourScreens)), async (desk) => {
     await desk.waitForSelector("#list");

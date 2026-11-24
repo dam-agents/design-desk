@@ -305,7 +305,15 @@ const p6 = pr("P-6", 815, "Agents: spend shown in the list", 12, { merged: false
     { asset: "A-agents-after", stage: "after", pair: "Agents list", caption: "Each row shows its spend", source: "instance", marks: [{ x: 0.78, y: 0.17, w: 0.18, h: 0.38 }] },
     { asset: "A-limit-dialog", caption: "The weekly limit dialog", source: "instance", new: true },
     { asset: "A-usage", caption: "The usage page", source: "pr" },
-    { asset: "A-agents-before", caption: "The agent's settings", source: "pr", unchanged: true }] });
+    { asset: "A-agents-before", caption: "The agent's settings", source: "pr", unchanged: true }],
+  // Compared with its Figma frame (docs/desk.md → Differences from Figma): each difference names the change it is on.
+  attention: { level: "designer", reasons: ["2 major differences from its Figma frame (Agents — spend)."] }, ci: { state: "failing", sha: "abc1234" },
+  figma_check: { id: "F-3", verdict: "differs", checked: ago(10), frame: { url: "https://www.figma.com/design/abc/Agents?node-id=12-3", name: "Agents — spend", edited: ago(60 * 26) },
+    differences: [
+      { part: "Spend label", change: "Agents list", severity: "major", what: "Figma shows spend against the limit with a slash; the product writes it out.", figma: "$4.60 / $5.00", product: "$4.60 of $5" },
+      { part: "Spend pill colour", change: "Agents list", severity: "minor", what: "The pill under the limit is green in Figma, blue in the product.", figma: "#1f7a4d", product: "#2f5bd3" },
+      { part: "Save button", change: "A-limit-dialog", severity: "major", what: "Figma has a filled primary button; the product shows a tinted pill.", figma: "Primary button, filled", product: "Tinted pill" },
+      { part: "Dialog padding", change: "A-limit-dialog", severity: "minor", what: "A little tighter in the product.", figma: "24px", product: "16px" }] } });
 
 // Before design (docs/desk.md → Draft and Proposal): the mock's person's own draft, and Pat's
 // proposal; the page shows them to the roles that see them (?role=developer, ui-dev-owner, admin).

@@ -692,6 +692,28 @@ test("drafts: Looks good is a draft with no words on one change of a pull reques
   assert.equal((await d.viewer("alice@example.com", `/api/cards/${chg}/drafts`, { ok: true, change: "Elsewhere" })).status, 400, "a change the pull request does not have");
 });
 
+test("drafts: a difference from Figma on a change, taken or marked fine, only by whoever may mark it handled", async (t) => {
+  const d = await desk(t);
+  const { body: { asset } } = await d.agent("/agent/assets", { kind: "screen", name: "s", contentType: "image/svg+xml", data: "<svg xmlns='http://www.w3.org/2000/svg'/>", encoding: "utf8" });
+  const frame = { url: "https://www.figma.com/design/abc/Agents?node-id=1-2", name: "Agents" };
+  const up = await d.agent("/agent/cards", { kind: "change", title: "Spend", source: { repo: "acme/widgets", pr: 7 }, screens: [{ asset: asset.id, caption: "The list" }],
+    figma_check: { verdict: "differs", frame, differences: [{ part: "Label", change: asset.id, severity: "major", what: "Slash.", figma: "a / b", product: "a of b" }, { part: "Pill", change: asset.id, severity: "minor", what: "Green.", figma: "#1f7a4d", product: "#2f5bd3" }] } });
+  assert.equal(up.status, 200, JSON.stringify(up.body));
+  const chg = up.body.card.id;
+  const taken = await d.viewer("alice@example.com", `/api/cards/${chg}/drafts`, { figma: "Label", text: "Use the slash.", edited: true });
+  assert.equal(taken.status, 201, JSON.stringify(taken.body));
+  assert.deepEqual([taken.body.draft.figma, taken.body.draft.change, taken.body.draft.edited], ["Label", asset.id, true]);
+  const fine = await d.viewer("alice@example.com", `/api/cards/${chg}/drafts`, { figma: "Pill", fine: true });
+  assert.equal(fine.body.draft.fine, true);
+  assert.equal((await d.viewer("guest@example.com", `/api/cards/${chg}/drafts`, { figma: "Pill", fine: true })).status, 403, "a guest comments, but marks nothing handled");
+  const r = await d.viewer("alice@example.com", `/api/cards/${chg}/reviews`, { verdict: "request-changes" });
+  assert.equal(r.status, 201, JSON.stringify(r.body));
+  assert.deepEqual(r.body.review.figma_fine, [{ part: "Pill", change: asset.id }]);
+  const card = (await d.agent(`/agent/cards/${chg}`)).body.card;
+  assert.deepEqual(card.threads.map((x) => [x.figma, x.change]), [["Label", asset.id]], "the agent reads which comment came from Figma, to post it so");
+  assert.deepEqual(card.figma_check.dismissed.map((x) => x.part), ["Pill"]);
+});
+
 test("reviews: a guest sends Comment only; asking changes of a request takes the change ability, of a change who may mark it handled", async (t) => {
   const d = await desk(t);
   const { body: { card } } = await d.viewer("alice@example.com", "/api/requests", { problem: "People miss the upload button." });
