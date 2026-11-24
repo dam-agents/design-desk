@@ -726,18 +726,17 @@ Every change to the page keeps to one scale; `desk/tests/page.test.mjs` fails on
   is worded, its case included, is the guidelines' (Text). A role alone as a label is
   capitalised (*Designer*), inside a sentence as written.
 - **The mark:** Design Desk's mark is the DD pair, `desk/brand/mark.svg`, drawn by
-  `desk/brand/build.mjs`: two D's of two quarter circles each, their gaps opening into a small
-  spark, a colour per piece (`--mk-*`). It stands for Design Desk wherever it speaks or acts, never
+  `desk/brand/build.mjs`: two D's of two perfect quarter circles each, one even gap between
+  every two, a colour per piece (`--mk-*`). It stands for Design Desk wherever it speaks or acts, never
   for the product: the favicon, the head (left of the tabs, back to Requests), the agent's avatar
   in every thread, the ask panel, What's already known and the bell (on an ink circle,
   `.mk-on-ink`), the `from:` of what it filed or drew, How it works, the offline banner (greyed).
   Never letters. The spark alone is the icon of **Draw options**. Two cuts: `mark-small.svg`, its
-  gaps and spark wider, for 32px and below (all of the Desk, the favicon, the avatar, GitHub);
+  gaps wider, for 32px and below (all of the Desk, the favicon, the avatar, GitHub);
   `mark.svg` from 48px. **At work** the mark moves: `.dd-spin` is the small mark in the spinner's brown
-  (`--warn`), at text size (16px at least), never still: its pieces bounce one after another
-  like jumping dots (the two on top rise, the two below dip) and, as the last lands, a D turns round;
-  the D's take turns, so it passes through the circle, both facing left, facing each other and DD
-  (`SPIN_SVG`). It never turns as a whole; waiting, it rests, faint. In the list it stands
+  (`--warn`), at text size (16px at least), simple: the first D turns round and the two close
+  into a circle, the circle turns once, and it opens into DD again (`SPIN_SVG`, 5 s); waiting, it
+  rests, faint. In the list it stands
   at a row's top right (the state's pill drops to the second line), in a request beside its buttons.
   Still when it speaks, moving when it works. The page carries one inline copy of the mark, in the
   head; a test keeps it equal to `mark-small.svg`.

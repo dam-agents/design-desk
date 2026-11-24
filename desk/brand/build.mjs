@@ -3,8 +3,8 @@
 //   node desk/brand/build.mjs        writes mark.svg, favicon.svg, avatar.svg and their PNGs
 //
 // The mark is DD: two D's facing right, each made of two quarter circles. The gaps between the
-// quarters run straight from the rim and open into a spark at the centre. At work the first D
-// turns round, the two close into a disc and the disc turns (.dd-spin, desk/page.html), in ink.
+// quarters are one even width, a cross when the two close. At work the first D turns round, the
+// two close into a circle, it turns once and opens again (.dd-spin, desk/page.html).
 // The page, the guidelines and their tests import the shapes from here, so there is one drawing.
 import { writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -13,12 +13,11 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const R = 11.5;        // the disc's radius, in a 24-unit box
 const C = 12;          // the box's centre
 
-// Two cuts of one drawing. G is half of every gap (each quarter's corner sits G off the centre),
-// REACH where a gap starts to open into the spark, CTL how far out the spark's curve pulls.
-// REGULAR is for 48 px and up; SMALL, its gaps and spark wider so they survive, for everything
-// at 32 px and below — on the Desk that is everywhere (#215).
-export const REGULAR = { G: 0.6, REACH: 5, CTL: 1 };
-export const SMALL = { G: 1.3, REACH: 7.5, CTL: 2.1 };
+// Two cuts of one drawing: four perfect quarter circles, G half of every gap (each quarter's
+// corner sits G off the centre). REGULAR is for 48 px and up; SMALL, its gaps wider so they
+// survive, for everything at 32 px and below — on the Desk that is everywhere (#215).
+export const REGULAR = { G: 0.6 };
+export const SMALL = { G: 1.3 };
 
 const f = (n) => +n.toFixed(3);
 const pt = ([x, y]) => `${f(x)} ${f(y)}`;
@@ -27,10 +26,10 @@ const rot = ([x, y], k) => { for (let i = 0; i < k; i++) [x, y] = [-y, x]; retur
 // One quarter, k quarter turns clockwise from top-right; `mirror` turns it about the vertical line
 // x = mirror, in the disc's own coordinates (the first D, turned round to face right).
 function quarter(cut, k, mirror = null) {
-  const { G, REACH, CTL } = cut, QR = R - G;
+  const { G } = cut, QR = R - G;
   const m = ([x, y]) => [(mirror === null ? x : 2 * mirror - x) + C, y + C];
   const P = (p) => pt(m(rot(p, k)));
-  return `M${P([G, -R])}A${f(QR)} ${f(QR)} 0 0 ${mirror === null ? 1 : 0} ${P([R, -G])}L${P([REACH, -G])}C${P([CTL, -G])} ${P([G, -CTL])} ${P([G, -REACH])}Z`;
+  return `M${P([G, -R])}A${f(QR)} ${f(QR)} 0 0 ${mirror === null ? 1 : 0} ${P([R, -G])}L${P([G, -G])}Z`;
 }
 // The first D's own centre line, about which it turns round (in the disc's coordinates).
 const leftMid = (cut) => (-R - cut.G) / 2;
@@ -71,45 +70,23 @@ export const AVATAR_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 
 export const MARK_INLINE = `<svg class="dd-mark" viewBox="0 0 24 24" aria-hidden="true">${paths(PIECES_SMALL)}</svg>`;
 
 /**
- * The spinner (.dd-spin): the small mark, never still. Four phrases, one into the next: the two
- * pieces on top rise and settle one after the other, then the two below dip and come back, like
- * jumping dots; as the last one lands, a D turns round. The D's take turns, so the mark passes
- * through its four poses — the circle (the first D round), both facing left (the second too),
- * facing each other (the first back), DD (the second back). Nothing turns as a whole; each D turns
- * about its own fixed centre line (a group moved there), so nothing drifts.
+ * The spinner (.dd-spin): the small mark, simple. At rest DD; the first D turns round and the two
+ * close into a circle; the circle turns once; the D turns back and it opens into DD (5 s). The D
+ * turns about its own fixed centre line and the circle about the mark's centre (groups moved
+ * there), so nothing drifts.
  * The SVG carries its own motion and is the CSS mask of .dd-spin, whose colour is the page's;
  * SPIN_STILL is the mark at rest, for a spinner that waits (.queued). The mark fills SPIN_SIZE.
  */
 export const SPIN_SIZE = 0.8;
-const UP = 2.6, STAGGER = 0.26, RISE = 0.36, FALL = 0.44;   // the bounce: height (of 24) and timing, s
-const FLIP_AT = 3 * STAGGER + RISE + FALL * 0.6, MOVE = 0.6; // the flip starts as the last piece lands
-export const SPIN_PHRASE = f(FLIP_AT + MOVE);                // s
-const LOOP = f(4 * SPIN_PHRASE), EASE = "cubic-bezier(.65,0,.35,1)";
-const pc = (sec) => f((sec * 100) / LOOP);
+const LOOP = 5, EASE = "cubic-bezier(.65,0,.35,1)";
 const box = f(24 / SPIN_SIZE), pad = f((box - 24) / 2);
-const lCx = f(C + leftMid(SMALL)), rCx = f(2 * C - lCx); // each D's own centre line
-// The pieces, in the order they bounce: on top left to right, then below. Turned round, a D's
-// pieces stay where they were, so up and down stay up and down.
-const BOUNCE_ORDER = ["tl", "tr", "bl", "br"];
-function bounceKeys(k) {
-  const i = BOUNCE_ORDER.indexOf(k), dir = i < 2 ? -1 : 1, frames = ["0%{transform:translateY(0)}"];
-  for (let p = 0; p < 4; p++) {
-    const t0 = p * SPIN_PHRASE + i * STAGGER;
-    frames.push(`${pc(t0)}%{transform:translateY(0)}`, `${pc(t0 + RISE)}%{transform:translateY(${f(dir * UP)}px)}`, `${pc(t0 + RISE + FALL)}%{transform:translateY(0)}`);
-  }
-  return frames.join("") + "100%{transform:translateY(0)}";
-}
-// A D turns round at the end of the phrases it owns: the first D in phrases 0 and 2, the second in 1 and 3.
-const flipKeys = (phrases) => {
-  const [a, b] = phrases.map((p) => p * SPIN_PHRASE + FLIP_AT);
-  return `0%,${pc(a)}%{transform:scaleX(1)}${pc(a + MOVE)}%,${pc(b)}%{transform:scaleX(-1)}${pc(b + MOVE)}%,100%{transform:scaleX(1)}`;
-};
-const piece = (k) => `<path class="p ${k}" d="${PIECES_SMALL[k]}"/>`;
+const lCx = f(C + leftMid(SMALL)); // the first D's own centre line
+const piece = (k) => `<path d="${PIECES_SMALL[k]}"/>`;
 const turning = (cx, cls, inner) => `<g transform="translate(${cx} ${C})"><g class="${cls}"><g transform="translate(${-cx} ${-C})">${inner}</g></g></g>`;
 const svgOf = (css, body) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${box} ${box}"><style>g[class]{transform-origin:0 0;transform-box:view-box}${css}</style><g transform="translate(${pad} ${pad})">${body}</g></svg>`;
 export const SPIN_SVG = svgOf(
-  `.l,.r{animation:${LOOP}s ${EASE} infinite}.l{animation-name:l}.r{animation-name:r}.p{animation:${LOOP}s cubic-bezier(.45,0,.55,1) infinite}@keyframes l{${flipKeys([0, 2])}}@keyframes r{${flipKeys([1, 3])}}${ORDER.map((k) => `.${k}{animation-name:b${k}}@keyframes b${k}{${bounceKeys(k)}}`).join("")}@media (prefers-reduced-motion:reduce){.l,.r,.p{animation-duration:${f(LOOP * 2.5)}s}}`,
-  turning(lCx, "l", piece("tl") + piece("bl")) + turning(rCx, "r", piece("tr") + piece("br")),
+  `.a,.l{animation:${LOOP}s ${EASE} infinite}.a{animation-name:t}.l{animation-name:l}@keyframes t{0%,36%{transform:rotate(0)}62%,100%{transform:rotate(360deg)}}@keyframes l{0%,14%{transform:scaleX(1)}26%,70%{transform:scaleX(-1)}82%,100%{transform:scaleX(1)}}@media (prefers-reduced-motion:reduce){.a,.l{animation-duration:${LOOP * 2}s}}`,
+  turning(C, "a", turning(lCx, "l", piece("tl") + piece("bl")) + piece("tr") + piece("br")),
 );
 const dataUrl = (svg) => `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
 export const SPIN_MASK = dataUrl(SPIN_SVG);
