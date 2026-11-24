@@ -14,7 +14,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const BOX = 48, C = 24, SCALE = 0.74;
 /** The two D's, the spark cut from the second (filled even-odd). */
 export const D1_PATH = "M4 14H12A10 10 0 0 1 12 34H4Z";
-export const D2_PATH = "M26 14H34A10 10 0 0 1 34 34H26Z M33.5 16.5C33.5 24 33.5 24 41 24C33.5 24 33.5 24 33.5 31.5C33.5 24 33.5 24 26.5 24C33.5 24 33.5 24 33.5 16.5Z";
+export const D2_PATH = "M26 14H34A10 10 0 0 1 34 34H26Z M33 17.5Q33.9 23.1 39.5 24Q33.9 24.9 33 30.5Q32.1 24.9 26.5 24Q32.1 23.1 33 17.5Z";
 export const D_PATH = `${D1_PATH} ${D2_PATH}`;
 
 /** Its colours, light and dark mode: the disc and the D's. Finalised here (#215). */

@@ -4814,8 +4814,6 @@ test("in full mode Design Desk's messages carry its mark, people's none", (t) =>
   await desk.waitForSelector("#th-T-1", { state: "attached" });
   assert.equal(await desk.locator("#th-T-1 .msg.agent .who .msg-av.mk-on-ink svg.dd-mark").count(), 1, "the agent's message opens with the mark");
   assert.equal(await desk.locator("#th-T-1 .msg:not(.agent) .msg-av").count(), 0, "a person's message keeps its name alone");
-  await desk.click("header .brand");
-  assert.equal(await desk.getAttribute('#nav [data-tab="requests"]', "aria-current"), "true", "the mark in the head goes home, to Requests");
 }));
 
 // Design Desk's mark (#215): one drawing, desk/brand/build.mjs, wherever it stands.
@@ -4823,12 +4821,12 @@ test("the mark on the page is desk/brand/mark.svg, and the spark is Draw options
   const brand = await import("../brand/build.mjs");
   const brandFile = (name) => readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "brand", name), "utf8");
   assert.equal(brandFile("mark.svg"), brand.MARK_SVG, "desk/brand/mark.svg is stale: run node desk/brand/build.mjs");
-  const head = page.match(/<a class="brand"[^>]*>(<svg class="dd-mark"[\s\S]*?<\/svg>)<\/a>/);
-  assert.ok(head, "the head carries the mark inline");
-  assert.equal(head[1], brand.MARK_INLINE, "the head's copy is build.mjs's");
+  const head = page.match(/<template id="dd-mark">(<svg class="dd-mark"[\s\S]*?<\/svg>)<\/template>/);
+  assert.ok(head, "the page keeps the mark in a template");
+  assert.equal(head[1], brand.MARK_INLINE, "its copy is build.mjs's");
+  assert.doesNotMatch(page, /<a class="brand"/, "the head carries no mark");
   assert.ok(head[1].includes(`d="${brand.D_PATH}"`) && brand.MARK_SVG.includes(`d="${brand.D_PATH}"`), "the same DD and spark as mark.svg");
   assert.equal(page.match(/<svg class="dd-mark"/g).length, 1, "one inline copy; the script reuses it");
-  assert.match(page, /<a class="brand" href="#" data-home /, "the mark in the head goes home");
   assert.ok(page.includes(`<link rel="icon" href="${brand.FAVICON_HREF}" />`), "the favicon is the mark");
   assert.match(page, /\.dd-spin \{[^}]*color: var\(--mk-disc\)/, "the spinner is the DD pair in the mark's colour");
   assert.deepEqual([...page.matchAll(/["']spark["']|ICON_PATH\.spark/g)].map((m) => m[0]), ['"spark"'], "the Desk's spark icon only for Draw options (BTN_ICON explore); the mark's own is drawn in it");

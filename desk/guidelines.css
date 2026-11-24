@@ -1894,7 +1894,6 @@
   .mk-on-ink { background: none; }
   /* As an avatar the mark fills its circle: 28px (.sav, .ask-avatar, the bell), 24px (.face), 18px (.msg-av). */
   .mk-on-ink svg.dd-mark { width: 28px; height: 28px; } .brief-k .face.mk-on-ink svg.dd-mark { width: 24px; height: 24px; } .msg .who .msg-av svg.dd-mark { width: 18px; height: 18px; }
-  header .brand { display: inline-grid; place-items: center; margin-right: 8px; border-radius: var(--r-sm); } header .brand svg.dd-mark { width: 32px; height: 32px; }
   .msg .who .msg-av { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; vertical-align: -4px; margin-right: 8px; }
   .prov svg.dd-mark { width: 12px; height: 12px; }
   .banner .mk-off { display: inline-block; vertical-align: -3px; margin-right: 8px; filter: grayscale(1); opacity: .55; } .banner .mk-off svg.dd-mark { width: 16px; height: 16px; }

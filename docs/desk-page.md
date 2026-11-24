@@ -756,14 +756,14 @@ Every change to the page keeps to one scale; `desk/tests/page.test.mjs` fails on
   capitalised (*Designer*), inside a sentence as written.
 - **The mark:** Design Desk's mark is DD on a disc, `desk/brand/mark.svg`, drawn by
   `desk/brand/build.mjs`: the disc in DAM's avatar orange (`--mk-disc`), two white D's
-  on it (`--mk-d`), in light and dark mode alike, a spark cut out of the second. It stands for Design Desk wherever it speaks or acts, never for the product: the favicon,
-  the head (left of the tabs, back to Requests), the agent's avatar in every thread, the ask panel,
+  on it (`--mk-d`), in light and dark mode alike, a spark cut out of the second. It stands for Design Desk wherever it speaks or acts, never for the product: the favicon
+  (the head carries none), the agent's avatar in every thread, the ask panel,
   What's already known and the bell (the disc is the avatar's circle, `.mk-on-ink`; the head shows it
   at 32px, as tall as its buttons and tabs), the `from:` of
   what it filed or drew, How it works, the offline banner (greyed). Never letters. The Desk's spark
   icon alone is **Draw options**'. **At work:** `.dd-spin`, the DD pair as before, in the mark's
   colour (`--mk-disc`); in the list at a row's top right (the state's pill drops to the second line),
-  in a request beside its buttons. The page carries one inline copy of the mark, in the head; a
+  in a request beside its buttons. The page carries one inline copy of the mark, in a template; a
   test keeps it equal to `mark.svg`.
 - **A request's box** keeps two rows above its stages: the state and Turn with Approve, Close and
   ⋯; then the ways on (sent: when and where on the left, the ways on at the right).
