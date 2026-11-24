@@ -4830,7 +4830,7 @@ test("the mark on the page is desk/brand/mark.svg, and the spark is Draw options
   assert.equal(page.match(/<svg class="dd-mark"/g).length, 1, "one inline copy; the script reuses it");
   assert.match(page, /<a class="brand" href="#" data-home /, "the mark in the head goes home");
   assert.ok(page.includes(`<link rel="icon" href="${brand.FAVICON_HREF}" />`), "the favicon is the mark");
-  assert.match(page, /\.dd-spin \{[^}]*color: var\(--warn\)/, "the spinner is the DD pair in amber, the mark's colour");
+  assert.match(page, /\.dd-spin \{[^}]*color: var\(--accent\)/, "the spinner is the DD pair in the mark's blue");
   assert.deepEqual([...page.matchAll(/["']spark["']|ICON_PATH\.spark/g)].map((m) => m[0]), ['"spark"'], "the Desk's spark icon only for Draw options (BTN_ICON explore); the mark's own is drawn in it");
   assert.doesNotMatch(page, /data-r="agent">DD</, "no letters stand for Design Desk");
 });
