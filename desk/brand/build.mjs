@@ -70,29 +70,40 @@ export const AVATAR_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 
 export const MARK_INLINE = `<svg class="dd-mark" viewBox="0 0 24 24" aria-hidden="true">${paths(PIECES_SMALL)}</svg>`;
 
 /**
- * The spinner (.dd-spin): the small mark, simple. At rest DD; the first D turns round and the two
- * close into a circle; the circle turns once, slowly; the D turns back and it opens into DD. The D
- * turns about its own fixed centre line and the circle about the mark's centre (groups moved
- * there), so nothing drifts.
- * The SVG carries its own motion and is the CSS mask of .dd-spin, whose colour is the page's;
- * SPIN_STILL is the mark at rest, for a spinner that waits (.queued). The mark fills SPIN_SIZE.
+ * The spinner (.dd-spin): the small mark in its own colours, simple, in two halves. First half: the
+ * first D turns round and the two close into a circle; the circle turns once (2 s); the second D
+ * turns round and opens it — the D's now face left. Second half: the second D turns back and closes
+ * the circle; it turns once more; the first D turns back and opens it into DD. Each D turns about
+ * its own fixed centre line and the circle about the mark's centre (groups moved there), so
+ * nothing drifts. The SVG carries its own motion.
+ * SPIN_COLOR draws it in the mark's colours (light and dark mode), SPIN_MASK in one colour for a
+ * CSS mask (white on a comment pin); the *_STILL ones rest, for a spinner that waits (.queued).
+ * The mark fills SPIN_SIZE of the box.
  */
 export const SPIN_SIZE = 0.8;
-// In seconds: rest, the D turns round, a pause, the circle turns, a pause, the D turns back, rest.
-const T = { flip: 0.7, flipEnd: 1.3, turn: 1.6, turnEnd: 4.4, back: 4.8, backEnd: 5.4 }, LOOP = 6.4;
+const FLIP = 0.6, TURN = 2, HALF = 4.7, LOOP = f(2 * HALF);
+// Each half, in seconds from its start: a D closes, the circle turns, the other D opens.
+const H = { close: 0.5, turn: 1.4, open: 3.8 };
 const EASE = "cubic-bezier(.65,0,.35,1)", pc = (sec) => f((sec * 100) / LOOP);
 const box = f(24 / SPIN_SIZE), pad = f((box - 24) / 2);
-const lCx = f(C + leftMid(SMALL)); // the first D's own centre line
-const piece = (k) => `<path d="${PIECES_SMALL[k]}"/>`;
+const lCx = f(C + leftMid(SMALL)), rCx = f(2 * C - lCx); // each D's own centre line
+// The first D turns round as the first half closes and back as the second half opens; the second D
+// turns round as the first half opens and back as the second half closes.
+const flipKeys = (out, back) => `0%,${pc(out)}%{transform:scaleX(1)}${pc(out + FLIP)}%,${pc(back)}%{transform:scaleX(-1)}${pc(back + FLIP)}%,100%{transform:scaleX(1)}`;
+const turnKeys = `0%,${pc(H.turn)}%{transform:rotate(0)}${pc(H.turn + TURN)}%,${pc(HALF + H.turn)}%{transform:rotate(360deg)}${pc(HALF + H.turn + TURN)}%,100%{transform:rotate(720deg)}`;
+const SPIN_CSS = `.a,.l,.r{animation:${LOOP}s ${EASE} infinite}.a{animation-name:t}.l{animation-name:l}.r{animation-name:r}@keyframes t{${turnKeys}}@keyframes l{${flipKeys(H.close, HALF + H.open)}}@keyframes r{${flipKeys(H.open, HALF + H.close)}}@media (prefers-reduced-motion:reduce){.a,.l,.r{animation-duration:${f(LOOP * 2)}s}}`;
+const piece = (k, mode) => `<path d="${PIECES_SMALL[k]}"${mode ? ` fill="${COLORS[mode][k]}"` : ""}/>`;
 const turning = (cx, cls, inner) => `<g transform="translate(${cx} ${C})"><g class="${cls}"><g transform="translate(${-cx} ${-C})">${inner}</g></g></g>`;
 const svgOf = (css, body) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${box} ${box}"><style>g[class]{transform-origin:0 0;transform-box:view-box}${css}</style><g transform="translate(${pad} ${pad})">${body}</g></svg>`;
-export const SPIN_SVG = svgOf(
-  `.a,.l{animation:${LOOP}s ${EASE} infinite}.a{animation-name:t}.l{animation-name:l}@keyframes t{0%,${pc(T.turn)}%{transform:rotate(0)}${pc(T.turnEnd)}%,100%{transform:rotate(360deg)}}@keyframes l{0%,${pc(T.flip)}%{transform:scaleX(1)}${pc(T.flipEnd)}%,${pc(T.back)}%{transform:scaleX(-1)}${pc(T.backEnd)}%,100%{transform:scaleX(1)}}@media (prefers-reduced-motion:reduce){.a,.l{animation-duration:${f(LOOP * 2)}s}}`,
-  turning(C, "a", turning(lCx, "l", piece("tl") + piece("bl")) + piece("tr") + piece("br")),
-);
+// mode "light" or "dark": the mark's colours; none: one colour, for a mask.
+const spinIn = (mode) => svgOf(SPIN_CSS, turning(C, "a", turning(lCx, "l", piece("tl", mode) + piece("bl", mode)) + turning(rCx, "r", piece("tr", mode) + piece("br", mode))));
+const stillIn = (mode) => svgOf("", ORDER.map((k) => piece(k, mode)).join(""));
+export const SPIN_SVG = spinIn();
 const dataUrl = (svg) => `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
 export const SPIN_MASK = dataUrl(SPIN_SVG);
-export const SPIN_STILL = dataUrl(svgOf("", ORDER.map((k) => `<path d="${PIECES_SMALL[k]}"/>`).join("")));
+export const SPIN_STILL = dataUrl(stillIn());
+export const SPIN_COLOR = { light: dataUrl(spinIn("light")), dark: dataUrl(spinIn("dark")) };
+export const SPIN_COLOR_STILL = { light: dataUrl(stillIn("light")), dark: dataUrl(stillIn("dark")) };
 /** A mask in a JS string's single quotes (the prototype overlay's own copy). */
 export const sq = (s) => s.replace(/"/g, "'");
 

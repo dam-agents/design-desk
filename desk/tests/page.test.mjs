@@ -4796,9 +4796,12 @@ test("the mark on the page is desk/brand/mark.svg, and the spark is Draw options
   assert.equal(page.match(/<svg class="dd-mark"/g).length, 1, "one inline copy; the script reuses it");
   assert.match(page, /<a class="brand" href="#" data-home /, "the mark in the head goes home");
   assert.ok(page.includes(`<link rel="icon" href="${brand.FAVICON_HREF}" />`), "the favicon is the mark");
-  assert.ok(page.includes(`mask: ${brand.SPIN_MASK} center`), "the spinner is the mark's pieces turning over (build.mjs SPIN_SVG)");
-  assert.ok(page.includes(`mask:${brand.sq(brand.SPIN_MASK)} center`), "and so is the prototype overlay's");
-  assert.ok(page.includes(`mask-image: ${brand.SPIN_STILL}`), "waiting, it rests");
+  for (const mode of ["light", "dark"]) {
+    assert.ok(page.includes(`${brand.SPIN_COLOR[mode]}`), `the spinner is the mark moving, in its ${mode} colours (build.mjs SPIN_COLOR)`);
+    assert.ok(page.includes(`${brand.SPIN_COLOR_STILL[mode]}`), `waiting, it rests (${mode})`);
+  }
+  assert.ok(page.includes(`mask: ${brand.SPIN_MASK} center`), "on a comment pin, one colour");
+  assert.ok(page.includes(`background:${brand.sq(brand.SPIN_COLOR.light)} center`), "the prototype overlay's is the same");
   assert.deepEqual([...page.matchAll(/["']spark["']|ICON_PATH\.spark/g)].map((m) => m[0]), ['"spark"'], "the spark only as Draw options' icon (BTN_ICON explore)");
   assert.doesNotMatch(page, /data-r="agent">DD</, "no letters stand for Design Desk");
 });
