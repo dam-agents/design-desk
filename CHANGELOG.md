@@ -19,6 +19,12 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
    written before names no change: its differences stay in the item's box until it is compared again.
    No data migration.
 
+## 1.112.1 — 2026-11-24
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): a Request changes sent with
+   a note alone shows that note once, as its change note ([desk.md](docs/desk.md) → Reviews). No data migration.
+
 ## 1.112.0 — 2026-11-24
 
 **Upgrade:**

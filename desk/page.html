@@ -3759,7 +3759,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const reviews = c.send ? [] : (c.reviews || []).filter((r) => r && r.id), mine = new Map(reviews.map((r) => [r.id, []]));
     const loose = threads.filter((th) => !(th.review && mine.has(th.review) && mine.get(th.review).push(th)));
     const items = [...loose.map((th) => ({ th, at: last(th), html: () => one(th) })),
-      ...reviews.map((r) => { const ts = [...mine.get(r.id)].sort(order); return { review: true, r, at: Math.max(Date.parse(r.at) || 0, ...ts.map(last)), html: () => reviewBlock(c, r, ts.map(one).join("")) }; })];
+      ...reviews.map((r) => { const ts = [...mine.get(r.id)].sort(order); return { review: true, r, at: Math.max(Date.parse(r.at) || 0, ...ts.map(last)), html: () => reviewBlock(c, r, ts.map(one).join(""), ts) }; })];
     const rank = (x) => (resolvedLast && x.th?.state === "resolved" ? 1 : 0);
     const sorted = items.sort((a, b) => rank(a) - rank(b) || b.at - a.at);
     // A request that went to design keeps what was said before, folded after the rest (docs/desk-page.md → Simple mode).
@@ -3769,11 +3769,15 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const rest = sorted.filter((x) => !before.includes(x)).map((x) => x.html()).join("");
     return rest + (before.length ? `<details class="fold before-design"><summary>Before design · ${before.length}</summary>${before.map((x) => x.html()).join("")}</details>` : "");
   }
-  function reviewBlock(c, r, rows) {
+  // Request changes with a note alone makes the note its change note (docs/desk.md → Reviews): the
+  // conversation says it, so the review's note is not shown a second time above it.
+  const sameWords = (a, b) => String(a || "").replace(/\s+/g, " ").trim() === String(b || "").replace(/\s+/g, " ").trim();
+  function reviewBlock(c, r, rows, ts = []) {
+    const note = r.note && !ts.some((th) => sameWords(th.messages?.[0]?.text, r.note)) ? r.note : "";
     const who = ((n) => (n === "you" ? "You" : n))(r.by?.agent ? "Design Desk" : shortName(r.by?.email, r.by?.name) || "someone");
     const gh = r.posted?.url ? `<a class="rv-gh" href="${safeUrl(r.posted.url)}" target="_blank" rel="noopener noreferrer" title="This feedback on the pull request">On GitHub ↗</a>` : "";
     return `<article class="rvw" id="rv-${esc(r.id)}" data-v="${esc(r.verdict)}"><div class="rv-h"><b>${esc(who)}</b>${r.by?.role ? `<span class="hint">${esc(roleLabel(r.by.role))}</span>` : ""}<span class="rv-v" title="What this feedback says">${esc(REVIEW_SAYS[r.verdict] || r.verdict)}</span><span class="hint" title="${esc(when(r.at))}">${esc(sWhen(r.at))}</span>${gh}</div>
-      ${r.note ? `<div class="rv-note">${md(r.note)}</div>` : ""}${(r.looks_good || []).length ? `<p class="rv-ok">✓ Looks good: ${esc(r.looks_good.map((x) => x.name).join(", "))}</p>` : ""}${(r.figma_fine || []).length ? `<p class="rv-ok rv-fig">${FIG_ICON}Fine as it is, from Figma: ${esc(r.figma_fine.map((x) => x.part).join(", "))}</p>` : ""}${rows}</article>`;
+      ${note ? `<div class="rv-note">${md(note)}</div>` : ""}${(r.looks_good || []).length ? `<p class="rv-ok">✓ Looks good: ${esc(r.looks_good.map((x) => x.name).join(", "))}</p>` : ""}${(r.figma_fine || []).length ? `<p class="rv-ok rv-fig">${FIG_ICON}Fine as it is, from Figma: ${esc(r.figma_fine.map((x) => x.part).join(", "))}</p>` : ""}${rows}</article>`;
   }
   // A review in the making (docs/desk.md → Reviews): the viewer's drafts on an item, kept by the
   // Desk server for them alone. `addDraft` is the one way a box adds one, here and in the item's other views.
