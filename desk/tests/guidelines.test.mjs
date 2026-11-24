@@ -95,7 +95,7 @@ test("the guidelines show in light and dark, with the Desk's colours", async (t)
 // Every switcher the Desk renders has one of the looks the guidelines show, by what it means. A
 // new kind of switcher fails here until the page names its look (or it takes one of these).
 const LOOKS = {
-  filters: "Segmented control", "ws-pages": "Segmented control", "fb-vs": "Segmented control",
+  filters: "Segmented control", "ws-pages": "Segmented control", "fb-vs": "Segmented control", "fb-vs fb-os": "Segmented control",
   "tabs vtabs utabs": "Underline tabs with a number chip", "tabs vtabs vrow utabs": "Underline tabs with a number chip", "ws-opts": "Underline tabs with a number chip",
   subtabs: "Plain underline tabs", "pl-tabs": "Plain underline tabs", "ws-ptabs": "Plain underline tabs",
   tabs: "Choice in a form",
