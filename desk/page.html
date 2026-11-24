@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Design Desk</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cstyle%3E.mk-tl%7Bfill%3A%239a6200%7D.mk-bl%7Bfill%3A%23d98f6c%7D.mk-tr%7Bfill%3A%2382ad68%7D.mk-br%7Bfill%3A%236a90cc%7D%40media%20(prefers-color-scheme%3Adark)%7B.mk-tl%7Bfill%3A%23e0a640%7D.mk-bl%7Bfill%3A%23eaa889%7D.mk-tr%7Bfill%3A%239fcc86%7D.mk-br%7Bfill%3A%238eb1ec%7D%7D%3C%2Fstyle%3E%3Cpath%20class%3D%22mk-tl%22%20d%3D%22M11.4%2011.4A10.9%2010.9%200%200%200%200.5%200.5L0.5%207C0.5%2011%200.9%2011.4%204.9%2011.4Z%22%2F%3E%3Cpath%20class%3D%22mk-bl%22%20d%3D%22M0.5%2023.5A10.9%2010.9%200%200%200%2011.4%2012.6L4.9%2012.6C0.9%2012.6%200.5%2013%200.5%2017Z%22%2F%3E%3Cpath%20class%3D%22mk-tr%22%20d%3D%22M12.6%200.5A10.9%2010.9%200%200%201%2023.5%2011.4L17%2011.4C13%2011.4%2012.6%2011%2012.6%207Z%22%2F%3E%3Cpath%20class%3D%22mk-br%22%20d%3D%22M23.5%2012.6A10.9%2010.9%200%200%201%2012.6%2023.5L12.6%2017C12.6%2013%2013%2012.6%2017%2012.6Z%22%2F%3E%3C%2Fsvg%3E" />
 <script>
   // Before the first paint, so a chosen mode never flashes the other one.
   // Each person's copy is their own (desk-theme:<email>); before the Desk says who is viewing,
@@ -12,6 +13,8 @@
 </script>
 <style>
   :root {
+    /* Design Desk's mark (desk/brand/mark.svg): a colour per piece; --mk-inv-* on the ink circle of its avatar. */
+    --mk-tl: #9a6200; --mk-bl: #d98f6c; --mk-tr: #82ad68; --mk-br: #6a90cc; --mk-inv-tl: #e0a640; --mk-inv-bl: #eaa889; --mk-inv-tr: #9fcc86; --mk-inv-br: #8eb1ec;
     --bg: #fcfbfc; --panel: #ffffff; --ink: #1b1b1a; --muted: #6b6b66; --line: #e4e3df; --soft: #f0efeb;
     --tip-opens: #6fd3a0; --accent: #2f5bd3; --accent-ink: #ffffff; --ok: #1f7a4d; --ok-soft: #e3f3ea; --warn: #9a6200; --warn-soft: #fbf0d9;
     --bad: #b3261e; --bad-soft: #fbe5e3; --info-soft: #e7edfc; --live: #6b3fc4; --live-soft: #efe8fb; --why: #0d7d78; --why-soft: #e0f3f1; --r-sm: 6px; --radius: 12px; --shadow: 0 1px 2px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.04);
@@ -27,11 +30,13 @@
   @media (min-width: 2200px) { :root { --measure: 150ch; --pad-x: 64px; --list-w: 550px; --side-w: 520px; --shot-w: 400px; --shot-h: 440px; } }
   /* Night follows the system unless the header switch chose a mode (data-theme). */
   @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) { --bg: #151514; --panel: #1e1e1c; --ink: #ecebe7; --muted: #a09f99; --line: #33332f; --soft: #262624;
+    :root:not([data-theme="light"]) { --mk-tl: #e0a640; --mk-bl: #eaa889; --mk-tr: #9fcc86; --mk-br: #8eb1ec; --mk-inv-tl: #9a6200; --mk-inv-bl: #d98f6c; --mk-inv-tr: #82ad68; --mk-inv-br: #6a90cc;
+      --bg: #151514; --panel: #1e1e1c; --ink: #ecebe7; --muted: #a09f99; --line: #33332f; --soft: #262624;
       --tip-opens: #1f7a4d; --accent: #8aa8ff; --accent-ink: #10142a; --ok: #6fd3a0; --ok-soft: #1c2f25; --warn: #f0c060; --warn-soft: #34291a;
       --bad: #ff8a80; --bad-soft: #3a1f1d; --info-soft: #1f2640; --live: #c3a6ff; --live-soft: #2a2140; --why: #62d2c8; --why-soft: #16302e; --shadow: none; --float: 0 0 0 1px rgba(255,255,255,.10), 0 14px 36px rgba(0,0,0,.6), 0 36px 90px rgba(0,0,0,.7); color-scheme: dark; }
   }
-  :root[data-theme="dark"] { --bg: #151514; --panel: #1e1e1c; --ink: #ecebe7; --muted: #a09f99; --line: #33332f; --soft: #262624;
+  :root[data-theme="dark"] { --mk-tl: #e0a640; --mk-bl: #eaa889; --mk-tr: #9fcc86; --mk-br: #8eb1ec; --mk-inv-tl: #9a6200; --mk-inv-bl: #d98f6c; --mk-inv-tr: #82ad68; --mk-inv-br: #6a90cc;
+    --bg: #151514; --panel: #1e1e1c; --ink: #ecebe7; --muted: #a09f99; --line: #33332f; --soft: #262624;
     --tip-opens: #1f7a4d; --accent: #8aa8ff; --accent-ink: #10142a; --ok: #6fd3a0; --ok-soft: #1c2f25; --warn: #f0c060; --warn-soft: #34291a;
     --bad: #ff8a80; --bad-soft: #3a1f1d; --info-soft: #1f2640; --live: #c3a6ff; --live-soft: #2a2140; --why: #62d2c8; --why-soft: #16302e; --shadow: none; --float: 0 0 0 1px rgba(255,255,255,.10), 0 14px 36px rgba(0,0,0,.6), 0 36px 90px rgba(0,0,0,.7); color-scheme: dark; }
   :root[data-theme="light"] { color-scheme: light; }
@@ -96,6 +101,7 @@
   #notes .note.unread { border-left-color: var(--accent); background: color-mix(in srgb, var(--info-soft) 55%, transparent); }
   #notes .note .ic { grid-row: 1 / span 2; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); }
   #notes .note .ic svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  #notes .note .ic.mk-on-ink { background: var(--ink); } #notes .note .ic.mk-on-ink svg { width: 17px; height: 17px; }
   /* A row is at most three lines: what and who, the item, what was said; each line cuts with … */
   #notes .note .ev { font-weight: 600; color: var(--ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #notes .note .ev span { font-weight: 400; color: var(--muted); }
@@ -314,7 +320,7 @@
   .smsg .who .role { display: inline-flex; align-items: center; gap: 4px; }
   .sav { width: 28px; height: 28px; flex: none; border-radius: 50%; display: grid; place-items: center; font-size: var(--fs-meta); font-weight: 600; color: var(--ink); background: var(--soft); }
   .sav[data-r="designer"], .sav[data-r="admin"] { background: var(--live-soft); color: var(--live); } .sav[data-r="developer"], .sav[data-r="ui-dev-owner"] { background: var(--info-soft); color: var(--accent); }
-  .sav[data-r="agent"] { background: var(--ink); color: var(--bg); } .sav svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+  .sav svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; }
   .sthread .chip { margin-bottom: 8px; } .sthread .reply { margin-top: 12px; margin-left: 40px; }
   .sh-after { margin-top: 4px; font-size: var(--fs-meta); color: var(--muted); } .sh-after a { color: inherit; }
   /* A review in the making: the person's drafts, seen by them alone (docs/desk.md → Reviews). */
@@ -941,7 +947,6 @@
   .ask-row { display: flex; gap: 8px; align-items: flex-start; align-self: flex-start; max-width: 92%; }
   .ask-row .ask-msg { max-width: none; }
   .ask-avatar { flex: none; width: 28px; height: 28px; border-radius: 50%; background: var(--ink); color: var(--panel); display: grid; place-items: center; font-size: var(--fs-micro); font-weight: 600; line-height: 1; }
-  .dd-mark svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .ask-name { display: block; font-size: var(--fs-micro); font-weight: 600; color: var(--muted); margin-bottom: 2px; }
   .ask-msg.agent { align-self: flex-start; background: var(--soft); border-bottom-left-radius: 4px; }
   /* Design Desk is answering: a typing bubble, three dots that rise in turn. */
@@ -1816,17 +1821,32 @@
   /* Design Desk at work: the DD pair. The Ds flip one at a time and rest in three ways: as DD, with the
      round sides out, with the round sides in; back as DD, the pair turns once round. Its size follows the
      font size, its color the text color. Queued: still and faint. */
+  /* Design Desk at work: its mark, DD, in one colour and two tones. The first D turns round, the two
+     close into a disc, the disc turns once and opens into DD again. Each D is the mark's own shape
+     (desk/brand/build.mjs D_MASK); the first one flips. */
   .dd-spin { position: relative; display: inline-block; width: 1.25em; height: 1.25em; flex: none; vertical-align: -0.25em; color: var(--warn); animation: dd-spin-turn 5s cubic-bezier(.65,0,.35,1) infinite; }
-  .dd-spin::before, .dd-spin::after { content: ""; position: absolute; top: 29.167%; width: 37.5%; height: 41.667%; background: currentColor; border-radius: 0 999px 999px 0; animation: dd-spin-left 5s cubic-bezier(.65,0,.35,1) infinite; }
-  .dd-spin::before { left: 7.5%; }
-  .dd-spin::after { left: 55%; animation-name: dd-spin-right; }
-  .dd-spin.queued, .dd-spin.queued::before, .dd-spin.queued::after { animation: none; }
+  .dd-spin::before, .dd-spin::after { content: ""; position: absolute; top: 15.5%; width: 32.7%; height: 69%; background: currentColor; -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2010.9%2023%22%3E%3Cpath%20d%3D%22M0%200A10.9%2010.9%200%200%201%2010.9%2010.9L4.4%2010.9C0.4%2010.9%200%2010.5%200%206.5Z%22%2F%3E%3Cpath%20d%3D%22M10.9%2012.1A10.9%2010.9%200%200%201%200%2023L0%2016.5C0%2012.5%200.4%2012.1%204.4%2012.1Z%22%2F%3E%3C%2Fsvg%3E") center / 100% 100% no-repeat; mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2010.9%2023%22%3E%3Cpath%20d%3D%22M0%200A10.9%2010.9%200%200%201%2010.9%2010.9L4.4%2010.9C0.4%2010.9%200%2010.5%200%206.5Z%22%2F%3E%3Cpath%20d%3D%22M10.9%2012.1A10.9%2010.9%200%200%201%200%2023L0%2016.5C0%2012.5%200.4%2012.1%204.4%2012.1Z%22%2F%3E%3C%2Fsvg%3E") center / 100% 100% no-repeat; }
+  .dd-spin::before { left: 15.5%; animation: dd-spin-left 5s cubic-bezier(.65,0,.35,1) infinite; }
+  .dd-spin::after { left: 51.8%; opacity: .5; }
+  .dd-spin.queued, .dd-spin.queued::before { animation: none; }
   .dd-spin.queued { opacity: .5; }
   .dd-spin.light { color: var(--bg); }
-  @keyframes dd-spin-turn { 0%, 72% { transform: rotate(0); } 94%, 100% { transform: rotate(360deg); } }
-  @keyframes dd-spin-left { 0%, 12% { transform: scaleX(1); } 20%, 34% { transform: scaleX(-1); } 42%, 100% { transform: scaleX(1); } }
-  @keyframes dd-spin-right { 0%, 40% { transform: scaleX(1); } 48%, 58% { transform: scaleX(-1); } 66%, 100% { transform: scaleX(1); } }
-  @media (prefers-reduced-motion: reduce) { .dd-spin, .dd-spin::before, .dd-spin::after { animation-duration: 10s; } }
+  @keyframes dd-spin-turn { 0%, 36% { transform: rotate(0); } 62%, 100% { transform: rotate(360deg); } }
+  @keyframes dd-spin-left { 0%, 14% { transform: scaleX(1); } 26%, 70% { transform: scaleX(-1); } 82%, 100% { transform: scaleX(1); } }
+  @media (prefers-reduced-motion: reduce) { .dd-spin, .dd-spin::before { animation-duration: 10s; } }
+  /* Design Desk's mark, wherever it speaks or acts (docs/desk-page.md → The mark). Its colours follow
+     the mode; on the ink circle of its avatar (.mk-on-ink) it takes the other mode's. */
+  svg.dd-mark { display: block; flex: none; }
+  svg.dd-mark path { stroke: none; }
+  svg.dd-mark .mk-tl { fill: var(--mk-tl); } svg.dd-mark .mk-bl { fill: var(--mk-bl); } svg.dd-mark .mk-tr { fill: var(--mk-tr); } svg.dd-mark .mk-br { fill: var(--mk-br); }
+  .mk-on-ink { --mk-tl: var(--mk-inv-tl); --mk-bl: var(--mk-inv-bl); --mk-tr: var(--mk-inv-tr); --mk-br: var(--mk-inv-br); background: var(--ink); }
+  /* The mark fills 60 % of its circle: 28 px avatars (.sav, .ask-avatar, the bell), 24 px (.face), 18 px (.msg-av). */
+  .mk-on-ink svg.dd-mark { width: 17px; height: 17px; } .brief-k .face.mk-on-ink svg.dd-mark { width: 15px; height: 15px; } .msg .who .msg-av svg.dd-mark { width: 11px; height: 11px; }
+  header .brand { display: inline-grid; place-items: center; border-radius: var(--r-sm); } header .brand svg.dd-mark { width: 22px; height: 22px; }
+  .msg .who .msg-av { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; vertical-align: -4px; margin-right: 6px; }
+  .prov svg.dd-mark { width: 12px; height: 12px; }
+  .banner .mk-off { display: inline-block; vertical-align: -3px; margin-right: 8px; filter: grayscale(1); opacity: .55; } .banner .mk-off svg.dd-mark { width: 16px; height: 16px; }
+  h2.with-mark { display: flex; align-items: center; gap: 10px; } h2.with-mark svg.dd-mark { width: 28px; height: 28px; }
   .ws-sub { min-height: 40px; padding: 4px 16px; }
   .ws-sub .step-by { display: inline-flex; align-items: center; gap: 2px; } .ws-sub .step-by .hint { margin: 0; min-width: 8ch; text-align: center; font-variant-numeric: tabular-nums; }
   .ws-canvas { flex-direction: column; gap: 8px; background: color-mix(in srgb, var(--ink) 9%, var(--bg)); }
@@ -1870,6 +1890,7 @@
 <body>
 <div class="app">
   <header>
+    <a class="brand" href="#" data-tab="requests" title="Design Desk: back to Requests" aria-label="Design Desk, Requests"><svg class="dd-mark" viewBox="0 0 24 24" aria-hidden="true"><path class="mk-tl" d="M11.4 11.4A10.9 10.9 0 0 0 0.5 0.5L0.5 7C0.5 11 0.9 11.4 4.9 11.4Z"/><path class="mk-bl" d="M0.5 23.5A10.9 10.9 0 0 0 11.4 12.6L4.9 12.6C0.9 12.6 0.5 13 0.5 17Z"/><path class="mk-tr" d="M12.6 0.5A10.9 10.9 0 0 1 23.5 11.4L17 11.4C13 11.4 12.6 11 12.6 7Z"/><path class="mk-br" d="M23.5 12.6A10.9 10.9 0 0 1 12.6 23.5L12.6 17C12.6 13 13 12.6 17 12.6Z"/></svg></a>
     <nav id="nav" aria-label="Desk"></nav>
     <span class="sep head-sep" id="new-request-sep" aria-hidden="true" hidden></span>
     <button class="btn primary" id="new-request" hidden>+ New request</button>
@@ -2265,7 +2286,7 @@
     "Every change that ships gets its card with screenshots; a designer marks it handled, or adjusts its design through a new request.");
   // How it works: the processes, each as a tab's intro draws it (its flow, its steps, the buttons
   // the person may press), then what Design Desk cannot do and how long things take.
-  const GUIDE = () => `<h2>How Design Desk works</h2>
+  const GUIDE = () => `<h2 class="with-mark">${MARK}How Design Desk works</h2>
 <p class="lead">Design Desk tells you what changed in the product, explains it in plain words, and turns your ideas into design options${full(" and live prototypes")}. It changes only how the product <b>looks</b>, never what it <b>does</b>.</p>
 <h3>A design request</h3>${process("requests")}
 <h3>Changing a design</h3>${process("workspace")}
@@ -2428,6 +2449,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // A list row's button covers the whole card: it shows no line and no preview of its own; its
   // labels and its issue or pull request link show theirs (docs/desk-page.md → Tooltips).
   const ROW_OPEN = ".row.item > .open";
+  // Design Desk's mark, the one inline copy in the head (desk/brand/mark.svg; a test keeps them
+  // equal). It stands for Design Desk wherever it speaks or acts; the spark is Draw options' icon.
+  const MARK = document.querySelector("header .brand svg.dd-mark").outerHTML;
+  // Its avatar: the mark on an ink circle, in the class of the circle it replaces.
+  const agentAvatar = (cls) => `<span class="${cls} mk-on-ink" title="Design Desk" aria-hidden="true">${MARK}</span>`;
   // A button's icon, by its data- action (or id), drawn before its words; a button whose
   // words start with a sign of their own (▶, ✓, 👍, +…) keeps that sign instead.
   const ICON_PATH = {
@@ -2789,7 +2815,6 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // The Desk itself: a desk with a screen on it.
     desk: '<rect x="4.5" y="1.8" width="7" height="5" rx="1"/><path d="M8 6.8v2.2M1.5 9h13M3 9v5.2M13 9v5.2"/>',
     chat: '<circle cx="8" cy="5.5" r="2.6"/><path d="M2.8 14.2c.4-2.8 2.6-4.3 5.2-4.3s4.8 1.5 5.2 4.3"/>',
-    agent: '<path d="M8 1.8 9.5 6.5 14.2 8 9.5 9.5 8 14.2 6.5 9.5 1.8 8 6.5 6.5z"/>',
     test: '<path d="M6 1.8h4M6.6 1.8v4.4L2.7 12.9a1 1 0 0 0 .9 1.4h8.8a1 1 0 0 0 .9-1.4L9.4 6.2V1.8M4.6 10h6.8"/>',
     digest: '<rect x="2.2" y="3" width="11.6" height="11" rx="1.5"/><path d="M2.2 6.5h11.6M5.5 1.8v2.4M10.5 1.8v2.4"/>',
     auto: '<path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2.5v3h-3"/>',
@@ -2806,7 +2831,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       <span class="ask-who"><b>${esc(name)}</b> asked, from</span>
       <span class="prov"><span class="src" data-k="${p.kind}">${icon(p.kind)}${p.src}</span>${p.auto}${p.parent}</span>${c.created ? `<span class="ask-when">· ${esc(when(c.created))}</span>` : ""}`;
   }
-  const icon = (k) => `<svg viewBox="0 0 16 16" aria-hidden="true">${ICON[k]}</svg>`;
+  // What Design Desk filed or drew on its own carries its mark.
+  const icon = (k) => k === "agent" ? MARK : `<svg viewBox="0 0 16 16" aria-hidden="true">${ICON[k]}</svg>`;
   function origin(c, { parts = false } = {}) {
     const o = c.origin || {}, by = c.by || c.created_by || {}, from = c.from || c.request?.from || null;
     const out = (url, text) => url ? `<a href="${safeUrl(url)}" target="_blank" rel="noopener noreferrer">${text}&nbsp;↗</a>` : text;
@@ -3290,8 +3316,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   function renderBanners() {
     const out = [];
     if (S.offline) out.push(S.stale
-      ? `<div class="banner warn">Can't reach Design Desk. If it was just updated, copy what you're writing, then <button class="btn small" data-reload>Reload the page</button></div>`
-      : `<div class="banner warn">Can't reach Design Desk right now. Retrying… <button class="btn small" data-reload>Reload the page</button></div>`);
+      ? `<div class="banner warn"><span class="mk-off" aria-hidden="true">${MARK}</span>Can't reach Design Desk. If it was just updated, copy what you're writing, then <button class="btn small" data-reload>Reload the page</button></div>`
+      : `<div class="banner warn"><span class="mk-off" aria-hidden="true">${MARK}</span>Can't reach Design Desk right now. Retrying… <button class="btn small" data-reload>Reload the page</button></div>`);
     if (S.me?.role === "guest") out.push(`<div class="banner">You can read, ask and comment. To vote or send requests, ask ${esc(contact())} to add ${esc(S.me.email || "you")} as a designer, PM, UI dev owner or developer.</div>`);
     $("#banners").innerHTML = out.join("");
   }
@@ -3945,7 +3971,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const last = (th) => Date.parse(th.messages[th.messages.length - 1]?.at || 0) || 0;
     const person = (by) => by?.agent ? { n: "Design Desk", r: "", k: "agent" }
       : { n: shortName(by?.email, by?.name) || "someone", r: by?.role && by.role !== "slack" ? by.role : "", k: by?.role || "" };
-    const av = (p) => `<span class="sav" data-r="${esc(p.k)}" aria-hidden="true">${p.k === "agent" ? `<svg viewBox="0 0 24 24">${ICON_PATH.spark}</svg>` : esc((p.n === "you" ? S.me?.my_name || "Y" : p.n)[0].toUpperCase())}</span>`;
+    const av = (p) => p.k === "agent" ? agentAvatar("sav") : `<span class="sav" data-r="${esc(p.k)}" aria-hidden="true">${esc((p.n === "you" ? S.me?.my_name || "Y" : p.n)[0].toUpperCase())}</span>`;
     const msg = (m, reply) => { const p = person(m.by);
       return `<div class="smsg${reply ? " re" : ""}">${av(p)}<div class="sm-b"><div class="who"><b>${esc(p.n === "you" ? "You" : p.n)}</b>${p.r ? `<span class="role">${roleIcon(p.r)}${esc(roleLabel(p.r))}</span>` : ""}<span class="at" title="${esc(when(m.at))}">${esc(sWhen(m.at))}</span></div>${md(m.text)}</div></div>`; };
     const optionOf = (th) => { if (th.change && c.kind === "change") return changeChip(c, th); const v = th.anchor?.variant && (c.variants || []).find((x) => x.id === th.anchor.variant); return v ? `<button class="chip sjump" data-goto="${esc(th.id)}" title="Open the design at the part this is about">Option ${(c.variants || []).indexOf(v) + 1}: ${esc(v.name)}${th.anchor.label ? ` · ${esc(th.anchor.label)}` : ""}</button>` : ""; };
@@ -5135,7 +5161,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       const mini = th.state === "resolved";
       return `${mini ? `<details class="thread mini" id="th-${esc(th.id)}"><summary>${kind}<span class="q"><b>${esc(((n) => n.includes("@") ? n : n.replace(/^./, (x) => x.toUpperCase()))(noteBy(th.messages[0]?.by) || "someone"))}</b> — ${esc(String(th.messages[0]?.text || "").replace(/[*_`#>]+/g, "").replace(/\s+/g, " ").trim())}</span>${state}</summary>${anchor ? `<div class="head">${anchor}</div>` : ""}` : `<article class="thread" id="th-${esc(th.id)}">
         <div class="head">${kind}${anchor}${state}</div>`}
-        ${th.messages.map((m, i) => `<div class="msg ${m.by?.agent ? "agent" : ""}" data-m="${i}"><div class="who">${who(m.by)} · ${esc(when(m.at))}${m.decision ? ` · <a href="#${esc(m.decision)}" data-ref="${esc(m.decision)}">Decision ${esc(m.decision)}</a>` : !m.by?.agent && can("decide") ? ` · <button class="link" data-decide="${esc(th.id)}:${i}" title="Design Desk records it as a numbered decision, with who said it and a link back here">Record as a decision</button>` : ""}</div>${md(m.text)}${warnsOf(m)}${changed(m)}</div>`).join("")}
+        ${th.messages.map((m, i) => `<div class="msg ${m.by?.agent ? "agent" : ""}" data-m="${i}"><div class="who">${m.by?.agent ? agentAvatar("msg-av") : ""}${who(m.by)} · ${esc(when(m.at))}${m.decision ? ` · <a href="#${esc(m.decision)}" data-ref="${esc(m.decision)}">Decision ${esc(m.decision)}</a>` : !m.by?.agent && can("decide") ? ` · <button class="link" data-decide="${esc(th.id)}:${i}" title="Design Desk records it as a numbered decision, with who said it and a link back here">Record as a decision</button>` : ""}</div>${md(m.text)}${warnsOf(m)}${changed(m)}</div>`).join("")}
         ${th.needs_agent ? `<div class="msg"><span class="pending">Waiting for Design Desk…</span></div>` : ""}
         ${th.state !== "resolved" ? `<div class="reply">${mayIn(th, "reply") ? `<input placeholder="Reply…" data-reply="${esc(th.id)}" /><button class="btn small" data-send-reply="${esc(th.id)}">Reply</button>` : ""}${mayIn(th, "resolve") ? `<button class="btn small" data-resolve="${esc(th.id)}" title="Closes this conversation">Mark done</button>` : ""}${workable(c, th) ? `${workInBtn(c, th)}` : ""}</div>` : mayIn(th, "reply") ? `<div class="reply"><button class="btn small" data-reopen="${esc(th.id)}">Reopen</button></div>` : ""}
       ${mini ? "</details>" : "</article>"}`;
@@ -5269,8 +5295,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // One linear chat per item or page: its questions and answers oldest first, the person's
   // on the right and Design Desk's on the left. Each question is its own private ask; a
   // different option, state or part starts with its label.
-  // Design Desk's mark is the spark of its own actions, never letters that read as a person.
-  const DD_AVATAR = `<span class="ask-avatar dd-mark" title="Design Desk" aria-hidden="true"><svg viewBox="0 0 24 24">${ICON_PATH.spark}</svg></span>`;
+  // Design Desk's avatar is its mark, never letters that read as a person.
+  const DD_AVATAR = agentAvatar("ask-avatar");
   function stream(list, ctx) {
     let last = null;
     return [...list].sort((a, b) => a.created.localeCompare(b.created)).map((th) => {
@@ -6451,7 +6477,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ${renderLinked(c)}
       <div class="section">${bug ? `<h4>What happens</h4>` : ""}${md(r.problem)}${r.vision ? `<h4>How they picture it</h4>${md(r.vision)}` : ""}${more ? `<details class="fold"><summary>${bug && r.goal ? (r.steps ? "What should happen and the steps" : "What should happen") : "Steps"}</summary><div class="panel">${more}</div></details>` : ""}${skillLine(r.skills)}${r.figma ? `<p class="hint"><a href="${safeUrl(r.figma)}" target="_blank" rel="noopener noreferrer">The Figma design ↗</a></p>` : ""}</div>
       ${shots(given)}</div>${briefToggle(S.folds.brief, bug)}</div>
-      <div class="brief made-col${S.folds.made ? " clamped" : ""}"><div class="brief-k"><span class="face agent dd-mark" title="Design Desk" aria-hidden="true"><svg viewBox="0 0 24 24">${ICON_PATH.spark}</svg></span><span class="ask-who"><b>What's already known</b></span></div><div class="brief-body">
+      <div class="brief made-col${S.folds.made ? " clamped" : ""}"><div class="brief-k">${agentAvatar("face agent")}<span class="ask-who"><b>What's already known</b></span></div><div class="brief-body">
       ${againstBox(c)}${followsLine(c)}
       ${renderResearch(c.research)}
       ${renderIssueBrief(c)}
@@ -7123,7 +7149,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // is outlined while its comment is open or its pin is pointed at. One Design Desk works on carries its spinner.
     const spinCss = document.createElement("style");
     // The DD pair, as on the Desk (.dd-spin), on a white disc beside a pin Design Desk works on.
-    spinCss.textContent = ".desk-dd{position:absolute;right:-10px;top:-10px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);font-size:14px;display:grid;place-items:center}.desk-dd i{position:relative;display:block;width:1em;height:1em;color:#9a6200;animation:dd-t 5s cubic-bezier(.65,0,.35,1) infinite}.desk-dd i::before,.desk-dd i::after{content:'';position:absolute;top:29.167%;width:37.5%;height:41.667%;background:currentColor;border-radius:0 999px 999px 0;animation:dd-l 5s cubic-bezier(.65,0,.35,1) infinite}.desk-dd i::before{left:7.5%}.desk-dd i::after{left:55%;animation-name:dd-r}@keyframes dd-t{0%,72%{transform:rotate(0)}94%,100%{transform:rotate(360deg)}}@keyframes dd-l{0%,12%{transform:scaleX(1)}20%,34%{transform:scaleX(-1)}42%,100%{transform:scaleX(1)}}@keyframes dd-r{0%,40%{transform:scaleX(1)}48%,58%{transform:scaleX(-1)}66%,100%{transform:scaleX(1)}}@media (prefers-reduced-motion:reduce){.desk-dd i,.desk-dd i::before,.desk-dd i::after{animation-duration:10s}}";
+    spinCss.textContent = ".desk-dd{position:absolute;right:-10px;top:-10px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);font-size:14px;display:grid;place-items:center}.desk-dd i{position:relative;display:block;width:1em;height:1em;color:#9a6200;animation:dd-t 5s cubic-bezier(.65,0,.35,1) infinite}.desk-dd i::before,.desk-dd i::after{content:'';position:absolute;top:15.5%;width:32.7%;height:69%;background:currentColor;-webkit-mask:url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2010.9%2023%22%3E%3Cpath%20d%3D%22M0%200A10.9%2010.9%200%200%201%2010.9%2010.9L4.4%2010.9C0.4%2010.9%200%2010.5%200%206.5Z%22%2F%3E%3Cpath%20d%3D%22M10.9%2012.1A10.9%2010.9%200%200%201%200%2023L0%2016.5C0%2012.5%200.4%2012.1%204.4%2012.1Z%22%2F%3E%3C%2Fsvg%3E') center/100% 100% no-repeat;mask:url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2010.9%2023%22%3E%3Cpath%20d%3D%22M0%200A10.9%2010.9%200%200%201%2010.9%2010.9L4.4%2010.9C0.4%2010.9%200%2010.5%200%206.5Z%22%2F%3E%3Cpath%20d%3D%22M10.9%2012.1A10.9%2010.9%200%200%201%200%2023L0%2016.5C0%2012.5%200.4%2012.1%204.4%2012.1Z%22%2F%3E%3C%2Fsvg%3E') center/100% 100% no-repeat}.desk-dd i::before{left:15.5%;animation:dd-l 5s cubic-bezier(.65,0,.35,1) infinite}.desk-dd i::after{left:51.8%;opacity:.5}@keyframes dd-t{0%,36%{transform:rotate(0)}62%,100%{transform:rotate(360deg)}}@keyframes dd-l{0%,14%{transform:scaleX(1)}26%,70%{transform:scaleX(-1)}82%,100%{transform:scaleX(1)}}@media (prefers-reduced-motion:reduce){.desk-dd i,.desk-dd i::before{animation-duration:10s}}";
     document.documentElement.appendChild(spinCss);
     // The pins drawn and where (page coordinates): the pointer over one is found from these, so a redraw never flickers it.
     let pinHover = null, pinAt = [];
@@ -9962,7 +9988,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       const by = many ? `${names.slice(0, 2).join(", ")}${names.length > 2 ? ` +${names.length - 2}` : ""}` : noteBy(x.by), d = dayWord(x.at), head = d !== lastDay ? `<div class="day">${esc(d)}</div>` : "";
       lastDay = d;
       return `${head}<button class="note${x.read ? "" : " unread"}" data-g="${g}" data-note="${i}">
-        <span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24">${icon}</svg></span>
+        ${g === "agent" ? agentAvatar("ic") : `<span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24">${icon}</svg></span>`}
         <span class="ev">${esc(label)}${by && !label.startsWith(by) ? ` <span>· ${esc(by)}</span>` : ""}</span><time datetime="${esc(x.at)}" title="${esc(when(x.at))}">${esc(ago(x.at))}</time>
         <span class="ti"><span>${NOTE_KIND[x.kind] ? `<em>${esc(NOTE_KIND[x.kind])}:</em> ` : ""}${esc(x.title || "Untitled")}</span><span class="num">${esc(x.item || "")}</span></span>
         ${x.detail ? `<span class="q">${esc(x.detail)}</span>` : ""}</button>`;
