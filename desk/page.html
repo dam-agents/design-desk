@@ -313,7 +313,7 @@
   /* What Design Desk found: a fold like the others, the first of them. Its head carries Design
      Desk's mark and its answer, so a glance tells whether there is anything to check. */
   details.sfound > summary .sf-mark { width: 24px; height: 24px; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--ink); color: var(--bg); }
-  details.sfound > summary .sf-mark svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+  details.sfound > summary .sf-mark.mk-on-ink { background: none; } details.sfound > summary .sf-mark svg.dd-mark { width: 24px; height: 24px; }
   details.sfound > summary .sf-say { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-meta); font-weight: 500; color: var(--ok); }
   details.sfound > summary .sf-say[data-k="warn"] { padding: 0 8px; line-height: 24px; border-radius: 999px; color: var(--warn); background: var(--warn-soft); }
   details.sfound > summary .sf-say svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
@@ -3827,7 +3827,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const say = n ? `<span class="sf-say" data-k="warn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9.5 17h-19z"/><path d="M12 10v4M12 17h.01"/></svg>${esc(plural(n, "thing", "things"))} to check</span>`
       : `<span class="sf-say" data-k="ok"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>Nothing to flag</span>`;
     const open = S.folds.found ?? n > 0;
-    return `<details class="fold big sfold sfound"${open ? " open" : ""}><summary><span class="sf-mark" title="Design Desk" aria-hidden="true"><svg viewBox="0 0 24 24">${ICON_PATH.spark}</svg></span><h3>What Design Desk found</h3>${say}</summary>
+    return `<details class="fold big sfold sfound"${open ? " open" : ""}><summary>${agentAvatar("sf-mark")}<h3>What Design Desk found</h3>${say}</summary>
       <div class="section">${body || `<p class="hint">It goes against no decision in force${c.kind === "change" ? ", and nothing in it waits for a designer" : ""}.</p>`}</div></details>`;
   }
   // A sent review shows once, as one block: who, the verdict, the note, then each of its comments
