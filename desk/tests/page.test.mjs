@@ -3098,6 +3098,8 @@ test("For Developers: the UI dev owner moves it there, a developer but its autho
   // docs/handoff.md step 2: a question the spec leaves open is asked on the Desk, next to the spec.
   assert.match(await card("dana", "C-6"), /Before Design Desk writes the spec, it needs your answers/);
   assert.equal(await count(".spec-banner[data-s=asks] [data-specq-step]"), 1, "the question is asked in the spec's banner, one at a time");
+  assert.equal((await desk.textContent("#detail .line5 li:nth-child(4) .l5-q")).trim(), "1 question", "the strip's Approved step says a question waits");
+  assert.match(await desk.getAttribute("#detail .line5", "aria-label"), /^Stage 4 of 5: Approved, a question waits for your answers$/);
   assert.equal(await count("[data-send-form]"), 0, "and not a second time as a form below");
   assert.equal(await count(".spec-banner [data-spec-read]"), 1, "a spec written before it asked still reads");
 
@@ -5443,7 +5445,7 @@ test("an approved request names where its spec stands, in its review, until it i
 // send; Leave the rest sends what is picked. Not a second time as a form below; nothing opens by itself.
 test("the spec banner asks Design Desk's questions one at a time, then sends them all", (t) => open(t, HEAD_DESK(HEAD_ME, [
   { ...drawn, id: "R-12", title: "Questions wait", status: "spec", approved: APPROVED, threads: HANDOFF_FORM("open", "T-12") },
-  { ...drawn, id: "R-13", title: "Leave some", status: "spec", approved: APPROVED, threads: HANDOFF_FORM("open", "T-13") }]), async (desk) => {
+  { ...drawn, id: "R-13", title: "Leave some", status: "spec", approved: APPROVED, threads: HANDOFF_FORM("open", "T-13").map((th) => ({ ...th, questions: [th.questions[0], { text: "On a phone?", options: ["Stacked", "Hidden"] }] })) }]), async (desk) => {
   await desk.waitForSelector("#list");
   const banner = () => desk.textContent("#detail .spec-banner");
   await desk.evaluate(() => { location.hash = "#R-12"; });
@@ -5480,6 +5482,12 @@ test("the spec banner asks Design Desk's questions one at a time, then sends the
   await desk.evaluate(() => { location.hash = "#R-13"; });
   await desk.waitForSelector('#detail [data-specq-step="T-13"]');
   await desk.check('#detail [data-specq-opt="T-13|0|0"]');
+  await desk.click('#detail [data-specq-next="T-13"]');
+  await desk.click('#detail [data-specq-next="T-13"]');
+  await desk.waitForSelector('#detail [data-specq-send="T-13"]');
+  assert.match(await banner(), /On a phone\?\s*Left to Design Desk\s/, "a question with no recommendation is only left to Design Desk");
+  assert.doesNotMatch(await banner(), /recommended: Stacked/, "never a recommendation it does not have");
+  await desk.click('#detail [data-specq-back="T-13"]');
   await desk.click('#detail [data-specq-rest="T-13"]');
   await desk.waitForFunction(() => posts.some((p) => p.path === "/api/threads/T-13/answers"));
   assert.deepEqual((await desk.evaluate(() => posts.find((p) => p.path === "/api/threads/T-13/answers").body)).answers, [{ choice: "A line", note: "" }, { choice: null, note: "" }], "the pick made, the rest left to Design Desk");

@@ -133,14 +133,17 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
     before it writes the spec.* After the answers: *Design Desk is writing the spec with your answers* (*the answers*
     when someone else gave them), with *Answered by <name> · <when>*. Both say how long, as the state's line does
     (*Started 2 min ago, usually about 6 min*), and that the spec comes back here to read (or, with full mode's
-    *Send it as soon as the spec is written* ticked, that it goes to developers then). No buttons.
+    *Send it as soon as the spec is written* ticked, that it goes to developers then). No buttons, but **Read the last
+    version** for a spec written before (one sent back for changes, or written before its questions were asked). With
+    nothing of Design Desk's queued or at work and no spec: *Design Desk has not written the spec yet.*, no spinner,
+    and who to tell.
   - **Questions** — magenta, the person's move: *Before Design Desk writes the spec*, and *Question k of N* under it.
     The questions come one at a time: a thin progress line; the form's `text` on the first; the question, its options
     as rows to click with **recommended** on the suggested one, and *Anything to add? (optional)*; **Back** (not on
     the first), **Next** (**Review your answers** on the last; a question left open goes to Design Desk) and, always,
     **Leave the rest to Design Desk**, which sends what is picked and leaves the rest. Enter moves on. After the last,
-    *Your answers, before they go*: every question with its pick or *Left to Design Desk (recommended: …)* and its
-    note, each a way back to it; one line, *Design Desk writes the spec from these; you read it before it goes.*; and
+    *Your answers, before they go*: every question with its pick or *Left to Design Desk* (with its recommended
+    option, when it has one) and its note, each a way back to it; one line, *Design Desk writes the spec from these; you read it before it goes.*; and
     **Send answers**. What a person picks is kept in their browser (`desk-asks-<thread>` in local storage) until they
     send it, so a reload or a poll leaves them on the same question, the focus where it was; the first person to send
     wins, and anyone else's picks are dropped once the questions are answered. Someone whose role may not answer
@@ -148,7 +151,8 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
     comment. The questions are not asked a second time as a form below, and nothing opens by itself: when they
     arrive on the request open in the page, one toast says so (*Design Desk has N questions before it writes the
     spec*), once per browser. A question of another step (after checking, building, revising) is a form under the
-    state, as before.
+    state, as before. In full mode the state's strip says so too: its **Approved** step wears the count, *3 questions*,
+    in the same magenta, and its **Next:** reads *Answer 3 questions*.
   - **Waiting** — green, *The developer spec is ready. Read it, then send it to developers.*, its version, who wrote it
     and where it goes, and one row of buttons along its bottom: **Read the spec**, a ghost, on the left, its chevron
     turning as the spec opens right under it, with its versions; **Edit**, **Ask for changes…** and, last, **Send to
@@ -276,10 +280,10 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   holding **Propose** or **Back to draft**, and **Close…**. Both ask first, as it cannot come back. Its
   **Approve for dev** is a verdict in Submit feedback, and asks as an approval does. No plain Approve;
   votes on a proposal in full mode (**Ask for feedback**, **End the vote**), none on a draft. While it
-  is in Design review, a request's approval is **Approve** — which sends the spec as soon as it is
-  written, with no box to tick, or, for one the Desk may not send by itself (a Slack origin, an open
-  pull request; [handoff.md](handoff.md) → Review before it goes), leaves it in its review with **Send
-  to developers** beside Submit feedback — and a change's **Approve** marks it handled; each only for
+  is in Design review, a request's approval is **Approve** — with no box to tick: Design Desk may ask
+  its questions, writes the spec, and it waits in its review as *Spec ready* with **Send to developers**
+  beside Submit feedback (with `spec_review` disabled it goes on its own, save a Slack origin or an open
+  pull request; [handoff.md](handoff.md) → Review before it goes) — and a change's **Approve** marks it handled; each only for
   who may. In Dev review after design opened, a request or a change has **Send to design** — the move
   to For Designers, for a UI dev owner or an admin, asking first; it then is in Design review — beside
   Submit feedback, whose approval is **Approve for dev** (on a change **Approve**, which marks it

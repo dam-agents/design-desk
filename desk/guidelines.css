@@ -1636,6 +1636,7 @@
   .line5 .l { display: inline-flex; align-items: center; gap: 8px; padding: 2px 0 4px; border-bottom: 2px solid transparent; }
   .line5 li + li::before { content: ""; width: 16px; height: 1px; background: var(--line); margin: 0 12px; align-self: center; }
   .line5 li.done { color: var(--ink); }
+  .line5 .l5-q { color: var(--turn); font-size: var(--fs-meta); font-weight: 500; padding: 0 8px; border-radius: 999px; background: var(--turn-soft); }
   .line5 li.done + li::before { background: color-mix(in srgb, var(--ink) 45%, var(--line)); }
   .line5 li .ck { color: var(--st-bar, var(--o)); font-weight: 600; font-size: .9em; }
   .line5 li.now { color: var(--ink); font-weight: 600; } .line5 li.now .l { border-bottom-color: var(--o); }

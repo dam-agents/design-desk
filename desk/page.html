@@ -1648,6 +1648,7 @@
   .line5 .l { display: inline-flex; align-items: center; gap: 8px; padding: 2px 0 4px; border-bottom: 2px solid transparent; }
   .line5 li + li::before { content: ""; width: 16px; height: 1px; background: var(--line); margin: 0 12px; align-self: center; }
   .line5 li.done { color: var(--ink); }
+  .line5 .l5-q { color: var(--turn); font-size: var(--fs-meta); font-weight: 500; padding: 0 8px; border-radius: 999px; background: var(--turn-soft); }
   .line5 li.done + li::before { background: color-mix(in srgb, var(--ink) 45%, var(--line)); }
   .line5 li .ck { color: var(--st-bar, var(--o)); font-weight: 600; font-size: .9em; }
   .line5 li.now { color: var(--ink); font-weight: 600; } .line5 li.now .l { border-bottom-color: var(--o); }
@@ -6089,8 +6090,12 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const subs = [(v && VERDICT[typeOf(c)][v]?.[0]) || "Design Desk checks it", n ? plural(n, "option", "options") : "a few options",
       v && v !== "design" ? "votes and comments" : "votes and comments; a live prototype to try, if someone builds one", ap,
       S.me?.spec_review ? "once the spec is sent" : "after approval"];
+    // The spec's questions wait: the Approved step says how many, in a person's magenta (docs/desk-page.md → The spec banner).
+    const asks = bannerForm(c)?.questions.length || 0;
+    const waits = asks ? `${asks === 1 ? "a question waits" : `${asks} questions wait`} for your answers` : "";
+    if (asks) subs[3] = `${subs[3]}; ${waits}`;
     // The stages as words in one row: the passed ones ticked, the current one underlined.
-    return `<ol class="line5" aria-label="Stage ${i + 1} of ${STAGES.length}: ${esc(STAGES[i])}">${STAGES.map((l, k) => `<li class="${k < i ? "done" : k === i ? "now" : ""}" title="${esc(`${l}: ${subs[k]}`)}"${k === i ? ' aria-current="step"' : ""}><span class="l">${k < i ? '<span class="ck" aria-hidden="true">✓</span>' : ""}${esc(l)}</span></li>`).join("")}</ol>`;
+    return `<ol class="line5" aria-label="Stage ${i + 1} of ${STAGES.length}: ${esc(STAGES[i])}${asks ? `, ${esc(waits)}` : ""}">${STAGES.map((l, k) => `<li class="${k < i ? "done" : k === i ? "now" : ""}" title="${esc(`${l}: ${subs[k]}`)}"${k === i ? ' aria-current="step"' : ""}><span class="l">${k < i ? '<span class="ck" aria-hidden="true">✓</span>' : ""}${esc(l)}${k === 3 && asks ? `<span class="l5-q">${esc(plural(asks, "question", "questions"))}</span>` : ""}</span></li>`).join("")}</ol>`;
   }
 
   // Only a designer puts a card on the presentation, with its final version (docs/desk.md → The presentation).
@@ -6242,7 +6247,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (c.status === "declined") paths = [can("reopen") ? go("Reopen", "It goes back to where it was.") : no("Reopen", "Only a designer or a PM reopens it; say so in a comment.")];
     else if (c.status === "handed-off") paths = [info("Developers build it. When it ships, it appears under PR Changes; nothing for you to do here."), ...(seesDesigns() ? [go("Show the design", "It opens on Designs, as developers build it, with their questions for the designer.")] : [])];
     else if (c.status === "spec") paths = (c.threads || []).some((th) => th.kind === "asks" && th.state === "open")
-      ? [go("Answer Design Desk's questions", "They are under this box; the spec waits for them."), close()]
+      ? [go("Answer Design Desk's questions", bannerForm(c) ? "They are in the spec's banner, one at a time; Design Desk writes the spec from them." : "They are under this box; the spec waits for them."), close()]
       : [info("Design Desk writes the developer spec and sends it. Nothing for you to do."), close()];
     else if (c.status === "triage" && !c.triage) paths = [info("Design Desk checks it first: how the screen works today, who else is changing it, what a design change can do."), close()];
     // Checked, or at Options drawn with every option taken out: the way on is to draw them (again).
@@ -6332,7 +6337,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       // The summary: every pick, each a way back to its question, then the one send.
       const reads = specReads(c);
       const rows = qs.map((q, i) => { const a = d.answers[i]; return `<li><button class="anchor-text" data-specq-goto="${id}|${i}" title="Change this answer">${txt(q.text)}</button>
-        <span class="as-pick">${a.choice ? `<b>${esc(a.choice)}</b>` : `Left to Design Desk <span class="hint">(recommended: ${esc(q.suggested || q.options[0])})</span>`}${a.note.trim() ? ` — ${esc(a.note.trim())}` : ""}</span></li>`; }).join("");
+        <span class="as-pick">${a.choice ? `<b>${esc(a.choice)}</b>` : `Left to Design Desk${q.suggested ? ` <span class="hint">(recommended: ${esc(q.suggested)})</span>` : ""}`}${a.note.trim() ? ` — ${esc(a.note.trim())}` : ""}</span></li>`; }).join("");
       return `<div class="ask-step" data-specq-step="${id}">${bar}<ol class="as-sum">${rows}</ol>
         <p class="hint">${reads ? "Design Desk writes the spec from these; you read it before it goes." : "Design Desk writes the spec from these and sends it to developers."}</p>
         <div class="as-moves">${back}<button class="btn primary" data-specq-send="${id}">Send answers</button></div></div>`;
