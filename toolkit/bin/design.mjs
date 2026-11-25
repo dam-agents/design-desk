@@ -34,6 +34,9 @@ const USAGE = `usage: design <command> [args]
                                        a component's state dimensions (props, values, conditions, hooks)
   guard <worktree> --base <ref> [--profile <profile.json>]
                                        the design-only check of a prototype diff; JSON verdict
+  assets commit <clone> <R-n> <dir>    a handoff bundle as one commit on the product's design-desk/assets
+                                       branch, in its clone, not pushed; prints {sha, push, files}
+  webp <picture>...                    each picture beside itself as <name>.webp
   desk <command>                       the Desk store (run \`design desk\` for its commands)
   figma <command>                      read a design from Figma's REST API (run \`design figma\` for its commands)
   config sha | write <file> --from <sha>
@@ -58,6 +61,7 @@ const table = {
   capture: "./capture.mjs", "pr-shots": "./pr-shots.mjs", guard: "./guard.mjs", desk: "./desk.mjs", config: "./config.mjs", states: "./states.mjs",
   "deck-new": "./deck.mjs", "deck-pdf": "./deck.mjs", "deck-check": "./deck.mjs", video: "./video.mjs", stills: "./video.mjs",
   "video-new": "./video.mjs", brand: "./brand.mjs", icons: "../lib/icons.mjs", skill: "./skill.mjs", where: "./where.mjs", diff: "./diff.mjs", compare: "./compare.mjs", figma: "./figma.mjs", kit: "./kit.mjs",
+  assets: "./assets.mjs", webp: "../lib/webp.mjs",
 };
 if (!cmd || !table[cmd]) { process.stdout.write(USAGE); process.exit(cmd ? 2 : 0); }
 const mod = await import(table[cmd]);
