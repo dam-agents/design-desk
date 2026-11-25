@@ -2,7 +2,7 @@
 // and design.json for any product.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { bundleOf, acceptanceOf, specPictures } from "../bin/desk.mjs";
+import { bundleOf, acceptanceOf, specPictures, freshBundleDir, shotPath } from "../bin/desk.mjs";
 
 const card = {
   id: "C-7", title: "Calmer header", request: { type: "idea", problem: "The header is too loud." },
@@ -122,4 +122,27 @@ test("a prototype's patch is bundled only when the card says its guard passed", 
     assert.equal(design.prototype.patch, null);
     assert.equal(design.prototype.branch, "design-desk/c7-calm", "the branch is still named");
   }
+});
+
+test("a shot is WebP only when its asset is a still picture", () => {
+  assert.equal(shotPath("shots/s1-x.webp", "image/png"), "shots/s1-x.webp");
+  assert.equal(shotPath("shots/s1-x.webp", "image/gif"), "shots/s1-x.gif", "a GIF keeps its type");
+  assert.equal(shotPath("shots/s1-x.webp", "image/svg+xml"), "shots/s1-x.svgxm");
+  assert.equal(shotPath("states/s1-x.html", "text/html"), "states/s1-x.html", "only a planned .webp is touched");
+});
+
+test("the bundle's directory starts empty: an earlier bundle is cleared, anything else refused", async (t) => {
+  const { mkdtempSync, mkdirSync, writeFileSync, existsSync, rmSync } = await import("node:fs");
+  const { join } = await import("node:path");
+  const { tmpdir } = await import("node:os");
+  const root = mkdtempSync(join(tmpdir(), "design-desk-bundle-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  freshBundleDir(join(root, "missing"));
+  const old = join(root, "old"); mkdirSync(join(old, "shots"), { recursive: true });
+  writeFileSync(join(old, "design.json"), "{}"); writeFileSync(join(old, "shots", "stale.webp"), "x");
+  freshBundleDir(old);
+  assert.equal(existsSync(join(old, "shots", "stale.webp")), false, "an earlier attempt's file is gone");
+  const other = join(root, "other"); mkdirSync(other); writeFileSync(join(other, "notes.txt"), "keep");
+  assert.throws(() => freshBundleDir(other), /not empty and holds no earlier bundle/);
+  assert.equal(existsSync(join(other, "notes.txt")), true, "a directory that is not a bundle is left alone");
 });

@@ -103,7 +103,7 @@ card the people who may approve it read the spec in its banner ([desk-page.md](d
   `comment_on`, the default there). Approve then asks no such thing; with `spec_review: disabled` Approve still does.
 ## Sending it
 
-5. **The bundle.** `design desk bundle R-<n> /tmp/design-desk-r<n>-<item>/handoff`: `spec.md` (the
+5. **The bundle.** `design desk bundle R-<n> /tmp/design-desk-r<n>-<item>/handoff` (an earlier bundle there is cleared first): `spec.md` (the
    text for people), `design.json` (the same design for a coding agent: the approved option,
    the boundary and what needs a developer, every element and state with its selector in the
    mockup, the user stories, the acceptance criteria, the decisions it follows, the

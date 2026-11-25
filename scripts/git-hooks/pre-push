@@ -75,12 +75,13 @@ while read -r _local lsha remote_ref rsha; do
     if printf '%s\n' "$all" | grep -v -e '^$' -e '^\.design-desk/handoff/R-[0-9][0-9]*/' | grep -q .; then
       echo "design-desk: refusing to push $remote_ref — it holds handoff bundles only (.design-desk/handoff/R-<n>/)" >&2; exit 1
     fi
-  # Any other branch: its pushed tip as a whole, not only the commits the remote lacks, so a
-  # bundle commit the remote already has cannot ride in on a branch built from it.
-  elif ! tip="$(git ls-tree -r -z --name-only "$lsha" -- .design-desk/handoff 2>/dev/null | tr '\0' '\n')"; then
-    echo "design-desk: refusing to push $remote_ref — cannot read the files of $lsha" >&2; exit 1
-  elif printf '%s\n' "$tip" | grep -q '^\.design-desk/handoff/'; then
-    echo "design-desk: refusing to push $remote_ref — a handoff bundle goes on design-desk/assets only" >&2; exit 1
+  # Any other branch: no commit of its whole history may touch .design-desk/handoff/ — not
+  # only the commits the remote lacks, and not only its tip — so neither a bundle commit the
+  # remote already has nor one deleted again before the tip can ride into the product.
+  elif ! hit="$(git rev-list -1 "$lsha" -- .design-desk/handoff 2>/dev/null)"; then
+    echo "design-desk: refusing to push $remote_ref — cannot read the history of $lsha" >&2; exit 1
+  elif [ -n "$hit" ]; then
+    echo "design-desk: refusing to push $remote_ref — commit $hit carries a handoff bundle; it goes on design-desk/assets only" >&2; exit 1
   fi
 done
 exit 0

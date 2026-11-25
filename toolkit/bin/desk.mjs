@@ -1,7 +1,7 @@
 // design desk <command> — the agent's side of the Desk. Every write goes through the
 // Desk server (its store has one writer), authenticated by work/desk/.agent-token.
 // Text comes from files (or - for stdin), never from argv. Prints JSON on stdout.
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { basename, extname, join } from "node:path";
 import { WORK, cfg, fail, run, tableIn, withRosterRow, writeConfig } from "../lib/core.mjs";
 import { ADDABLE_ROLES, rosterOf, personOf } from "../../desk/store.mjs";
@@ -223,6 +223,21 @@ export async function specPictures(text, fetch, webp = null) {
   return { text, files };
 }
 
+// The bundle's directory starts empty, so no file of an earlier attempt is published with it: one
+// that holds an earlier bundle (its design.json) is cleared, any other that is not empty refused.
+export function freshBundleDir(dir) {
+  if (!existsSync(dir) || !readdirSync(dir).length) return;
+  if (!existsSync(join(dir, "design.json"))) throw new Error(`${dir} is not empty and holds no earlier bundle; give the bundle an empty directory`);
+  rmSync(dir, { recursive: true, force: true });
+}
+
+// A shot is WebP only when its asset is a still picture; another keeps its own type's extension.
+export function shotPath(path, contentType) {
+  if (!path.endsWith(".webp") || isRaster(contentType)) return path;
+  const ext = (String(contentType || "").split(";")[0].split("/")[1] || "bin").replace(/[^a-z0-9]/g, "").slice(0, 5) || "bin";
+  return `${path.slice(0, -".webp".length)}.${ext}`;
+}
+
 export function bundleOf(card) {
   // A prototype's patch is handed off only once the guard passed on it (CLAUDE.md → Design only):
   // the card's guard record says so, nothing else (docs/prototype.md step 4).
@@ -426,6 +441,7 @@ export async function main(_cmd, argv) {
       const { card } = await call("GET", `/agent/cards/${pos[0]}`);
       if (card.kind !== "request" || !card.approved) fail(`${pos[0]} is not an approved request`);
       const { design, files } = bundleOf(card);
+      try { freshBundleDir(pos[1]); } catch (e) { fail(e.message); }
       for (const d of ["", "states", "shots"]) mkdirSync(join(pos[1], d), { recursive: true });
       // Every picture the bundle pushes is WebP: a shot named .webp is encoded as it is saved,
       // by one browser started on the first picture.
@@ -435,7 +451,13 @@ export async function main(_cmd, argv) {
         for (const f of files) {
           const a = await call("GET", `/agent/assets/${f.asset}`);
           let data = Buffer.from(a.data, a.encoding === "base64" ? "base64" : "utf8");
-          if (f.path.endsWith(".webp")) data = await encode(data, a.contentType);
+          const path = shotPath(f.path, a.contentType);
+          if (path !== f.path) {
+            for (const x of design.states) if (x.shot === f.path) x.shot = path;
+          } else if (path.endsWith(".webp")) {
+            data = await encode(data, a.contentType);
+          }
+          f.path = path;
           writeFileSync(join(pos[1], f.path), data);
         }
         // The spec's pictures are Desk assets: saved under pictures/, the spec pointing at them there.
