@@ -268,7 +268,8 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   the same **Changes requested** line under the title, the same boxes, the same **Changes** of a change and dialogs, and **Your feedback** at the top
   of Questions and comments while drafts wait, with the same **Submit feedback** in it; before design it
   offers no Approve. A request that went to design folds the conversations and feedback begun
-  before it opened (`opened_at`) into **Before design · n**, in both modes: after the rest in full mode, first in simple mode. ⋯ holds **Close…** or **Reopen** on a request
+  before it opened (`opened_at`) into **Before design · n**, in both modes: after the rest in full mode, first in simple mode. ⋯ holds **Back to feedback…** on a request approved whose spec has not gone to developers, for
+  who may approve it ([desk.md](desk.md) → Taking an approval back; full mode's ⋯ too), **Close…** or **Reopen** on a request
   — on one sent to developers, first **Mark as shipped** while it is In dev and **Not shipped yet** once
   it is Shipped, for whoever marks a design done (`built`: a developer, a UI dev owner, an admin;
   `POST /api/cards/R-<n>/built`): the store marks it built by itself when a merged change that builds it
@@ -477,7 +478,10 @@ its final check), and in full mode's **Your feedback**.
   in view while the notes scroll, the send button in the verdict's colour (`Request
   changes · 2`, `Approve with 2 notes`, `Approve for dev`, `Send comments`) and **Keep drafting**,
   each as tall as Submit feedback.
-- **The verdicts**, the viewer's own: **Request changes** (with options drawn on a request; on a
+- **The verdicts**, the viewer's own: **Request changes** (with options drawn on a request — on one
+  approved whose spec has not gone to developers, only for who may approve it, once a note of theirs
+  waits (without one the head shows no Submit feedback, and ⋯ → Back to feedback… goes back), its hint saying the
+  approval is taken back first, [desk.md](desk.md) → Taking an approval back; on a
   change for who may handle it), the approval — **Approve** in Design review, **Approve for dev** in
   Dev review and, for the UI dev owner, before design — and **Comment only**. A change whose pull
   request is merged has no Request changes; while nobody handled it, its **Approve** ("Design is done
@@ -697,6 +701,7 @@ icon's upper right corner, gone once the notification is read. The events:
 | Design Desk answered, Design Desk asks | the agent answers a question, or asks one |
 | New options drawn, Options redrawn | a run draws options, or new versions of them |
 | New vote, Option approved, Spec ready, Closed with a decision | a request moves on |
+| Back to feedback | a person takes a request's approval back ([desk.md](desk.md) → Taking an approval back); For you for whose approval it was, too |
 | Feedback asked | a person hands the drawn options to the team (**Ask for feedback**); For you for every `developer` and `ui-dev-owner` |
 | New decision, Decision revoked | a decision is added or revoked |
 | Developer asks, Marked done | a developer asks a design's designer, or marks it done ([Designs](#designs)) |

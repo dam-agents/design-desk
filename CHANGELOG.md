@@ -7,6 +7,16 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.118.0 — 2026-11-25
+
+**Upgrade:**
+1. Restart the Desk server ([desk.md](docs/desk.md) → Server) and republish the page
+   ([desk.md](docs/desk.md) → Publishing the page): whoever may approve a request takes its approval
+   back while its spec has not gone to developers — **Back to feedback…** under ⋯, or **Request
+   changes** in Submit feedback — and the next approval's spec starts from the draft
+   ([desk.md](docs/desk.md) → Taking an approval back). No data migration: an approval from before
+   this version names no step (`approved.from`) and goes back to its options.
+
 ## 1.117.1 — 2026-11-25
 
 **Upgrade:**
