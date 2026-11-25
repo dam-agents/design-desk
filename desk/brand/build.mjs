@@ -1,6 +1,6 @@
 // Design Desk's mark (#215): its geometry, and every file in desk/brand/ drawn from it.
 //
-//   node desk/brand/build.mjs        writes mark.svg, favicon.svg, avatar.svg and their PNGs
+//   node desk/brand/build.mjs        writes mark.svg, favicon.svg, avatar.svg, app.svg and their PNGs
 //
 // The mark is a disc with DD on it: two D's, a spark cut out of the second so the disc shows
 // through (the operator's drawing, dd-light.svg), the disc in DAM's avatar orange, the D's white,
@@ -41,6 +41,24 @@ export const markIn = (mode) => svg(drawing(mode)) + "\n";
 /** avatar.svg: the agent's avatar is the mark itself, in its light colours. */
 export const AVATAR_SVG = markIn("light");
 
+/**
+ * app.svg: the large version, a macOS app icon. On macOS's icon grid (a 1024 canvas, the body 824
+ * with macOS's continuous corner, a margin around it), the disc becomes a rounded square and the D's keep
+ * their share of it. The circle stays wherever the mark is small (avatars, favicon, GitHub).
+ */
+const APP = { canvas: 1024, body: 824 };
+const f = (n) => +n.toFixed(3);
+export const APP_SVG = (() => {
+  const k = BOX / APP.canvas, body = APP.body * k, sc = f(SCALE * (body / BOX));
+  // macOS's corner is no circle's quarter but a continuous curve: a superellipse, |x|^5 + |y|^5 = 1.
+  const h = body / 2, pts = Array.from({ length: 240 }, (_, i) => {
+    const t = (i / 240) * 2 * Math.PI, c = Math.cos(t), sn = Math.sin(t);
+    return `${f(C + h * Math.sign(c) * Math.abs(c) ** 0.4)} ${f(C + h * Math.sign(sn) * Math.abs(sn) ** 0.4)}`;
+  });
+  return svg(`<path d="M${pts.join("L")}Z" fill="${COLORS.light.disc}"/>`
+    + `<path transform="translate(${C} ${C}) scale(${sc}) translate(${-C} ${-C})" fill-rule="evenodd" d="${D_PATH}" fill="${COLORS.light.d}"/>`) + "\n";
+})();
+
 /** The mark as the page draws it inline: classes only, its colours from the page's CSS. */
 export const MARK_INLINE = `<svg class="dd-mark" viewBox="0 0 ${BOX} ${BOX}" aria-hidden="true">${drawing()}</svg>`;
 
@@ -52,6 +70,7 @@ async function build() {
   writeFileSync(join(out, "mark.svg"), MARK_SVG);
   writeFileSync(join(out, "favicon.svg"), MARK_SVG);
   writeFileSync(join(out, "avatar.svg"), AVATAR_SVG);
+  writeFileSync(join(out, "app.svg"), APP_SVG);
   const { launch } = await import("../../toolkit/lib/core.mjs");
   const browser = await launch();
   const page = await browser.newPage();
@@ -61,10 +80,11 @@ async function build() {
     await page.screenshot({ path: join(out, file), omitBackground: true });
   };
   await png(AVATAR_SVG, 512, "avatar.png");
+  await png(APP_SVG, 1024, "app.png");
   await png(markIn("light"), 32, "favicon-32.png");
   await png(markIn("light"), 64, "mark.png"); // GitHub comments show it at 16 px: four pixels to each
   await browser.close();
-  console.log("wrote mark.svg, favicon.svg, avatar.svg, avatar.png, favicon-32.png, mark.png");
+  console.log("wrote mark.svg, favicon.svg, avatar.svg, app.svg, avatar.png, app.png, favicon-32.png, mark.png");
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] || "").href) await build();
