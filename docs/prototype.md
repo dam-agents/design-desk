@@ -116,7 +116,7 @@ Desk (**Switch it off…** on the live prototype of a request still at `prototyp
 keeps its status, and **Build it again** brings it back): `proto.sh run R-<n> down` (when the
 profile has it), `delete_environment`, `proto.sh remove R-<n>` (the worktree and its branch,
 never the patch), `prototype.state: torn-down`. A pushed branch stays; it is the
-developer's.
+developer's. `design-desk/assets` is no request's and is never torn down ([handoff.md](handoff.md) step 5).
 
 ## Push (`prototype_remote` only)
 

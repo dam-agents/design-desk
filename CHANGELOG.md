@@ -7,6 +7,14 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.119.0 — 2026-11-25
+
+**Upgrade:**
+1. Nothing to run: a handoff with `prototype_remote` set now pushes its bundle, its pictures as WebP, to
+   `.design-desk/handoff/R-<n>/` on the orphan `design-desk/assets` branch, never a prototype's
+   ([handoff.md](docs/handoff.md) step 5). Earlier `handoff/R-<n>/` folders and `design-desk/r<n>-handoff`
+   branches stay as they are: old comments link to them.
+
 ## 1.118.0 — 2026-11-25
 
 **Upgrade:**

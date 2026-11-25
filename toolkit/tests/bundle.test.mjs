@@ -27,11 +27,11 @@ test("the bundle carries the approved option, its states, the boundary and the a
   assert.deepEqual(design.boundary.needs_developer, ["Sort by spend: no such order in the data."]);
   assert.deepEqual(design.boundary.build, ["Send the header's count with the list."], "what a developer wires reaches the bundle");
   assert.deepEqual(design.elements[0].states, ["s1"], "an element lists its states");
-  assert.equal(design.states[0].shot, "shots/s1-empty-list.png");
+  assert.equal(design.states[0].shot, "shots/s1-empty-list.webp", "a shot is pushed as WebP");
   assert.deepEqual(design.stories, [{ id: "u1", text: "As an admin I see the list calmly", met: "yes" }]);
   assert.equal(design.acceptance[0].then, "the header is grey");
   assert.deepEqual(design.decisions, [{ decision: "D-2", how: "Greys stay quiet." }]);
-  assert.deepEqual(files.map((f) => [f.path, f.asset]), [["spec.md", "A-9"], ["mockup.html", "A-2"], ["states/s1-empty-list.html", "A-3"], ["shots/s1-empty-list.png", "A-4"], ["prototype.patch", "A-8"]]);
+  assert.deepEqual(files.map((f) => [f.path, f.asset]), [["spec.md", "A-9"], ["mockup.html", "A-2"], ["states/s1-empty-list.html", "A-3"], ["shots/s1-empty-list.webp", "A-4"], ["prototype.patch", "A-8"]]);
 });
 
 test("a live prototype's option and version are what the bundle carries", () => {
@@ -62,4 +62,30 @@ test("the spec's pictures are saved once and its lines point at them", async () 
   assert.deepEqual(asked, ["A-12", "A-13"], "each picture fetched once");
   assert.equal(text, "![Before](pictures/A-12.png)\n![After](pictures/A-13.png)\n![Before again](pictures/A-12.png)");
   assert.deepEqual(files.map((f) => f.name), ["pictures/A-12.png", "pictures/A-13.png"]);
+});
+
+test("with an encoder, a raster picture is saved as WebP and the spec points at the .webp; an SVG stays as it is", async () => {
+  const seen = [];
+  const webp = async (data, type) => { seen.push(type); return Buffer.from("RIFFxxxxWEBP"); };
+  const fetch = async (id) => id === "A-12" ? { contentType: "image/png", encoding: "base64", data: "iVBORw0KGgo=" } : { contentType: "image/svg+xml", encoding: "utf8", data: "<svg/>" };
+  const { text, files } = await specPictures("![Before](asset:A-12)\n![Icon](asset:A-13)", fetch, webp);
+  assert.equal(text, "![Before](pictures/A-12.webp)\n![Icon](pictures/A-13.svgxm)");
+  assert.deepEqual(seen, ["image/png"], "only the raster picture is encoded");
+  assert.equal(files[0].data.toString(), "RIFFxxxxWEBP");
+  assert.equal(files[1].data.toString(), "<svg/>");
+});
+
+test("the toolkit's Chromium encodes a PNG as WebP", async (t) => {
+  const { chromium, req } = await import("../lib/core.mjs");
+  if (!chromium()) return t.skip("no browser here");
+  try { req("playwright-core"); } catch (e) { if (e.code === "MODULE_NOT_FOUND") return t.skip("toolkit dependencies are not installed"); throw e; }
+  const { webpEncoder, isRaster } = await import("../lib/webp.mjs");
+  assert.ok(isRaster("image/png") && isRaster("image/jpeg; q=1") && !isRaster("image/svg+xml") && !isRaster("image/gif"));
+  const enc = await webpEncoder();
+  try {
+    const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==", "base64");
+    const out = await enc.encode(png, "image/png");
+    assert.equal(out.subarray(0, 4).toString(), "RIFF");
+    assert.equal(out.subarray(8, 12).toString(), "WEBP");
+  } finally { await enc.close(); }
 });

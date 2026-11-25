@@ -109,12 +109,19 @@ card the people who may approve it read the spec in its banner ([desk-page.md](d
    mockup, the user stories, the acceptance criteria, the decisions it follows, the
    prototype's branch and patch), `mockup.html` (the approved option, the exact reference),
    `states/` and `shots/` (each state alone), `pictures/` (the spec's pictures, its lines pointing at them). Look at `design.json`: every element has its
-   states, every acceptance line names something on the screens. With `prototype_remote` set,
-   commit the folder as `handoff/R-<n>/` on the request's `design-desk/` branch (the
-   prototype's, else `design-desk/r<n>-handoff` from the default branch), run `design guard`
-   on that exact diff ([boundary.md](boundary.md)), and push only when it passes; a refusal
-   pushes nothing: the delivery carries `design.json` in the issue alone and its pictures by
-   `--attach`, and fails without them ([`handoff-github`](../.agents/skills/handoff-github/SKILL.md) → The pictures).
+   states, every acceptance line names something on the screens. Its shots and raster pictures
+   are WebP, encoded as they are saved. With `prototype_remote` set, the bundle goes on the
+   product's **`design-desk/assets`** branch, never a prototype's or a request's own branch:
+   `design assets commit <clone> R-<n> /tmp/design-desk-r<n>/handoff` (the clone from
+   `scripts/checkout.sh`) makes one commit adding or replacing `.design-desk/handoff/R-<n>/`
+   and nothing else, on an orphan branch it starts when there is none. It is never merged and
+   never deleted, so every commit a comment links to stays. It holds no product code, so its
+   check is the command's own: it refuses a commit that touches another path, and a branch that
+   shares history with the default branch. Push its `push` refspec,
+   `git -C <clone> push <remote-url> <push>`, never `--force`; refused as not a fast-forward
+   (another handoff pushed first), run the command again and push its new sha. A refusal or a
+   failed push sends nothing on: the delivery carries `design.json` in the issue alone and its
+   pictures by `--attach`, and fails without them ([`handoff-github`](../.agents/skills/handoff-github/SKILL.md) → The pictures).
 6. **A send after a reopen.** A request sent before, reopened by an admin and approved again
    (`sends` not empty; this is send `k` = `sends` + 1) is sent anew: a **new** issue with this
    spec — never an edit of, or a comment on, an earlier send's issue, comment or pull request,
@@ -162,7 +169,7 @@ card the people who may approve it read the spec in its banner ([desk-page.md](d
    **✓ Designed** ([issues.md](issues.md) → On the Desk). What it sends asks nothing of its reader:
    it is the spec as the Desk settled it, and it names the Desk card as the place for a
    question that still comes up. It carries the bundle: `design.json` in a folded block
-   ("For a coding agent"), the link to the pushed `handoff/R-<n>/` folder when there is one,
+   ("For a coding agent"), the link to the pushed `.design-desk/handoff/R-<n>/` folder when there is one,
    and one line for the coding agent: build from `design.json` and `mockup.html`, check each
    state against `shots/`, and tick every acceptance line in the pull request.
 7. Write `dev_summary` (`design desk upsert`): the UX decisions the request's threads, votes,
