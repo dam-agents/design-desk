@@ -3044,7 +3044,7 @@ const cards = [
   { id: "C-7", kind: "request", title: "Sent", status: "handed-off", updated: at, triage, created_by: bob, spec: { issue_url: "https://github.com/acme/w/issues/31" }, sent_card: "C-8" },
   { id: "C-8", kind: "issue", title: "Build the spend column", status: "open", bucket: "sprint", designed: { card: "C-7", title: "Sent", at } },
   { id: "C-9", kind: "issue", title: "Still open", status: "open", bucket: "sprint" },
-  { id: "C-6", kind: "request", title: "Spec with a question", status: "spec", triage, created_by: bob, spec: { asset: "A-9" },
+  { id: "C-6", kind: "request", title: "Spec with a question", status: "spec", triage, created_by: bob, approved: { by: bob, at }, spec: { asset: "A-9", review: "draft" },
     threads: [{ id: "T-1", kind: "asks", state: "open", step: "handoff", messages: [{ by: { agent: true }, at, text: "The spec waits for one answer." }],
       questions: [{ text: "What does an empty list show?", why: "No option shows it.", options: ["A short hint", "Nothing"], suggested: "A short hint" }] }] },
 ];
@@ -3097,8 +3097,9 @@ test("For Developers: the UI dev owner moves it there, a developer but its autho
 
   // docs/handoff.md step 2: a question the spec leaves open is asked on the Desk, next to the spec.
   assert.match(await card("dana", "C-6"), /Before Design Desk writes the spec, it needs your answers/);
-  assert.equal(await count("[data-send-form]"), 1, "the question is a form on the card");
-  assert.equal(await count("details.fold[open] #spec-body"), 1, "the spec it will send is open to read");
+  assert.equal(await count(".spec-banner[data-s=asks] [data-specq-step]"), 1, "the question is asked in the spec's banner, one at a time");
+  assert.equal(await count("[data-send-form]"), 0, "and not a second time as a form below");
+  assert.equal(await count(".spec-banner [data-spec-read]"), 1, "a spec written before it asked still reads");
 
   // docs/issues.md → On the Desk: the sent issue is linked both ways and leaves the open lists.
   assert.match(await card("dana", "C-7"), /With developers[\s\S]*Sent [\s\S]*Issue #31 ↗[\s\S]*see it in Issues\s*C-8/);
@@ -5411,7 +5412,7 @@ test("a spec sent back for changes keeps its review, not In dev", (t) => open(t,
 // From Approve to Send an approved request stays in its review (docs/desk-page.md → A request's state
 // in the list): its pill says Writing spec, Answers needed or Spec ready, in the list as on its page,
 // and it counts with its review, never with In dev, until its spec is sent.
-const HANDOFF_FORM = (state = "open") => [{ id: "T-5", kind: "asks", step: "handoff", state, may: { reply: true }, messages: [{ by: { agent: true }, at: "2026-11-18T09:05:00Z", text: "Two things the design does not settle." }],
+const HANDOFF_FORM = (state = "open", id = "T-5") => [{ id, kind: "asks", step: "handoff", state, may: { reply: true }, messages: [{ by: { agent: true }, at: "2026-11-18T09:05:00Z", text: "Two things the design does not settle." }],
   questions: [{ text: "Empty state?", options: ["A line", "A picture"], suggested: "A line" }, { text: "On a phone?", options: ["Stacked", "Hidden"], suggested: "Stacked" }] }];
 const APPROVED = { by: { email: "d@example.com" }, at: "2026-11-18T09:00:00Z" };
 test("an approved request names where its spec stands, in its review, until it is sent", (t) => open(t, HEAD_DESK(HEAD_ME, [
@@ -5435,6 +5436,84 @@ test("an approved request names where its spec stands, in its review, until it i
   await desk.evaluate(() => { location.hash = "#R-12"; });
   await desk.waitForFunction(() => (document.querySelector("#detail .shead h2")?.textContent || "").includes("Questions wait"));
   assert.match(await desk.textContent("#detail .sh-line .spill"), /Answers needed/, "the head says the same");
+}));
+
+// The spec's questions, one at a time in its banner (docs/desk-page.md → The spec banner): Back and
+// Next, the picks kept in the browser across a reload, a summary with a way back to each, then one
+// send; Leave the rest sends what is picked. Not a second time as a form below; nothing opens by itself.
+test("the spec banner asks Design Desk's questions one at a time, then sends them all", (t) => open(t, HEAD_DESK(HEAD_ME, [
+  { ...drawn, id: "R-12", title: "Questions wait", status: "spec", approved: APPROVED, threads: HANDOFF_FORM("open", "T-12") },
+  { ...drawn, id: "R-13", title: "Leave some", status: "spec", approved: APPROVED, threads: HANDOFF_FORM("open", "T-13") }]), async (desk) => {
+  await desk.waitForSelector("#list");
+  const banner = () => desk.textContent("#detail .spec-banner");
+  await desk.evaluate(() => { location.hash = "#R-12"; });
+  await desk.waitForSelector('#detail .spec-banner[data-s="asks"] [data-specq-step]');
+  assert.match(await banner(), /Before Design Desk writes the spec\s*Question 1 of 2[\s\S]*Two things the design does not settle\.[\s\S]*Empty state\?/);
+  assert.doesNotMatch(await banner(), /On a phone\?/, "one question at a time");
+  assert.equal(await desk.locator("#detail [data-specq-back]").count(), 0, "no Back on the first");
+  assert.match(await desk.textContent('#detail .as-opt:has([value="A line"])'), /recommended/);
+  assert.equal(await desk.locator("#detail [data-send-form]").count(), 0, "not a second time as a form below");
+  assert.equal(await desk.locator("dialog[open]").count(), 0, "nothing opens by itself");
+  await desk.check('#detail [data-specq-opt="T-12|0|1"]');
+  await desk.fill('#detail [data-specq-note="T-12|0"]', "Big one.");
+  await desk.click('#detail [data-specq-next="T-12"]');
+  await desk.waitForFunction(() => /Question 2 of 2/.test(document.querySelector("#detail .spec-banner")?.textContent || ""));
+  assert.match(await banner(), /On a phone\?/);
+  assert.match(await desk.textContent('#detail [data-specq-next="T-12"]'), /Review your answers/);
+  await desk.reload();
+  await desk.waitForSelector('#detail .spec-banner[data-s="asks"] [data-specq-step]');
+  assert.match(await banner(), /Question 2 of 2/, "a reload lands on the same question");
+  await desk.click('#detail [data-specq-next="T-12"]');
+  await desk.waitForSelector('#detail [data-specq-send="T-12"]');
+  const sum = await banner();
+  assert.match(sum, /Your answers, before they go[\s\S]*Empty state\?\s*A picture — Big one\.[\s\S]*On a phone\?\s*Left to Design Desk \(recommended: Stacked\)/);
+  assert.match(sum, /you read it before it goes/);
+  await desk.click('#detail [data-specq-goto="T-12|0"]');
+  await desk.waitForFunction(() => /Question 1 of 2/.test(document.querySelector("#detail .spec-banner")?.textContent || ""));
+  assert.equal(await desk.isChecked('#detail [data-specq-opt="T-12|0|1"]'), true, "the pick is kept");
+  await desk.click('#detail [data-specq-next="T-12"]');
+  await desk.click('#detail [data-specq-next="T-12"]');
+  await desk.click('#detail [data-specq-send="T-12"]');
+  await desk.waitForFunction(() => posts.some((p) => p.path === "/api/threads/T-12/answers"));
+  assert.deepEqual((await desk.evaluate(() => posts.find((p) => p.path === "/api/threads/T-12/answers").body)).answers, [{ choice: "A picture", note: "Big one." }, { choice: null, note: "" }]);
+  assert.equal(await desk.evaluate(() => localStorage.getItem("desk-asks-T-12")), null, "sent: the draft is gone");
+  await desk.evaluate(() => { location.hash = "#R-13"; });
+  await desk.waitForSelector('#detail [data-specq-step="T-13"]');
+  await desk.check('#detail [data-specq-opt="T-13|0|0"]');
+  await desk.click('#detail [data-specq-rest="T-13"]');
+  await desk.waitForFunction(() => posts.some((p) => p.path === "/api/threads/T-13/answers"));
+  assert.deepEqual((await desk.evaluate(() => posts.find((p) => p.path === "/api/threads/T-13/answers").body)).answers, [{ choice: "A line", note: "" }, { choice: null, note: "" }], "the pick made, the rest left to Design Desk");
+}));
+
+// From Approve on the banner says what Design Desk does: reading the design, and maybe asking; then
+// writing from the answers, saying who gave them. Questions arriving on the request open here: one toast.
+test("the spec banner shows from Approve on, and one toast says when the questions arrive", (t) => open(t, HEAD_DESK(HEAD_ME, [
+  { ...drawn, id: "R-11", title: "Just approved", status: "spec", approved: APPROVED, waiting: [{ kind: "handoff", state: "claimed", created: "2026-11-18T09:00:00Z", started: "2026-11-18T09:01:00Z" }] },
+  { ...drawn, id: "R-14", title: "Answered elsewhere", status: "spec", approved: APPROVED, waiting: [{ kind: "handoff", state: "queued", created: "2026-11-18T09:10:00Z" }],
+    threads: [{ ...HANDOFF_FORM("answered", "T-14")[0], messages: [...HANDOFF_FORM("answered", "T-14")[0].messages, { by: { email: "pat@example.com", name: "Pat Lee" }, at: "2026-11-18T09:09:00Z", text: "**Empty state?**\nA line" }] }] },
+  { ...drawn, id: "R-18", title: "Approved again", status: "spec", approved: { ...APPROVED, at: "2026-11-20T09:00:00Z" }, waiting: [{ kind: "handoff", state: "queued", created: "2026-11-20T09:00:00Z" }], threads: HANDOFF_FORM("answered", "T-18") },
+  { ...drawn, id: "R-19", title: "Stopped", status: "spec", approved: APPROVED }]), async (desk) => {
+  await desk.waitForSelector("#list");
+  await desk.evaluate(() => { localStorage.setItem("desk-asks-T-14", JSON.stringify({ step: 1, answers: [{ choice: "A picture", note: "" }] })); location.hash = "#R-14"; });
+  await desk.waitForSelector('#detail .spec-banner[data-s="writing"]');
+  assert.match(await desk.textContent("#detail .spec-banner"), /Design Desk is writing the spec with the answers\.\s*Answered by (Pat Lee|pat@example\.com) ·[\s\S]*It comes back here to read\./);
+  assert.equal(await desk.evaluate(() => localStorage.getItem("desk-asks-T-14")), null, "answered by someone else: the picks made here are dropped");
+  // Reopened and approved again: an earlier approval's answers are not this one's.
+  await desk.evaluate(() => { location.hash = "#R-18"; });
+  await desk.waitForFunction(() => /reading the design and may have a few questions/.test(document.querySelector("#detail .spec-banner")?.textContent || ""));
+  assert.doesNotMatch(await desk.textContent("#detail .spec-banner"), /Answered by/);
+  // Nothing of Design Desk's queued or at work, and no spec: it says so, with no spinner.
+  await desk.evaluate(() => { location.hash = "#R-19"; });
+  await desk.waitForFunction(() => /Design Desk has not written the spec yet\./.test(document.querySelector("#detail .spec-banner")?.textContent || ""));
+  assert.equal(await desk.locator("#detail .spec-banner .spin").count(), 0);
+  await desk.evaluate(() => { location.hash = "#R-11"; });
+  await desk.waitForFunction(() => /reading the design and may have a few questions/.test(document.querySelector("#detail .spec-banner")?.textContent || ""));
+  assert.equal(await desk.getAttribute("#detail .spec-banner", "data-s"), "writing");
+  assert.equal(await desk.locator("#detail .spec-banner [data-spec-send], #detail .spec-banner [data-spec-read]").count(), 0, "nothing to read or send yet");
+  await desk.evaluate(() => { const c = cards.find((x) => x.id === "R-11"); c.waiting = []; c.threads = [{ id: "T-11", kind: "asks", step: "handoff", state: "open", may: { reply: true }, messages: [{ by: { agent: true }, at: "2026-11-18T09:05:00Z", text: "One thing." }], questions: [{ text: "Empty state?", options: ["A line", "A picture"], suggested: "A line" }] }]; });
+  await desk.waitForSelector('#detail .spec-banner[data-s="asks"]', { timeout: 15000 });
+  await desk.waitForFunction(() => [...document.querySelectorAll(".toast")].some((x) => /Design Desk has 1 question before it writes the spec/.test(x.textContent)));
+  assert.equal(await desk.locator("dialog[open]").count(), 0, "nothing opens by itself");
 }));
 
 // Ask for changes takes a note of any length: the dialog sets no limit, and the note goes whole.

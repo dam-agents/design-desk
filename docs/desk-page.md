@@ -125,15 +125,41 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   on a narrow screen; the presentation's Exit, a picture's ✕).
   `desk/tests/page.test.mjs` drives every dialog in such a frame. It reports itself skipped
   only when it finds no Chromium or the toolkit's `playwright-core` is not installed.
-- <a id="the-spec-banner"></a>**The spec banner.** A spec draft waiting for its review, or rewritten after Ask for changes,
-  stands under the request's head as a banner, in both modes; the spec itself stays closed in it, so
-  the page below keeps its place. Waiting: green, *The developer spec is ready. Read it, then send it
-  to developers.*, its version, who wrote it and where it goes, and one row of buttons along its bottom: **Read the
-  spec**, a ghost, on the left, its chevron turning as the spec opens right under it, with its versions;
-  **Edit**, **Ask for changes…** and, last, **Send to developers** on the right for who may approve it; anyone else reads who sends it. Rewritten: blue, a spinner, *Design Desk is rewriting
-  the spec as you asked.*, who asked and when, and **Read the last version**; no Send. With Design
-  Desk's question open: blue, pointing to the questions, no Send. Once sent, the spec is a closed fold
-  further down. Send to developers wears the paper plane wherever it stands, its dialog's button too.
+- <a id="the-spec-banner"></a>**The spec banner.** From Approve to **Send to developers** the spec's whole flow stands
+  under the request's head as one banner, in both modes, in the phase it is at ([handoff.md](handoff.md)); the page below
+  keeps its place. In every phase it sits on the selected row's grey (`--soft`), its phase's colour only as an edge
+  down its left and its icon, and what it holds (the options, the spec) in white:
+  - **Writing** — blue, a spinner. Right after Approve: *Design Desk is reading the design and may have a few questions
+    before it writes the spec.* After the answers: *Design Desk is writing the spec with your answers* (*the answers*
+    when someone else gave them), with *Answered by <name> · <when>*. Both say how long, as the state's line does
+    (*Started 2 min ago, usually about 6 min*), and that the spec comes back here to read (or, with full mode's
+    *Send it as soon as the spec is written* ticked, that it goes to developers then). No buttons.
+  - **Questions** — magenta, the person's move: *Before Design Desk writes the spec*, and *Question k of N* under it.
+    The questions come one at a time: a thin progress line; the form's `text` on the first; the question, its options
+    as rows to click with **recommended** on the suggested one, and *Anything to add? (optional)*; **Back** (not on
+    the first), **Next** (**Review your answers** on the last; a question left open goes to Design Desk) and, always,
+    **Leave the rest to Design Desk**, which sends what is picked and leaves the rest. Enter moves on. After the last,
+    *Your answers, before they go*: every question with its pick or *Left to Design Desk (recommended: …)* and its
+    note, each a way back to it; one line, *Design Desk writes the spec from these; you read it before it goes.*; and
+    **Send answers**. What a person picks is kept in their browser (`desk-asks-<thread>` in local storage) until they
+    send it, so a reload or a poll leaves them on the same question, the focus where it was; the first person to send
+    wins, and anyone else's picks are dropped once the questions are answered. Someone whose role may not answer
+    reads the questions and who will. Once sent, answers are not changed here: **Ask for changes…** on the spec, or a
+    comment. The questions are not asked a second time as a form below, and nothing opens by itself: when they
+    arrive on the request open in the page, one toast says so (*Design Desk has N questions before it writes the
+    spec*), once per browser. A question of another step (after checking, building, revising) is a form under the
+    state, as before.
+  - **Waiting** — green, *The developer spec is ready. Read it, then send it to developers.*, its version, who wrote it
+    and where it goes, and one row of buttons along its bottom: **Read the spec**, a ghost, on the left, its chevron
+    turning as the spec opens right under it, with its versions; **Edit**, **Ask for changes…** and, last, **Send to
+    developers** on the right for who may approve it; anyone else reads who sends it.
+  - **Rewritten** — blue, a spinner, *Design Desk is rewriting the spec as you asked.*, who asked and when, and **Read
+    the last version**; no Send.
+
+  A spec written before its questions were asked (before 1.120.0) reads as **Read the last version** while they wait.
+  Once sent, the spec is a closed fold further down. Send to developers wears the paper plane wherever it stands, its
+  dialog's button too. Approve's dialog says Design Desk may ask a few questions, then writes the spec for the person
+  to read and send.
 - **What a person writes has no limit on the page.** A request, a comment, a reply, a review, an
   answer and the note of every dialog take any length; the server keeps one bound, 20,000 characters
   (`LIMITS.prompt`), and says when text passes it. Short records keep theirs: a title, a name, a link,

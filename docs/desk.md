@@ -828,7 +828,10 @@ Requests use **Your turn** instead): only the cards that wait for a designer's d
   shows both), and has no heading. A question is one sentence; an option a few words, its
   consequence after a colon when it is not plain. `why` is not shown: put what matters in the
   `text`. A question nobody answers is left to Design Desk, which takes `suggested`;
-  **Leave it to Design Desk** leaves them all.
+  **Leave it to Design Desk** leaves them all. The spec's form (`--step handoff`) is asked in the spec
+  banner instead, one question at a time, its **Leave the rest to Design Desk** leaving only those not yet
+  picked ([desk-page.md](desk-page.md#the-spec-banner)); every other step's shows as a form under the
+  request's state.
 - A card is updated, never duplicated: `design desk upsert` with its `id`.
 - **Where a card came from.** Every row in PR Changes, Requests, Designs, Issues and Product shows its source, its author and,
   for what no person asked for, the event behind it, as `created: <when> from: <source> by: <author> based on:
