@@ -296,7 +296,7 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   the box to write in, each where it began: each conversation a card, its first message with the
   replies hung under it on a thin line, each by an avatar, the name (in the reading size), a designer's role
   (only theirs, in its colour) and a short date — the viewer's own on a faint accent tint, Design Desk's on a soft
-  panel with its mark outlined, everyone else's on none —, a note on a
+  panel with its mark as the avatar, everyone else's on none —, a note on a
   design led by its option (and part) as a chip that opens the design workspace there; one resolved
   folds to one line where it falls (who wrote it and how it starts, who resolved it and when) that opens on
   a click. Its moves are quiet words under it: **Reply** opens its box, the cursor in it (**Cancel**
@@ -778,16 +778,17 @@ Every change to the page keeps to one scale; `desk/tests/page.test.mjs` fails on
   is worded, its case included, is the guidelines' (Text). A role alone as a label is
   capitalised (*Designer*), inside a sentence as written.
 - **The mark:** Design Desk's mark is DD on a disc, `desk/brand/mark.svg`, drawn by
-  `desk/brand/build.mjs`: the disc in DAM's avatar orange (`--mk-disc`), two white D's
-  on it (`--mk-d`), in light and dark mode alike, a spark cut out of the second. It stands for Design Desk wherever it speaks or acts, never for the product: the favicon
-  (the head carries none), the agent's avatar in every thread, the ask panel,
-  What's already known and the bell (the disc is the avatar's circle, `.mk-on-ink`; the head shows it
-  at 32px, as tall as its buttons and tabs), the `from:` of
-  what it filed or drew, How it works, the offline banner (greyed). Never letters. The Desk's spark
+  `desk/brand/build.mjs`: the disc in DAM's avatar orange (`--mk-disc`), two white D's on it
+  (`--mk-d`), in light and dark mode alike, a spark cut out of the second. Above 128px — the macOS
+  app icon, `desk/brand/app.svg` — the disc is macOS's rounded square and the spark finer. It
+  stands for Design Desk wherever it speaks or acts, never for the product: the favicon, the
+  agent's avatar in every thread, the ask panel, What's already known, What Design Desk found and
+  the bell (the disc is the avatar's circle, `.mk-on-ink`), the `from:` of what it filed or drew,
+  How it works, the offline banner (greyed). The head carries none. Never letters. The Desk's spark
   icon alone is **Draw options**'. **At work:** `.dd-spin`, the DD pair as before, in the mark's
-  colour (`--mk-disc`); in the list at a row's top right (the state's pill drops to the second line),
-  in a request beside its buttons. The page carries one inline copy of the mark, in a template; a
-  test keeps it equal to `mark.svg`.
+  colour (`--mk-disc`); in the list at a row's top right (the state's pill drops to the second line;
+  under 400px, both on the third), in a request beside its buttons. The page carries one inline copy
+  of the mark, in a template; a test keeps it equal to `mark.svg`.
 - **A request's box** keeps two rows above its stages: the state and Turn with Approve, Close and
   ⋯; then the ways on (sent: when and where on the left, the ways on at the right).
 - **Buttons:** `.btn` 32px high, `.btn.small` 26px; which one is primary, and which green: the

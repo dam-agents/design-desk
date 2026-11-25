@@ -4313,6 +4313,13 @@ test("simple mode lists every request and change in one list, each in one state,
   assert.equal((await desk.textContent('#nav [data-tab="requests"]')).replace(/\d+$/, "").trim(), "Requests & PRs", "one entry, no PR Changes");
   assert.deepEqual(await rows(desk), [["r-check", "Design review"], ["r-busy", "Design review"], ["r-draft", "Design review"], ["c-open", "Design review"]], "Design review by default, newest change first, the pill on every row even with one state");
   assert.equal(await desk.locator('#list [data-card="r-busy"] .dd-spin').count(), 1, "Design Desk at work: the spinner, still Open");
+  // On a phone (under 400px) the row has two columns: the spinner and the pill share its third line.
+  await desk.setViewportSize({ width: 360, height: 800 });
+  const busy = await desk.$eval('#list [data-card="r-busy"]', (el) => { const r = el.getBoundingClientRect(), t = el.querySelector(".t").getBoundingClientRect(), pill = el.querySelector(".spill").getBoundingClientRect();
+    return { cols: getComputedStyle(el).gridTemplateColumns.split(" ").length, title: t.width / r.width, pillIn: pill.left >= r.left && pill.right <= r.right }; });
+  assert.deepEqual(busy, { ...busy, cols: 2, pillIn: true }, "a row at work keeps the phone's two columns, its pill inside it");
+  assert.ok(busy.title > 0.7, "and its title keeps the width");
+  await desk.setViewportSize({ width: 1280, height: 720 });
   await desk.click("details.sf > summary");
   await desk.click('[data-simf="states:proposal"]');
   await desk.click('[data-simf="states:dev"]');
