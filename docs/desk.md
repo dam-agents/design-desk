@@ -421,7 +421,7 @@ prototype once Design Desk has checked a request:
 ### Approved is final
 
 From **Approve** on (the spec, and once it went to developers) a request's design no longer
-changes: the store refuses Draw design options, one more option, a redraw, Work it in, other
+changes, unless its approval is taken back while the spec is still on the Desk (below): the store refuses Draw design options, one more option, a redraw, Work it in, other
 ways a part could look, removing an option, a live prototype, a Figma import, and Reopen of
 one sent to developers, save an admin's (**Reopen…** under ⋯, behind a confirmation): the
 request goes back to before the team's vote with its options (`variants`, `team_feedback`
@@ -432,6 +432,32 @@ sends it anew, with a new issue ([handoff](handoff.md), step 6) and a new Design
 type; its dialog asks which options carry over (the approved one ticked) and how many new ones
 to draw besides (none by default). Comments,
 votes, the presentation, every state of an element and the spec's own review stay open.
+
+### Taking an approval back
+
+Until its spec went to developers (`spec.sent`, or `review: "sent"`), whoever may approve a
+request — and read and send its spec — takes its approval back (`POST /api/cards/<id>/actions
+{action: "take-back"}`; **Back to feedback…** under ⋯, behind a confirmation), so a detail
+someone forgot goes into the design. **Request changes** in Submit feedback does the same on
+an approved request, then works its feedback in as it always does (a `revise`); on an approved
+request only those people are offered it, and the store refuses anyone else. Either way:
+
+- the request goes back to where the team gives feedback, with its options: Live — try it while
+  its prototype is up, Team feedback while it was asked, else its drawn options; none drawn →
+  triage, as it was checked;
+- its `approved` (with `overruled`) and its spec, the draft or the one being written, move into
+  a record on the card's `taken_back` (`{by, at, approved, overruled?, spec}`, the last 10); no
+  Designs record, nothing in `sends`, so an earlier send still closes as it did;
+- a `handoff` item not done yet is done (`cancelled: approval taken back`), Design Desk's open
+  questions at the handoff step are resolved, and a session still writing the spec has its late
+  spec, `status: spec` or `handed-off` refused (409) while the card is not approved;
+- the next approval's spec starts from that draft when it is on the same option, and keeps it as
+  its earlier version ([handoff.md](handoff.md), step 1);
+- the bell tells whoever it was yours to (Notifications), the person who approved it included.
+
+A request from Slack hears nothing of it in its thread, which never heard of the approval
+either ([requests.md](requests.md) → Who Slack serves).
+Once the spec went to developers only an admin's **Reopen…** goes back, as above.
 
 ### Deleting a request
 

@@ -15,6 +15,14 @@ sent; the developer or coding agent gets only answers.
    revise), it is what the prototype shows: the card's `live_pick` — its option, `version` and
    assets (`live_pick.asset`, `states[].asset`), which `approved.variant` and `approved.version`
    repeat; write the spec from those, not from a newer version drawn since.
+   **An approval taken back before** (the card's `taken_back`, [desk.md](desk.md) → Taking an
+   approval back): read its last record's `spec` (`asset`, then `history`). When it was approved
+   on the same option as now (`approved.variant`, or neither names one), start from that draft —
+   download it, keep what a person edited, and rewrite only what the design changed since;
+   otherwise write the spec fresh. Either way the store keeps the draft as the new spec's earlier
+   version. A write the store refuses with *not approved any more* means the approval was taken
+   back while you worked: the item is cancelled already; delete `/tmp/design-desk-r<n>` and stop,
+   sending nothing.
 2. Write `/tmp/design-desk-r<n>/spec.md` in plain words ([desk.md](desk.md) → Writing on the
    Desk): a developer reads it, but so do the designers who approved it. These sections:
    - **Summary** — the problem and the approved direction, three sentences.

@@ -2715,6 +2715,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // A designer, a PM or a UI dev owner approves at any step once it is checked (docs/desk.md → Deciding straight away).
   const canApprove = (c) => can("approve") || (!(c.conflicts || []).some((x) => x.status === "active")
     && (can("skip") || (Boolean(c.size?.small) && DEVELOPERS.includes(S.me?.role) && !filedIt(c))));
+  // An approval taken back while its spec is still on the Desk: by whoever may approve the request
+  // (docs/desk.md → Taking an approval back). Once sent, only an admin's Reopen… goes back.
+  const takesBack = (c) => c?.kind === "request" && Boolean(c.approved) && !["declined", "handed-off"].includes(c.status) && !(c.spec?.sent || c.spec?.review === "sent") && canApprove(c);
   const contact = () => S.me?.contact || "the Desk's owner";
   const when = (iso) => { if (!iso) return ""; const d = new Date(iso); return d.toLocaleString("en", { dateStyle: "medium", timeStyle: "short" }); };
   const day = (iso) => (iso ? new Date(iso).toLocaleDateString("en", { dateStyle: "medium" }) : "");
@@ -3808,7 +3811,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const url = change ? src.url : c.spec?.issue_url || c.spec?.pr_url || "";
     const items = [change ? (can("follow-up") && !hasRequest(c) ? btn("data-adjust", "Turn into a design request") : "") + (handledAt(c) && mayHandle(c) ? btn('data-handle="0"', "Undo approval") : "")
         : closed(c) ? shipMove(c) + ((c.status === "handed-off" ? S.me?.role === "admin" : can("reopen") || closesStaged(c)) ? btn('data-act="reopen"', "Reopen") : "")
-        : stageMore + ((preDesign(c) ? closesStaged(c) : can("close") || can("skip")) ? btn('data-act="close"', "Close…") : ""),
+        : stageMore + (takesBack(c) ? btn('data-act="take-back"', "Back to feedback…") : "") + ((preDesign(c) ? closesStaged(c) : can("close") || can("skip")) ? btn('data-act="close"', "Close…") : ""),
       url ? `<a class="btn" href="${safeUrl(url)}" target="_blank" rel="noopener noreferrer">Open on GitHub ↗</a>` : ""].join("");
     const more = items ? `<details class="more sh-more"><summary class="btn" aria-label="More" title="More">⋯</summary><div class="menu">${items}</div></details>` : "";
     return `<div class="shead"><div class="sh-main"><h2>${kindIcon(c)}<span class="sh-t" title="${esc(sTitle(c))}">${txt(sTitle(c))}</span>${num(c)}${titleLink(c)}</h2>
@@ -4073,7 +4076,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const open = ["open", "proposal"].includes(simpleState(c, true)?.state) || Boolean(c.responsible);
     const out = [];
     if (c.kind === "request") {
-      if (can("change") && (c.variants || []).length && !locked(c) && !closed(c)) out.push({ id: "request-changes", name: "Request changes", hint: "Design Desk draws the next version from your comments." });
+      // Approved: Request changes takes the approval back first, for whoever may approve it.
+      if (can("change") && (c.variants || []).length && !closed(c) && (!c.approved || takesBack(c))) out.push({ id: "request-changes", name: "Request changes", hint: c.approved ? "It goes back to feedback: the approval and its spec draft are taken back, and Design Desk draws the next version from your comments." : "Design Desk draws the next version from your comments." });
       // In Dev review after design opened, the approval is Approve for dev; before design, the UI dev
       // owner's Approve for dev is the only one (docs/desk.md → Draft and Proposal).
       const dev = simpleState(c, true)?.state === "proposal";
@@ -6296,7 +6300,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const redraw = closed(c) || locked(c) || protoDown(c) || !can("revise") || !(c.variants || []).length ? "" : `<button class="btn" data-act="revise">Redraw the options with all comments</button>`;
     // Sending to Slack happens once in a request's life: it waits here, and in the design workspace's bar.
     const slack = c.status === "feedback" && slackModes(c).length ? `<button class="btn" data-act="slack">Send to Slack…</button>` : "";
-    const items = (preDesign(c) === "draft" ? "" : slack) + (preDesign(c) ? "" : call + size) + reopenSent + del + redraw + (locked(c) && can("request") ? `<button class="btn" data-adjust>New request from this…</button>` : "");
+    const back = takesBack(c) ? `<button class="btn" data-act="take-back" title="Takes the approval back: the request goes back to feedback and the design can change again; the spec draft is kept for the next approval">Back to feedback…</button>` : "";
+    const items = (preDesign(c) === "draft" ? "" : slack) + (preDesign(c) ? "" : call + size) + back + reopenSent + del + redraw + (locked(c) && can("request") ? `<button class="btn" data-adjust>New request from this…</button>` : "");
     return items ? `<details class="more"><summary class="btn" aria-label="More">⋯</summary><div class="menu">${items}</div></details>` : "";
   }
   // Whose turn it is, said the same way in every state: Design Desk while it works or is about to,
@@ -6538,7 +6543,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (!S.variant || !vs.some((v) => v.id === S.variant)) S.variant = (favourite(c) || vs[0]).id;
     const v = vs.find((x) => x.id === S.variant);
     const mine = myVote(c, v.id);
-    return `<h3>Design options${locked(c) ? ` <span class="hint locked-note">🔒 Approved: this design no longer changes. To change it, ${can("request") ? `<button class="anchor-text" data-adjust>start a new request from this one</button>` : "start a new request from this one"}.</span>` : ""}</h3>
+    return `<h3>Design options${locked(c) ? ` <span class="hint locked-note">🔒 Approved: this design no longer changes. To change it, ${takesBack(c) ? "take it back to feedback under ⋯ while the spec is still here, or " : ""}${can("request") ? `<button class="anchor-text" data-adjust>start a new request from this one</button>` : "start a new request from this one"}.</span>` : ""}</h3>
       <div class="tabs vtabs vrow utabs" role="group" aria-label="Design options"><div class="vscroll">${splitTab(c)}${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${!splitOf(c)?.on && x.id === v.id}"${optionMark(c, x.id)}${x.asset ? ` draggable="true" title="Shows this design option; drag it onto the panel below to set it beside another"` : ""}><span class="ono">${vs.indexOf(x) + 1}</span><span class="vname" title="${esc(x.name)}">${esc(x.name)}</span>${(x.version || 1) > 1 ? ` <span class="chip" title="Design Desk changed this option ${x.version - 1} ${x.version === 2 ? "time" : "times"}; this is its latest version, version ${x.version}" aria-label="version ${x.version}">v${x.version}</span>` : ""}${c.live_pick?.variant === x.id && (["building", "live"].includes(c.prototype?.state) || working(c).includes("build")) ? ` <span class="chip info" title="The option the live prototype is built from">▶ Goes live</span>` : ""}${closeTab(c, x)}</button>`).join("")}${addOptionTab(c)}</div>${wsTab0(c)}</div>
       ${splitOf(c)?.on ? `<div class="vpanel">${designBox(c, v)}${dropLayer(c)}</div>` : `<div class="vpanel">
       ${v.fidelity === "picture" ? `<p class="hint">Pictures added by ${v.by ? who(v.by) : "a person"}; Design Desk drew nothing.</p>` : ""}
@@ -8737,6 +8742,14 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       await refreshList(); renderDetail(); return;
     }
     const post = (note, more = {}) => api("POST", `/api/cards/${c.id}/actions`, { action: name, note, ...more });
+    // Back to feedback, knowingly: the approval goes, the spec draft waits for the next one.
+    if (name === "take-back") {
+      const by = c.approved?.by?.email && !isMe(c.approved.by.email) ? shortName(c.approved.by.email, c.approved.by.name) : "";
+      const r = await ask({ title: "Take the approval back?", body: `It goes back to feedback with its design options, and the design can change again${by ? `; ${by} approved it and hears of it` : ""}. The spec draft is kept: the next approval's spec starts from it. Nothing has gone to developers yet.`, ok: "Back to feedback", send: () => post() });
+      if (!r) return;
+      toast("Back to feedback. The design can change again.");
+      await refreshList(); await openCard(c.id); return;
+    }
     // A request sent to developers reopens only knowingly: its approval goes, GitHub keeps what it got.
     if (name === "reopen" && c.status === "handed-off") {
       const r = await ask({ title: "Reopen a request sent to developers?", body: "It goes back to before the team's vote, with its design options; its approval goes and the design can change again. Its record on Designs closes; a new approval sends it again, with a new record. The issue or pull request on GitHub stays as it is: tell the developers there.", ok: "Reopen", send: () => post() });
@@ -10168,6 +10181,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     vote: ["New vote", "design", '<path d="M7 11v9H4v-9zM7 11l4-7a2 2 0 0 1 3 2l-1 4h6a2 2 0 0 1 2 2.3l-1.2 6A2 2 0 0 1 17.8 20H7"/>'],
     "feedback-asked": ["Feedback asked", "design", '<path d="M4 5h16v11H9l-5 4z"/><path d="M12 8v3.5M12 13.5h.01"/>'],
     approved: ["Option approved", "ok", '<path d="m5 12.5 4.5 4.5L19 7.5"/>'],
+    "taken-back": ["Back to feedback", "design", '<path d="M10 8 5 12l5 4"/><path d="M5 12h9a5 5 0 0 1 5 5v1"/>'],
     spec: ["Spec ready", "ok", '<path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4M9 12h6M9 16h6"/>'],
     built: ["Marked done", "ok", '<path d="m5 12.5 4.5 4.5L19 7.5"/>'],
     decided: ["Closed with a decision", "closed", '<path d="M5 21V4M5 4h12l-2 4 2 4H5"/>'],

@@ -977,7 +977,10 @@ export class Store {
     const workIn = c.kind === "request" && verdict === "request-changes"
       ? worked.filter((t) => (c.variants || []).some((v) => v.id === t.anchor?.variant) && !(t.kind === "change" && t.state !== "resolved")) : [];
     const skipped = worked.length - workIn.length;
-    if (workIn.length && designLocked(c)) throw bad(LOCKED);
+    // Request changes on a request approved whose spec is still on the Desk takes the approval
+    // back first (takeBack checks who and when), so what it asks for is drawn (docs/desk.md → Taking an approval back).
+    const back = c.kind === "request" && verdict === "request-changes" && Boolean(c.approved) && !["declined", "handed-off"].includes(c.status);
+    if (workIn.length && designLocked(c) && !back) throw bad(LOCKED);
     if (!notes.length && !looks.length && !workIn.length && !fineOnes.length && !words) throw bad(worked.length ? "Comments to work in go only with Request changes: write a note too, or pick Request changes." : "Write a comment or a note first.");
     const request = c.kind === "request", changes = verdict === "request-changes";
     // A merged change nobody handled yet may still be approved, which marks it handled as Mark
@@ -1005,6 +1008,7 @@ export class Store {
     const id = this.nextOf("review"), threads = [];
     let item = null;
     try {
+      if (back) this.takeBack(c, who);
       for (const x of plan) {
         const r = this.openThread(c.id, who, { kind: x.kind, text: x.d.text, anchor: x.anchor });
         r.thread.review = id;
@@ -1385,6 +1389,8 @@ export class Store {
       if (c.team_feedback?.state === "open" && c.team_feedback.at) push(c.team_feedback.at, "feedback-asked", it, c.team_feedback.by, {}, yours || DEVELOPERS.includes(who?.role));
       if (c.approved?.at) push(c.approved.at, "approved", it, c.approved.by, { detail: (c.variants || []).find((v) => v.id === c.approved.variant)?.name || null, variant: c.approved.variant || null }, yours);
       if (c.spec?.at) push(c.spec.at, "spec", it, c.spec.by || { agent: true }, {}, yours);
+      // An approval taken back is for whose approval it was, too (docs/desk-page.md → Notifications).
+      for (const w of c.taken_back || []) push(w.at, "taken-back", it, w.by, {}, yours || isMine(w.approved?.by));
       if (c.decided?.at) push(c.decided.at, "decided", it, c.decided.by, {}, yours);
       if (c.built?.at) push(c.built.at, "built", it, c.built.by, { designs: true }, yours);
       // A review sent, and a pull request's new commits after one asked for changes (docs/desk.md → Reviews).
@@ -2095,6 +2101,8 @@ export class Store {
   // A state change a person asks for on a request card; the agent does the work.
   act(cardId, who, action, note = "", { askFirst = false, count = null, overrule = false, implement = false, closeEarlier = false, autoSend = false, variant = null, version = null, states = null, part = null, element = null, forDev = false } = {}) {
     const c = this.card(cardId);
+    // Back to feedback: an approval taken back while its spec is still on the Desk.
+    if (action === "take-back") { this.takeBack(c, who); this.save(); return { card: c, inbox: null }; }
     // Check again: Design Desk takes the screen's pictures again on the live product; the same
     // pictures mark it checked, new ones redraw it (docs/map.md → Check again).
     if (c.kind === "screen") {
@@ -2266,7 +2274,8 @@ export class Store {
     if (against.length) c.overruled = { by: person(who), at: this.clock(), decisions: against };
     else if (action === "approve") delete c.overruled;
     // Who approved, shown on the card; an approval For Developers says so (`small`).
-    if (action === "approve") c.approved = { by: person(who), at: this.clock(), small: Boolean(c.size?.small), ...(implement ? { implement: true } : {}),
+    // `from`: the step it was approved at, where taking the approval back returns it (takeBack).
+    if (action === "approve") c.approved = { by: person(who), at: this.clock(), small: Boolean(c.size?.small), from: c.status, ...(implement ? { implement: true } : {}),
       ...(shown ? { variant: shown.variant, version: shown.version } : (c.variants || []).some((v) => v.id === note) ? { variant: note } : {}) };
     // The approver sends the spec unread, as soon as it is written (docs/handoff.md → Review
     // before it goes); never a request from Slack, whose spec always waits for a person.
@@ -2306,6 +2315,35 @@ export class Store {
     return { card: c, inbox: item };
   }
 
+  // Who reads an approved request's spec, sends it, or takes the approval back: whoever may approve it.
+  mayApproveSpec(c, who) {
+    return !who?.agent && (can(who?.role, "approve") || can(who?.role, "skip") || (Boolean(c.approved?.small) && DEVELOPERS.includes(who?.role) && !isAuthor(c, who)));
+  }
+
+  // An approved request goes back to Team feedback while its spec has not gone to developers
+  // (docs/desk.md → Approved is final, Taking an approval back): the approval and the spec drafted
+  // from it move into `taken_back`, the handoff still writing the spec is cancelled with its
+  // questions, and the next approval's spec starts from that draft. Without saving: the caller saves.
+  takeBack(c, who) {
+    if (c.kind !== "request" || !c.approved) throw bad("This request is not approved.");
+    if (["declined", "handed-off"].includes(c.status)) throw bad(c.status === "declined" ? "This request is closed. Press Reopen first." : "This request is sent to developers. Only an admin reopens it.");
+    if (c.spec?.sent || c.spec?.review === "sent") throw bad("This spec is already on its way to developers. Only an admin reopens the request once it is sent.");
+    if (!this.mayApproveSpec(c, who)) throw forbidden("Only the people who may approve this request take its approval back.");
+    const at = this.clock(), from = c.approved.from;
+    c.taken_back = [...(c.taken_back || []), { by: person(who), at, approved: c.approved, ...(c.overruled ? { overruled: c.overruled } : {}), spec: c.spec?.asset ? c.spec : null }].slice(-10);
+    for (const k of ["overruled", "approved", "spec"]) delete c[k];
+    for (const it of Object.values(this.db.inbox)) if (it.card === c.id && it.kind === "handoff" && it.state !== "done")
+      Object.assign(it, { state: "done", done_at: at, outcome: "cancelled: approval taken back" });
+    for (const tid of c.threads || []) {
+      const t = own(this.db.threads, tid);
+      if (t?.kind === "asks" && t.step === "handoff" && t.state === "open") Object.assign(t, { state: "resolved", needs_agent: false, resolved: { by: person(who), at } });
+    }
+    // Back where it was approved: Live while its prototype is up, else its options at the step it
+    // was approved at (an older approval, or one at a prototype now down, by the team's feedback), or triage without any.
+    c.status = c.prototype?.state === "live" ? "testing" : (c.variants || []).length ? (["variants", "feedback"].includes(from) ? from : c.team_feedback?.state === "open" ? "feedback" : "variants") : "triage";
+    c.updated = at;
+  }
+
   // ---------- the developer spec, read by a person before it goes ----------
   // Design Desk writes the spec as a draft (`spec.review: "draft"`); a person reads it, edits
   // it, asks for changes, or sends it. Only a send lets it leave the Desk (docs/handoff.md →
@@ -2317,8 +2355,7 @@ export class Store {
     if (!["draft", "changes"].includes(c.spec.review || "")) throw bad(c.spec.review === "sent" ? "This spec is already on its way to developers." : "This spec is not waiting for a review.");
     if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === "handoff")) throw bad(BUSY);
     if ((c.threads || []).some((t) => this.db.threads[t]?.kind === "asks" && this.db.threads[t]?.state === "open")) throw bad("Answer Design Desk's questions first; the spec takes your answers in.");
-    const may = can(who?.role, "approve") || can(who?.role, "skip") || (c.approved?.small && DEVELOPERS.includes(who?.role) && !isAuthor(c, who));
-    if (!may) throw forbidden("Only the people who may approve this request read and send its spec.");
+    if (!this.mayApproveSpec(c, who)) throw forbidden("Only the people who may approve this request read and send its spec.");
     const at = this.clock();
     if (action === "edit") {
       const body = clean(text, 60000, "spec");
@@ -2820,6 +2857,10 @@ export class Store {
         // A new version Design Desk writes waits for a person (docs/handoff.md → Review before it
         // goes), unless the write says otherwise (`review`, as with spec_review disabled) or it went.
         if (now?.asset && now.asset !== was?.asset && now.review === undefined && !was?.sent) now.review = "draft";
+        // The first spec after an approval was taken back keeps the draft it starts from as its
+        // earlier version (docs/handoff.md, step 2).
+        const before = !was?.asset && now?.asset ? (c?.taken_back || []).slice(-1)[0]?.spec : null;
+        if (before?.asset && before.asset !== now.asset && !now.history) now.history = [...(before.history || []), { asset: before.asset, at: before.at || c.updated, by: before.by || { agent: true }, taken_back: true }].slice(-20);
         next.spec = now && was?.asset && now.asset && now.asset !== was.asset
           ? { ...now, history: [...(was.history || []), { asset: was.asset, at: was.at || c.updated, by: was.by || { agent: true } }].slice(-20), at: this.clock(), by: { agent: true } }
           : now && was ? { ...now, history: now.history || was.history, ...(was.sent && !now.sent ? { sent: was.sent } : {}) } : now;
@@ -2834,6 +2875,9 @@ export class Store {
     const waits = [c?.origin, next.origin].some((o) => o?.channel === "slack") || Boolean(c && this.fromPr(c));
     if (waits && !c?.spec?.sent && ((fields.spec !== undefined && next.spec && (next.spec.review === "sent" || next.spec.sent)) || (next.status === "handed-off" && c?.status !== "handed-off")))
       throw bad("a request from Slack or from an open pull request waits for a person's Send to developers: write its spec with review \"draft\", and hand it off only after that send (docs/handoff.md step 3)");
+    // An approval taken back while a session wrote its spec: that session's late spec or send is refused (docs/desk.md → Taking an approval back).
+    if (c && next.kind === "request" && !c.approved && (c.taken_back || []).length && ((["spec", "handed-off"].includes(next.status) && !["spec", "handed-off"].includes(c.status)) || (fields.spec !== undefined && next.spec?.asset && next.spec.asset !== c.spec?.asset)))
+      throw new DeskError(409, `${c.id} is not approved any more: its spec waits for the next approval`);
     if (!next.title) throw bad("a card needs a title");
     // Every option of a request shows the request's elements, or says why not (docs/requests.md → The same elements in every option).
     if (next.kind === "request" && next.shared_elements?.length && (fields.variants !== undefined || fields.shared_elements !== undefined))
