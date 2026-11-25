@@ -88,6 +88,18 @@ test("the toolkit's Chromium encodes a PNG as WebP", async (t) => {
     assert.equal(out.subarray(0, 4).toString(), "RIFF");
     assert.equal(out.subarray(8, 12).toString(), "WEBP");
   } finally { await enc.close(); }
+  // The command line's success path: the picture beside itself as .webp, its path printed.
+  const { mkdtempSync, writeFileSync, readFileSync, rmSync } = await import("node:fs");
+  const { spawnSync } = await import("node:child_process");
+  const { join } = await import("node:path");
+  const { tmpdir } = await import("node:os");
+  const dir = mkdtempSync(join(tmpdir(), "design-desk-webp-ok-"));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  writeFileSync(join(dir, "shot.png"), Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==", "base64"));
+  const r = spawnSync(process.execPath, [join(import.meta.dirname, "..", "bin", "design.mjs"), "webp", join(dir, "shot.png")], { encoding: "utf8" });
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(r.stdout.trim(), join(dir, "shot.webp"));
+  assert.equal(readFileSync(join(dir, "shot.webp")).subarray(8, 12).toString(), "WEBP");
 });
 
 test("design webp reads a picture's type from its bytes and refuses a GIF, an SVG or a non-picture before writing any", async (t) => {
@@ -162,4 +174,17 @@ test("the encoder hands back the browser's WebP, and refuses a browser that answ
   await assert.rejects(enc.encode(Buffer.from("png"), "image/png"), /did not encode WebP/, "a PNG fallback is never saved as .webp");
   await enc.close();
   assert.equal(closed, 1, "its page is closed; a browser it was given stays open");
+});
+
+test("a bundle that died halfway (its placeholder design.json alone) is cleared on the next try", async (t) => {
+  const { mkdtempSync, mkdirSync, writeFileSync, existsSync, rmSync } = await import("node:fs");
+  const { join } = await import("node:path");
+  const { tmpdir } = await import("node:os");
+  const dir = mkdtempSync(join(tmpdir(), "design-desk-half-"));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  mkdirSync(join(dir, "shots")); writeFileSync(join(dir, "shots", "s1.webp"), "x");
+  writeFileSync(join(dir, "design.json"), JSON.stringify({ format: "design-desk/handoff@1", partial: true }));
+  freshBundleDir(dir);
+  assert.equal(existsSync(join(dir, "shots", "s1.webp")), false);
+  assert.equal(existsSync(join(dir, "design.json")), false);
 });

@@ -50,7 +50,8 @@ never stands in for them (a developer may not see the Desk):
      `![<view name>](https://<host>/<owner>/<name>/raw/<sha>/.design-desk/handoff/R-<n>/pictures/A-<n>.<ext>)`,
      `<sha>` the pushed commit on `design-desk/assets`, so a later push never changes it. Never a branch of their own.
    - **`--attach <file>#<alt>`** otherwise (no push, a refused push, or `prototype_remote`
-     another repository): repeated per picture (`gh issue create`, `gh issue comment`,
+     another repository): each picture as WebP (`design webp <file>...` on the spec's fetched
+     pictures and step 1's shots), repeated per picture (`gh issue create`, `gh issue comment`,
      `gh issue edit`, `gh pr create`, `gh pr comment`, `gh pr edit`), each referred to in the
      body as `![<view name>](<file>)` so it lands in place. A DAM sandbox cannot upload (it
      sends the upload host no token); a comment edited through `gh api` takes no attachment,

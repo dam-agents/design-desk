@@ -97,7 +97,8 @@ When the guard refuses:
    `design`. A part that makes the product work differently is `needs-developer`: take it out
    of the prototype, keep it in the variants, and record it for the spec.
 3. Never change the profile's boundary, the guard, or a file's imports to get a pass, and
-   never install, push or hand off a diff the guard has not passed.
+   never install, push or hand off a prototype's diff the guard has not passed (a handoff
+   bundle carries its patch only once it passed, [handoff.md](handoff.md) step 5).
 
 The guard report and the patch go on the card as assets (`--kind report`, `--kind patch`),
 so a developer sees exactly what the prototype changed and that it stayed in bounds.

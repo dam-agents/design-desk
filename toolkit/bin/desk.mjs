@@ -454,6 +454,9 @@ export async function main(_cmd, argv) {
       const { design, files } = bundleOf(card);
       try { freshBundleDir(pos[1]); } catch (e) { fail(e.message); }
       for (const d of ["", "states", "shots"]) mkdirSync(join(pos[1], d), { recursive: true });
+      // A placeholder first, the real design.json last: a bundle that dies halfway leaves a
+      // directory the next try recognises as its own and clears.
+      writeFileSync(join(pos[1], "design.json"), `${JSON.stringify({ format: design.format, partial: true })}\n`);
       // Every picture the bundle pushes is WebP: a shot named .webp is encoded as it is saved,
       // by one browser started on the first picture.
       let enc = null;

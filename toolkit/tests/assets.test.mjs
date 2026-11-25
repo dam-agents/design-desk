@@ -6,7 +6,8 @@ import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { ASSETS_BRANCH, argsOf, commitAssets, outside } from "../bin/assets.mjs";
+import { ASSETS_BRANCH, LOCK_STALE_MS, LOCK_WAIT_MS, argsOf, commitAssets, outside } from "../bin/assets.mjs";
+import { readFileSync } from "node:fs";
 import { existsSync } from "node:fs";
 
 // No identity anywhere, as in a clone from scripts/checkout.sh on a sandbox with no global one:
@@ -123,4 +124,11 @@ test("--remote is read wherever it stands, and a malformed call is refused", (t)
   const r = spawnSync(process.execPath, [design, "assets", "commit", clone, "R-2", bundle(root, "b2", { "design.json": "{}\n" }), "--remote", other], { encoding: "utf8" });
   assert.equal(r.status, 0, r.stderr);
   assert.equal(JSON.parse(r.stdout).parent, first.sha);
+});
+
+test("the clone's lock is the one scripts/checkout.sh takes: same path, wait and stale window", () => {
+  const sh = readFileSync(join(import.meta.dirname, "..", "..", "scripts", "checkout.sh"), "utf8");
+  assert.match(sh, /^lock="\$dir\.lock"/m, "checkout.sh locks <clone>.lock");
+  assert.equal(Number(/while \[ "\$waited" -lt (\d+) \]/.exec(sh)?.[1]) * 1000, LOCK_WAIT_MS, "the same wait");
+  assert.equal(Number(/\[ "\$age" -gt (\d+) \]/.exec(sh)?.[1]) * 1000, LOCK_STALE_MS, "the same stale window");
 });

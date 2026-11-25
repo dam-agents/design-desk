@@ -84,7 +84,8 @@ function commitLocked(clone, card, dir, files, { git, now, remote }) {
 
 // The clone's lock (`<clone>.lock`, scripts/checkout.sh): taken for the call, a dead run's (older
 // than 5 minutes) taken over, and after 60 s of waiting the call goes on without it, as there.
-export function withCloneLock(clone, fn, { waitMs = 60000, staleMs = 300000 } = {}) {
+export const LOCK_WAIT_MS = 60000, LOCK_STALE_MS = 300000;
+export function withCloneLock(clone, fn, { waitMs = LOCK_WAIT_MS, staleMs = LOCK_STALE_MS } = {}) {
   const lock = `${resolve(clone).replace(/\/+$/, "")}.lock`, until = Date.now() + waitMs;
   let held = false;
   while (Date.now() < until) {
