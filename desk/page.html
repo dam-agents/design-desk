@@ -2318,17 +2318,17 @@
   <path class="f-e" d="M750 116 V193" marker-end="url(#fl-issue)"/><text class="f-lbl f-start" x="758" y="158">Design this</text>
   <path class="f-e" d="M660 226 H613" marker-end="url(#fl-issue)"/><text class="f-lbl" x="636" y="218">sent</text>`,
     "The plan is this sprint, the next one, the issues someone has taken and the ones labelled for design; the sprint's are sketched first. <b>Draw it</b> sketches one again now. Once the request from <b>Design this</b> goes to developers, the issue leaves the plan's filters and stays in <b>All</b> with a purple Designed dot.");
-  const FLOW_CHANGE = () => flow(760, 240, `A merged pull request: Design Desk explains it with screenshots, puts it under PR Changes${full(" and updates Product")}; its title is bold until each person opens it, a designer marks it Handled, and Adjust the design turns it into a request.`, `${flowHead("fl-change")}
+  const FLOW_CHANGE = () => flow(760, 240, `A merged pull request: Design Desk explains it with screenshots, puts it under PR Changes and updates Product; its title is bold until each person opens it, a designer marks it Handled, and Adjust the design turns it into a request.`, `${flowHead("fl-change")}
   <rect class="f-n" x="10" y="92" width="140" height="56" rx="10"/><text x="80" y="116">A change ships</text><text class="f-sub" x="80" y="134">a merged pull request</text>
   <rect class="f-n f-checking" x="200" y="92" width="160" height="56" rx="10"/><text x="280" y="116">Design Desk explains</text><text class="f-sub" x="280" y="134">what, why, screenshots</text>
   <rect class="f-n f-waiting" x="410" y="92" width="130" height="56" rx="10"/><text x="475" y="116">PR Changes</text><text class="f-sub" x="475" y="134">days are counted</text>
-  ${full(`<rect class="f-n" x="200" y="186" width="160" height="44" rx="10"/><text x="280" y="213">Product is updated</text>`)}
+  <rect class="f-n" x="200" y="186" width="160" height="44" rx="10"/><text x="280" y="213">Product is updated</text>
   <rect class="f-n" x="590" y="16" width="160" height="48" rx="10"/><text x="670" y="36">Opened</text><text class="f-sub" x="670" y="53">each of you: no longer bold</text>
   <rect class="f-n f-approved" x="590" y="96" width="160" height="48" rx="10"/><text x="670" y="116">Handled</text><text class="f-sub" x="670" y="133">a designer; the count stops</text>
   <rect class="f-n f-checking" x="590" y="176" width="160" height="48" rx="10"/><text x="670" y="196">Adjust the design</text><text class="f-sub" x="670" y="213">it becomes a request</text>
   <path class="f-e" d="M150 120 H197" marker-end="url(#fl-change)"/><text class="f-lbl" x="174" y="112">hourly</text>
   <path class="f-e" d="M360 120 H407" marker-end="url(#fl-change)"/><text class="f-lbl" x="384" y="112">posts</text>
-  ${full(`<path class="f-e f-dash" d="M280 148 V183" marker-end="url(#fl-change)"/><text class="f-lbl f-start" x="288" y="170">screens, parts</text>`)}
+  <path class="f-e f-dash" d="M280 148 V183" marker-end="url(#fl-change)"/><text class="f-lbl f-start" x="288" y="170">screens, parts</text>
   <path class="f-e" d="M540 120 C566 120 562 40 587 40" marker-end="url(#fl-change)"/><path class="f-e" d="M540 120 H587" marker-end="url(#fl-change)"/><path class="f-e" d="M540 120 C566 120 562 200 587 200" marker-end="url(#fl-change)"/>`,
     "Every change that ships gets its card with screenshots; a designer marks it handled, or adjusts its design through a new request.");
   // How it works: the processes, each as a tab's intro draws it (its flow, its steps, the buttons
@@ -8781,7 +8781,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       if (!res) return;
     } else if (name === "close") {
       const how = [can("close") && { id: "close", name: "Just close it", hint: "Nothing is recorded as a decision" },
-        can("skip") && { id: "decide", name: "Close it and record a decision", hint: `In your name${full(", under Product → Decisions")}` }].filter(Boolean);
+        can("skip") && { id: "decide", name: "Close it and record a decision", hint: "In your name, under Product → Decisions" }].filter(Boolean);
       res = await ask({ title: "Close this request", body: `Design Desk stops working on it${live(c) || !simple() ? " and switches off its live prototype" : ""}. You can reopen it later.`, ok: "Close it",
         choices: how.length > 1 ? how : null, pick: how[0].id, note: how.some((x) => x.id === "decide") ? "What did you decide, and why?" : null, noteFor: how.length > 1 ? "decide" : null, noteMax: 600,
         send: (a) => {

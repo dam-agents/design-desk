@@ -11,7 +11,8 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
 **Upgrade:**
 1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): simple mode's menu shows
-   **Product** with all of its pages, and the bell keeps Product's screens, elements and decisions
+   **Product** with all of its pages, the bell keeps Product's screens, elements and decisions, and How it
+   works says a shipped change updates Product
    ([desk-page.md](docs/desk-page.md) → Simple mode). No data migration.
 
 ## 1.115.1 — 2026-11-24

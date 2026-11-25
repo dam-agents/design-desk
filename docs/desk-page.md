@@ -313,7 +313,7 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   Nothing else names a role a request needs: no **Needs a designer** line or heading. A request offers no rename. Switching the mode
   starts an option's sections again as they first open. The tab
   intros and How it works, its drawings included, leave out what it hides, and so does the bell:
-  no notification about an issue, a screen, an element or a decision, nor in its count.
+  no notification about an issue, nor in its count (a screen, an element and a decision show, as Product does).
   A link to anything hidden still opens it: a `D-3` in a request opens the decision, and
   `#people` or `#presentation` their pages. The Desk keeps each person's choice like day or
   night (`POST /api/prefs {simple}`, `simple` in `GET /api/me`; only the keys sent change), so
@@ -651,7 +651,8 @@ works on it, and its pill says how it ended — **Shipped** (purple) a request b
 change merged, **No review needed** (grey) an auto handled change merged, **Closed** (red) a
 request closed, with a decision or without. An archived change is not listed, nor someone else's
 draft (the server sends it only to its author and an admin, [desk.md](desk.md) → Draft and Proposal). Issues, screens, elements and decisions have no
-simple state: simple mode lists none of them, and a link to one opens its full page.
+simple state: the one list holds none of them; a screen, an element and a decision are on Product's
+pages, as in full mode, and a link to an issue opens its full page.
 
 A list row's title, in both modes, takes two lines at most and ends with an ellipsis; its tooltip
 has it in full, and so does full mode's page (simple mode's head cuts it to one line, its words on

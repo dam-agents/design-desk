@@ -4082,6 +4082,8 @@ test("simple mode leaves the live prototype step out of the help", (t) => open(t
   const steps = await desk.textContent("#detail > .guide");
   assert.match(steps, /New request/);
   assert.doesNotMatch(steps, /live prototype/i, "a step only about what simple mode hides leaves with it");
+  assert.match(steps, /updates Product/, "Product stays in simple mode, and so does what the help says of it");
+  assert.match(steps, /Product is updated/, "the shipped change's drawing keeps Product");
 }));
 
 // A dialog with something typed or picked asks before Escape or a click outside closes it;
