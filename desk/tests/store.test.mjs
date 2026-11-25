@@ -763,6 +763,20 @@ test("an approval taken back returns where it was given: Live while its prototyp
   assert.equal(s.peopleActivity([{ email: "alice@example.com" }])["alice@example.com"].approved, 3);
 });
 
+test("a design that goes against a decision in force is taken back by a designer only, as it is approved", () => {
+  const s = fresh(), pat = { email: "pat@example.com", role: "pm" };
+  const { card, inbox: item } = s.createRequest(alice, { title: "Two primary buttons", problem: "Kit needs a button." });
+  s.claim(item.id, "s1"); s.done(item.id, "s1", "triaged");
+  const page = s.addAsset({ kind: "variant", name: "v.html", contentType: "text/html", data: "<p>v</p>", encoding: "utf8" }).asset.id;
+  const d = s.addDecision({ concepts: ["buttons"], text: "One primary button per screen", author: { login: "alice" }, origin: { kind: "pr", url: "https://github.com/acme/widgets/pull/4" } }).decision;
+  s.upsertCard({ id: card.id, status: "variants", triage: { verdict: "design", reasons: ["Look only."] }, variants: [{ id: "v1", name: "Bright", asset: page }] });
+  s.upsertCard({ id: card.id, conflicts: [{ decision: d.id, why: "A second primary button." }] });
+  s.openFeedback(card.id, alice);
+  s.act(card.id, alice, "approve", "v1", { overrule: true });
+  assert.throws(() => s.act(card.id, pat, "take-back"), (e) => e.status === 403 && /decision in force/.test(e.message), "a PM approves no such design, nor takes its approval back");
+  assert.equal(s.act(card.id, alice, "take-back").card.approved, undefined, "a designer does");
+});
+
 test("a request For Developers is taken back by a developer who may approve it, never by its author", () => {
   const s = fresh(), lee = { email: "lee@example.com", role: "ui-dev-owner" }, dana = { email: "dana@example.com", role: "developer" }, evan = { email: "evan@example.com", role: "developer" };
   const { card, inbox: item } = s.createRequest(bob, { title: "Denser rows", problem: "Too airy." });

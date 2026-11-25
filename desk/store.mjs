@@ -2331,6 +2331,8 @@ export class Store {
     if (["declined", "handed-off"].includes(c.status)) throw bad(c.status === "declined" ? "This request is closed. Press Reopen first." : "This request is sent to developers. Only an admin reopens it.");
     if (c.spec?.sent || c.spec?.review === "sent") throw bad("This spec is already on its way to developers. Only an admin reopens the request once it is sent.");
     if (!this.mayApproveSpec(c, who)) throw forbidden("Only the people who may approve this request take its approval back.");
+    // As with approving it: a design that goes against a decision in force is a designer's call (docs/desk.md → Decisions).
+    if (this.activeConflicts(c).length && !can(who?.role, "approve")) throw forbidden("This design goes against a decision in force, so only a designer takes its approval back.");
     const at = this.clock(), from = c.approved.from;
     c.taken_back = [...(c.taken_back || []), { by: person(who), at, approved: c.approved, ...(c.overruled ? { overruled: c.overruled } : {}), spec: c.spec?.asset ? c.spec : null }].slice(-10);
     // Its vote opens again for the next version, as a reopen's does.

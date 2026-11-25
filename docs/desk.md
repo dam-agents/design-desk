@@ -435,8 +435,9 @@ votes, the presentation, every state of an element and the spec's own review sta
 
 ### Taking an approval back
 
-Until its spec went to developers (`spec.sent`, or `review: "sent"`), whoever may approve a
-request — and read and send its spec — takes its approval back (`POST /api/cards/<id>/actions
+Until its spec went to developers (`spec.sent`, or `review: "sent"`), whoever may approve the
+request now takes its approval back — the approval's own rule, a design that goes against a
+decision in force a designer's alone — (`POST /api/cards/<id>/actions
 {action: "take-back"}`; **Back to feedback…** under ⋯, behind a confirmation), so a detail
 someone forgot goes into the design. **Request changes** in Submit feedback does the same on
 an approved request, then works its feedback in as it always does (a `revise`); on an approved
