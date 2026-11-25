@@ -199,9 +199,10 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   them to every device; the browser keeps a copy named for them only to open without a flash, marked unsaved until
   the server takes it, and sent again on the next load.
   **Simple mode**, a switch in the menu under the person's name (an on/off switch beside its
-  words, in the accent when on), is review-first. The menu has one entry, **Requests & PRs**
+  words, in the accent when on), is review-first. The menu has two entries, **Requests & PRs**
   (current on Requests and PR Changes, its count the items in the reviews the viewer's default
-  filter shows), and **+ New request**; its one list holds every request and pull request change,
+  filter shows) and **Product**, with all of its pages as in full mode (Screens, Elements, Decisions, History, and
+  Kit and Differences where they show), and **+ New request**; its one list holds every request and pull request change,
   whatever its side — For Developers or For Designers only decides which review it is in — each in
   one state ([A request's state in the list](#a-requests-state-in-the-list)), the newest change
   first; only an archived change is not listed, nor someone else's draft, which the server sends only
@@ -299,10 +300,10 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   instead of the Requests intro a box per state, **Draft** only while it holds
   something, then **Dev review**, **Design review**, **In dev** and **Closed**: how many items are
   in each — the viewer's alone while Whose is Mine, redrawn as the filter changes — (the reviews and In dev with their kinds, Closed with how many of them
-  shipped in the last 7 days); a click on one filters the list to that state. Otherwise it hides: **Designs**, **Issues**, **Product** and **People** leave the menu — for
-  every role but an admin, who keeps them all, for now, after **Requests & PRs**, with Product's pages, their
+  shipped in the last 7 days); a click on one filters the list to that state. Otherwise it hides: **Designs**, **Issues** and **People** leave the menu — for
+  every role but an admin, who keeps them all, for now, after **Requests & PRs**, with their
   intros' lines and their notifications as in full mode — (a sent
-  request offers no **Show the design**), Product's pages their bar, the presentation leaves Requests (its page, its buttons on a card and in an intro), a
+  request offers no **Show the design**), the presentation leaves Requests (its page, its buttons on a card and in an intro), a
   request offers no **Build a live prototype** (a prototype already up still shows), and an
   option shows no **Why it looks like this** section (the design workspace keeps it
   in its side panel). An option's design (the mockup) and All elements start open, as in full mode. A
@@ -707,7 +708,7 @@ decision on its page, a revoked one on why. The place pulses twice and fades out
 in all, and the glow keeps its place when the page draws again. A public notification closes the private chat, which would
 cover it. The bell opens on **For you**: what the person
 filed, voted on, approved or wrote in; **All** shows the rest too. In simple mode both leave out
-an issue, a screen, an element and a decision, the pages it hides (Simple mode above). The red
+an issue, the page it hides (Simple mode above); a screen, an element and a decision show, as Product does. The red
 count is the unread rows For you, in simple mode only what it shows (an admin's, who sees them all, the server's count, as in full mode). Opening the bell reads
 nothing: a row is read, for that person alone, once they click it (`POST
 /api/notifications/read?id=<row id>`; the store keeps `noted: {<person>: [ids]}`, only rows still

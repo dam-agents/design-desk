@@ -491,13 +491,13 @@ try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
 test("a viewer starts in simple mode; the switch in their menu shows it and keeps their choice on the Desk", (t) => open(t, VIEWER, async (desk) => {
   await desk.waitForSelector("#nav [data-tab]");
   const tabs = () => desk.$$eval("#nav [data-tab]", (xs) => xs.map((x) => x.dataset.tab));
-  assert.deepEqual((await tabs()).filter((k) => ["issues", "product", "people"].includes(k)), [], "Issues, Product and People are hidden");
+  assert.deepEqual((await tabs()).filter((k) => ["issues", "product", "people"].includes(k)), ["product"], "Issues and People are hidden; Product stays");
   assert.equal(await desk.getAttribute("#simple", "aria-pressed"), "true", "the switch says it is on");
   assert.equal(await desk.locator("header > #simple").count(), 0, "the switch sits in the menu under the person's name");
   await desk.click("#me");
   await desk.click("#simple");
   assert.equal(await desk.getAttribute("#simple", "aria-pressed"), "false");
-  assert.ok((await tabs()).includes("product"), "full mode shows them again");
+  assert.ok((await tabs()).includes("people"), "full mode shows them again");
   await desk.waitForFunction(() => posts.some((p) => p.path === "/api/prefs"));
   assert.deepEqual(await desk.evaluate(() => posts.filter((p) => p.path === "/api/prefs").map((p) => JSON.parse(p.body))), [{ simple: false }], "saved for this person");
 }));
@@ -509,14 +509,14 @@ const DESIGNER_BARE_PREFS = VIEWER.replace('{ theme: null, simple: JSON.parse(bo
 test("simple mode switched on stays on after the next redraw, whatever the save answers", (t) => open(t, DESIGNER_BARE_PREFS, async (desk) => {
   await desk.waitForSelector("#nav [data-tab]");
   const tabs = () => desk.$$eval("#nav [data-tab]", (xs) => xs.map((x) => x.dataset.tab));
-  assert.ok((await tabs()).includes("product"), "a designer who chose full mode starts in it");
+  assert.ok((await tabs()).includes("people"), "a designer who chose full mode starts in it");
   await desk.click("#me");
   await desk.click("#simple");
   await desk.waitForFunction(() => posts.some((p) => p.path === "/api/prefs"));
   await desk.waitForTimeout(300);
   // Anything that redraws the page: here the tab the person is on.
   await desk.click('#nav [data-tab="requests"]');
-  assert.deepEqual((await tabs()).filter((k) => ["issues", "product", "people"].includes(k)), [], "still simple mode");
+  assert.deepEqual((await tabs()).filter((k) => ["issues", "product", "people"].includes(k)), ["product"], "still simple mode");
   assert.equal(await desk.getAttribute("#simple", "aria-pressed"), "true");
 }));
 
@@ -3594,8 +3594,8 @@ window.platform = { async request({ method, path }) {
 } };
 try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
 </script>`;
-// Simple mode and the bell: a row about a page simple mode hides (Issues, Product) leaves the
-// list and the count; switching simple mode off brings them back.
+// Simple mode and the bell: a row about a page simple mode hides (Issues) leaves the list and
+// the count, one about Product's screens, elements and decisions stays; switching simple mode off brings them back.
 const SIMPLE_BELL = `<script>
 window.posts = [];
 const ago = (m) => new Date(Date.now() - m * 60e3).toISOString().replace(/\\.\\d{3}Z$/, "Z");
@@ -3611,19 +3611,19 @@ window.platform = { async request({ method, path, body }) {
 } };
 try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
 </script>`;
-test("in simple mode the bell leaves out issues, screens, elements and decisions, in its rows and its count; switching simple mode off brings them back", (t) => open(t, SIMPLE_BELL, async (desk) => {
+test("in simple mode the bell leaves out issues, in its rows and its count, and keeps Product's screens, elements and decisions; switching simple mode off brings them back", (t) => open(t, SIMPLE_BELL, async (desk) => {
   await desk.waitForFunction(() => document.querySelector("#bell-count")?.hidden === false);
-  assert.equal(await desk.textContent("#bell-count"), "1", "simple mode counts only the request");
+  assert.equal(await desk.textContent("#bell-count"), "4", "simple mode counts all but the issue");
   await desk.click("#me");
   await desk.click("#simple");
   await desk.waitForFunction(() => document.querySelector("#bell-count")?.textContent === "5");
   await desk.click("#me");
   await desk.click("#simple");
-  await desk.waitForFunction(() => document.querySelector("#bell-count")?.textContent === "1");
+  await desk.waitForFunction(() => document.querySelector("#bell-count")?.textContent === "4");
   await desk.click("#bell-btn");
   for (const only of ["1", "0"]) {
     await desk.click(`#notes [data-only="${only}"]`);
-    assert.deepEqual(await desk.$$eval("#notes [data-note] .ti .num", (els) => els.map((e) => e.textContent)), ["C-2"], `only the request, ${only === "1" ? "For you" : "All"}`);
+    assert.deepEqual(await desk.$$eval("#notes [data-note] .ti .num", (els) => els.map((e) => e.textContent)), ["C-8", "C-9", "D-1", "C-2"], `all but the issue, ${only === "1" ? "For you" : "All"}`);
   }
   // The switch sits in another menu, so the bell closes on its click; open again, every row is back.
   await desk.click("#me");
@@ -4289,9 +4289,9 @@ const rows = (desk) => desk.$$eval("#list [data-card]", (xs) => xs.map((x) => [x
 const ticked = (desk) => desk.$eval(".sf .menu", (m) => { const on = (g) => [...m.querySelectorAll(`[data-simf^="${g}:"][aria-checked="true"]`)].map((x) => x.children[1].textContent.trim());
   const k = on("kinds"); return [...on("states"), ...(k.length < m.querySelectorAll('[data-simf^="kinds:"]').length ? k : [])]; });
 
-test("simple mode lists every request and change in one list, each in one state, and its menu has one entry", (t) => open(t, DESK(SIMPLE_ME, SIMPLE_CARDS), async (desk) => {
+test("simple mode lists every request and change in one list, each in one state, and its menu has one entry for them", (t) => open(t, DESK(SIMPLE_ME, SIMPLE_CARDS), async (desk) => {
   await desk.waitForSelector('#list [data-card="r-check"]');
-  assert.equal((await desk.textContent("#nav")).replace(/\d+$/, "").trim(), "Requests & PRs", "one entry, no PR Changes");
+  assert.equal((await desk.textContent('#nav [data-tab="requests"]')).replace(/\d+$/, "").trim(), "Requests & PRs", "one entry, no PR Changes");
   assert.deepEqual(await rows(desk), [["r-check", "Design review"], ["r-busy", "Design review"], ["r-draft", "Design review"], ["c-open", "Design review"]], "Design review by default, newest change first, the pill on every row even with one state");
   assert.equal(await desk.locator('#list [data-card="r-busy"] .dd-spin').count(), 1, "Design Desk at work: the spinner, still Open");
   await desk.click("details.sf > summary");
@@ -5649,10 +5649,25 @@ window.platform = { async request({ method, path, body }) {
 const SENT = [{ ...SIMPLE_CARDS.find((c) => c.id === "r-sent"), id: "R-31" }, { ...SIMPLE_CARDS.find((c) => c.id === "r-built"), id: "R-32" }];
 const navTabs = (desk) => desk.$$eval("#nav [data-tab]", (xs) => xs.map((x) => x.dataset.tab));
 
-for (const role of ["designer", "pm", "developer", "ui-dev-owner", "guest"]) test(`a ${role} with no choice of their own starts in simple mode, its menu one entry`, (t) => open(t, DESK({ role, email: "x@example.com", simple: null, can: { request: role !== "guest", designs: DEVELOPERS.includes(role) } }, SIMPLE_CARDS), async (desk) => {
+for (const role of ["designer", "pm", "developer", "ui-dev-owner", "guest"]) test(`a ${role} with no choice of their own starts in simple mode, its menu Requests & PRs and Product`, (t) => open(t, DESK({ role, email: "x@example.com", simple: null, can: { request: role !== "guest", designs: DEVELOPERS.includes(role) } }, SIMPLE_CARDS), async (desk) => {
   await desk.waitForSelector("#nav [data-tab]");
-  assert.deepEqual(await navTabs(desk), ["requests"]);
+  assert.deepEqual(await navTabs(desk), ["requests", "product"]);
   assert.equal(await desk.getAttribute("#simple", "aria-pressed"), "true");
+}));
+
+test("in simple mode Product shows in the menu, and each of its pages opens as in full mode", (t) => open(t, DESK({ ...SIMPLE_ME, role: "designer" }, SIMPLE_CARDS), async (desk) => {
+  await desk.waitForSelector("#nav [data-tab]");
+  assert.equal(await desk.getAttribute("#simple", "aria-pressed"), "true");
+  assert.deepEqual(await navTabs(desk), ["requests", "product"], "Designs, Issues and People stay hidden");
+  await desk.click('#nav [data-tab="product"]');
+  await desk.waitForSelector('[data-filter="productFilter:screens"]');
+  const pages = await desk.$$eval('[data-filter^="productFilter:"]', (xs) => xs.map((x) => x.dataset.filter.split(":")[1]));
+  for (const k of ["screens", "elements", "decisions", "history"]) assert.ok(pages.includes(k), `${k} in Product's bar`);
+  for (const k of pages) {
+    await desk.click(`[data-filter="productFilter:${k}"]`);
+    await desk.waitForSelector(`[data-filter="productFilter:${k}"][aria-current="page"]`);
+    assert.equal(await desk.getAttribute('#nav [data-tab="product"]', "aria-current"), "true", `still on Product, on ${k}`);
+  }
 }));
 
 test("an admin in simple mode keeps every page in the menu, Product's pages included", (t) => open(t, DESK({ role: "admin", email: "lead@example.com", simple: null, can: { request: true, designs: true, people: true } }, SIMPLE_CARDS), async (desk) => {

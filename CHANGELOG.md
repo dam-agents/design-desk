@@ -7,6 +7,13 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.116.0 — 2026-11-25
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): simple mode's menu shows
+   **Product** with all of its pages, and the bell keeps Product's screens, elements and decisions
+   ([desk-page.md](docs/desk-page.md) → Simple mode). No data migration.
+
 ## 1.115.1 — 2026-11-24
 
 **Upgrade:**
