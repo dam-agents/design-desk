@@ -2536,7 +2536,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const XCHEV = `<svg class="xchev" viewBox="0 0 16 16" aria-hidden="true"><path d="m6 4 4 4-4 4"/></svg>`;
   const BTN_ICON = {
     act: { workspace: "pen", explore: "spark", build: (el) => /another option/.test(textOf(el)) ? "undo" : "screen", approve: () => S.card?.kind === "request" && !(S.card.variants || []).length ? "send" : "check", "approve-dev": "code",
-      reopen: "undo", revise: "redo", close: "cross", states: "layers", slack: "send", unqueue: "minus",
+      reopen: "undo", "take-back": "undo", revise: "redo", close: "cross", states: "layers", slack: "send", unqueue: "minus",
       draw: "pen", refresh: "redo", history: "clock", "figma-import": "down", "figma-export": "up" },
     size: { small: "bolt", designer: () => simple() ? "send" : "person" }, stage: { design: "send", proposal: "send" }, specSend: "send",
     adjust: "pen", addShots: "image", wsEdit: "pen", wsBuild: "screen",

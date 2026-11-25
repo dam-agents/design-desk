@@ -5351,6 +5351,7 @@ test("an approved request whose spec is still on the Desk goes back to feedback 
   await desk.waitForFunction(() => /Spec on the Desk/.test(document.querySelector("#detail .shead h2")?.textContent || ""));
   assert.equal(await desk.locator('#detail [data-fb="head"]').count(), 0, "with no note waiting the head stays calm: Back to feedback is under ⋯");
   await desk.click("#detail .sh-more > summary");
+  assert.equal(await desk.locator('#detail .sh-more [data-act="take-back"] svg.ico').count(), 1, "with Reopen's undo icon, as every item of ⋯ has one");
   await desk.click('#detail .sh-more [data-act="take-back"]');
   assert.match(await desk.textContent("#confirm-dialog"), /Take the approval back\?[\s\S]*jana\.novak approved it and hears of it[\s\S]*next approval's spec starts from it/);
   await desk.click("#cf-ok");
