@@ -58,8 +58,11 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   click on it in **Comments**, the panel's other tab: every comment on the option by state, a box
   for one on the whole option or state, Open / Done / All and Add all to my feedback; and **Your feedback**,
   the third tab for who may comment (with its count): every note of theirs on the request waiting
-  to be sent, across options, each with what it is about and ✕, a click showing its option, state
-  and part, and **Send feedback…**, the page's dialog. A note in the feedback is no pin. Pins are in the Desk's brown,
+  to be sent, across options, in the same boxes as Submit feedback's panel, and **Submit feedback…**,
+  which opens that panel. **Submit feedback** stands on the bar on top, before ✕, as in every
+  dialog's head ([Submit feedback](#submit-feedback)); in the tab and the panel a note's option and
+  part line shows the design there and closes the panel. Once the feedback is
+  sent, the part selected is let go. A note in the feedback is no pin. Pins are in the Desk's brown,
   small and green once done, with a spinner while Design Desk works on them. The design fills the
   canvas a little in from its edges and the tool bar stands under it, so the canvas never scrolls. A part selected is let go
   by Click through, by another option, state or version, and once it no longer shows in the design
@@ -83,7 +86,7 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   colors (`--*` on `:root`) first, then those it uses, then any color, marked as not the design's.
   Other parts changed and not sent are listed under it, kept per drawing until the Desk is left;
   **Add to feedback** puts a part's edits in the person's feedback (**In your feedback**; listed
-  under Your feedback as "Look of <part> · this browser", ✕ taking it out, the edit staying), and
+  in Submit feedback's panel as "Look of <part> · this browser", ✕ taking it out, the edit staying), and
   sending the feedback makes one note per part with `anchor.style` / `anchor.controls`, a `change`
   note with Request changes ([requests.md](requests.md) → revise). A reload drops them.
   The options' tabs are underline tabs with a number chip, in both modes and in the design
@@ -373,7 +376,8 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   folds slide open and shut (a script eases the fold's height, so every browser slides; only a
   fold opened or shut by a click is kept, not one drawn open), the private ask grows from its button, a new message in it rises
   in, a newly opened item rises into the pane (a refresh of the same one does not), buttons and
-  rows ease between states, and a toast comes and goes. Nothing waits on an animation; a
+  rows ease between states, and a toast comes and goes: a compact box in the top right corner, over the
+  bars, newest on top and three at most, with ✕ to close it sooner ([guidelines](../desk/guidelines.html) → The toast). Nothing waits on an animation; a
   browser without one of these features shows the change at once.
 - **Tab intros.** Every tab but How it works and People has an intro, `INTRO` in `desk/page.html`
   (Designs too, for the roles that see it): it explains the process, never what is on the screen.
@@ -442,7 +446,8 @@ muted line — **Create proposal** for a developer, a UI dev owner or an admin (
 ## Submit feedback
 
 One button holds a person's review of an item ([desk.md](desk.md) → Reviews): in simple mode's
-head, in every dialog's head (a change's, a part's), and in full mode's **Your feedback**.
+head, in every dialog's head (a change's, a part's), on the design workspace's bar on top (not in
+its final check), and in full mode's **Your feedback**.
 
 - **Its colour is the verdict it sends:** Approved's green for an approval (Approve, Approve for
   dev), also with nothing drafted yet; a quiet amber for **Request changes** — the pale amber fill,
