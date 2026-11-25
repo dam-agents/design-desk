@@ -23,7 +23,7 @@ coding agent builds from the same design as a person:
 - `design.json` in the body, folded: `<details><summary>For a coding agent: design.json</summary>`
   and the JSON in a fenced block; cut `states[].page` and `shot` paths to names when the folder
   is not pushed;
-- the pushed `handoff/R-<n>/` folder's link, when `prototype_remote` is set;
+- the pushed `.design-desk/handoff/R-<n>/` folder's link on `design-desk/assets`, at its sha, when `prototype_remote` is set;
 - one line for the agent: build from `design.json` and `mockup.html`, check each state against
   `shots/`, tick every acceptance line in the pull request.
 
@@ -37,6 +37,7 @@ never stands in for them (a developer may not see the Desk):
    `design shot <option.html> <dir> --width 1280`, plus `--width 390` when the request is about
    a small screen. Light first; dark when the change is about colour. Add the screen as it is
    today from the card's screens (`design desk fetch <A-n> <file>`), so the developer sees before and after.
+   Each goes to GitHub as WebP: `design webp <file>...` writes `<name>.webp` beside it.
 2. Keep the views the spec names, at most six pictures, each under 5 MB. The spec writes its
    pictures as `![<view>](asset:A-<n>)`: fetch each (`design desk fetch A-<n> <file>`) and
    replace the line with the picture's GitHub reference (step 3), so none stays a Desk-only
@@ -46,10 +47,11 @@ never stands in for them (a developer may not see the Desk):
      and `prototype_remote` is the repository this skill writes to (`-R`), so its reader can
      open them. Send the bundle's own pictures, the spec's (`design.json` → `pictures`, each
      `pictures/A-<n>.<ext>`), not step 1's shots: the push is already made. Refer to each as
-     `![<view name>](https://<host>/<owner>/<name>/raw/<sha>/handoff/R-<n>/pictures/A-<n>.<ext>)`,
-     `<sha>` the pushed commit, so a later push never changes it. Never a branch of their own.
+     `![<view name>](https://<host>/<owner>/<name>/raw/<sha>/.design-desk/handoff/R-<n>/pictures/A-<n>.<ext>)`,
+     `<sha>` the pushed commit on `design-desk/assets`, so a later push never changes it. Never a branch of their own.
    - **`--attach <file>#<alt>`** otherwise (no push, a refused push, or `prototype_remote`
-     another repository): repeated per picture (`gh issue create`, `gh issue comment`,
+     another repository): each picture as WebP (`design webp <file>...` on the spec's fetched
+     pictures and step 1's shots), repeated per picture (`gh issue create`, `gh issue comment`,
      `gh issue edit`, `gh pr create`, `gh pr comment`, `gh pr edit`), each referred to in the
      body as `![<view name>](<file>)` so it lands in place. A DAM sandbox cannot upload (it
      sends the upload host no token); a comment edited through `gh api` takes no attachment,
@@ -58,7 +60,7 @@ never stands in for them (a developer may not see the Desk):
 4. Check what was written: every picture's reference in the posted body is its pushed file's
    URL or an uploaded attachment URL, never a local file name (`gh issue view` / `gh api` the
    comment), and each pushed one answers (`gh api [--hostname <host>]
-   "repos/<owner>/<name>/contents/handoff/R-<n>/pictures/A-<n>.<ext>?ref=<sha>"`, the host
+   "repos/<owner>/<name>/contents/.design-desk/handoff/R-<n>/pictures/A-<n>.<ext>?ref=<sha>"`, the host
    when `prototype_remote` names one). A picture that did not land is put on again; a delivery
    without its pictures is not done, so it fails with the reason (`ledger.sh fail`; when
    `--attach` cannot upload: "set prototype_remote to the delivery repository") instead of

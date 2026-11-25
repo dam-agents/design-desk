@@ -15,7 +15,17 @@ sent; the developer or coding agent gets only answers.
    revise), it is what the prototype shows: the card's `live_pick` — its option, `version` and
    assets (`live_pick.asset`, `states[].asset`), which `approved.variant` and `approved.version`
    repeat; write the spec from those, not from a newer version drawn since.
-2. Write `/tmp/design-desk-r<n>/spec.md` in plain words ([desk.md](desk.md) → Writing on the
+   **An approval taken back before** (the card's `taken_back`, [desk.md](desk.md) → Taking an
+   approval back): read its last record's `spec` (`asset`, then `history`). When it was approved
+   on the same option as now (`approved.variant`, or neither names one), start from that draft —
+   download it, keep what a person edited, and rewrite only what the design changed since;
+   otherwise write the spec fresh. Either way the store keeps the draft as the new spec's earlier
+   version. A write the store refuses with *not approved any more* means the approval was taken
+   back while you worked: the item is cancelled already; delete your own scratch directory (below) and
+   stop, sending nothing.
+2. Work in a scratch directory of this item's own, `/tmp/design-desk-r<n>-<item>` (`<item>` the
+   handoff item's id, `Q-<m>`): after an approval taken back, the next approval's run works on the
+   same request at the same time. Write `/tmp/design-desk-r<n>-<item>/spec.md` in plain words ([desk.md](desk.md) → Writing on the
    Desk): a developer reads it, but so do the designers who approved it. These sections:
    - **Summary** — the problem and the approved direction, three sentences.
    - **Why** — the request in your own words, the decisions taken on the Desk (which
@@ -97,18 +107,27 @@ Every comment, issue and draft pull request a send writes is signed with the mar
 ([watch.md](watch.md) → The mark line; [`handoff-github`](../.agents/skills/handoff-github/SKILL.md)):
 the mark at 16 px before a bold **Design Desk**. The hidden marker stays exactly as it is.
 
-5. **The bundle.** `design desk bundle R-<n> /tmp/design-desk-r<n>/handoff`: `spec.md` (the
+5. **The bundle.** `design desk bundle R-<n> /tmp/design-desk-r<n>-<item>/handoff` (it clears an earlier bundle there, and refuses any other directory that is not empty): `spec.md` (the
    text for people), `design.json` (the same design for a coding agent: the approved option,
    the boundary and what needs a developer, every element and state with its selector in the
    mockup, the user stories, the acceptance criteria, the decisions it follows, the
    prototype's branch and patch), `mockup.html` (the approved option, the exact reference),
    `states/` and `shots/` (each state alone), `pictures/` (the spec's pictures, its lines pointing at them). Look at `design.json`: every element has its
-   states, every acceptance line names something on the screens. With `prototype_remote` set,
-   commit the folder as `handoff/R-<n>/` on the request's `design-desk/` branch (the
-   prototype's, else `design-desk/r<n>-handoff` from the default branch), run `design guard`
-   on that exact diff ([boundary.md](boundary.md)), and push only when it passes; a refusal
-   pushes nothing: the delivery carries `design.json` in the issue alone and its pictures by
-   `--attach`, and fails without them ([`handoff-github`](../.agents/skills/handoff-github/SKILL.md) → The pictures).
+   states, every acceptance line names something on the screens. Its shots and still pictures
+   (PNG, JPEG) are WebP, encoded as they are saved; an SVG or a GIF stays as it is. With `prototype_remote` set, the bundle goes on the
+   product's **`design-desk/assets`** branch, never a prototype's or a request's own branch:
+   `design assets commit <clone> R-<n> /tmp/design-desk-r<n>-<item>/handoff --remote <remote-url>` (the clone from
+   `scripts/checkout.sh`) makes one commit adding or replacing `.design-desk/handoff/R-<n>/`
+   and nothing else, on an orphan branch it starts when there is none. It is never merged and
+   never deleted, so every commit a comment links to stays. Its one piece of product code is
+   the prototype's patch, which the bundle carries only once the card's guard passed on it
+   (`prototype.guard.ok`, [prototype.md](prototype.md) step 4); the commit's check is the command's own: it refuses a commit that touches another path, and a branch whose
+   history holds anything but bundles; the pre-push hook refuses a bundle on any other
+   branch, anything but bundles in this one's history, and its deletion or a rewind. Push its `push` refspec,
+   `git -C <clone> push <remote-url> <push>`, never `--force`; refused as not a fast-forward
+   (another handoff pushed first), run the command again and push its new sha. A refusal or a
+   failed push sends nothing on: the delivery carries `design.json` in the issue alone and its
+   pictures by `--attach`, and fails without them ([`handoff-github`](../.agents/skills/handoff-github/SKILL.md) → The pictures).
 6. **A send after a reopen.** A request sent before, reopened by an admin and approved again
    (`sends` not empty; this is send `k` = `sends` + 1) is sent anew: a **new** issue with this
    spec — never an edit of, or a comment on, an earlier send's issue, comment or pull request,
@@ -156,7 +175,7 @@ the mark at 16 px before a bold **Design Desk**. The hidden marker stays exactly
    **✓ Designed** ([issues.md](issues.md) → On the Desk). What it sends asks nothing of its reader:
    it is the spec as the Desk settled it, and it names the Desk card as the place for a
    question that still comes up. It carries the bundle: `design.json` in a folded block
-   ("For a coding agent"), the link to the pushed `handoff/R-<n>/` folder when there is one,
+   ("For a coding agent"), the link to the pushed `.design-desk/handoff/R-<n>/` folder when there is one,
    and one line for the coding agent: build from `design.json` and `mockup.html`, check each
    state against `shots/`, and tick every acceptance line in the pull request.
 7. Write `dev_summary` (`design desk upsert`): the UX decisions the request's threads, votes,

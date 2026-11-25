@@ -52,8 +52,9 @@ connections:
     required: true
     note: >-
       Reads merged pull requests, their issues and the product's code; clones the
-      repository to build variants and prototypes. Pushes a prototype branch or
-      files a handoff issue only when you turn that on.
+      repository to build variants and prototypes. Pushes a prototype branch and
+      handoff pictures (on one design-desk/assets branch) or files a handoff issue only
+      when you turn that on.
   - accepts: [mcp-server]
     required: false
     note: >-

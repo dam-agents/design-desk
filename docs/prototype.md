@@ -116,7 +116,7 @@ Desk (**Switch it off…** on the live prototype of a request still at `prototyp
 keeps its status, and **Build it again** brings it back): `proto.sh run R-<n> down` (when the
 profile has it), `delete_environment`, `proto.sh remove R-<n>` (the worktree and its branch,
 never the patch), `prototype.state: torn-down`. A pushed branch stays; it is the
-developer's.
+developer's. `design-desk/assets` is no request's and is never torn down ([handoff.md](handoff.md) step 5).
 
 ## Push (`prototype_remote` only)
 
@@ -125,6 +125,7 @@ With `prototype_remote` set, push the guarded branch there after step 4:
 never `--force` onto a branch a person changed. Without it, the patch on the card is the
 prototype's record. The pre-push hook (`scripts/git-hooks/pre-push`) accepts the repository
 only over `https://` or ssh, and refuses another repository or host, another branch and any
-change under `.github/`, whatever characters its path holds; it is a local guard only.
+change under `.github/`, whatever characters its path holds, and keeps handoff bundles to
+`design-desk/assets` ([handoff.md](handoff.md) step 5); it is a local guard only.
 **Operator-only:** the real control is on GitHub — a ruleset or a fine-grained token that lets
 the agent's identity push `design-desk/*` branches and nothing else.

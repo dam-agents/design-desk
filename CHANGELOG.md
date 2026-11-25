@@ -7,19 +7,76 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
-## 1.115.0 — 2026-11-24
+## 1.120.0 — 2026-11-26
 
 **Upgrade:**
 1. Restart the Desk server ([desk.md](docs/desk.md) → Server) and republish the page
    ([desk.md](docs/desk.md) → Publishing the page): Design Desk has one mark, `desk/brand/mark.svg` —
-   DD on a gradient disc — wherever it speaks or acts: the head, the favicon, its avatar in every
-   thread, the ask panel, the bell; the spinner is in the mark's blue ([desk-page.md](docs/desk-page.md)
-   → The mark). No data migration.
+   white DD on an orange disc — wherever it speaks or acts: the favicon, its avatar in every thread,
+   the ask panel, What's already known, What Design Desk found, the bell; the spinner is in its
+   orange ([desk-page.md](docs/desk-page.md) → The mark). No data migration.
 2. **Set the agent's avatar by hand.** A Kit Update never changes an agent's avatar: the operator
    uploads `desk/brand/avatar.png` in the agent's avatar picker. New agents start with it
    (`kit.yaml` `avatar`). It is also what Slack shows beside the agent's replies where the install
    has `chat:write.customize`. The GitHub account's avatar and the Slack app's own icon are the
    platform's and the operator's, not this repository's.
+
+## 1.119.0 — 2026-11-25
+
+**Upgrade:**
+1. Nothing to run: a handoff with `prototype_remote` set now pushes its bundle, its pictures as WebP, to
+   `.design-desk/handoff/R-<n>/` on the orphan `design-desk/assets` branch, never a prototype's
+   ([handoff.md](docs/handoff.md) step 5). Earlier `handoff/R-<n>/` folders and `design-desk/r<n>-handoff`
+   branches stay as they are: old comments link to them.
+
+## 1.118.0 — 2026-11-25
+
+**Upgrade:**
+1. Restart the Desk server ([desk.md](docs/desk.md) → Server) and republish the page
+   ([desk.md](docs/desk.md) → Publishing the page): whoever may approve a request takes its approval
+   back while its spec has not gone to developers — **Back to feedback…** under ⋯, or **Request
+   changes** in Submit feedback — and the next approval's spec starts from the draft
+   ([desk.md](docs/desk.md) → Taking an approval back). No data migration: an approval from before
+   this version names no step (`approved.from`) and goes back to its options.
+
+## 1.117.1 — 2026-11-25
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): opening, closing or picking in
+   Submit feedback's panel no longer draws the whole item again, so answers typed in Design Desk's
+   questions stay ([desk-page.md](docs/desk-page.md) → Submit feedback). No data migration.
+
+## 1.117.0 — 2026-11-25
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): simple mode's menu shows
+   **Product** with all of its pages, the bell keeps Product's screens, elements and decisions, and How it
+   works says a shipped change updates Product
+   ([desk-page.md](docs/desk-page.md) → Simple mode). No data migration.
+
+## 1.116.0 — 2026-11-25
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): the design workspace's
+   **Submit feedback** stands on its bar on top, before ✕, the same button and panel as in every
+   dialog's head, and lets the part selected go once sent; the side panel's **Your feedback** tab shows
+   the same notes, three lines each at most with Show all, and its **Submit feedback…** opens that panel
+   ([desk-page.md](docs/desk-page.md) → Submit feedback). A toast is a compact box in the top right corner with ✕ ([guidelines](desk/guidelines.html) → The toast). No data migration.
+
+## 1.115.1 — 2026-11-24
+
+**Upgrade:**
+1. Restart the Desk server ([desk.md](docs/desk.md) → Server) and republish the page
+   ([desk.md](docs/desk.md) → Publishing the page): a change whose pull request merged before anyone
+   approved it can be approved from Submit feedback, which marks it handled; nothing is posted to the
+   pull request ([desk.md](docs/desk.md) → Reviews). No data migration.
+
+## 1.115.0 — 2026-11-24
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): in simple mode, Submit feedback
+   asks **Which design?** for an approval of a request with more than one option, and its buttons stay
+   in view in a footer ([desk-page.md](docs/desk-page.md) → Submit feedback). No data migration.
 
 ## 1.114.0 — 2026-11-24
 

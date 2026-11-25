@@ -58,8 +58,11 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   click on it in **Comments**, the panel's other tab: every comment on the option by state, a box
   for one on the whole option or state, Open / Done / All and Add all to my feedback; and **Your feedback**,
   the third tab for who may comment (with its count): every note of theirs on the request waiting
-  to be sent, across options, each with what it is about and ✕, a click showing its option, state
-  and part, and **Send feedback…**, the page's dialog. A note in the feedback is no pin. Pins are in the Desk's brown,
+  to be sent, across options, in the same boxes as Submit feedback's panel, and **Submit feedback…**,
+  which opens that panel. **Submit feedback** stands on the bar on top, before ✕, as in every
+  dialog's head ([Submit feedback](#submit-feedback)); in the tab and the panel a note's option and
+  part line shows the design there and closes the panel. Once the feedback is
+  sent, the part selected is let go. A note in the feedback is no pin. Pins are in the Desk's brown,
   small and green once done, with a spinner while Design Desk works on them. The design fills the
   canvas a little in from its edges and the tool bar stands under it, so the canvas never scrolls. A part selected is let go
   by Click through, by another option, state or version, and once it no longer shows in the design
@@ -83,7 +86,7 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   colors (`--*` on `:root`) first, then those it uses, then any color, marked as not the design's.
   Other parts changed and not sent are listed under it, kept per drawing until the Desk is left;
   **Add to feedback** puts a part's edits in the person's feedback (**In your feedback**; listed
-  under Your feedback as "Look of <part> · this browser", ✕ taking it out, the edit staying), and
+  in Submit feedback's panel as "Look of <part> · this browser", ✕ taking it out, the edit staying), and
   sending the feedback makes one note per part with `anchor.style` / `anchor.controls`, a `change`
   note with Request changes ([requests.md](requests.md) → revise). A reload drops them.
   The options' tabs are underline tabs with a number chip, in both modes and in the design
@@ -199,9 +202,10 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   them to every device; the browser keeps a copy named for them only to open without a flash, marked unsaved until
   the server takes it, and sent again on the next load.
   **Simple mode**, a switch in the menu under the person's name (an on/off switch beside its
-  words, in the accent when on), is review-first. The menu has one entry, **Requests & PRs**
+  words, in the accent when on), is review-first. The menu has two entries, **Requests & PRs**
   (current on Requests and PR Changes, its count the items in the reviews the viewer's default
-  filter shows), and **+ New request**; its one list holds every request and pull request change,
+  filter shows) and **Product**, with all of its pages as in full mode (Screens, Elements, Decisions, History, and
+  Kit and Differences where they show), and **+ New request**; its one list holds every request and pull request change,
   whatever its side — For Developers or For Designers only decides which review it is in — each in
   one state ([A request's state in the list](#a-requests-state-in-the-list)), the newest change
   first; only an archived change is not listed, nor someone else's draft, which the server sends only
@@ -264,7 +268,8 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   the same **Changes requested** line under the title, the same boxes, the same **Changes** of a change and dialogs, and **Your feedback** at the top
   of Questions and comments while drafts wait, with the same **Submit feedback** in it; before design it
   offers no Approve. A request that went to design folds the conversations and feedback begun
-  before it opened (`opened_at`) into **Before design · n**, in both modes: after the rest in full mode, first in simple mode. ⋯ holds **Close…** or **Reopen** on a request
+  before it opened (`opened_at`) into **Before design · n**, in both modes: after the rest in full mode, first in simple mode. ⋯ holds **Back to feedback…** on a request approved whose spec has not gone to developers, for
+  who may approve it ([desk.md](desk.md) → Taking an approval back; full mode's ⋯ too), **Close…** or **Reopen** on a request
   — on one sent to developers, first **Mark as shipped** while it is In dev and **Not shipped yet** once
   it is Shipped, for whoever marks a design done (`built`: a developer, a UI dev owner, an admin;
   `POST /api/cards/R-<n>/built`): the store marks it built by itself when a merged change that builds it
@@ -299,10 +304,10 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   instead of the Requests intro a box per state, **Draft** only while it holds
   something, then **Dev review**, **Design review**, **In dev** and **Closed**: how many items are
   in each — the viewer's alone while Whose is Mine, redrawn as the filter changes — (the reviews and In dev with their kinds, Closed with how many of them
-  shipped in the last 7 days); a click on one filters the list to that state. Otherwise it hides: **Designs**, **Issues**, **Product** and **People** leave the menu — for
-  every role but an admin, who keeps them all, for now, after **Requests & PRs**, with Product's pages, their
+  shipped in the last 7 days); a click on one filters the list to that state. Otherwise it hides: **Designs**, **Issues** and **People** leave the menu — for
+  every role but an admin, who keeps them all, for now, after **Requests & PRs**, with their
   intros' lines and their notifications as in full mode — (a sent
-  request offers no **Show the design**), Product's pages their bar, the presentation leaves Requests (its page, its buttons on a card and in an intro), a
+  request offers no **Show the design**), the presentation leaves Requests (its page, its buttons on a card and in an intro), a
   request offers no **Build a live prototype** (a prototype already up still shows), and an
   option shows no **Why it looks like this** section (the design workspace keeps it
   in its side panel). An option's design (the mockup) and All elements start open, as in full mode. A
@@ -312,7 +317,7 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   Nothing else names a role a request needs: no **Needs a designer** line or heading. A request offers no rename. Switching the mode
   starts an option's sections again as they first open. The tab
   intros and How it works, its drawings included, leave out what it hides, and so does the bell:
-  no notification about an issue, a screen, an element or a decision, nor in its count.
+  no notification about an issue, nor in its count (a screen, an element and a decision show, as Product does).
   A link to anything hidden still opens it: a `D-3` in a request opens the decision, and
   `#people` or `#presentation` their pages. The Desk keeps each person's choice like day or
   night (`POST /api/prefs {simple}`, `simple` in `GET /api/me`; only the keys sent change), so
@@ -373,7 +378,8 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   folds slide open and shut (a script eases the fold's height, so every browser slides; only a
   fold opened or shut by a click is kept, not one drawn open), the private ask grows from its button, a new message in it rises
   in, a newly opened item rises into the pane (a refresh of the same one does not), buttons and
-  rows ease between states, and a toast comes and goes. Nothing waits on an animation; a
+  rows ease between states, and a toast comes and goes: a compact box in the top right corner, over the
+  bars, newest on top and three at most, with ✕ to close it sooner ([guidelines](../desk/guidelines.html) → The toast). Nothing waits on an animation; a
   browser without one of these features shows the change at once.
 - **Tab intros.** Every tab but How it works and People has an intro, `INTRO` in `desk/page.html`
   (Designs too, for the roles that see it): it explains the process, never what is on the screen.
@@ -442,7 +448,8 @@ muted line — **Create proposal** for a developer, a UI dev owner or an admin (
 ## Submit feedback
 
 One button holds a person's review of an item ([desk.md](desk.md) → Reviews): in simple mode's
-head, in every dialog's head (a change's, a part's), and in full mode's **Your feedback**.
+head, in every dialog's head (a change's, a part's), on the design workspace's bar on top (not in
+its final check), and in full mode's **Your feedback**.
 
 - **Its colour is the verdict it sends:** Approved's green for an approval (Approve, Approve for
   dev), also with nothing drafted yet; a quiet amber for **Request changes** — the pale amber fill,
@@ -453,18 +460,32 @@ head, in every dialog's head (a change's, a part's), and in full mode's **Your f
 - **Who gets it:** whoever may send a verdict on the item (`verdictsFor`); someone who may only
   comment, once something of theirs waits to be sent.
 - **Its panel** opens under it and never moves the page; one is open at a time, closed by Esc, a
-  click outside it or **Keep drafting**, and kept through the page's redraws: on a change, how many
+  click outside it or **Keep drafting**, and kept through the page's redraws. Opening it, closing it
+  or picking in it draws only the Submit feedback buttons and their panels again, never the item or
+  the dialog around them: what the person typed or picked elsewhere (an answer to Design Desk's
+  questions, a comment) stays, as do focus and scroll. It holds: on a change, how many
   of the changes to look at were looked at, a bar, and the ones not looked at as chips that open them
   (else "✓ All looked at"); for whoever may mark it handled, the differences from Figma not taken or
   marked fine yet, as chips of their changes with how many ("Sending leaves them as they are"); each
   note and Looks good waiting (a Looks good on an unchanged screen is not counted), a difference taken
   or marked fine tagged **From Figma**, with what it is about (a change's opens
   it) and ✕; else a line saying where notes come from; the verdicts as one control, each with its
-  line under it; a note for the whole feedback; and the send button in the verdict's colour (`Request
-  changes · 2`, `Approve with 2 notes`, `Approve for dev`, `Send comments`).
-- **The verdicts**, the viewer's own: **Request changes** (with options drawn on a request; on a
+  line under it; in simple mode, for an approval of a request with more than one option (and no live
+  prototype naming it), **Which design?**: the options as one control, each by its number and name, picked in neutral (no colour: the verdict carries it),
+  the one shown on the page picked first — the approval is for it, and its dialog asks for no option
+  (Request changes and Comment only show none: a comment on a design goes through the workspace or
+  an element); a note for the whole feedback; and, in a footer fixed to the panel's bottom that stays
+  in view while the notes scroll, the send button in the verdict's colour (`Request
+  changes · 2`, `Approve with 2 notes`, `Approve for dev`, `Send comments`) and **Keep drafting**,
+  each as tall as Submit feedback.
+- **The verdicts**, the viewer's own: **Request changes** (with options drawn on a request — on one
+  approved whose spec has not gone to developers, only for who may approve it, once a note of theirs
+  waits (without one the head shows no Submit feedback, and ⋯ → Back to feedback… goes back), its hint saying the
+  approval is taken back first, [desk.md](desk.md) → Taking an approval back; on a
   change for who may handle it), the approval — **Approve** in Design review, **Approve for dev** in
-  Dev review and, for the UI dev owner, before design — and **Comment only**. Look edits and comments
+  Dev review and, for the UI dev owner, before design — and **Comment only**. A change whose pull
+  request is merged has no Request changes; while nobody handled it, its **Approve** ("Design is done
+  with this change.") still closes it out, as Shipped. Look edits and comments
   to work in say they go only with Request changes; a change whose review goes to GitHub says so,
   and that the differences from Figma taken and marked fine go with it.
 - **Sending:** an approval with nothing drafted and no note is the approval alone (a request's asks
@@ -642,7 +663,8 @@ works on it, and its pill says how it ended — **Shipped** (purple) a request b
 change merged, **No review needed** (grey) an auto handled change merged, **Closed** (red) a
 request closed, with a decision or without. An archived change is not listed, nor someone else's
 draft (the server sends it only to its author and an admin, [desk.md](desk.md) → Draft and Proposal). Issues, screens, elements and decisions have no
-simple state: simple mode lists none of them, and a link to one opens its full page.
+simple state: the one list holds none of them; a screen, an element and a decision are on Product's
+pages, as in full mode, and a link to an issue opens its full page.
 
 A list row's title, in both modes, takes two lines at most and ends with an ellipsis; its tooltip
 has it in full, and so does full mode's page (simple mode's head cuts it to one line, its words on
@@ -679,6 +701,7 @@ icon's upper right corner, gone once the notification is read. The events:
 | Design Desk answered, Design Desk asks | the agent answers a question, or asks one |
 | New options drawn, Options redrawn | a run draws options, or new versions of them |
 | New vote, Option approved, Spec ready, Closed with a decision | a request moves on |
+| Back to feedback | a person takes a request's approval back ([desk.md](desk.md) → Taking an approval back); For you for whose approval it was, too |
 | Feedback asked | a person hands the drawn options to the team (**Ask for feedback**); For you for every `developer` and `ui-dev-owner` |
 | New decision, Decision revoked | a decision is added or revoked |
 | Developer asks, Marked done | a developer asks a design's designer, or marks it done ([Designs](#designs)) |
@@ -699,7 +722,7 @@ decision on its page, a revoked one on why. The place pulses twice and fades out
 in all, and the glow keeps its place when the page draws again. A public notification closes the private chat, which would
 cover it. The bell opens on **For you**: what the person
 filed, voted on, approved or wrote in; **All** shows the rest too. In simple mode both leave out
-an issue, a screen, an element and a decision, the pages it hides (Simple mode above). The red
+an issue, the page it hides (Simple mode above); a screen, an element and a decision show, as Product does. The red
 count is the unread rows For you, in simple mode only what it shows (an admin's, who sees them all, the server's count, as in full mode). Opening the bell reads
 nothing: a row is read, for that person alone, once they click it (`POST
 /api/notifications/read?id=<row id>`; the store keeps `noted: {<person>: [ids]}`, only rows still

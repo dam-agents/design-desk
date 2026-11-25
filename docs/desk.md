@@ -347,7 +347,7 @@ moved it and when. A request For Developers is approved by a designer or
 by any `developer` or `ui-dev-owner` except the person who filed it (`created_by`, or
 `origin.email` when you filed it for them); the store refuses the author, by any address on their row of `## Desk people`, and the page names them **you** by any of them, from Slack, GitHub or chat as from the Desk. A request whose
 `origin` names its reporter only by name or login (a GitHub issue) has no author to refuse. A request For Developers
-that goes against a decision in force is approved by a designer only. Every approval writes `approved: {by, at, small}` on the card (`implement: true` when the approver ticked **Straight to implementation**, [handoff.md](handoff.md) step 5); the
+that goes against a decision in force is approved by a designer only. Every approval writes `approved: {by, at, small, from}` on the card (`from`: the step it was approved at, where taking it back returns it) (`implement: true` when the approver ticked **Straight to implementation**, [handoff.md](handoff.md) step 5); the
 page shows who chose its tab and who approved it, and a reopen clears `approved`. A request For Developers
 is not in **Needs a designer** for its options or its prototype. The `handoff` item it makes is
 worked like any other ([handoff.md](handoff.md)); the approver is `approved.by`.
@@ -421,7 +421,7 @@ prototype once Design Desk has checked a request:
 ### Approved is final
 
 From **Approve** on (the spec, and once it went to developers) a request's design no longer
-changes: the store refuses Draw design options, one more option, a redraw, Work it in, other
+changes, unless its approval is taken back while the spec is still on the Desk (below): the store refuses Draw design options, one more option, a redraw, Work it in, other
 ways a part could look, removing an option, a live prototype, a Figma import, and Reopen of
 one sent to developers, save an admin's (**Reopen…** under ⋯, behind a confirmation): the
 request goes back to before the team's vote with its options (`variants`, `team_feedback`
@@ -432,6 +432,35 @@ sends it anew, with a new issue ([handoff](handoff.md), step 6) and a new Design
 type; its dialog asks which options carry over (the approved one ticked) and how many new ones
 to draw besides (none by default). Comments,
 votes, the presentation, every state of an element and the spec's own review stay open.
+
+### Taking an approval back
+
+Until its spec went to developers (`spec.sent`, or `review: "sent"`), whoever may approve the
+request now takes its approval back — the approval's own rule, a design that goes against a
+decision in force a designer's alone — (`POST /api/cards/<id>/actions
+{action: "take-back"}`; **Back to feedback…** under ⋯, behind a confirmation), so a detail
+someone forgot goes into the design. **Request changes** in Submit feedback does the same on
+an approved request, then works its feedback in as it always does (a `revise`); on an approved
+request only those people are offered it, and the store refuses anyone else. Either way:
+
+- the request goes back to the step it was approved at (`approved.from`), with its options: Live —
+  try it while its prototype is up, else Team feedback or its drawn options as it was then (an
+  approval from before `from`: Team feedback while it was asked, else its options); none drawn →
+  triage, as it was checked. In simple mode each of them is Design review;
+- its vote opens again (`vote_ended` cleared), as a reopen's does, for the next version;
+- its `approved` (with `overruled`) and its spec, the draft or the one being written, move into
+  a record on the card's `taken_back` (`{by, at, approved, overruled?, spec}`, the last 10); no
+  Designs record, nothing in `sends`, so an earlier send still closes as it did;
+- a `handoff` item not done yet is done (`cancelled: approval taken back`), Design Desk's open
+  questions at the handoff step are resolved, and a session still writing the spec has its late
+  spec, `status: spec` or `handed-off` refused (409) while the card is not approved;
+- the next approval's spec starts from that draft when it is on the same option, and keeps it as
+  its earlier version ([handoff.md](handoff.md), step 1);
+- the bell tells whoever it was yours to (Notifications), the person who approved it included.
+
+A request from Slack hears nothing of it in its thread, which never heard of the approval
+either ([requests.md](requests.md) → Who Slack serves).
+Once the spec went to developers only an admin's **Reopen…** goes back, as above.
 
 ### Deleting a request
 
@@ -546,7 +575,9 @@ draft becomes its own conversation tagged `review`, all or none. The verdicts:
   note alone becomes one, and the page shows its words there only, not again as the review's note. On a change, by whoever may mark it handled: the drafts are comments,
   and the review keeps the pull request's head commit (`sha`) the Desk last read, or the first it
   reads, until its post names the last commit from before it (judged by the next read, never the post).
-- **Approve** — on a change, by whoever may mark it handled: it is marked handled. On a request,
+- **Approve** — on a change, by whoever may mark it handled: it is marked handled; a change whose
+  pull request is merged before anyone approved it is approved the same way, as long as nobody
+  handled it, and nothing goes to its pull request. On a request,
   only after the same person approved it: the review goes with that approval.
 - **Comment only** — by whoever may comment: comments, nothing else changes.
 
@@ -555,8 +586,8 @@ next version: `design-desk` on a request until an option is drawn after it, `dev
 change until its pull request's head is no longer `sha` (`next_at`; a later approval, a merge or the
 handled mark ends it too). A review never holds Design Desk's check on GitHub: Request changes
 leaves the handled mark and the check as they are; Approve marks the change handled, which passes
-a held check as the mark always does. Only Comment only is sent on a closed or sent request or a
-merged change. A draft about an option no longer drawn goes on the option shown under Request changes, and as one
+a held check as the mark always does. Only Comment only is sent on a closed or sent request, an archived change, or a merged change
+already handled; a merged change takes no Request changes, having no next version to ask for. A draft about an option no longer drawn goes on the option shown under Request changes, and as one
 about the whole request otherwise. What exists stays as it is: a vote
 is not a verdict and counts on its own; **Add to my feedback** (once Work it in) on a comment is a
 draft `{work_in: <thread>}` (whoever may write a change note; once per comment; on a request's

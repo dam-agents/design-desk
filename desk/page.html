@@ -361,6 +361,8 @@
   .yreview .yr-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; } .yreview .yr-h b { font-size: var(--fs-ui); }
   .dbub { display: flex; gap: 8px; align-items: flex-start; padding: 8px 12px; border-radius: var(--r-sm); background: var(--panel); } .dbub + .dbub { margin-top: 8px; }
   .dbub .db-b { min-width: 0; flex: 1; white-space: pre-wrap; overflow-wrap: anywhere; } .dbub .about { display: block; font-size: var(--fs-micro); color: var(--muted); white-space: normal; }
+  .dbub .dtx { display: block; } .dbub .dtx:not(.open) { display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .dbub button.dtx-more { display: block; padding: 0; margin-top: 4px; font-size: var(--fs-micro); font-weight: 400; color: var(--muted); } .dbub button.dtx-more:hover { color: var(--ink); } .dbub .dtx-more[hidden] { display: none; }
   .dbub .x { border: 0; background: none; color: var(--muted); cursor: pointer; font: inherit; padding: 0 4px; } .dbub .x:hover { color: var(--ink); }
   /* Submit feedback (docs/desk-page.md → Submit feedback): its colour is the verdict it sends — green
      an approval, amber Request changes, ink Comment only; its counts sit inside it. */
@@ -383,7 +385,8 @@
   .fb-pop .fb-prog { display: grid; gap: 8px; font-size: var(--fs-meta); } .fb-pop .fb-prog .pbar { width: 100%; } .fb-pop .chg-done { margin: 0; }
   .fb-pop .fb-left { display: flex; flex-wrap: wrap; gap: 4px; } .fb-pop .fb-left .chip { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 1px dashed var(--line); background: none; cursor: pointer; }
   .fb-pop .fb-items { display: grid; gap: 8px; } .fb-pop .dbub { border: 1px solid var(--line); margin: 0; } .fb-pop .dbub.ok { background: var(--approved-soft); border-color: transparent; }
-  .fb-pop .dbub .link.about { display: block; padding: 0; font-size: var(--fs-micro); text-align: left; }
+  :is(.fb-pop, .ws-fb-items) .dbub .link.about { display: block; padding: 0; font-size: var(--fs-micro); font-weight: 400; color: var(--muted); text-align: left; }
+  :is(.fb-pop, .ws-fb-items) .dbub .link.about:hover { color: var(--ink); }
   .fb-pop .fb-empty { margin: 0; padding: 8px 12px; border: 1px dashed var(--line); border-radius: var(--r-sm); }
   .fb-vs { display: grid; grid-auto-columns: 1fr; grid-auto-flow: column; border: 1px solid var(--line); border-radius: var(--r-sm); overflow: hidden; }
   .fb-vs button { display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 8px 4px; border: 0; border-right: 1px solid var(--line); background: var(--panel); color: inherit; font: inherit; font-size: var(--fs-meta); white-space: nowrap; cursor: pointer; }
@@ -391,7 +394,14 @@
   .fb-vs button[aria-checked="true"] { font-weight: 600; background: var(--soft); }
   .fb-vs button[aria-checked="true"][data-v="ok"] { background: var(--approved-soft); color: var(--approved); } .fb-vs button[aria-checked="true"][data-v="rc"] { background: var(--warn-soft); color: var(--warn); }
   .fb-pop .fb-hint { margin: -4px 0 0; } .fb-pop textarea { width: 100%; min-height: 56px; }
-  .fb-pop .fb-send { display: flex; gap: 8px; } .fb-pop .fb-send .fbk { flex: 1; }
+  /* Its buttons are a footer fixed to the panel's bottom, in view while the notes scroll. */
+  .fb-pop .fb-send { position: sticky; bottom: 0; z-index: 1; display: flex; gap: 8px; padding: 12px 16px; background: var(--panel); border-top: 1px solid var(--line); }
+  .fb-pop .fb-send .fbk { flex: 1; } .fb-pop .fb-b { padding-bottom: 12px; }
+  /* Which design an approval is for: the options as the verdicts are, each by its number and name. */
+  .fb-pop .fb-opt { display: grid; gap: 8px; } .fb-pop .fb-opt > b { font-size: var(--fs-meta); font-weight: 600; }
+  .fb-os button { min-width: 0; padding: 8px; } .fb-os .fb-on { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .fb-os .fb-no { flex: none; min-width: 18px; line-height: 18px; padding: 0 4px; border-radius: var(--r-sm); background: var(--soft); color: var(--muted); font-size: var(--fs-micro); font-weight: 600; }
+  .fb-os button[aria-checked="true"] .fb-no { background: var(--ink); color: var(--panel); }
   .elbar .el-acts .fb-pop { z-index: 6; }
   /* On a narrow screen the panel spans it, edge to edge, so none of it hangs off to the left. */
   @media (max-width: 560px) { .fb-pop { position: fixed; top: 64px; left: 8px; right: 8px; width: auto; max-height: calc(100vh - 80px); } }
@@ -1040,7 +1050,14 @@
   #peek .t { display: flex; gap: 8px; align-items: baseline; justify-content: space-between; }
   #peek .sub { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0 0; color: var(--muted); font-size: var(--fs-meta); }
   #peek p { margin: 8px 0 0; } #peek h4 { margin: 12px 0 2px; font-size: var(--fs-meta); } #peek ul { margin: 0; padding-left: 20px; }
-  .toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--panel); padding: 8px 16px; border-radius: var(--r-sm); z-index: 90; max-width: calc(100% - 32px); }
+  /* The toast: a compact box in the top right corner, over the bars, newest on top, with ✕; it goes by itself.
+     Only its ✕ takes a click: one on its words reaches the bar's control under it. */
+  .toasts { position: fixed; top: 12px; right: 24px; z-index: 90; display: grid; gap: 8px; justify-items: end; width: min(360px, calc(100% - 32px)); pointer-events: none; }
+  .toast { display: flex; align-items: flex-start; gap: 8px; width: 100%; max-width: 360px; box-sizing: border-box; padding: 12px 8px 12px 16px; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 10px 30px rgba(0,0,0,.18); font-size: var(--fs-meta); line-height: 1.45; }
+  .toast .t-m { flex: 1; min-width: 0; overflow-wrap: anywhere; padding-top: 1px; }
+  .toast .t-x { pointer-events: auto; flex: none; border: 0; background: none; color: var(--muted); cursor: pointer; font: inherit; width: 24px; height: 24px; border-radius: var(--r-sm); display: grid; place-items: center; }
+  .toast .t-x .ico { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+  .toast .t-x:hover { color: var(--ink); background: var(--soft); }
   dialog { border: 1px solid var(--line); border-radius: var(--radius); padding: 0; width: min(560px, calc(100% - 32px)); background: var(--panel); color: var(--ink); }
   dialog::backdrop { background: rgba(0,0,0,.35); }
   .drop.over { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
@@ -1826,14 +1843,9 @@
   .ws-ptabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); }
   .ws-ptabs .n { min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px; background: var(--soft); color: var(--ink); font-size: var(--fs-micro); line-height: 17px; text-align: center; box-sizing: border-box; }
   .ws-ptabs .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
-  /* Your feedback in the workspace's side panel: the viewer's notes not sent yet, across options. */
-  .ws-drafts { list-style: none; margin: 0; padding: 8px 12px; display: grid; gap: 8px; }
-  .ws-drafts li { display: flex; gap: 8px; align-items: flex-start; padding: 8px 12px; border-radius: var(--r-sm); background: var(--warn-soft); }
-  .ws-fb-go { all: unset; flex: 1; min-width: 0; cursor: pointer; display: grid; gap: 4px; } .ws-fb-go .about { font-size: var(--fs-micro); color: var(--muted); } .ws-fb-go .tx { white-space: pre-wrap; overflow-wrap: anywhere; }
-  .ws-fb-go:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .ws-drafts .x { border: 0; background: none; color: var(--muted); cursor: pointer; font: inherit; padding: 0 4px; } .ws-drafts .x:hover { color: var(--ink); }
-  .ws-fb-bar { display: flex; gap: 8px; align-items: center; justify-content: space-between; padding: 8px 12px 16px; } .ws-fb-bar .hint { margin: 0; }
-  .ws-fb-empty { padding: 16px 12px; margin: 0; }
+  .ws-fb-items { display: grid; gap: 8px; } .ws-fb-items .dbub { border: 1px solid var(--line); margin: 0; background: var(--warn-soft); border-color: transparent; }
+  .ws-fb-bar { display: flex; gap: 8px; align-items: center; justify-content: space-between; } .ws-fb-bar .hint { margin: 0; }
+  .ws-fb-empty { margin: 0; }
   .ws-pbody { padding: 12px 16px 80px; display: grid; gap: 12px; align-content: start; }
   .sel .ws-wholebox { margin-top: 8px; background: var(--bg); }
 
@@ -1946,8 +1958,8 @@
     @keyframes dd-rise { from { opacity: 0; transform: translateY(8px); } }
     @keyframes dd-pop { from { opacity: 0; transform: translateY(-4px) scale(.97); } }
     @keyframes dd-grow { from { opacity: 0; transform: translateY(12px) scale(.96); } }
-    @keyframes dd-toast-in { from { opacity: 0; transform: translate(-50%, 10px); } }
-    @keyframes dd-toast-out { to { opacity: 0; transform: translate(-50%, 6px); } }
+    @keyframes dd-toast-in { from { opacity: 0; transform: translateY(-8px); } }
+    @keyframes dd-toast-out { to { opacity: 0; transform: translateX(8px); } }
   }
 </style>
 </head>
@@ -2335,17 +2347,17 @@
   <path class="f-e" d="M750 116 V193" marker-end="url(#fl-issue)"/><text class="f-lbl f-start" x="758" y="158">Design this</text>
   <path class="f-e" d="M660 226 H613" marker-end="url(#fl-issue)"/><text class="f-lbl" x="636" y="218">sent</text>`,
     "The plan is this sprint, the next one, the issues someone has taken and the ones labelled for design; the sprint's are sketched first. <b>Draw it</b> sketches one again now. Once the request from <b>Design this</b> goes to developers, the issue leaves the plan's filters and stays in <b>All</b> with a purple Designed dot.");
-  const FLOW_CHANGE = () => flow(760, 240, `A merged pull request: Design Desk explains it with screenshots, puts it under PR Changes${full(" and updates Product")}; its title is bold until each person opens it, a designer marks it Handled, and Adjust the design turns it into a request.`, `${flowHead("fl-change")}
+  const FLOW_CHANGE = () => flow(760, 240, `A merged pull request: Design Desk explains it with screenshots, puts it under PR Changes and updates Product; its title is bold until each person opens it, a designer marks it Handled, and Adjust the design turns it into a request.`, `${flowHead("fl-change")}
   <rect class="f-n" x="10" y="92" width="140" height="56" rx="10"/><text x="80" y="116">A change ships</text><text class="f-sub" x="80" y="134">a merged pull request</text>
   <rect class="f-n f-checking" x="200" y="92" width="160" height="56" rx="10"/><text x="280" y="116">Design Desk explains</text><text class="f-sub" x="280" y="134">what, why, screenshots</text>
   <rect class="f-n f-waiting" x="410" y="92" width="130" height="56" rx="10"/><text x="475" y="116">PR Changes</text><text class="f-sub" x="475" y="134">days are counted</text>
-  ${full(`<rect class="f-n" x="200" y="186" width="160" height="44" rx="10"/><text x="280" y="213">Product is updated</text>`)}
+  <rect class="f-n" x="200" y="186" width="160" height="44" rx="10"/><text x="280" y="213">Product is updated</text>
   <rect class="f-n" x="590" y="16" width="160" height="48" rx="10"/><text x="670" y="36">Opened</text><text class="f-sub" x="670" y="53">each of you: no longer bold</text>
   <rect class="f-n f-approved" x="590" y="96" width="160" height="48" rx="10"/><text x="670" y="116">Handled</text><text class="f-sub" x="670" y="133">a designer; the count stops</text>
   <rect class="f-n f-checking" x="590" y="176" width="160" height="48" rx="10"/><text x="670" y="196">Adjust the design</text><text class="f-sub" x="670" y="213">it becomes a request</text>
   <path class="f-e" d="M150 120 H197" marker-end="url(#fl-change)"/><text class="f-lbl" x="174" y="112">hourly</text>
   <path class="f-e" d="M360 120 H407" marker-end="url(#fl-change)"/><text class="f-lbl" x="384" y="112">posts</text>
-  ${full(`<path class="f-e f-dash" d="M280 148 V183" marker-end="url(#fl-change)"/><text class="f-lbl f-start" x="288" y="170">screens, parts</text>`)}
+  <path class="f-e f-dash" d="M280 148 V183" marker-end="url(#fl-change)"/><text class="f-lbl f-start" x="288" y="170">screens, parts</text>
   <path class="f-e" d="M540 120 C566 120 562 40 587 40" marker-end="url(#fl-change)"/><path class="f-e" d="M540 120 H587" marker-end="url(#fl-change)"/><path class="f-e" d="M540 120 C566 120 562 200 587 200" marker-end="url(#fl-change)"/>`,
     "Every change that ships gets its card with screenshots; a designer marks it handled, or adjusts its design through a new request.");
   // How it works: the processes, each as a tab's intro draws it (its flow, its steps, the buttons
@@ -2553,7 +2565,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const XCHEV = `<svg class="xchev" viewBox="0 0 16 16" aria-hidden="true"><path d="m6 4 4 4-4 4"/></svg>`;
   const BTN_ICON = {
     act: { workspace: "pen", explore: "spark", build: (el) => /another option/.test(textOf(el)) ? "undo" : "screen", approve: () => S.card?.kind === "request" && !(S.card.variants || []).length ? "send" : "check", "approve-dev": "code",
-      reopen: "undo", revise: "redo", close: "cross", states: "layers", slack: "send", unqueue: "minus",
+      reopen: "undo", "take-back": "undo", revise: "redo", close: "cross", states: "layers", slack: "send", unqueue: "minus",
       draw: "pen", refresh: "redo", history: "clock", "figma-import": "down", "figma-export": "up" },
     size: { small: "bolt", designer: () => simple() ? "send" : "person" }, stage: { design: "send", proposal: "send" }, specSend: "send",
     adjust: "pen", addShots: "image", wsEdit: "pen", wsBuild: "screen",
@@ -2732,12 +2744,41 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // A designer, a PM or a UI dev owner approves at any step once it is checked (docs/desk.md → Deciding straight away).
   const canApprove = (c) => can("approve") || (!(c.conflicts || []).some((x) => x.status === "active")
     && (can("skip") || (Boolean(c.size?.small) && DEVELOPERS.includes(S.me?.role) && !filedIt(c))));
+  // An approval taken back while its spec is still on the Desk: by whoever may approve the request
+  // (docs/desk.md → Taking an approval back). Once sent, only an admin's Reopen… goes back.
+  const takesBack = (c) => c?.kind === "request" && Boolean(c.approved) && !["declined", "handed-off"].includes(c.status) && !(c.spec?.sent || c.spec?.review === "sent") && canApprove(c);
   const contact = () => S.me?.contact || "the Desk's owner";
   const when = (iso) => { if (!iso) return ""; const d = new Date(iso); return d.toLocaleString("en", { dateStyle: "medium", timeStyle: "short" }); };
   const day = (iso) => (iso ? new Date(iso).toLocaleDateString("en", { dateStyle: "medium" }) : "");
   // A day said as people say it: Today, Yesterday, else its date.
   const dayWord = (iso) => { const d = new Date(iso), t = new Date(), y = new Date(t); y.setDate(t.getDate() - 1); const same = (a, b) => a.toDateString() === b.toDateString(); return same(d, t) ? "Today" : same(d, y) ? "Yesterday" : day(iso); };
-  const toast = (msg) => { const el = document.createElement("div"); el.className = "toast"; el.textContent = msg; (document.querySelector("dialog[open]") || document.body).append(el); setTimeout(() => el.remove(), 4800); };
+  // A toast (desk/guidelines.html → The toast): at the top right of the open dialog or the page,
+  // newest on top, three at most; ✕ closes it, and it goes by itself after a few seconds.
+  // Show all shows only where a note's words are cut off, measured after each redraw.
+  function dtxMeasure() {
+    for (const t of document.querySelectorAll(".dtx")) {
+      const b = t.nextElementSibling; if (!b?.matches(".dtx-more")) continue;
+      const open = t.classList.contains("open");
+      let cut = t.scrollHeight > t.clientHeight + 1;
+      if (open) { t.classList.remove("open"); cut = t.scrollHeight > t.clientHeight + 1; t.classList.add("open"); }
+      if (b.hidden === cut) b.hidden = !cut;
+      const say = open ? "Show less" : "Show all"; if (b.textContent !== say) b.textContent = say;
+    }
+  }
+  let dtxQueued = false;
+  new MutationObserver(() => { if (dtxQueued) return; dtxQueued = true; requestAnimationFrame(() => { dtxQueued = false; dtxMeasure(); }); }).observe(document.body, { childList: true, subtree: true });
+  const toast = (msg) => {
+    const host = document.querySelector("dialog[open]") || document.body;
+    let box = [...host.children].find((x) => x.classList.contains("toasts"));
+    if (!box) { box = document.createElement("div"); box.className = "toasts"; box.setAttribute("role", "status"); box.setAttribute("aria-live", "polite"); host.append(box); }
+    const el = document.createElement("div"); el.className = "toast";
+    el.innerHTML = `<span class="t-m"></span><button type="button" class="t-x" aria-label="Close this message" title="Close"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`;
+    el.firstChild.textContent = msg;
+    el.lastChild.addEventListener("click", () => el.remove());
+    box.prepend(el);
+    while (box.children.length > 3) box.lastChild.remove();
+    setTimeout(() => el.remove(), 4800);
+  };
   const fail = (e) => { if (!(e instanceof Said)) console.error(e); toast(e instanceof Said ? e.message : `Something went wrong. Try again; if it keeps happening, tell ${contact()}.`); };
   const guard = (fn) => async (...a) => { try { await fn(...a); } catch (e) { fail(e); } };
   // A send that fails opens its dialog again with what the person typed; the toast says why.
@@ -2756,11 +2797,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // You opened a request's parts for a developer (Contact a developer): its step moves on, for you.
   const devAsked = (c) => store.get(`desk-dev-asked:${c.id}`) === "1";
   // Simple mode (a switch in your menu, kept for you on the Desk) is review-first: one list of
-  // requests and changes with three states (simpleState, below). Besides, it hides: Designs, People,
-  // Product and Issues leave the tabs, a sent request its Show the design, Product's pages their bar, the presentation its page and buttons,
+  // requests and changes with three states (simpleState, below). Besides, it hides: Designs, People
+  // and Issues leave the tabs (Product stays, every page of it), a sent request its Show the design, the presentation its page and buttons,
   // and a request its buttons that build a live prototype and an option its Why it looks like
   // this strip (the design workspace keeps it). A link to anything in them still opens it: a D-3 in a request opens the decision.
-  const SIMPLE_HIDES = ["designs", "issues", "product", "people"];
+  const SIMPLE_HIDES = ["designs", "issues", "people"];
   // The tabs simple mode hides from this viewer: none from an admin, for now, who keeps every page
   // (docs/desk-page.md → Simple mode).
   const tabsHidden = () => (simple() && S.me?.role !== "admin" ? SIMPLE_HIDES : []);
@@ -3368,7 +3409,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const opens = reviews.length ? simpleCards({ states: reviews, kinds: SIM_KINDS.map(([k]) => k), who: "all" }).length : 0;
     const one = `<button data-tab="requests" aria-current="${S.tab === "requests" || S.tab === "new"}" class="main">Requests &amp; PRs${opens ? `<span class="count" title="${opens} in ${esc(reviews.map((k) => SIM_PILL[k]).join(" or "))}">${opens}</span>` : ""}</button>`;
     // An admin keeps every page in simple mode, for now; Requests & PRs stands for Requests and PR Changes.
-    const html = simple() ? (tabsHidden().length ? one : [one, ...[...designs, [["issues", openIssues]], [["product"], ["people"]]].map((group) => group.map(tab).join(""))].join(sep)) : [[["requests", open.length, asks && plural(asks, "request waits", "requests wait") + " for an answer"]], ...designs, [["new", unseen], ["issues", openIssues]], [["product"], ["people"]]]
+    // Product stays in simple mode, with all of its pages (docs/desk-page.md → Simple mode).
+    const html = simple() ? (tabsHidden().length ? [one, tab(["product"])].join(sep) : [one, ...[...designs, [["issues", openIssues]], [["product"], ["people"]]].map((group) => group.map(tab).join(""))].join(sep)) : [[["requests", open.length, asks && plural(asks, "request waits", "requests wait") + " for an answer"]], ...designs, [["new", unseen], ["issues", openIssues]], [["product"], ["people"]]]
       .map((group) => group.map(tab).join("")).join(sep);
     // The poll redraws the menu every few seconds: an unchanged menu is left as it is, so a
     // tooltip stays open and keyboard focus stays where it was.
@@ -3559,6 +3601,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     return lines.sort((a, b) => a.top - b.top);
   }
   addEventListener("resize", clampBriefs);
+  // Show all follows the width too, and the fonts once loaded (a note cut at three lines).
+  addEventListener("resize", () => dtxMeasure());
+  document.fonts?.ready.then(() => dtxMeasure());
 
   // What waits for a designer, and why (docs/desk.md → Needs a designer): a change until you
   // saw it or a designer marked it handled, and a request until it is closed.
@@ -3796,7 +3841,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const url = change ? src.url : c.spec?.issue_url || c.spec?.pr_url || "";
     const items = [change ? (can("follow-up") && !hasRequest(c) ? btn("data-adjust", "Turn into a design request") : "") + (handledAt(c) && mayHandle(c) ? btn('data-handle="0"', "Undo approval") : "")
         : closed(c) ? shipMove(c) + ((c.status === "handed-off" ? S.me?.role === "admin" : can("reopen") || closesStaged(c)) ? btn('data-act="reopen"', "Reopen") : "")
-        : stageMore + ((preDesign(c) ? closesStaged(c) : can("close") || can("skip")) ? btn('data-act="close"', "Close…") : ""),
+        : stageMore + (takesBack(c) ? btn('data-act="take-back"', "Back to feedback…") : "") + ((preDesign(c) ? closesStaged(c) : can("close") || can("skip")) ? btn('data-act="close"', "Close…") : ""),
       url ? `<a class="btn" href="${safeUrl(url)}" target="_blank" rel="noopener noreferrer">Open on GitHub ↗</a>` : ""].join("");
     const more = items ? `<details class="more sh-more"><summary class="btn" aria-label="More" title="More">⋯</summary><div class="menu">${items}</div></details>` : "";
     return `<div class="shead"><div class="sh-main"><h2>${kindIcon(c)}<span class="sh-t" title="${esc(sTitle(c))}">${txt(sTitle(c))}</span>${num(c)}${titleLink(c)}</h2>
@@ -3894,7 +3939,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // drawing, until the feedback is sent; each becomes a note with its values then (docs/desk.md → Reviews).
   const lookFeedback = (c) => c?.kind === "request" ? Object.entries(S.ws.looks || {}).filter(([k]) => k.startsWith(`${c.id}|`))
     .flatMap(([key, all]) => Object.entries(all).filter(([, e]) => e.fb && changeCount(e)).map(([selector, e]) => ({ key, selector, e }))) : [];
-  const lookBubble = (x, remove = true) => `<div class="dbub"><div class="db-b"><span class="about">Look of ${esc(x.e.label)} · this browser</span>${esc(changeWords(x.e).join("; "))}</div>${remove ? `<button class="x" data-look-unfb="${esc(`${x.key}\n${x.selector}`)}" aria-label="Take this look edit out of your feedback" title="Take it out of your feedback; the edit stays in the design">✕</button>` : ""}</div>`;
+  // A note's words in the feedback: three lines at most, Show all where more is cut off; the
+  // browser keeps which ones are open until the page reloads (docs/desk-page.md → Submit feedback).
+  const noteWords = (id, html) => `<span class="dtx${S.dtxOpen?.has(id) ? " open" : ""}" data-dtx="${esc(id)}">${html}</span><button type="button" class="link dtx-more" data-dtx-more="${esc(id)}" hidden>${S.dtxOpen?.has(id) ? "Show less" : "Show all"}</button>`;
+  const lookBubble = (x, remove = true) => `<div class="dbub"><div class="db-b"><span class="about">Look of ${esc(x.e.label)} · this browser</span>${noteWords(`look:${x.key}\n${x.selector}`, esc(changeWords(x.e).join("; ")))}</div>${remove ? `<button class="x" data-look-unfb="${esc(`${x.key}\n${x.selector}`)}" aria-label="Take this look edit out of your feedback" title="Take it out of your feedback; the edit stays in the design">✕</button>` : ""}</div>`;
   const feedbackCount = (c) => draftsOf(c).length + lookFeedback(c).length;
   // Full mode's Questions and comments, while drafts wait: each one, and Submit feedback to send them.
   // Simple mode has no such box: Submit feedback in the head holds them (docs/desk-page.md → Simple mode).
@@ -3924,8 +3972,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // `where`: the head, a dialog's head, or full mode's Questions and comments; one panel is open at a time.
   function fbButton(c, where) {
     const vs = verdictsFor(c), n = notesWaiting(c), g = marksWaiting(c);
-    // Someone who may only comment gets it only once something of theirs waits to be sent.
-    if (!vs.length || (!n && !g && vs.every((x) => x.id === "comment"))) return "";
+    // Someone who may only comment gets it only once something of theirs waits to be sent; so does
+    // anyone on an approved request, whose way back without a note is ⋯ → Back to feedback.
+    const quiet = c.kind === "request" && Boolean(c.approved) ? ["comment", "request-changes"] : ["comment"];
+    if (!vs.length || (!n && !g && vs.every((x) => quiet.includes(x.id)))) return "";
     const v = fbPick(c), open = S.fb?.card === c.id && S.fb.where === where;
     const counts = `${n ? `<span class="cnt" title="${esc(plural(n, "note waits", "notes wait"))} to be sent">${fbSvg("pen")}${n}</span>` : ""}${g ? `<span class="cnt" title="${esc(plural(g, "mark", "marks"))}: changes marked Looks good, differences from Figma marked fine as it is">${fbSvg("checkOnly")}${g}</span>` : ""}`;
     const says = { ok: "approves it", rc: "asks for changes", c: "only comments" }[VERDICT_TONE[v]];
@@ -3934,10 +3984,13 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // A note in the panel: what it is about (a change's opens it) and ✕.
   function fbItem(c, d) {
     const about = draftAbout(c, d), jump = d.change && c.kind === "change" && changesOf(c).some((x) => x.key === d.change);
-    const head = about ? (jump ? `<button class="link about" data-chg-open="${esc(d.change)}" title="Opens this change">${esc(about)}</button>` : `<span class="about">${esc(about)}</span>`) : "";
+    // In the design workspace a note on a design shows its option, state and part.
+    const go = !jump && S.ws.open && c.kind === "request" && (d.work_in ? workInOf(c, d)?.anchor : d.anchor)?.variant;
+    const head = about ? (jump ? `<button class="link about" data-chg-open="${esc(d.change)}" title="Opens this change">${esc(about)}</button>`
+      : go ? `<button class="link about" data-ws-draft-go="${esc(d.id)}" title="Shows where it is">${esc(about)}</button>` : `<span class="about">${esc(about)}</span>`) : "";
     const fig = d.figma ? `<span class="about fig-about">${FIG_TAG}${d.fine ? " · fine as it is" : d.edited ? " · in your words" : ""}</span>` : "";
     const words = d.fine ? `<b>${esc(d.figma)}</b>: ${esc(figDiff(c, d.figma)?.what || "")}` : d.ok ? "✓ Looks good" : d.work_in ? esc(workInWords(c, d)) : esc(d.text);
-    return `<div class="dbub${d.ok || d.fine ? " ok" : ""}${d.figma ? " fig" : ""}"><div class="db-b">${head}${fig}${words}</div><button class="x" data-draft-del="${esc(d.id)}" aria-label="${d.ok ? "Take back this Looks good" : d.fine ? "Take back Fine as it is" : "Remove this comment from your feedback"}" title="${d.ok ? "Takes back your Looks good" : d.fine ? "Takes back Fine as it is: the difference waits on its change again" : "Remove from your feedback"}">✕</button></div>`;
+    return `<div class="dbub${d.ok || d.fine ? " ok" : ""}${d.figma ? " fig" : ""}"><div class="db-b">${head}${fig}${noteWords(d.id, words)}</div><button class="x" data-draft-del="${esc(d.id)}" aria-label="${d.ok ? "Take back this Looks good" : d.fine ? "Take back Fine as it is" : "Remove this comment from your feedback"}" title="${d.ok ? "Takes back your Looks good" : d.fine ? "Takes back Fine as it is: the difference waits on its change again" : "Remove from your feedback"}">✕</button></div>`;
   }
   function fbPanel(c, v) {
     const ds = draftsOf(c), looks = lookFeedback(c), vs = verdictsFor(c), x = vs.find((y) => y.id === v) || vs[0], n = notesWaiting(c);
@@ -3958,14 +4011,45 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       <div class="fb-h"><b>Your feedback</b><span class="hint">${ds.length || looks.length ? "not sent yet · only you see it" : "nothing yet"}</span></div>
       <div class="fb-b">${prog}${figLeft}${items}${onlyChanges}
         <div class="fb-vs" role="radiogroup" aria-label="What your feedback says">${vs.map((y) => `<button type="button" role="radio" aria-checked="${y.id === x.id}" data-fb-v="${y.id}" data-v="${VERDICT_TONE[y.id]}" title="${esc(y.hint)}">${fbSvg(FB_ICON[y.id])}${esc(y.name)}</button>`).join("")}</div>
-        <p class="hint fb-hint">${esc(x.hint)}</p>${pr}
-        <textarea id="fb-note" placeholder="A note for the whole feedback (optional)" aria-label="A note for the whole feedback">${esc(S.fb?.note || "")}</textarea>
-        <div class="fb-send"><button type="button" class="btn fbk" data-fb-send data-v="${VERDICT_TONE[x.id]}" title="Sends your feedback: ${esc(x.name)}">${fbSvg(FB_ICON[x.id])}${esc(label)}</button><button type="button" class="btn" data-fb-close title="Closes this panel; your notes stay, not sent">Keep drafting</button></div></div></div>`;
+        <p class="hint fb-hint">${esc(x.hint)}</p>${fbOptions(c, x.id)}${pr}
+        <textarea id="fb-note" placeholder="A note for the whole feedback (optional)" aria-label="A note for the whole feedback">${esc(S.fb?.note || "")}</textarea></div>
+      <div class="fb-send"><button type="button" class="btn fbk" data-fb-send data-v="${VERDICT_TONE[x.id]}" title="Sends your feedback: ${esc(x.name)}">${fbSvg(FB_ICON[x.id])}${esc(label)}</button><button type="button" class="btn" data-fb-close title="Closes this panel; your notes stay, not sent">Keep drafting</button></div></div>`;
+  }
+  // Which design an approval is for, in simple mode: picked in the panel, the option shown on the page
+  // to begin with; never for a request with one option, or one whose live prototype names it.
+  function fbOption(c, verdict) {
+    const vs = c.variants || [];
+    if (!simple() || c.kind !== "request" || !["approve", "approve-dev"].includes(verdict) || vs.length < 2 || livePick(c)) return null;
+    return [S.fb?.option, S.variant].find((id) => vs.some((v) => v.id === id)) || vs[0].id;
+  }
+  function fbOptions(c, verdict) {
+    const pick = fbOption(c, verdict);
+    if (!pick) return "";
+    return `<div class="fb-opt"><b id="fb-opt-l">Which design?</b><div class="fb-vs fb-os" role="radiogroup" aria-labelledby="fb-opt-l">${(c.variants || []).map((v, i) => `<button type="button" role="radio" aria-checked="${v.id === pick}" data-fb-opt="${esc(v.id)}" title="${esc(`Approve option ${i + 1}, ${v.name}`)}"><span class="fb-no">${i + 1}</span><span class="fb-on">${esc(v.name)}</span></button>`).join("")}</div></div>`;
   }
   // The panel follows a redraw of what holds it; one open at a time, closed by Esc or a click outside it.
-  function fbToggle(c, where) { S.fb = S.fb?.card === c.id && S.fb.where === where ? null : { card: c.id, where, pick: S.fb?.card === c.id ? S.fb.pick : null, note: S.fb?.card === c.id ? S.fb.note : "" }; fbRedraw(); }
-  function fbClose() { if (!S.fb) return false; S.fb = { card: S.fb.card, where: null, pick: S.fb.pick, note: S.fb.note }; fbRedraw(); return true; }
-  function fbRedraw() { renderDetail(); }
+  function fbToggle(c, where) { S.fb = S.fb?.card === c.id && S.fb.where === where ? null : { card: c.id, where, pick: S.fb?.card === c.id ? S.fb.pick : null, option: S.fb?.card === c.id ? S.fb.option : null, note: S.fb?.card === c.id ? S.fb.note : "" }; fbRedraw(); }
+  function fbClose() { if (!S.fb) return false; S.fb = { card: S.fb.card, where: null, pick: S.fb.pick, option: S.fb.option, note: S.fb.note }; fbRedraw(); return true; }
+  // Opening, closing or changing the panel changes nothing outside it: only each Submit feedback and
+  // its panel are drawn again, so what the person typed elsewhere on the page stays, as do focus and
+  // scroll (docs/desk-page.md → Submit feedback). Focus inside one stays on the same control, else on
+  // its button.
+  function fbRedraw() {
+    const c = S.card;
+    if (!c) return;
+    const a = document.activeElement;
+    for (const w of document.querySelectorAll(".fbw")) {
+      const where = w.querySelector(":scope > [data-fb]")?.dataset.fb;
+      if (!where) continue;
+      const t = document.createElement("template");
+      t.innerHTML = fbButton(c, where);
+      const n = t.content.firstElementChild;
+      if (n) w.replaceWith(n); else w.remove();
+      if (!n || !w.contains(a)) continue;
+      const same = a.dataset.fbV ? `[data-fb-v="${CSS.escape(a.dataset.fbV)}"]` : a.dataset.fbOpt ? `[data-fb-opt="${CSS.escape(a.dataset.fbOpt)}"]` : null;
+      (same && n.querySelector(same) || n.querySelector(":scope > [data-fb]")).focus({ preventScroll: true });
+    }
+  }
   document.addEventListener("input", (e) => { if (e.target.id === "fb-note" && S.fb) S.fb.note = e.target.value; });
   document.addEventListener("input", (e) => { if (e.target.closest?.(".sreply") && e.target.dataset.reply === S.replyOpen) S.replyText = e.target.value; });
   document.addEventListener("click", (e) => { if (S.fb?.where && !e.target.closest?.(".fbw")) fbClose(); }, true);
@@ -3976,11 +4060,12 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     await loadDrafts(c, true);
     if (!S.drafts[c.id]) { toast("Your draft comments could not be read. Try again in a moment; nothing was sent."); return false; }
     const ds = draftsOf(c), looks = lookFeedback(c), empty = !ds.length && !looks.length && !note;
-    const approving = verdict === "approve" || verdict === "approve-dev";
+    const approving = verdict === "approve" || verdict === "approve-dev", option = fbOption(c, verdict);
     if (empty && !approving) { toast("Write a comment or a note first."); return false; }
     // Approving a request is today's approval, its own questions included; the review goes with it.
+    // The option picked in the panel is the one approved: its dialog asks for none.
     if (c.kind === "request" && approving) {
-      await act(verdict);
+      await act(verdict, { variant: option });
       const { card } = await api("GET", `/api/cards/${encodeURIComponent(c.id)}`);
       if (!card.approved) return false;
       S.fb = null;
@@ -3999,7 +4084,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       delete e.fb;
     }
     const sent = approving ? "approve" : verdict;
-    const r = await api("POST", `/api/cards/${encodeURIComponent(c.id)}/reviews`, { verdict: sent, note, ...(S.variant ? { variant: S.variant } : {}) });
+    const r = await api("POST", `/api/cards/${encodeURIComponent(c.id)}/reviews`, { verdict: sent, note, ...(option || S.variant ? { variant: option || S.variant } : {}) });
     for (const x of looks) { if (x.key === S.ws.shown) lookSent(x.selector); else delete S.ws.looks[x.key]?.[x.selector]; }
     S.drafts[c.id] = []; S.fb = null;
     toast(sent === "request-changes" && c.kind === "request" ? "Feedback sent. Design Desk draws the next version; this page updates by itself."
@@ -4023,14 +4108,16 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const open = ["open", "proposal"].includes(simpleState(c, true)?.state) || Boolean(c.responsible);
     const out = [];
     if (c.kind === "request") {
-      if (can("change") && (c.variants || []).length && !locked(c) && !closed(c)) out.push({ id: "request-changes", name: "Request changes", hint: "Design Desk draws the next version from your comments." });
+      // Approved: Request changes takes the approval back first, for whoever may approve it.
+      if (can("change") && (c.variants || []).length && !closed(c) && (!c.approved || takesBack(c))) out.push({ id: "request-changes", name: "Request changes", hint: c.approved ? "It goes back to feedback: the approval and its spec draft are taken back, and Design Desk draws the next version from your comments." : "Design Desk draws the next version from your comments." });
       // In Dev review after design opened, the approval is Approve for dev; before design, the UI dev
       // owner's Approve for dev is the only one (docs/desk.md → Draft and Proposal).
       const dev = simpleState(c, true)?.state === "proposal";
       if (open && !preDesign(c) && !specInReview(c) && canApprove(c) && (c.triage || (c.variants || []).length) && !closed(c)) out.push({ id: "approve", name: dev ? "Approve for dev" : "Approve", hint: dev ? "It goes to In dev, without a designer; your comments go with it." : "You approve the request; your comments go with it." });
       if (preDesign(c) && !closed(c) && stageMoves(c)[2]) out.push({ id: "approve-dev", name: "Approve for dev", hint: "It goes to In dev at once, without a designer; your comments go with it." });
-    } else if (mayHandle(c) && !c.source?.merged_at && c.status !== "archived") {
-      out.push({ id: "request-changes", name: "Request changes", hint: S.me?.review_post ? "The developer makes the next version; your feedback goes to the pull request." : "The developer makes the next version." });
+    } else if (mayHandle(c) && c.status !== "archived") {
+      // Merged: no next version to ask for, but a change nobody handled yet may still be approved.
+      if (!c.source?.merged_at) out.push({ id: "request-changes", name: "Request changes", hint: S.me?.review_post ? "The developer makes the next version; your feedback goes to the pull request." : "The developer makes the next version." });
       if (!c.handled) out.push({ id: "approve", name: "Approve", hint: "Design is done with this change." });
     }
     if (can("comment")) out.push({ id: "comment", name: "Comment only", hint: "Your comments, with nothing else changed." });
@@ -6245,7 +6332,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const redraw = closed(c) || locked(c) || protoDown(c) || !can("revise") || !(c.variants || []).length ? "" : `<button class="btn" data-act="revise">Redraw the options with all comments</button>`;
     // Sending to Slack happens once in a request's life: it waits here, and in the design workspace's bar.
     const slack = c.status === "feedback" && slackModes(c).length ? `<button class="btn" data-act="slack">Send to Slack…</button>` : "";
-    const items = (preDesign(c) === "draft" ? "" : slack) + (preDesign(c) ? "" : call + size) + reopenSent + del + redraw + (locked(c) && can("request") ? `<button class="btn" data-adjust>New request from this…</button>` : "");
+    const back = takesBack(c) ? `<button class="btn" data-act="take-back" title="Takes the approval back: the request goes back to feedback and the design can change again; the spec draft is kept for the next approval">Back to feedback…</button>` : "";
+    const items = (preDesign(c) === "draft" ? "" : slack) + (preDesign(c) ? "" : call + size) + back + reopenSent + del + redraw + (locked(c) && can("request") ? `<button class="btn" data-adjust>New request from this…</button>` : "");
     return items ? `<details class="more"><summary class="btn" aria-label="More">⋯</summary><div class="menu">${items}</div></details>` : "";
   }
   // Whose turn it is, said the same way in every state: Design Desk while it works or is about to,
@@ -6487,7 +6575,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (!S.variant || !vs.some((v) => v.id === S.variant)) S.variant = (favourite(c) || vs[0]).id;
     const v = vs.find((x) => x.id === S.variant);
     const mine = myVote(c, v.id);
-    return `<h3>Design options${locked(c) ? ` <span class="hint locked-note">🔒 Approved: this design no longer changes. To change it, ${can("request") ? `<button class="anchor-text" data-adjust>start a new request from this one</button>` : "start a new request from this one"}.</span>` : ""}</h3>
+    return `<h3>Design options${locked(c) ? ` <span class="hint locked-note">🔒 Approved: this design no longer changes. To change it, ${takesBack(c) ? "take it back to feedback under ⋯ while the spec is still here, or " : ""}${can("request") ? `<button class="anchor-text" data-adjust>start a new request from this one</button>` : "start a new request from this one"}.</span>` : ""}</h3>
       <div class="tabs vtabs vrow utabs" role="group" aria-label="Design options"><div class="vscroll">${splitTab(c)}${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${!splitOf(c)?.on && x.id === v.id}"${optionMark(c, x.id)}${x.asset ? ` draggable="true" title="Shows this design option; drag it onto the panel below to set it beside another"` : ""}><span class="ono">${vs.indexOf(x) + 1}</span><span class="vname" title="${esc(x.name)}">${esc(x.name)}</span>${(x.version || 1) > 1 ? ` <span class="chip" title="Design Desk changed this option ${x.version - 1} ${x.version === 2 ? "time" : "times"}; this is its latest version, version ${x.version}" aria-label="version ${x.version}">v${x.version}</span>` : ""}${c.live_pick?.variant === x.id && (["building", "live"].includes(c.prototype?.state) || working(c).includes("build")) ? ` <span class="chip info" title="The option the live prototype is built from">▶ Goes live</span>` : ""}${closeTab(c, x)}</button>`).join("")}${addOptionTab(c)}</div>${wsTab0(c)}</div>
       ${splitOf(c)?.on ? `<div class="vpanel">${designBox(c, v)}${dropLayer(c)}</div>` : `<div class="vpanel">
       ${v.fidelity === "picture" ? `<p class="hint">Pictures added by ${v.by ? who(v.by) : "a person"}; Design Desk drew nothing.</p>` : ""}
@@ -6548,6 +6636,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   }
 
   // Which option, at which version and with which states, a person sent to be built.
+  // The option a live prototype shows, when it is the one an approval is for (`live_pick`).
+  const livePick = (c) => (["prototype", "testing"].includes(c.status) || c.prototype?.state === "live") && (c.variants || []).some((v) => v.id === c.live_pick?.variant);
   function livePickLine(c) {
     const l = c.live_pick;
     if (!l) return "";
@@ -7711,7 +7801,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // Every button that opens the design workspace carries its mark, so it reads as the same way in.
   const wsMark = () => `<svg class="ico ws-mark" viewBox="0 0 24 24" aria-hidden="true">${ICONS.workspace}</svg>`;
 
-  // The bar on top: the request, what Design Desk does on it now, Figma, and the one way out.
+  // The bar on top: the request, what Design Desk does on it now, Figma, Submit feedback (as in
+  // every dialog's head, docs/desk-page.md → Submit feedback) and the one way out.
   function wsTop(c, v) {
     const busy = [v, ...(c.variants || []).filter((x) => x.id !== v.id)].flatMap((x) => busyOn(c, x.id).map((w) => ({ ...w, on: x.name }))).concat(working(c).includes("explore") ? [{ state: "claimed", what: "Drawing a new option" }] : [])
       .concat((c.waiting || []).filter((w) => w.kind === "figma" && !w.variant && !workDone(c, w)).map((w) => ({ ...w, what: "Bringing a frame in from Figma" })));
@@ -7721,7 +7812,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const title = S.ws.check ? `<span class="title">Final check: ${esc(v.name)} goes live</span><span class="chip" title="The version that goes live">version ${esc(v.version || 1)}</span>`
       : `<span class="title" title="${esc(c.title)}">${esc(c.title)}</span><span class="vsep" aria-hidden="true"></span>`;
     const opts = S.ws.check ? "" : `<div class="ws-opts" role="tablist" aria-label="Design options"><span class="k">Option</span><span class="ws-seg">${(c.variants || []).map((x, i) => wsTab(c, x, i, x.id === v.id)).join("")}</span>${wsAddOption(c)}</div>`;
-    return `${title}${opts}<span class="grow"></span>${agent}${figBtn}${!S.ws.check && c.status === "feedback" && slackModes(c).length ? `<button class="btn ws-slack" data-act="slack">Send to Slack…</button>` : ""}<button type="button" class="dlg-x" data-ws-close aria-label="Close the design workspace">✕</button>`;
+    return `${title}${opts}<span class="grow"></span>${agent}${figBtn}${!S.ws.check && c.status === "feedback" && slackModes(c).length ? `<button class="btn ws-slack" data-act="slack">Send to Slack…</button>` : ""}${S.ws.check ? "" : fbButton(c, "ws")}<button type="button" class="dlg-x" data-ws-close aria-label="Close the design workspace">✕</button>`;
   }
 
   // An option's tab: its number and name, a spinner while Design Desk changes it (a clock while it waits to), its open comments.
@@ -7841,19 +7932,21 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const panel = S.ws.panel || "comments";
     const kept = ["#ws-whole", "#ws-part"].map((q) => { const b = $(q); return { q, focus: document.activeElement === b, value: b?.value || "", caret: b ? [b.selectionStart, b.selectionEnd] : null }; });
     const open = notesOf(c).filter((n) => n.anchor.variant === v.id && n.state !== "resolved").length;
-    side.innerHTML = `<div class="ws-ptabs" role="tablist"><button role="tab" data-ws-panel="comments" aria-selected="${panel === "comments"}">Comments${open ? `<span class="n">${open}</span>` : ""}</button><button role="tab" data-ws-panel="props" aria-selected="${panel === "props"}">Properties${S.ws.selected ? `<span class="dot" title="A part is selected"></span>` : ""}</button>${can("comment") && !c.send ? `<button role="tab" data-ws-panel="feedback" aria-selected="${panel === "feedback"}">Your feedback${feedbackCount(c) ? `<span class="n">${feedbackCount(c)}</span>` : ""}</button>` : ""}</div>
-      <div class="ws-pbody">${panel === "comments" ? renderWsNotes(c, v, old) : panel === "feedback" ? renderWsFeedback(c) : wsProps(c, v, old)}</div>`;
+    side.innerHTML = `<div class="ws-ptabs" role="tablist"><button role="tab" data-ws-panel="comments" aria-selected="${panel === "comments"}">Comments${open ? `<span class="n">${open}</span>` : ""}</button><button role="tab" data-ws-panel="props" aria-selected="${panel === "props"}">Properties${S.ws.selected ? `<span class="dot" title="A part is selected"></span>` : ""}</button>${wsFeedbackTab(c) ? `<button role="tab" data-ws-panel="feedback" aria-selected="${panel === "feedback"}">Your feedback${feedbackCount(c) ? `<span class="n">${feedbackCount(c)}</span>` : ""}</button>` : ""}</div>
+      <div class="ws-pbody">${panel === "props" ? wsProps(c, v, old) : panel === "feedback" && wsFeedbackTab(c) ? renderWsFeedback(c) : renderWsNotes(c, v, old)}</div>`;
     for (const k of kept) { const b = $(k.q); if (!b) continue; b.value = k.value; if (k.focus) { b.focus(); b.setSelectionRange(k.caret[0], k.caret[1]); } }
     loadPictures(side);
   }
 
-  // Your feedback in the workspace: every note of the viewer's on this request waiting to be sent,
-  // across its options; a click shows its option and part; Send feedback… opens the page's dialog.
+  // Your feedback in the workspace: where the viewer's notes gather as they add them, across options,
+  // the same boxes as in Submit feedback's panel; Submit feedback… opens that panel on the bar on top.
+  const wsFeedbackTab = (c) => can("comment") && !c.send;
   function renderWsFeedback(c) {
-    const ds = draftsOf(c), looks = lookFeedback(c);
-    if (!ds.length && !looks.length) return `<p class="hint ws-fb-empty">Nothing in your feedback yet. Add to feedback keeps a note here until you send it.</p>`;
-    return `<ul class="ws-drafts">${ds.map((d) => `<li><button class="ws-fb-go" data-ws-draft-go="${esc(d.id)}" title="Shows where it is">${draftAbout(c, d) ? `<span class="about">${esc(draftAbout(c, d))}</span>` : ""}<span class="tx">${esc(d.work_in ? workInWords(c, d) : d.text || "")}</span></button><button class="x" data-draft-del="${esc(d.id)}" aria-label="Remove this comment from your feedback" title="Remove from your feedback">✕</button></li>`).join("")}${looks.map((x) => `<li><span class="ws-fb-go"><span class="about">Look of ${esc(x.e.label)} · this browser</span><span class="tx">${esc(changeWords(x.e).join("; "))}</span></span><button class="x" data-look-unfb="${esc(`${x.key}\n${x.selector}`)}" aria-label="Take this look edit out of your feedback" title="Take it out of your feedback; the edit stays in the design">✕</button></li>`).join("")}</ul>
-      <div class="ws-fb-bar"><span class="hint">${esc(plural(ds.length + looks.length, "note", "notes"))}, seen by you alone</span><button class="btn primary" data-review="">Send feedback…</button></div>`;
+    const ds = draftsOf(c), looks = lookFeedback(c), n = ds.length + looks.length;
+    const send = fbButton(c, "ws") ? `<button type="button" class="btn primary" data-fb="ws" title="Opens Submit feedback on the bar on top, to send it with a verdict">Submit feedback…</button>` : "";
+    if (!n) return `<p class="hint ws-fb-empty">Nothing in your feedback yet. Add to feedback keeps a note here until you send it with Submit feedback.</p>`;
+    return `<div class="fb-items ws-fb-items">${ds.map((d) => fbItem(c, d)).join("")}${looks.map((x) => lookBubble(x)).join("")}</div>
+      <div class="ws-fb-bar"><span class="hint">${esc(plural(n, "note", "notes"))}, seen by you alone</span>${send}</div>`;
   }
 
   function wsProps(c, v, old) {
@@ -8651,7 +8744,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   }
 
   // ---------- events ----------
-  async function act(name) {
+  async function act(name, { variant = null } = {}) {
     const c = S.card;
     // Approve for dev: the approval, sent For Developers out of a request's stage (docs/desk.md → Draft and Proposal).
     const forDev = name === "approve-dev";
@@ -8681,6 +8774,14 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       await refreshList(); renderDetail(); return;
     }
     const post = (note, more = {}) => api("POST", `/api/cards/${c.id}/actions`, { action: name, note, ...more });
+    // Back to feedback, knowingly: the approval goes, the spec draft waits for the next one.
+    if (name === "take-back") {
+      const by = c.approved?.by?.email && !isMe(c.approved.by.email) ? shortName(c.approved.by.email, c.approved.by.name) : "";
+      const r = await ask({ title: "Take the approval back?", body: `It goes back to the step it was approved at, with its design options, and the design can change again${by ? `; ${by} approved it and hears of it` : ""}. The spec draft is kept: the next approval's spec starts from it. Nothing has gone to developers yet.`, ok: "Back to feedback", send: () => post() });
+      if (!r) return;
+      toast("Back to feedback. The design can change again.");
+      await refreshList(); await openCard(c.id); return;
+    }
     // A request sent to developers reopens only knowingly: its approval goes, GitHub keeps what it got.
     if (name === "reopen" && c.status === "handed-off") {
       const r = await ask({ title: "Reopen a request sent to developers?", body: "It goes back to before the team's vote, with its design options; its approval goes and the design can change again. Its record on Designs closes; a new approval sends it again, with a new record. The issue or pull request on GitHub stays as it is: tell the developers there.", ok: "Reopen", send: () => post() });
@@ -8696,8 +8797,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       const against = [...new Set((c.conflicts || []).filter((x) => x.status === "active").map((x) => x.decision))];
       // A live prototype's option is the one approved; before options, the spec comes from the request.
       // What the live prototype shows: `live_pick`'s option at its version.
-      const built = (["prototype", "testing"].includes(c.status) || c.prototype?.state === "live") && options.some((o) => o.id === c.live_pick?.variant) ? { id: c.live_pick.variant, no: options.find((o) => o.id === c.live_pick.variant).no, name: c.live_pick.name, version: c.live_pick.version } : null;
-      const what = built ? `option ${built.no}, **${built.name}**, version ${built.version}, the option the live prototype shows` : options.length ? "the option you pick" : "this request as Design Desk checked it, without design options";
+      const built = livePick(c) ? { id: c.live_pick.variant, no: options.find((o) => o.id === c.live_pick.variant).no, name: c.live_pick.name, version: c.live_pick.version } : null;
+      // Picked in Submit feedback's panel (simple mode): the dialog names it and asks for none.
+      const picked = !built && variant ? options.find((o) => o.id === variant) : null;
+      const what = built ? `option ${built.no}, **${built.name}**, version ${built.version}, the option the live prototype shows` : picked ? `option ${picked.no}, **${picked.name}**` : options.length ? "the option you pick" : "this request as Design Desk checked it, without design options";
       // Straight to the coding agent: its issue gets the agent's label, only where the spec reaches GitHub (docs/handoff.md).
       const github = (S.me?.handoff?.[c.request?.type || "idea"] || "desk") !== "desk";
       // Sent before and reopened: what goes to GitHub now may close the earlier issue (docs/handoff.md, step 6).
@@ -8708,12 +8811,12 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       // Simple mode asks nothing: the spec goes as soon as it is written, wherever the store lets it.
       const auto = simple() && unread;
       const waits = Boolean(S.me?.spec_review || c.from_pr) && !auto;
-      res = await ask({ title: forDev ? "Approve it for developers" : options.length ? "Approve a design" : "Approve without design options", body: `${forDev ? "It opens For Developers and goes to In dev at once, without a designer; it does not come back to a draft. " : ""}${waits ? `Design Desk writes the developer spec for ${what}. It waits here for you to read and edit; nothing goes to ${to} until you press **Send to developers**${c.from_pr ? `, where you pick a new issue or a comment on PR #${c.from_pr.pr}` : ""}${unread ? ", unless you tick the box below" : ""}.` : `Design Desk writes the developer spec for ${what} and sends it to ${to}${auto ? " as soon as it is written" : ""}. Once sent, it can't be taken back.`}${against.length ? `\n\n⚠ **It goes against ${against.join(", ")}.** Approve it only if the team means to; then revoke the decision, or Design Desk records this approval as going against it.` : ""}${earlier ? `\n\n${earlier.line}` : ""}`, ok: "Approve", choices: options.length && !built ? options : null, pick: options.length === 1 ? options[0].id : null, note: options.length ? null : "What should developers build? (optional)",
+      res = await ask({ title: forDev ? "Approve it for developers" : options.length ? "Approve a design" : "Approve without design options", body: `${forDev ? "It opens For Developers and goes to In dev at once, without a designer; it does not come back to a draft. " : ""}${waits ? `Design Desk writes the developer spec for ${what}. It waits here for you to read and edit; nothing goes to ${to} until you press **Send to developers**${c.from_pr ? `, where you pick a new issue or a comment on PR #${c.from_pr.pr}` : ""}${unread ? ", unless you tick the box below" : ""}.` : `Design Desk writes the developer spec for ${what} and sends it to ${to}${auto ? " as soon as it is written" : ""}. Once sent, it can't be taken back.`}${against.length ? `\n\n⚠ **It goes against ${against.join(", ")}.** Approve it only if the team means to; then revoke the decision, or Design Desk records this approval as going against it.` : ""}${earlier ? `\n\n${earlier.line}` : ""}`, ok: "Approve", choices: options.length && !built && !picked ? options : null, pick: options.length === 1 ? options[0].id : null, note: options.length ? null : "What should developers build? (optional)",
         ...(against.length ? { check: `I know it goes against ${against.join(", ")}` } : {}),
         ...(github && !waits && !simple() ? { check2: `Straight to implementation: the spec goes on ${to.startsWith("the GitHub issue it came from") ? "that issue" : "a GitHub issue (a new one, with the spec and pictures, if none is filed)"} with the coding agent's label, when its manifest names one` } : {}),
         ...(unread && !auto ? { check2: `Send it to ${to} as soon as the spec is written, without waiting for me to read it. Once sent, it can't be taken back` } : {}),
         ...(earlier?.open ? { check3: unread ? `${earlier.check} (only with the box above ticked; else you pick it when you send)` : earlier.check } : {}),
-        send: (a) => post(built?.id || a.choice || a.note || "", { ...(forDev ? { for_dev: true } : {}), ...(against.length ? { overrule: a.check } : {}), ...(auto ? { auto_send: true } : a.check2 ? (unread ? { auto_send: true } : { implement: true }) : {}), ...(a.check3 && (!unread || a.check2) ? { close_earlier: true } : {}) }) });
+        send: (a) => post(built?.id || picked?.id || a.choice || a.note || "", { ...(forDev ? { for_dev: true } : {}), ...(against.length ? { overrule: a.check } : {}), ...(auto ? { auto_send: true } : a.check2 ? (unread ? { auto_send: true } : { implement: true }) : {}), ...(a.check3 && (!unread || a.check2) ? { close_earlier: true } : {}) }) });
       if (!res) return;
     }
     // Build: pick the option, then look at its latest version and states once more in the
@@ -8785,7 +8888,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       if (!res) return;
     } else if (name === "close") {
       const how = [can("close") && { id: "close", name: "Just close it", hint: "Nothing is recorded as a decision" },
-        can("skip") && { id: "decide", name: "Close it and record a decision", hint: `In your name${full(", under Product → Decisions")}` }].filter(Boolean);
+        can("skip") && { id: "decide", name: "Close it and record a decision", hint: "In your name, under Product → Decisions" }].filter(Boolean);
       res = await ask({ title: "Close this request", body: `Design Desk stops working on it${live(c) || !simple() ? " and switches off its live prototype" : ""}. You can reopen it later.`, ok: "Close it",
         choices: how.length > 1 ? how : null, pick: how[0].id, note: how.some((x) => x.id === "decide") ? "What did you decide, and why?" : null, noteFor: how.length > 1 ? "decide" : null, noteMax: 600,
         send: (a) => {
@@ -8941,11 +9044,12 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const text = box?.value.trim() || ""; if (!text || !v) return;
     const anchor = { variant: v.id, ...(S.ws.state ? { state: S.ws.state } : {}), ...(sel ? { selector: sel.selector, ...(sel.name ? { name: sel.name } : {}), text: sel.text, tag: sel.tag, label: sel.label, view: sel.view || null, view_name: sel.view_name || null } : { label: S.ws.state ? `the whole state “${wsDrawing(v).name}”` : "the whole option" }), ...(S.ws.edit && !whole ? { edit: S.ws.edit } : {}) };
     if (draft) {
-      await addDraft(c, { text, anchor });
+      // No toast: the side panel turns to Your feedback, the note in it, which says so.
+      await addDraft(c, { text, anchor }, { quiet: true });
       box.value = "";
       if (from === "pop") { S.ws.edit = null; S.ws.pop = null; S.ws.target = null; frameSay({ type: "desk-track", selector: "" }); }
       S.ws.panel = "feedback";
-      renderWorkspace();
+      renderDetail(); renderWorkspace();
       return;
     }
     const { thread } = await api("POST", `/api/cards/${c.id}/threads`, { kind, text, anchor });
@@ -9143,11 +9247,18 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // Submit feedback and its panel (docs/desk-page.md → Submit feedback).
     if (ds.fb && S.card) { fbToggle(S.card, ds.fb); return; }
     if (ds.fbV && S.fb) { S.fb.pick = ds.fbV; fbRedraw(); return; }
+    if (ds.fbOpt && S.fb) { S.fb.option = ds.fbOpt; fbRedraw(); return; }
     if ("fbClose" in ds) { fbClose(); return; }
     if ("fbSend" in ds && S.card && S.fb) {
       const c = S.card, note = ($("#fb-note")?.value || "").trim();
       el.disabled = true;
-      try { if (await sendFeedback(c, fbPick(c), note) && $("#element-dialog").open) $("#element-dialog").close(); } finally { el.disabled = false; }
+      try {
+        if (await sendFeedback(c, fbPick(c), note)) {
+          if ($("#element-dialog").open) $("#element-dialog").close();
+          // Sent from the design workspace, the part selected is let go (docs/desk-page.md → Submit feedback).
+          if (S.ws.open && S.ws.selected) { S.ws.selected = null; S.ws.edit = null; frameSay({ type: "desk-select", selector: null }); renderWorkspace(); }
+        }
+      } finally { el.disabled = false; }
       return;
     }
     if (ds.stage && S.card) { await moveStage(S.card, ds.stage); return; }
@@ -9485,10 +9596,14 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     }
     if (ds.wsFilter) { S.ws.filter = ds.wsFilter; renderWorkspace(); return; }
     if ("wsClear" in ds) { S.ws.selected = null; S.ws.edit = null; renderWorkspace(); frameSay({ type: "desk-select", selector: null }); return; }
+    if (ds.dtxMore) { S.dtxOpen ||= new Set(); if (S.dtxOpen.has(ds.dtxMore)) S.dtxOpen.delete(ds.dtxMore); else S.dtxOpen.add(ds.dtxMore);
+      for (const t of document.querySelectorAll(`[data-dtx="${CSS.escape(ds.dtxMore)}"]`)) t.classList.toggle("open", S.dtxOpen.has(ds.dtxMore));
+      dtxMeasure(); return; }
     if (ds.wsDraftGo) {
-      // A note in Your feedback: its option and state, the part selected where it has one.
+      // A note in Submit feedback's panel: its option and state, the part selected where it has one.
       const d = draftsOf(S.card).find((x) => x.id === ds.wsDraftGo), a = d?.work_in ? workInOf(S.card, d)?.anchor : d?.anchor;
       if (!a?.variant) return;
+      if (S.fb) S.fb.where = null;
       if (a.variant !== S.variant) { S.variant = a.variant; S.ws.version = null; }
       if ((a.state || null) !== (S.ws.state || null)) { S.ws.state = a.state || null; S.ws.version = null; }
       S.ws.selected = a.selector ? { selector: a.selector, ...(a.name ? { name: a.name } : {}), text: a.text || "", tag: a.tag || "", label: a.label || "", view: a.view || null, view_name: a.view_name || null } : null;
@@ -10001,8 +10116,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const b = $("#simple"), on = simple();
     b.innerHTML = `<span>Simple mode</span><span class="sw" aria-hidden="true"></span>`;
     b.setAttribute("aria-pressed", String(on));
-    b.title = on ? "Simple mode is on. Turn it off to show Designs, Issues, Product, People, the presentation and live prototypes again"
-      : "Simple mode is off. Turn it on to hide Designs, Issues, Product, People, the presentation and live prototypes";
+    b.title = on ? "Simple mode is on. Turn it off to show Designs, Issues, People, the presentation and live prototypes again"
+      : "Simple mode is off. Turn it on to hide Designs, Issues, People, the presentation and live prototypes";
   }
   let simpleSaves = Promise.resolve(), simpleSeq = 0;
   function saveSimple(on, { quiet = false } = {}) {
@@ -10098,6 +10213,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     vote: ["New vote", "design", '<path d="M7 11v9H4v-9zM7 11l4-7a2 2 0 0 1 3 2l-1 4h6a2 2 0 0 1 2 2.3l-1.2 6A2 2 0 0 1 17.8 20H7"/>'],
     "feedback-asked": ["Feedback asked", "design", '<path d="M4 5h16v11H9l-5 4z"/><path d="M12 8v3.5M12 13.5h.01"/>'],
     approved: ["Option approved", "ok", '<path d="m5 12.5 4.5 4.5L19 7.5"/>'],
+    "taken-back": ["Back to feedback", "design", '<path d="M10 8 5 12l5 4"/><path d="M5 12h9a5 5 0 0 1 5 5v1"/>'],
     spec: ["Spec ready", "ok", '<path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4M9 12h6M9 16h6"/>'],
     built: ["Marked done", "ok", '<path d="m5 12.5 4.5 4.5L19 7.5"/>'],
     decided: ["Closed with a decision", "closed", '<path d="M5 21V4M5 4h12l-2 4 2 4H5"/>'],
@@ -10115,10 +10231,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const NOTE_KIND = { request: "Request", change: "PR change", issue: "Issue", screen: "Screen", element: "Element", decision: "Decision" };
   const noteBy = (by) => !by ? "" : by.agent ? "Design Desk" : by.name && !by.email ? by.name : personName(by.email, by.name || "someone");
   const ago = (iso) => { const s = (Date.now() - Date.parse(iso)) / 1000; return s < 60 ? "just now" : s < 3600 ? `${Math.floor(s / 60)} min` : s < 86400 ? `${Math.floor(s / 3600)} h` : dayWord(iso) === "Yesterday" ? "Yesterday" : new Date(iso).toLocaleDateString("en", { month: "short", day: "numeric" }); };
-  // Simple mode leaves out what lives on the pages it hides: Issues' issues, Product's screens,
-  // elements and decisions (docs/desk-page.md → Notifications); the count counts what is left.
-  const NOTE_HIDDEN = ["issue", "screen", "element", "decision"];
-  const noteShown = (x) => !(tabsHidden().length && NOTE_HIDDEN.includes(x.kind));
+  // Simple mode leaves out what lives on the pages it hides: Issues' issues (Product's screens,
+  // elements and decisions show, as Product does; docs/desk-page.md → Notifications); the count counts what is left.
+  const NOTE_TAB = { issue: "issues", screen: "product", element: "product", decision: "product" };
+  const noteShown = (x) => !tabsHidden().includes(NOTE_TAB[x.kind]);
   // Only while simple mode hides some notifications does the count come from the list fetched; an
   // admin's, who sees them all, is the server's, as in full mode.
   const noteUnread = () => tabsHidden().length ? S.notes.items.filter((x) => noteShown(x) && x.for_you && !x.read).length : S.notes.unread;

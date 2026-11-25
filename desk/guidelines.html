@@ -45,7 +45,6 @@
   .gl-spaces { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 24px; }
   .gl-space { display: grid; justify-items: start; gap: 4px; }
   .gl-bar { display: block; height: 32px; background: var(--accent); }
-  .gl-fixed { position: relative; transform: translateZ(0); width: 100%; min-height: 72px; }
   .gl-dlg { width: 100%; }
   .gl-palette { width: 340px; max-width: 100%; }
   .gl-static { position: relative; margin: 0; }
@@ -506,9 +505,9 @@
   <div class="gl-item">
     <div class="gl-rule">
       <h3 class="gl-h3">What just happened, once</h3>
-      <p class="gl-p">At the bottom, for a few seconds, after an action whose result does not show where you are. Never a question, never an error that needs a move.</p>
+      <p class="gl-p">Top right, for a few seconds, ✕ to close it, after an action whose result does not show where you are. Never a question, never an error that needs a move.</p>
     </div>
-    <div class="gl-ex gl-fixed"><div class="toast">Sent to Design Desk: 2 changes.</div></div>
+    <div class="gl-ex"><div class="toast"><span class="t-m">Sent to Design Desk: 2 changes.</span><button class="t-x" aria-label="Close">✕</button></div></div>
   </div>
 </section>
 

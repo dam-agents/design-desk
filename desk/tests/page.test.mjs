@@ -491,13 +491,13 @@ try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
 test("a viewer starts in simple mode; the switch in their menu shows it and keeps their choice on the Desk", (t) => open(t, VIEWER, async (desk) => {
   await desk.waitForSelector("#nav [data-tab]");
   const tabs = () => desk.$$eval("#nav [data-tab]", (xs) => xs.map((x) => x.dataset.tab));
-  assert.deepEqual((await tabs()).filter((k) => ["issues", "product", "people"].includes(k)), [], "Issues, Product and People are hidden");
+  assert.deepEqual((await tabs()).filter((k) => ["issues", "product", "people"].includes(k)), ["product"], "Issues and People are hidden; Product stays");
   assert.equal(await desk.getAttribute("#simple", "aria-pressed"), "true", "the switch says it is on");
   assert.equal(await desk.locator("header > #simple").count(), 0, "the switch sits in the menu under the person's name");
   await desk.click("#me");
   await desk.click("#simple");
   assert.equal(await desk.getAttribute("#simple", "aria-pressed"), "false");
-  assert.ok((await tabs()).includes("product"), "full mode shows them again");
+  assert.ok((await tabs()).includes("people"), "full mode shows them again");
   await desk.waitForFunction(() => posts.some((p) => p.path === "/api/prefs"));
   assert.deepEqual(await desk.evaluate(() => posts.filter((p) => p.path === "/api/prefs").map((p) => JSON.parse(p.body))), [{ simple: false }], "saved for this person");
 }));
@@ -509,14 +509,14 @@ const DESIGNER_BARE_PREFS = VIEWER.replace('{ theme: null, simple: JSON.parse(bo
 test("simple mode switched on stays on after the next redraw, whatever the save answers", (t) => open(t, DESIGNER_BARE_PREFS, async (desk) => {
   await desk.waitForSelector("#nav [data-tab]");
   const tabs = () => desk.$$eval("#nav [data-tab]", (xs) => xs.map((x) => x.dataset.tab));
-  assert.ok((await tabs()).includes("product"), "a designer who chose full mode starts in it");
+  assert.ok((await tabs()).includes("people"), "a designer who chose full mode starts in it");
   await desk.click("#me");
   await desk.click("#simple");
   await desk.waitForFunction(() => posts.some((p) => p.path === "/api/prefs"));
   await desk.waitForTimeout(300);
   // Anything that redraws the page: here the tab the person is on.
   await desk.click('#nav [data-tab="requests"]');
-  assert.deepEqual((await tabs()).filter((k) => ["issues", "product", "people"].includes(k)), [], "still simple mode");
+  assert.deepEqual((await tabs()).filter((k) => ["issues", "product", "people"].includes(k)), ["product"], "still simple mode");
   assert.equal(await desk.getAttribute("#simple", "aria-pressed"), "true");
 }));
 
@@ -2579,18 +2579,27 @@ test("a comment from the part selected lets the part go and shows; feedback sent
     await frame.waitForFunction(() => ![...document.querySelectorAll("div")].some((d) => d.style.borderStyle === "solid" && d.textContent === "Button"));
     assert.match(await desk.getAttribute('#ws-side [data-ws-note="t1"]', "class"), /\bspot\b/, "the new comment is lit");
 
-    // Feedback from the workspace: the note waits under Your feedback, then goes with Request changes.
-    const long = `Make it a   secondary button ${"and quieter ".repeat(8)}`;
+    // Feedback from the workspace: the note waits under Your feedback, three lines at most, and in
+    // Submit feedback on the bar on top, as in every dialog's head; it goes with Request changes from there.
+    const long = `Make it a   secondary button ${"and quieter ".repeat(30)}`;
     await desk.click('[data-ws-panel="comments"]');
     await desk.fill("#ws-whole", long);
     await desk.click("#ws-side [data-ws-send-whole=draft]");
-    await desk.waitForSelector("#ws-side .ws-drafts li");
+    await desk.waitForFunction(() => /Submit feedback\s*1/.test(document.querySelector('#ws-top [data-fb="ws"]')?.textContent || ""));
     assert.equal(await desk.getAttribute('[data-ws-panel="feedback"]', "aria-selected"), "true", "the side panel shows Your feedback");
     assert.match(await desk.textContent('[data-ws-panel="feedback"]'), /Your feedback\s*1/);
-    assert.match(await desk.textContent("#ws-side .ws-drafts"), /the whole option[\s\S]*Make it a/);
-    await desk.click('#ws-side [data-review=""]');
-    await desk.click('#cf-choices input[value="request-changes"]');
-    await desk.click("#cf-ok");
+    assert.match(await desk.textContent("#ws-side .ws-fb-items"), /the whole option[\s\S]*Make it a/);
+    await desk.waitForSelector("#ws-side .dtx-more:not([hidden])");
+    assert.equal(await desk.$eval("#ws-side .dtx", (t) => t.scrollHeight > t.clientHeight), true, "a long note shows three lines");
+    await desk.click("#ws-side .dtx-more");
+    assert.equal(await desk.$eval("#ws-side .dtx", (t) => t.scrollHeight <= t.clientHeight + 1), true, "Show all shows the rest");
+    assert.equal(await desk.textContent("#ws-side .dtx-more"), "Show less");
+    assert.equal(await desk.getAttribute('#ws-top [data-fb="ws"]', "data-v"), "rc", "it sends Request changes, as a note waits");
+    // The tab's Submit feedback… opens the panel on the bar on top: the same notes, then the verdict.
+    await desk.click('#ws-side [data-fb="ws"]');
+    assert.match(await desk.textContent("#ws-top .fb-pop"), /the whole option[\s\S]*Make it a/);
+    await desk.click('#ws-top .fb-pop [data-fb-v="request-changes"]');
+    await desk.click("#ws-top .fb-pop [data-fb-send]");
     await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/r8/reviews"));
     // Queued: the pill names the comment by its first words, on one line, and breathes.
     const words = long.replace(/\s+/g, " ").trim().slice(0, 79).trimEnd();
@@ -2604,10 +2613,9 @@ test("a comment from the part selected lets the part go and shows; feedback sent
     await desk.click('[data-ws-panel="comments"]');
     await desk.fill("#ws-whole", "A bigger title");
     await desk.click("#ws-side [data-ws-send-whole=draft]");
-    await desk.waitForSelector("#ws-side .ws-drafts li");
-    await desk.click('#ws-side [data-review=""]');
-    await desk.click('#cf-choices input[value="request-changes"]');
-    await desk.click("#cf-ok");
+    await desk.waitForFunction(() => /Submit feedback\s*1/.test(document.querySelector('#ws-top [data-fb="ws"]')?.textContent || ""));
+    await desk.click('#ws-top [data-fb="ws"]');
+    await desk.click("#ws-top .fb-pop [data-fb-send]");
     await desk.waitForFunction(() => /^Working on 2 comments · Tabs$/.test(document.querySelector(".ws-agent")?.textContent.trim() || ""));
   } finally {
     await run.close();
@@ -2872,6 +2880,7 @@ test("the look palette: in the side panel under the part picked, a preview only,
     assert.match(await desk.textContent("#ws-palette .pl-foot"), /In your feedback/);
     assert.equal((await posts("/api/cards/r7/threads")).length + (await posts("/api/cards/r7/drafts")).length, 0, "nothing sent before the feedback is");
     assert.match(await desk.textContent('[data-ws-panel="feedback"]'), /Your feedback\s*1/);
+    assert.match(await desk.textContent('#ws-top [data-fb="ws"]'), /Submit feedback\s*1/);
     assert.equal(await style("backgroundColor"), "rgb(214, 51, 108)", "the design keeps showing it");
 
     // A flex box has Layout.
@@ -2891,15 +2900,23 @@ test("the look palette: in the side panel under the part picked, a preview only,
     assert.equal(await desk.locator('#ws-palette .pl-reset[data-pl-pick="kind|link"]').count(), 0, "back to the option drawn: nothing to undo there");
     await desk.click('#ws-palette [data-pl-pick="kind|button"]');
     await desk.click("#ws-palette [data-pl-send]");
-    await desk.waitForFunction(() => /Your feedback\s*2/.test(document.querySelector('[data-ws-panel="feedback"]')?.textContent || ""));
+    await desk.waitForFunction(() => /Submit feedback\s*2/.test(document.querySelector('#ws-top [data-fb="ws"]')?.textContent || ""));
     // Sent with Request changes, each edit becomes a note with its values, then the feedback goes.
-    await desk.click('[data-ws-panel="feedback"]');
-    assert.match(await desk.textContent("#ws-side .ws-drafts"), /Look of Button “Save” · this browser[\s\S]*Look of More link · this browser/);
-    await desk.click('#ws-side [data-review=""]');
-    assert.match(await desk.textContent("#cf-body"), /drawn only with Request changes/);
-    await desk.click('#cf-choices input[value="request-changes"]');
-    await desk.click("#cf-ok");
+    await desk.click('#ws-top [data-fb="ws"]');
+    assert.match(await desk.textContent("#ws-top .fb-pop .fb-items"), /Look of Button “Save” · this browser[\s\S]*Look of More link · this browser/);
+    assert.match(await desk.textContent("#ws-top .fb-pop"), /drawn only with Request changes/);
+    assert.equal(await desk.locator('[data-ws-panel="props"] .dot').count(), 1, "a part is selected while the feedback is written");
+    await desk.click('#ws-top .fb-pop [data-fb-v="request-changes"]');
+    await desk.click("#ws-top .fb-pop [data-fb-send]");
     await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/r7/reviews"));
+    await desk.waitForFunction(() => !document.querySelector('[data-ws-panel="props"] .dot'));
+    // The toast says it in the top right corner, a box with ✕ that closes it.
+    const tb = await desk.$eval(".toasts .toast", (t) => { const r = t.getBoundingClientRect(); return { right: innerWidth - r.right, top: r.top, x: Boolean(t.querySelector(".t-x[aria-label]")) }; });
+    assert.ok(tb.right < 40 && tb.top < 40 && tb.x, `the toast at the top right with its ✕: ${JSON.stringify(tb)}`);
+    assert.equal(await desk.$eval(".toasts .toast .t-m", (m) => getComputedStyle(m).pointerEvents), "none", "a click on its words reaches the bar under it");
+    const before = await desk.locator(".toasts .toast").count();
+    await desk.click(".toasts .toast .t-x");
+    assert.equal(await desk.locator(".toasts .toast").count(), before - 1, "✕ closes it");
     const [body, smart] = (await posts("/api/cards/r7/drafts")).map((x) => JSON.parse(x.body));
     assert.deepEqual(body.anchor.style, [{ prop: "background-color", from: "rgb(59, 91, 219)", to: "var(--danger)" }]);
     assert.equal(body.anchor.variant, "v1");
@@ -3594,8 +3611,8 @@ window.platform = { async request({ method, path }) {
 } };
 try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
 </script>`;
-// Simple mode and the bell: a row about a page simple mode hides (Issues, Product) leaves the
-// list and the count; switching simple mode off brings them back.
+// Simple mode and the bell: a row about a page simple mode hides (Issues) leaves the list and
+// the count, one about Product's screens, elements and decisions stays; switching simple mode off brings them back.
 const SIMPLE_BELL = `<script>
 window.posts = [];
 const ago = (m) => new Date(Date.now() - m * 60e3).toISOString().replace(/\\.\\d{3}Z$/, "Z");
@@ -3611,19 +3628,19 @@ window.platform = { async request({ method, path, body }) {
 } };
 try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
 </script>`;
-test("in simple mode the bell leaves out issues, screens, elements and decisions, in its rows and its count; switching simple mode off brings them back", (t) => open(t, SIMPLE_BELL, async (desk) => {
+test("in simple mode the bell leaves out issues, in its rows and its count, and keeps Product's screens, elements and decisions; switching simple mode off brings them back", (t) => open(t, SIMPLE_BELL, async (desk) => {
   await desk.waitForFunction(() => document.querySelector("#bell-count")?.hidden === false);
-  assert.equal(await desk.textContent("#bell-count"), "1", "simple mode counts only the request");
+  assert.equal(await desk.textContent("#bell-count"), "4", "simple mode counts all but the issue");
   await desk.click("#me");
   await desk.click("#simple");
   await desk.waitForFunction(() => document.querySelector("#bell-count")?.textContent === "5");
   await desk.click("#me");
   await desk.click("#simple");
-  await desk.waitForFunction(() => document.querySelector("#bell-count")?.textContent === "1");
+  await desk.waitForFunction(() => document.querySelector("#bell-count")?.textContent === "4");
   await desk.click("#bell-btn");
   for (const only of ["1", "0"]) {
     await desk.click(`#notes [data-only="${only}"]`);
-    assert.deepEqual(await desk.$$eval("#notes [data-note] .ti .num", (els) => els.map((e) => e.textContent)), ["C-2"], `only the request, ${only === "1" ? "For you" : "All"}`);
+    assert.deepEqual(await desk.$$eval("#notes [data-note] .ti .num", (els) => els.map((e) => e.textContent)), ["C-8", "C-9", "D-1", "C-2"], `all but the issue, ${only === "1" ? "For you" : "All"}`);
   }
   // The switch sits in another menu, so the bell closes on its click; open again, every row is back.
   await desk.click("#me");
@@ -4082,6 +4099,8 @@ test("simple mode leaves the live prototype step out of the help", (t) => open(t
   const steps = await desk.textContent("#detail > .guide");
   assert.match(steps, /New request/);
   assert.doesNotMatch(steps, /live prototype/i, "a step only about what simple mode hides leaves with it");
+  assert.match(steps, /updates Product/, "Product stays in simple mode, and so does what the help says of it");
+  assert.match(steps, /Product is updated/, "the shipped change's drawing keeps Product");
 }));
 
 // A dialog with something typed or picked asks before Escape or a click outside closes it;
@@ -4289,9 +4308,9 @@ const rows = (desk) => desk.$$eval("#list [data-card]", (xs) => xs.map((x) => [x
 const ticked = (desk) => desk.$eval(".sf .menu", (m) => { const on = (g) => [...m.querySelectorAll(`[data-simf^="${g}:"][aria-checked="true"]`)].map((x) => x.children[1].textContent.trim());
   const k = on("kinds"); return [...on("states"), ...(k.length < m.querySelectorAll('[data-simf^="kinds:"]').length ? k : [])]; });
 
-test("simple mode lists every request and change in one list, each in one state, and its menu has one entry", (t) => open(t, DESK(SIMPLE_ME, SIMPLE_CARDS), async (desk) => {
+test("simple mode lists every request and change in one list, each in one state, and its menu has one entry for them", (t) => open(t, DESK(SIMPLE_ME, SIMPLE_CARDS), async (desk) => {
   await desk.waitForSelector('#list [data-card="r-check"]');
-  assert.equal((await desk.textContent("#nav")).replace(/\d+$/, "").trim(), "Requests & PRs", "one entry, no PR Changes");
+  assert.equal((await desk.textContent('#nav [data-tab="requests"]')).replace(/\d+$/, "").trim(), "Requests & PRs", "one entry, no PR Changes");
   assert.deepEqual(await rows(desk), [["r-check", "Design review"], ["r-busy", "Design review"], ["r-draft", "Design review"], ["c-open", "Design review"]], "Design review by default, newest change first, the pill on every row even with one state");
   assert.equal(await desk.locator('#list [data-card="r-busy"] .dd-spin').count(), 1, "Design Desk at work: the spinner, still Open");
   await desk.click("details.sf > summary");
@@ -4501,6 +4520,99 @@ test("simple mode heads a request with its number, link, state, author and Submi
   assert.equal((await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/R-5/actions").body)).auto_send, true);
 }));
 
+// Which design an approval is for (docs/desk-page.md → Submit feedback): picked in the panel, the
+// option shown on the page first; the dialog after it asks for none. One option, or a verdict that
+// is no approval, shows no picker.
+const twoOptions = { ...drawn, variants: [{ id: "v1", name: "Calm", asset: "A-1", version: 1 }, { id: "v2", name: "Bold", asset: "A-1", version: 1 }] };
+test("simple mode: Submit feedback asks which design an approval is for, the shown option first; the dialog asks for none", (t) => open(t, HEAD_DESK(HEAD_ME, [twoOptions, slackDraft]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="R-5"]');
+  await desk.click('#list [data-card="R-5"]');
+  await desk.waitForSelector("#detail .shead");
+  await openFeedback(desk);
+  assert.equal(await picked(desk), "approve");
+  assert.equal((await desk.textContent(".fb-pop .fb-opt > b")).trim(), "Which design?");
+  const opts = () => desk.$$eval(".fb-pop [data-fb-opt]", (xs) => xs.map((x) => [x.dataset.fbOpt, x.textContent.trim(), x.getAttribute("aria-checked")]));
+  assert.deepEqual(await opts(), [["v1", "1Calm", "true"], ["v2", "2Bold", "false"]], "each option by its number and name, the one shown picked");
+  await desk.click('.fb-pop [data-fb-v="request-changes"]');
+  assert.equal(await desk.locator(".fb-pop [data-fb-opt]").count(), 0, "Request changes asks for no design");
+  await desk.click('.fb-pop [data-fb-v="comment"]');
+  assert.equal(await desk.locator(".fb-pop [data-fb-opt]").count(), 0, "nor does Comment only");
+  await desk.click('.fb-pop [data-fb-v="approve"]');
+  await desk.click('.fb-pop [data-fb-opt="v2"]');
+  assert.deepEqual((await opts()).map((x) => x[2]), ["false", "true"], "the pick moves");
+  await desk.click(".fb-pop [data-fb-send]");
+  await desk.waitForSelector("#confirm-dialog[open]");
+  assert.equal(await desk.locator("#cf-choices input").count(), 0, "the dialog asks for no option again");
+  assert.match(await desk.textContent("#cf-body"), /option 2, Bold/, "it names the one picked");
+  await desk.click("#cf-ok");
+  await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/R-5/actions"));
+  const sent = await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/R-5/actions").body);
+  assert.equal(sent.action, "approve");
+  assert.equal(sent.note, "v2", "the option picked is the one approved");
+}));
+
+test("simple mode: a request with one option shows no design picker in Submit feedback", (t) => open(t, HEAD_DESK(HEAD_ME, [drawn]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="R-5"]');
+  await desk.click('#list [data-card="R-5"]');
+  await desk.waitForSelector("#detail .shead");
+  await openFeedback(desk);
+  assert.equal(await picked(desk), "approve");
+  assert.equal(await desk.locator(".fb-pop .fb-opt").count(), 0);
+}));
+
+// Opening, closing or changing Submit feedback's panel draws only the button and its panel again
+// (docs/desk-page.md → Submit feedback): answers typed in a question form stay, and so does the form itself.
+const asking = { ...drawn, threads: [{ id: "t1", kind: "asks", state: "open", step: "spec", messages: [{ by: { agent: true }, at: "2026-11-18T10:00:00Z", text: "Two things first." }],
+  questions: [{ text: "Empty list?", options: ["A hint", "Nothing"], suggested: "A hint" }, { text: "Button words?", options: ["Send", "Send message"] }] }] };
+test("Submit feedback opens, changes and closes without drawing the rest of the request again: typed answers stay", (t) => open(t, HEAD_DESK(HEAD_ME, [asking]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="R-5"]');
+  await desk.click('#list [data-card="R-5"]');
+  await desk.waitForSelector("#form-t1");
+  await desk.check('#form-t1 [data-q="0"] input[value="Nothing"]');
+  await desk.fill('#form-t1 [data-q="1"] [data-q-note]', "Shorter is better");
+  await desk.evaluate(() => { document.querySelector("#form-t1").kept = true; });
+  const answers = () => desk.evaluate(() => ({ kept: document.querySelector("#form-t1")?.kept === true, picked: document.querySelector('#form-t1 [data-q="0"] input:checked')?.value,
+    note: document.querySelector('#form-t1 [data-q="1"] [data-q-note]')?.value }));
+  const same = { kept: true, picked: "Nothing", note: "Shorter is better" };
+  await openFeedback(desk);
+  assert.deepEqual(await answers(), same, "opening it keeps the form and its answers");
+  await desk.click('.fb-pop [data-fb-v="comment"]');
+  assert.equal(await picked(desk), "comment");
+  assert.deepEqual(await answers(), same, "picking a verdict too");
+  assert.equal(await desk.evaluate(() => document.activeElement?.dataset.fbV), "comment", "the verdict picked keeps the focus");
+  await desk.click(".fb-pop [data-fb-close]");
+  assert.equal(await desk.locator(".fb-pop").count(), 0, "Keep drafting closes it");
+  assert.deepEqual(await answers(), same, "and keeps them");
+  await openFeedback(desk);
+  await desk.keyboard.press("Escape");
+  assert.equal(await desk.locator(".fb-pop").count(), 0, "Esc closes it");
+  await openFeedback(desk);
+  await desk.click('#form-t1 [data-q="1"] [data-q-note]');
+  assert.equal(await desk.locator(".fb-pop").count(), 0, "a click outside closes it");
+  assert.deepEqual(await answers(), same, "and none of them loses an answer");
+  await openFeedback(desk);
+  assert.equal(await picked(desk), "comment", "the verdict picked is still the one it sends");
+}));
+
+// Submit feedback's buttons are a footer fixed to the panel's bottom, as tall as Submit feedback.
+test("Submit feedback's buttons stay in view while many notes scroll, as tall as Submit feedback", (t) => open(t, REVIEW_DESK(HEAD_ME, [drawn]), async (desk) => {
+  await desk.setViewportSize({ width: 1200, height: 600 });
+  await desk.waitForSelector('#list [data-card="R-5"]');
+  await desk.evaluate(() => { drafts["R-5"] = Array.from({ length: 14 }, (_, i) => ({ id: `d${i}`, text: `Note ${i + 1}: a longer line about the design so the panel has to scroll.`, anchor: { variant: "v1" }, at: "2026-11-18T10:00:00Z" })); });
+  await desk.click('#list [data-card="R-5"]');
+  await desk.waitForSelector('#detail [data-fb="head"] .cnt');
+  await openFeedback(desk);
+  const look = () => desk.evaluate(() => { const r = (s) => document.querySelector(s).getBoundingClientRect(), pop = r(".fb-pop"), send = r(".fb-pop .fb-send");
+    return { scrolls: document.querySelector(".fb-pop").scrollHeight > document.querySelector(".fb-pop").clientHeight, inView: send.bottom <= pop.bottom + 1 && send.top >= pop.top,
+      heights: [r('#detail [data-fb="head"]').height, r(".fb-pop [data-fb-send]").height, r(".fb-pop [data-fb-close]").height] }; });
+  const top = await look();
+  assert.ok(top.scrolls, "the notes are more than the panel holds");
+  assert.ok(top.inView, "the buttons are in view before scrolling");
+  await desk.evaluate(() => { const p = document.querySelector(".fb-pop"); p.scrollTop = p.scrollHeight / 2; });
+  assert.ok((await look()).inView, "and while the notes scroll");
+  assert.equal(new Set(top.heights.map(Math.round)).size, 1, `the send button and Keep drafting are as tall as Submit feedback: ${top.heights}`);
+}));
+
 // Dev review after design opened: a For Developers request or change has the proposal's two moves,
 // Approve for dev (a change: Approve) and Send to design, the move to For Designers.
 test("simple mode: a For Developers item in Dev review offers Send to design, and Approve for dev in Submit feedback", (t) => open(t, HEAD_DESK({ ...HEAD_ME, role: "ui-dev-owner",
@@ -4621,6 +4733,46 @@ test("simple mode: a change's review offers Request changes and Approve to who m
   await desk.click(".fb-pop [data-fb-send]");
   await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/P-3/reviews"));
   assert.equal((await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/P-3/reviews").body)).verdict, "comment");
+}));
+
+// A change merged before anyone approved it (docs/desk.md → Reviews): Approve closes it out, Request changes is gone.
+const mergedChange = { ...prChange, id: "P-12", title: "Merged before review", source: { ...prChange.source, draft: false, merged_at: "2026-11-18T09:00:00Z" } };
+
+test("simple mode: a merged change nobody handled offers Approve, never Request changes, and Approve with nothing drafted marks it handled", (t) => open(t, REVIEW_DESK({ ...HEAD_ME, review_post: true }, [mergedChange]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="P-12"]');
+  await desk.click('#list [data-card="P-12"]');
+  await desk.waitForSelector('#detail [data-fb="head"]');
+  assert.equal(await desk.getAttribute('#detail [data-fb="head"]', "data-v"), "ok", "with nothing drafted, it approves");
+  await openFeedback(desk);
+  assert.deepEqual(await verdicts(desk), ["approve", "comment"]);
+  assert.equal(await picked(desk), "approve");
+  assert.equal((await desk.textContent(".fb-pop .fb-hint")).trim(), "Design is done with this change.");
+  assert.doesNotMatch(await desk.textContent(".fb-pop"), /pull request on GitHub/, "nothing goes to a merged pull request");
+  await desk.click(".fb-pop [data-fb-send]");
+  await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/P-12/handled"));
+  assert.deepEqual((await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/P-12/handled").body)), { handled: true });
+}));
+
+test("simple mode: Approve with notes on a merged change sends them as one review", (t) => open(t, REVIEW_DESK(HEAD_ME, [mergedChange]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="P-12"]');
+  await desk.evaluate(() => { drafts["P-12"] = [{ id: "d1", text: "Label a bit long.", anchor: null, at: "2026-11-18T10:00:00Z" }]; });
+  await desk.click('#list [data-card="P-12"]');
+  await desk.waitForSelector('#detail [data-fb="head"] .cnt');
+  await openFeedback(desk);
+  assert.deepEqual(await verdicts(desk), ["approve", "comment"]);
+  assert.equal(await picked(desk), "approve", "with notes waiting and no Request changes, the approval is picked");
+  await desk.click(".fb-pop [data-fb-send]");
+  await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/P-12/reviews"));
+  assert.equal((await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/P-12/reviews").body)).verdict, "approve");
+}));
+
+test("simple mode: a merged change already handled offers no Approve", (t) => open(t, REVIEW_DESK({ ...HEAD_ME, simFilter: null }, [{ ...mergedChange, status: "handled", handled: { by: { email: "d@example.com" }, at: "2026-11-18T10:00:00Z" } }]), async (desk) => {
+  await desk.evaluate(() => localStorage.setItem("desk-simFilter", JSON.stringify({ states: ["open", "dev", "closed"], kinds: ["request", "change"] })));
+  await desk.reload();
+  await desk.waitForSelector('#list [data-card="P-12"]');
+  await desk.click('#list [data-card="P-12"]');
+  await desk.waitForSelector("#detail .sh-line");
+  assert.equal(await desk.locator('#detail [data-fb="head"]').count(), 0, "nothing of theirs waits, and Comment only alone shows no Submit feedback");
 }));
 
 // A sent review (docs/desk.md → Reviews): one block, its comments under it, in both modes.
@@ -5217,6 +5369,44 @@ test("simple mode's head says, muted, who approved it and where it went; a bug s
   assert.equal(await desk.locator('#detail .sh-more [data-handle="0"]').count(), 1, "Undo approval under ⋯");
 }));
 
+// An approval is taken back while the spec is still on the Desk (docs/desk.md → Taking an approval back).
+const specDraft = { ...drawn, id: "R-7", title: "Spec on the Desk", status: "spec", approved: { by: { email: "jana.novak@example.com", role: "designer" }, at: "2026-11-18T09:00:00Z", variant: "v1" }, spec: { review: "draft", asset: "A-2" } };
+const specSent = { ...specDraft, id: "R-9", title: "Spec sent", spec: { review: "sent", asset: "A-2" } };
+test("an approved request whose spec is still on the Desk goes back to feedback from ⋯; a sent one does not", (t) => open(t, HEAD_DESK(HEAD_ME, [specDraft, specSent]), async (desk) => {
+  await desk.waitForSelector("#list");
+  await desk.evaluate(() => { location.hash = "#R-7"; });
+  await desk.waitForFunction(() => /Spec on the Desk/.test(document.querySelector("#detail .shead h2")?.textContent || ""));
+  assert.equal(await desk.locator('#detail [data-fb="head"]').count(), 0, "with no note waiting the head stays calm: Back to feedback is under ⋯");
+  await desk.click("#detail .sh-more > summary");
+  assert.equal(await desk.locator('#detail .sh-more [data-act="take-back"] svg.ico').count(), 1, "with Reopen's undo icon, as every item of ⋯ has one");
+  await desk.click('#detail .sh-more [data-act="take-back"]');
+  assert.match(await desk.textContent("#confirm-dialog"), /Take the approval back\?[\s\S]*jana\.novak approved it and hears of it[\s\S]*next approval's spec starts from it/);
+  await desk.click("#cf-ok");
+  await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/R-7/actions"));
+  assert.equal(await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/R-7/actions").body.action), "take-back");
+  await desk.evaluate(() => { location.hash = "#R-9"; });
+  await desk.waitForFunction(() => /Spec sent/.test(document.querySelector("#detail .shead h2")?.textContent || ""));
+  assert.equal(await desk.locator('#detail [data-act="take-back"]').count(), 0, "sent: only an admin's Reopen goes back");
+}));
+
+test("with a note waiting, Submit feedback on an approved request offers Request changes, which takes the approval back first", (t) => open(t, HEAD_DESK(HEAD_ME, [specDraft]).replace("path.endsWith(\"/drafts\") ? { drafts: [] }", "path.endsWith(\"/drafts\") ? { drafts: [{ id: \"d1\", text: \"The empty state is missing.\" }] }"), async (desk) => {
+  await desk.waitForSelector("#list");
+  await desk.evaluate(() => { location.hash = "#R-7"; });
+  await desk.waitForSelector('#detail [data-fb="head"]');
+  await openFeedback(desk);
+  assert.ok((await verdicts(desk)).includes("request-changes"), "Request changes is offered again");
+  assert.equal(await desk.getAttribute('.fb-pop [data-fb-v="request-changes"]', "aria-checked"), "true", "picked: a note waits");
+  assert.match(await desk.getAttribute('.fb-pop [data-fb-v="request-changes"]', "data-tip"), /approval and its spec draft are taken back/, "and says what it does first");
+}));
+
+test("who may not approve a request is not offered to take its approval back", (t) => open(t, HEAD_DESK({ ...HEAD_ME, role: "developer", can: { comment: true, change: true, revise: true } }, [specDraft]), async (desk) => {
+  await desk.waitForSelector("#list");
+  await desk.evaluate(() => { location.hash = "#R-7"; });
+  await desk.waitForFunction(() => /Spec on the Desk/.test(document.querySelector("#detail .shead h2")?.textContent || ""));
+  assert.equal(await desk.locator('#detail [data-act="take-back"]').count(), 0, "no Back to feedback under ⋯");
+  if (await desk.locator('[data-fb="head"]').count()) { await openFeedback(desk); assert.ok(!(await verdicts(desk)).includes("request-changes"), "nor Request changes"); }
+}));
+
 // A spec sent back with Ask for changes is not with developers yet: it keeps the review it was in,
 // For Designers and For Developers alike, and its banner says Design Desk rewrites it (docs/desk-page.md → The spec banner).
 test("a spec sent back for changes keeps its review, not In dev", (t) => open(t, HEAD_DESK(HEAD_ME, [
@@ -5577,10 +5767,25 @@ window.platform = { async request({ method, path, body }) {
 const SENT = [{ ...SIMPLE_CARDS.find((c) => c.id === "r-sent"), id: "R-31" }, { ...SIMPLE_CARDS.find((c) => c.id === "r-built"), id: "R-32" }];
 const navTabs = (desk) => desk.$$eval("#nav [data-tab]", (xs) => xs.map((x) => x.dataset.tab));
 
-for (const role of ["designer", "pm", "developer", "ui-dev-owner", "guest"]) test(`a ${role} with no choice of their own starts in simple mode, its menu one entry`, (t) => open(t, DESK({ role, email: "x@example.com", simple: null, can: { request: role !== "guest", designs: DEVELOPERS.includes(role) } }, SIMPLE_CARDS), async (desk) => {
+for (const role of ["designer", "pm", "developer", "ui-dev-owner", "guest"]) test(`a ${role} with no choice of their own starts in simple mode, its menu Requests & PRs and Product`, (t) => open(t, DESK({ role, email: "x@example.com", simple: null, can: { request: role !== "guest", designs: DEVELOPERS.includes(role) } }, SIMPLE_CARDS), async (desk) => {
   await desk.waitForSelector("#nav [data-tab]");
-  assert.deepEqual(await navTabs(desk), ["requests"]);
+  assert.deepEqual(await navTabs(desk), ["requests", "product"]);
   assert.equal(await desk.getAttribute("#simple", "aria-pressed"), "true");
+}));
+
+test("in simple mode Product shows in the menu, and each of its pages opens as in full mode", (t) => open(t, DESK({ ...SIMPLE_ME, role: "designer" }, SIMPLE_CARDS), async (desk) => {
+  await desk.waitForSelector("#nav [data-tab]");
+  assert.equal(await desk.getAttribute("#simple", "aria-pressed"), "true");
+  assert.deepEqual(await navTabs(desk), ["requests", "product"], "Designs, Issues and People stay hidden");
+  await desk.click('#nav [data-tab="product"]');
+  await desk.waitForSelector('[data-filter="productFilter:screens"]');
+  const pages = await desk.$$eval('[data-filter^="productFilter:"]', (xs) => xs.map((x) => x.dataset.filter.split(":")[1]));
+  for (const k of ["screens", "elements", "decisions", "history"]) assert.ok(pages.includes(k), `${k} in Product's bar`);
+  for (const k of pages) {
+    await desk.click(`[data-filter="productFilter:${k}"]`);
+    await desk.waitForSelector(`[data-filter="productFilter:${k}"][aria-current="page"]`);
+    assert.equal(await desk.getAttribute('#nav [data-tab="product"]', "aria-current"), "true", `still on Product, on ${k}`);
+  }
 }));
 
 test("an admin in simple mode keeps every page in the menu, Product's pages included", (t) => open(t, DESK({ role: "admin", email: "lead@example.com", simple: null, can: { request: true, designs: true, people: true } }, SIMPLE_CARDS), async (desk) => {

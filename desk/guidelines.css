@@ -300,7 +300,7 @@
   /* What Design Desk found: a fold like the others, the first of them. Its head carries Design
      Desk's mark and its answer, so a glance tells whether there is anything to check. */
   details.sfound > summary .sf-mark { width: 24px; height: 24px; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--ink); color: var(--bg); }
-  details.sfound > summary .sf-mark svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+  details.sfound > summary .sf-mark.mk-on-ink { background: none; } details.sfound > summary .sf-mark svg.dd-mark { width: 24px; height: 24px; }
   details.sfound > summary .sf-say { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-meta); font-weight: 500; color: var(--ok); }
   details.sfound > summary .sf-say[data-k="warn"] { padding: 0 8px; line-height: 24px; border-radius: 999px; color: var(--warn); background: var(--warn-soft); }
   details.sfound > summary .sf-say svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
@@ -348,6 +348,8 @@
   .yreview .yr-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; } .yreview .yr-h b { font-size: var(--fs-ui); }
   .dbub { display: flex; gap: 8px; align-items: flex-start; padding: 8px 12px; border-radius: var(--r-sm); background: var(--panel); } .dbub + .dbub { margin-top: 8px; }
   .dbub .db-b { min-width: 0; flex: 1; white-space: pre-wrap; overflow-wrap: anywhere; } .dbub .about { display: block; font-size: var(--fs-micro); color: var(--muted); white-space: normal; }
+  .dbub .dtx { display: block; } .dbub .dtx:not(.open) { display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .dbub button.dtx-more { display: block; padding: 0; margin-top: 4px; font-size: var(--fs-micro); font-weight: 400; color: var(--muted); } .dbub button.dtx-more:hover { color: var(--ink); } .dbub .dtx-more[hidden] { display: none; }
   .dbub .x { border: 0; background: none; color: var(--muted); cursor: pointer; font: inherit; padding: 0 4px; } .dbub .x:hover { color: var(--ink); }
   /* Submit feedback (docs/desk-page.md → Submit feedback): its colour is the verdict it sends — green
      an approval, amber Request changes, ink Comment only; its counts sit inside it. */
@@ -370,7 +372,8 @@
   .fb-pop .fb-prog { display: grid; gap: 8px; font-size: var(--fs-meta); } .fb-pop .fb-prog .pbar { width: 100%; } .fb-pop .chg-done { margin: 0; }
   .fb-pop .fb-left { display: flex; flex-wrap: wrap; gap: 4px; } .fb-pop .fb-left .chip { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 1px dashed var(--line); background: none; cursor: pointer; }
   .fb-pop .fb-items { display: grid; gap: 8px; } .fb-pop .dbub { border: 1px solid var(--line); margin: 0; } .fb-pop .dbub.ok { background: var(--approved-soft); border-color: transparent; }
-  .fb-pop .dbub .link.about { display: block; padding: 0; font-size: var(--fs-micro); text-align: left; }
+  :is(.fb-pop, .ws-fb-items) .dbub .link.about { display: block; padding: 0; font-size: var(--fs-micro); font-weight: 400; color: var(--muted); text-align: left; }
+  :is(.fb-pop, .ws-fb-items) .dbub .link.about:hover { color: var(--ink); }
   .fb-pop .fb-empty { margin: 0; padding: 8px 12px; border: 1px dashed var(--line); border-radius: var(--r-sm); }
   .fb-vs { display: grid; grid-auto-columns: 1fr; grid-auto-flow: column; border: 1px solid var(--line); border-radius: var(--r-sm); overflow: hidden; }
   .fb-vs button { display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 8px 4px; border: 0; border-right: 1px solid var(--line); background: var(--panel); color: inherit; font: inherit; font-size: var(--fs-meta); white-space: nowrap; cursor: pointer; }
@@ -378,7 +381,14 @@
   .fb-vs button[aria-checked="true"] { font-weight: 600; background: var(--soft); }
   .fb-vs button[aria-checked="true"][data-v="ok"] { background: var(--approved-soft); color: var(--approved); } .fb-vs button[aria-checked="true"][data-v="rc"] { background: var(--warn-soft); color: var(--warn); }
   .fb-pop .fb-hint { margin: -4px 0 0; } .fb-pop textarea { width: 100%; min-height: 56px; }
-  .fb-pop .fb-send { display: flex; gap: 8px; } .fb-pop .fb-send .fbk { flex: 1; }
+  /* Its buttons are a footer fixed to the panel's bottom, in view while the notes scroll. */
+  .fb-pop .fb-send { position: sticky; bottom: 0; z-index: 1; display: flex; gap: 8px; padding: 12px 16px; background: var(--panel); border-top: 1px solid var(--line); }
+  .fb-pop .fb-send .fbk { flex: 1; } .fb-pop .fb-b { padding-bottom: 12px; }
+  /* Which design an approval is for: the options as the verdicts are, each by its number and name. */
+  .fb-pop .fb-opt { display: grid; gap: 8px; } .fb-pop .fb-opt > b { font-size: var(--fs-meta); font-weight: 600; }
+  .fb-os button { min-width: 0; padding: 8px; } .fb-os .fb-on { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .fb-os .fb-no { flex: none; min-width: 18px; line-height: 18px; padding: 0 4px; border-radius: var(--r-sm); background: var(--soft); color: var(--muted); font-size: var(--fs-micro); font-weight: 600; }
+  .fb-os button[aria-checked="true"] .fb-no { background: var(--ink); color: var(--panel); }
   .elbar .el-acts .fb-pop { z-index: 6; }
   /* On a narrow screen the panel spans it, edge to edge, so none of it hangs off to the left. */
   @media (max-width: 560px) { .fb-pop { position: fixed; top: 64px; left: 8px; right: 8px; width: auto; max-height: calc(100vh - 80px); } }
@@ -1027,7 +1037,14 @@
   #peek .t { display: flex; gap: 8px; align-items: baseline; justify-content: space-between; }
   #peek .sub { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0 0; color: var(--muted); font-size: var(--fs-meta); }
   #peek p { margin: 8px 0 0; } #peek h4 { margin: 12px 0 2px; font-size: var(--fs-meta); } #peek ul { margin: 0; padding-left: 20px; }
-  .toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--panel); padding: 8px 16px; border-radius: var(--r-sm); z-index: 90; max-width: calc(100% - 32px); }
+  /* The toast: a compact box in the top right corner, over the bars, newest on top, with ✕; it goes by itself.
+     Only its ✕ takes a click: one on its words reaches the bar's control under it. */
+  .toasts { position: fixed; top: 12px; right: 24px; z-index: 90; display: grid; gap: 8px; justify-items: end; width: min(360px, calc(100% - 32px)); pointer-events: none; }
+  .toast { display: flex; align-items: flex-start; gap: 8px; width: 100%; max-width: 360px; box-sizing: border-box; padding: 12px 8px 12px 16px; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 10px 30px rgba(0,0,0,.18); font-size: var(--fs-meta); line-height: 1.45; }
+  .toast .t-m { flex: 1; min-width: 0; overflow-wrap: anywhere; padding-top: 1px; }
+  .toast .t-x { pointer-events: auto; flex: none; border: 0; background: none; color: var(--muted); cursor: pointer; font: inherit; width: 24px; height: 24px; border-radius: var(--r-sm); display: grid; place-items: center; }
+  .toast .t-x .ico { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+  .toast .t-x:hover { color: var(--ink); background: var(--soft); }
   dialog { border: 1px solid var(--line); border-radius: var(--radius); padding: 0; width: min(560px, calc(100% - 32px)); background: var(--panel); color: var(--ink); }
   dialog::backdrop { background: rgba(0,0,0,.35); }
   .drop.over { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
@@ -1813,14 +1830,9 @@
   .ws-ptabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); }
   .ws-ptabs .n { min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px; background: var(--soft); color: var(--ink); font-size: var(--fs-micro); line-height: 17px; text-align: center; box-sizing: border-box; }
   .ws-ptabs .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
-  /* Your feedback in the workspace's side panel: the viewer's notes not sent yet, across options. */
-  .ws-drafts { list-style: none; margin: 0; padding: 8px 12px; display: grid; gap: 8px; }
-  .ws-drafts li { display: flex; gap: 8px; align-items: flex-start; padding: 8px 12px; border-radius: var(--r-sm); background: var(--warn-soft); }
-  .ws-fb-go { all: unset; flex: 1; min-width: 0; cursor: pointer; display: grid; gap: 4px; } .ws-fb-go .about { font-size: var(--fs-micro); color: var(--muted); } .ws-fb-go .tx { white-space: pre-wrap; overflow-wrap: anywhere; }
-  .ws-fb-go:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .ws-drafts .x { border: 0; background: none; color: var(--muted); cursor: pointer; font: inherit; padding: 0 4px; } .ws-drafts .x:hover { color: var(--ink); }
-  .ws-fb-bar { display: flex; gap: 8px; align-items: center; justify-content: space-between; padding: 8px 12px 16px; } .ws-fb-bar .hint { margin: 0; }
-  .ws-fb-empty { padding: 16px 12px; margin: 0; }
+  .ws-fb-items { display: grid; gap: 8px; } .ws-fb-items .dbub { border: 1px solid var(--line); margin: 0; background: var(--warn-soft); border-color: transparent; }
+  .ws-fb-bar { display: flex; gap: 8px; align-items: center; justify-content: space-between; } .ws-fb-bar .hint { margin: 0; }
+  .ws-fb-empty { margin: 0; }
   .ws-pbody { padding: 12px 16px 80px; display: grid; gap: 12px; align-content: start; }
   .sel .ws-wholebox { margin-top: 8px; background: var(--bg); }
 
@@ -1933,6 +1945,6 @@
     @keyframes dd-rise { from { opacity: 0; transform: translateY(8px); } }
     @keyframes dd-pop { from { opacity: 0; transform: translateY(-4px) scale(.97); } }
     @keyframes dd-grow { from { opacity: 0; transform: translateY(12px) scale(.96); } }
-    @keyframes dd-toast-in { from { opacity: 0; transform: translate(-50%, 10px); } }
-    @keyframes dd-toast-out { to { opacity: 0; transform: translate(-50%, 6px); } }
+    @keyframes dd-toast-in { from { opacity: 0; transform: translateY(-8px); } }
+    @keyframes dd-toast-out { to { opacity: 0; transform: translateX(8px); } }
   }
