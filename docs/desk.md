@@ -442,9 +442,11 @@ someone forgot goes into the design. **Request changes** in Submit feedback does
 an approved request, then works its feedback in as it always does (a `revise`); on an approved
 request only those people are offered it, and the store refuses anyone else. Either way:
 
-- the request goes back to where the team gives feedback, with its options: Live — try it while
-  its prototype is up, Team feedback while it was asked, else its drawn options; none drawn →
-  triage, as it was checked;
+- the request goes back to the step it was approved at (`approved.from`), with its options: Live —
+  try it while its prototype is up, else Team feedback or its drawn options as it was then (an
+  approval from before `from`: Team feedback while it was asked, else its options); none drawn →
+  triage, as it was checked. In simple mode each of them is Design review;
+- its vote opens again (`vote_ended` cleared), as a reopen's does, for the next version;
 - its `approved` (with `overruled`) and its spec, the draft or the one being written, move into
   a record on the card's `taken_back` (`{by, at, approved, overruled?, spec}`, the last 10); no
   Designs record, nothing in `sends`, so an earlier send still closes as it did;

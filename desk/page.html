@@ -8747,7 +8747,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // Back to feedback, knowingly: the approval goes, the spec draft waits for the next one.
     if (name === "take-back") {
       const by = c.approved?.by?.email && !isMe(c.approved.by.email) ? shortName(c.approved.by.email, c.approved.by.name) : "";
-      const r = await ask({ title: "Take the approval back?", body: `It goes back to feedback with its design options, and the design can change again${by ? `; ${by} approved it and hears of it` : ""}. The spec draft is kept: the next approval's spec starts from it. Nothing has gone to developers yet.`, ok: "Back to feedback", send: () => post() });
+      const r = await ask({ title: "Take the approval back?", body: `It goes back to the step it was approved at, with its design options, and the design can change again${by ? `; ${by} approved it and hears of it` : ""}. The spec draft is kept: the next approval's spec starts from it. Nothing has gone to developers yet.`, ok: "Back to feedback", send: () => post() });
       if (!r) return;
       toast("Back to feedback. The design can change again.");
       await refreshList(); await openCard(c.id); return;
