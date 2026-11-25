@@ -2579,18 +2579,27 @@ test("a comment from the part selected lets the part go and shows; feedback sent
     await frame.waitForFunction(() => ![...document.querySelectorAll("div")].some((d) => d.style.borderStyle === "solid" && d.textContent === "Button"));
     assert.match(await desk.getAttribute('#ws-side [data-ws-note="t1"]', "class"), /\bspot\b/, "the new comment is lit");
 
-    // Feedback from the workspace: the note waits under Your feedback, then goes with Request changes.
-    const long = `Make it a   secondary button ${"and quieter ".repeat(8)}`;
+    // Feedback from the workspace: the note waits under Your feedback, three lines at most, and in
+    // Submit feedback on the bar on top, as in every dialog's head; it goes with Request changes from there.
+    const long = `Make it a   secondary button ${"and quieter ".repeat(30)}`;
     await desk.click('[data-ws-panel="comments"]');
     await desk.fill("#ws-whole", long);
     await desk.click("#ws-side [data-ws-send-whole=draft]");
-    await desk.waitForSelector("#ws-side .ws-drafts li");
+    await desk.waitForFunction(() => /Submit feedback\s*1/.test(document.querySelector('#ws-top [data-fb="ws"]')?.textContent || ""));
     assert.equal(await desk.getAttribute('[data-ws-panel="feedback"]', "aria-selected"), "true", "the side panel shows Your feedback");
     assert.match(await desk.textContent('[data-ws-panel="feedback"]'), /Your feedback\s*1/);
-    assert.match(await desk.textContent("#ws-side .ws-drafts"), /the whole option[\s\S]*Make it a/);
-    await desk.click('#ws-side [data-review=""]');
-    await desk.click('#cf-choices input[value="request-changes"]');
-    await desk.click("#cf-ok");
+    assert.match(await desk.textContent("#ws-side .ws-fb-items"), /the whole option[\s\S]*Make it a/);
+    await desk.waitForSelector("#ws-side .dtx-more:not([hidden])");
+    assert.equal(await desk.$eval("#ws-side .dtx", (t) => t.scrollHeight > t.clientHeight), true, "a long note shows three lines");
+    await desk.click("#ws-side .dtx-more");
+    assert.equal(await desk.$eval("#ws-side .dtx", (t) => t.scrollHeight <= t.clientHeight + 1), true, "Show all shows the rest");
+    assert.equal(await desk.textContent("#ws-side .dtx-more"), "Show less");
+    assert.equal(await desk.getAttribute('#ws-top [data-fb="ws"]', "data-v"), "rc", "it sends Request changes, as a note waits");
+    // The tab's Submit feedback… opens the panel on the bar on top: the same notes, then the verdict.
+    await desk.click('#ws-side [data-fb="ws"]');
+    assert.match(await desk.textContent("#ws-top .fb-pop"), /the whole option[\s\S]*Make it a/);
+    await desk.click('#ws-top .fb-pop [data-fb-v="request-changes"]');
+    await desk.click("#ws-top .fb-pop [data-fb-send]");
     await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/r8/reviews"));
     // Queued: the pill names the comment by its first words, on one line, and breathes.
     const words = long.replace(/\s+/g, " ").trim().slice(0, 79).trimEnd();
@@ -2604,10 +2613,9 @@ test("a comment from the part selected lets the part go and shows; feedback sent
     await desk.click('[data-ws-panel="comments"]');
     await desk.fill("#ws-whole", "A bigger title");
     await desk.click("#ws-side [data-ws-send-whole=draft]");
-    await desk.waitForSelector("#ws-side .ws-drafts li");
-    await desk.click('#ws-side [data-review=""]');
-    await desk.click('#cf-choices input[value="request-changes"]');
-    await desk.click("#cf-ok");
+    await desk.waitForFunction(() => /Submit feedback\s*1/.test(document.querySelector('#ws-top [data-fb="ws"]')?.textContent || ""));
+    await desk.click('#ws-top [data-fb="ws"]');
+    await desk.click("#ws-top .fb-pop [data-fb-send]");
     await desk.waitForFunction(() => /^Working on 2 comments · Tabs$/.test(document.querySelector(".ws-agent")?.textContent.trim() || ""));
   } finally {
     await run.close();
@@ -2872,6 +2880,7 @@ test("the look palette: in the side panel under the part picked, a preview only,
     assert.match(await desk.textContent("#ws-palette .pl-foot"), /In your feedback/);
     assert.equal((await posts("/api/cards/r7/threads")).length + (await posts("/api/cards/r7/drafts")).length, 0, "nothing sent before the feedback is");
     assert.match(await desk.textContent('[data-ws-panel="feedback"]'), /Your feedback\s*1/);
+    assert.match(await desk.textContent('#ws-top [data-fb="ws"]'), /Submit feedback\s*1/);
     assert.equal(await style("backgroundColor"), "rgb(214, 51, 108)", "the design keeps showing it");
 
     // A flex box has Layout.
@@ -2891,15 +2900,22 @@ test("the look palette: in the side panel under the part picked, a preview only,
     assert.equal(await desk.locator('#ws-palette .pl-reset[data-pl-pick="kind|link"]').count(), 0, "back to the option drawn: nothing to undo there");
     await desk.click('#ws-palette [data-pl-pick="kind|button"]');
     await desk.click("#ws-palette [data-pl-send]");
-    await desk.waitForFunction(() => /Your feedback\s*2/.test(document.querySelector('[data-ws-panel="feedback"]')?.textContent || ""));
+    await desk.waitForFunction(() => /Submit feedback\s*2/.test(document.querySelector('#ws-top [data-fb="ws"]')?.textContent || ""));
     // Sent with Request changes, each edit becomes a note with its values, then the feedback goes.
-    await desk.click('[data-ws-panel="feedback"]');
-    assert.match(await desk.textContent("#ws-side .ws-drafts"), /Look of Button “Save” · this browser[\s\S]*Look of More link · this browser/);
-    await desk.click('#ws-side [data-review=""]');
-    assert.match(await desk.textContent("#cf-body"), /drawn only with Request changes/);
-    await desk.click('#cf-choices input[value="request-changes"]');
-    await desk.click("#cf-ok");
+    await desk.click('#ws-top [data-fb="ws"]');
+    assert.match(await desk.textContent("#ws-top .fb-pop .fb-items"), /Look of Button “Save” · this browser[\s\S]*Look of More link · this browser/);
+    assert.match(await desk.textContent("#ws-top .fb-pop"), /drawn only with Request changes/);
+    assert.equal(await desk.locator('[data-ws-panel="props"] .dot').count(), 1, "a part is selected while the feedback is written");
+    await desk.click('#ws-top .fb-pop [data-fb-v="request-changes"]');
+    await desk.click("#ws-top .fb-pop [data-fb-send]");
     await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/r7/reviews"));
+    await desk.waitForFunction(() => !document.querySelector('[data-ws-panel="props"] .dot'));
+    // The toast says it in the top right corner, a box with ✕ that closes it.
+    const tb = await desk.$eval(".toasts .toast", (t) => { const r = t.getBoundingClientRect(); return { right: innerWidth - r.right, top: r.top, x: Boolean(t.querySelector(".t-x[aria-label]")) }; });
+    assert.ok(tb.right < 40 && tb.top < 40 && tb.x, `the toast at the top right with its ✕: ${JSON.stringify(tb)}`);
+    const before = await desk.locator(".toasts .toast").count();
+    await desk.click(".toasts .toast .t-x");
+    assert.equal(await desk.locator(".toasts .toast").count(), before - 1, "✕ closes it");
     const [body, smart] = (await posts("/api/cards/r7/drafts")).map((x) => JSON.parse(x.body));
     assert.deepEqual(body.anchor.style, [{ prop: "background-color", from: "rgb(59, 91, 219)", to: "var(--danger)" }]);
     assert.equal(body.anchor.variant, "v1");

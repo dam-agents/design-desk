@@ -351,6 +351,8 @@
   .yreview .yr-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; } .yreview .yr-h b { font-size: var(--fs-ui); }
   .dbub { display: flex; gap: 8px; align-items: flex-start; padding: 8px 12px; border-radius: var(--r-sm); background: var(--panel); } .dbub + .dbub { margin-top: 8px; }
   .dbub .db-b { min-width: 0; flex: 1; white-space: pre-wrap; overflow-wrap: anywhere; } .dbub .about { display: block; font-size: var(--fs-micro); color: var(--muted); white-space: normal; }
+  .dbub .dtx { display: block; } .dbub .dtx:not(.open) { display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .dbub button.dtx-more { display: block; padding: 0; margin-top: 4px; font-size: var(--fs-micro); font-weight: 400; color: var(--muted); } .dbub button.dtx-more:hover { color: var(--ink); } .dbub .dtx-more[hidden] { display: none; }
   .dbub .x { border: 0; background: none; color: var(--muted); cursor: pointer; font: inherit; padding: 0 4px; } .dbub .x:hover { color: var(--ink); }
   /* Submit feedback (docs/desk-page.md → Submit feedback): its colour is the verdict it sends — green
      an approval, amber Request changes, ink Comment only; its counts sit inside it. */
@@ -373,7 +375,8 @@
   .fb-pop .fb-prog { display: grid; gap: 8px; font-size: var(--fs-meta); } .fb-pop .fb-prog .pbar { width: 100%; } .fb-pop .chg-done { margin: 0; }
   .fb-pop .fb-left { display: flex; flex-wrap: wrap; gap: 4px; } .fb-pop .fb-left .chip { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 1px dashed var(--line); background: none; cursor: pointer; }
   .fb-pop .fb-items { display: grid; gap: 8px; } .fb-pop .dbub { border: 1px solid var(--line); margin: 0; } .fb-pop .dbub.ok { background: var(--approved-soft); border-color: transparent; }
-  .fb-pop .dbub .link.about { display: block; padding: 0; font-size: var(--fs-micro); text-align: left; }
+  :is(.fb-pop, .ws-fb-items) .dbub .link.about { display: block; padding: 0; font-size: var(--fs-micro); font-weight: 400; color: var(--muted); text-align: left; }
+  :is(.fb-pop, .ws-fb-items) .dbub .link.about:hover { color: var(--ink); }
   .fb-pop .fb-empty { margin: 0; padding: 8px 12px; border: 1px dashed var(--line); border-radius: var(--r-sm); }
   .fb-vs { display: grid; grid-auto-columns: 1fr; grid-auto-flow: column; border: 1px solid var(--line); border-radius: var(--r-sm); overflow: hidden; }
   .fb-vs button { display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 8px 4px; border: 0; border-right: 1px solid var(--line); background: var(--panel); color: inherit; font: inherit; font-size: var(--fs-meta); white-space: nowrap; cursor: pointer; }
@@ -1038,7 +1041,13 @@
   #peek .t { display: flex; gap: 8px; align-items: baseline; justify-content: space-between; }
   #peek .sub { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0 0; color: var(--muted); font-size: var(--fs-meta); }
   #peek p { margin: 8px 0 0; } #peek h4 { margin: 12px 0 2px; font-size: var(--fs-meta); } #peek ul { margin: 0; padding-left: 20px; }
-  .toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--panel); padding: 8px 16px; border-radius: var(--r-sm); z-index: 90; max-width: calc(100% - 32px); }
+  /* The toast: a compact box in the top right corner, over the bars, newest on top, with ✕; it goes by itself. */
+  .toasts { position: fixed; top: 12px; right: 24px; z-index: 90; display: grid; gap: 8px; justify-items: end; width: min(360px, calc(100% - 32px)); pointer-events: none; }
+  .toast { pointer-events: auto; display: flex; align-items: flex-start; gap: 8px; width: 100%; max-width: 360px; box-sizing: border-box; padding: 12px 8px 12px 16px; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 10px 30px rgba(0,0,0,.18); font-size: var(--fs-meta); line-height: 1.45; }
+  .toast .t-m { flex: 1; min-width: 0; overflow-wrap: anywhere; padding-top: 1px; }
+  .toast .t-x { flex: none; border: 0; background: none; color: var(--muted); cursor: pointer; font: inherit; width: 24px; height: 24px; border-radius: var(--r-sm); display: grid; place-items: center; }
+  .toast .t-x .ico { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+  .toast .t-x:hover { color: var(--ink); background: var(--soft); }
   dialog { border: 1px solid var(--line); border-radius: var(--radius); padding: 0; width: min(560px, calc(100% - 32px)); background: var(--panel); color: var(--ink); }
   dialog::backdrop { background: rgba(0,0,0,.35); }
   .drop.over { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
@@ -1824,14 +1833,9 @@
   .ws-ptabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); }
   .ws-ptabs .n { min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px; background: var(--soft); color: var(--ink); font-size: var(--fs-micro); line-height: 17px; text-align: center; box-sizing: border-box; }
   .ws-ptabs .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
-  /* Your feedback in the workspace's side panel: the viewer's notes not sent yet, across options. */
-  .ws-drafts { list-style: none; margin: 0; padding: 8px 12px; display: grid; gap: 8px; }
-  .ws-drafts li { display: flex; gap: 8px; align-items: flex-start; padding: 8px 12px; border-radius: var(--r-sm); background: var(--warn-soft); }
-  .ws-fb-go { all: unset; flex: 1; min-width: 0; cursor: pointer; display: grid; gap: 4px; } .ws-fb-go .about { font-size: var(--fs-micro); color: var(--muted); } .ws-fb-go .tx { white-space: pre-wrap; overflow-wrap: anywhere; }
-  .ws-fb-go:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .ws-drafts .x { border: 0; background: none; color: var(--muted); cursor: pointer; font: inherit; padding: 0 4px; } .ws-drafts .x:hover { color: var(--ink); }
-  .ws-fb-bar { display: flex; gap: 8px; align-items: center; justify-content: space-between; padding: 8px 12px 16px; } .ws-fb-bar .hint { margin: 0; }
-  .ws-fb-empty { padding: 16px 12px; margin: 0; }
+  .ws-fb-items { display: grid; gap: 8px; } .ws-fb-items .dbub { border: 1px solid var(--line); margin: 0; background: var(--warn-soft); border-color: transparent; }
+  .ws-fb-bar { display: flex; gap: 8px; align-items: center; justify-content: space-between; } .ws-fb-bar .hint { margin: 0; }
+  .ws-fb-empty { margin: 0; }
   .ws-pbody { padding: 12px 16px 80px; display: grid; gap: 12px; align-content: start; }
   .sel .ws-wholebox { margin-top: 8px; background: var(--bg); }
 
@@ -1930,8 +1934,8 @@
     @keyframes dd-rise { from { opacity: 0; transform: translateY(8px); } }
     @keyframes dd-pop { from { opacity: 0; transform: translateY(-4px) scale(.97); } }
     @keyframes dd-grow { from { opacity: 0; transform: translateY(12px) scale(.96); } }
-    @keyframes dd-toast-in { from { opacity: 0; transform: translate(-50%, 10px); } }
-    @keyframes dd-toast-out { to { opacity: 0; transform: translate(-50%, 6px); } }
+    @keyframes dd-toast-in { from { opacity: 0; transform: translateY(-8px); } }
+    @keyframes dd-toast-out { to { opacity: 0; transform: translateX(8px); } }
   }
 </style>
 </head>
@@ -2715,7 +2719,33 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const day = (iso) => (iso ? new Date(iso).toLocaleDateString("en", { dateStyle: "medium" }) : "");
   // A day said as people say it: Today, Yesterday, else its date.
   const dayWord = (iso) => { const d = new Date(iso), t = new Date(), y = new Date(t); y.setDate(t.getDate() - 1); const same = (a, b) => a.toDateString() === b.toDateString(); return same(d, t) ? "Today" : same(d, y) ? "Yesterday" : day(iso); };
-  const toast = (msg) => { const el = document.createElement("div"); el.className = "toast"; el.textContent = msg; (document.querySelector("dialog[open]") || document.body).append(el); setTimeout(() => el.remove(), 4800); };
+  // A toast (desk/guidelines.html → The toast): at the top right of the open dialog or the page,
+  // newest on top, three at most; ✕ closes it, and it goes by itself after a few seconds.
+  // Show all shows only where a note's words are cut off, measured after each redraw.
+  function dtxMeasure() {
+    for (const t of document.querySelectorAll(".dtx")) {
+      const b = t.nextElementSibling; if (!b?.matches(".dtx-more")) continue;
+      const open = t.classList.contains("open");
+      let cut = t.scrollHeight > t.clientHeight + 1;
+      if (open) { t.classList.remove("open"); cut = t.scrollHeight > t.clientHeight + 1; t.classList.add("open"); }
+      if (b.hidden === cut) b.hidden = !cut;
+      const say = open ? "Show less" : "Show all"; if (b.textContent !== say) b.textContent = say;
+    }
+  }
+  let dtxQueued = false;
+  new MutationObserver(() => { if (dtxQueued) return; dtxQueued = true; requestAnimationFrame(() => { dtxQueued = false; dtxMeasure(); }); }).observe(document.body, { childList: true, subtree: true });
+  const toast = (msg) => {
+    const host = document.querySelector("dialog[open]") || document.body;
+    let box = [...host.children].find((x) => x.classList.contains("toasts"));
+    if (!box) { box = document.createElement("div"); box.className = "toasts"; box.setAttribute("role", "status"); box.setAttribute("aria-live", "polite"); host.append(box); }
+    const el = document.createElement("div"); el.className = "toast";
+    el.innerHTML = `<span class="t-m"></span><button type="button" class="t-x" aria-label="Close this message" title="Close"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`;
+    el.firstChild.textContent = msg;
+    el.lastChild.addEventListener("click", () => el.remove());
+    box.prepend(el);
+    while (box.children.length > 3) box.lastChild.remove();
+    setTimeout(() => el.remove(), 4800);
+  };
   const fail = (e) => { if (!(e instanceof Said)) console.error(e); toast(e instanceof Said ? e.message : `Something went wrong. Try again; if it keeps happening, tell ${contact()}.`); };
   const guard = (fn) => async (...a) => { try { await fn(...a); } catch (e) { fail(e); } };
   // A send that fails opens its dialog again with what the person typed; the toast says why.
@@ -3871,7 +3901,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // drawing, until the feedback is sent; each becomes a note with its values then (docs/desk.md → Reviews).
   const lookFeedback = (c) => c?.kind === "request" ? Object.entries(S.ws.looks || {}).filter(([k]) => k.startsWith(`${c.id}|`))
     .flatMap(([key, all]) => Object.entries(all).filter(([, e]) => e.fb && changeCount(e)).map(([selector, e]) => ({ key, selector, e }))) : [];
-  const lookBubble = (x, remove = true) => `<div class="dbub"><div class="db-b"><span class="about">Look of ${esc(x.e.label)} · this browser</span>${esc(changeWords(x.e).join("; "))}</div>${remove ? `<button class="x" data-look-unfb="${esc(`${x.key}\n${x.selector}`)}" aria-label="Take this look edit out of your feedback" title="Take it out of your feedback; the edit stays in the design">✕</button>` : ""}</div>`;
+  // A note's words in the feedback: three lines at most, Show all where more is cut off; the
+  // browser keeps which ones are open until the page reloads (docs/desk-page.md → Submit feedback).
+  const noteWords = (id, html) => `<span class="dtx${S.dtxOpen?.has(id) ? " open" : ""}" data-dtx="${esc(id)}">${html}</span><button type="button" class="link dtx-more" data-dtx-more="${esc(id)}" hidden>${S.dtxOpen?.has(id) ? "Show less" : "Show all"}</button>`;
+  const lookBubble = (x, remove = true) => `<div class="dbub"><div class="db-b"><span class="about">Look of ${esc(x.e.label)} · this browser</span>${noteWords(`look:${x.key}\n${x.selector}`, esc(changeWords(x.e).join("; ")))}</div>${remove ? `<button class="x" data-look-unfb="${esc(`${x.key}\n${x.selector}`)}" aria-label="Take this look edit out of your feedback" title="Take it out of your feedback; the edit stays in the design">✕</button>` : ""}</div>`;
   const feedbackCount = (c) => draftsOf(c).length + lookFeedback(c).length;
   // Full mode's Questions and comments, while drafts wait: each one, and Submit feedback to send them.
   // Simple mode has no such box: Submit feedback in the head holds them (docs/desk-page.md → Simple mode).
@@ -3911,10 +3944,13 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // A note in the panel: what it is about (a change's opens it) and ✕.
   function fbItem(c, d) {
     const about = draftAbout(c, d), jump = d.change && c.kind === "change" && changesOf(c).some((x) => x.key === d.change);
-    const head = about ? (jump ? `<button class="link about" data-chg-open="${esc(d.change)}" title="Opens this change">${esc(about)}</button>` : `<span class="about">${esc(about)}</span>`) : "";
+    // In the design workspace a note on a design shows its option, state and part.
+    const go = !jump && S.ws.open && c.kind === "request" && (d.work_in ? workInOf(c, d)?.anchor : d.anchor)?.variant;
+    const head = about ? (jump ? `<button class="link about" data-chg-open="${esc(d.change)}" title="Opens this change">${esc(about)}</button>`
+      : go ? `<button class="link about" data-ws-draft-go="${esc(d.id)}" title="Shows where it is">${esc(about)}</button>` : `<span class="about">${esc(about)}</span>`) : "";
     const fig = d.figma ? `<span class="about fig-about">${FIG_TAG}${d.fine ? " · fine as it is" : d.edited ? " · in your words" : ""}</span>` : "";
     const words = d.fine ? `<b>${esc(d.figma)}</b>: ${esc(figDiff(c, d.figma)?.what || "")}` : d.ok ? "✓ Looks good" : d.work_in ? esc(workInWords(c, d)) : esc(d.text);
-    return `<div class="dbub${d.ok || d.fine ? " ok" : ""}${d.figma ? " fig" : ""}"><div class="db-b">${head}${fig}${words}</div><button class="x" data-draft-del="${esc(d.id)}" aria-label="${d.ok ? "Take back this Looks good" : d.fine ? "Take back Fine as it is" : "Remove this comment from your feedback"}" title="${d.ok ? "Takes back your Looks good" : d.fine ? "Takes back Fine as it is: the difference waits on its change again" : "Remove from your feedback"}">✕</button></div>`;
+    return `<div class="dbub${d.ok || d.fine ? " ok" : ""}${d.figma ? " fig" : ""}"><div class="db-b">${head}${fig}${noteWords(d.id, words)}</div><button class="x" data-draft-del="${esc(d.id)}" aria-label="${d.ok ? "Take back this Looks good" : d.fine ? "Take back Fine as it is" : "Remove this comment from your feedback"}" title="${d.ok ? "Takes back your Looks good" : d.fine ? "Takes back Fine as it is: the difference waits on its change again" : "Remove from your feedback"}">✕</button></div>`;
   }
   function fbPanel(c, v) {
     const ds = draftsOf(c), looks = lookFeedback(c), vs = verdictsFor(c), x = vs.find((y) => y.id === v) || vs[0], n = notesWaiting(c);
@@ -3954,7 +3990,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // The panel follows a redraw of what holds it; one open at a time, closed by Esc or a click outside it.
   function fbToggle(c, where) { S.fb = S.fb?.card === c.id && S.fb.where === where ? null : { card: c.id, where, pick: S.fb?.card === c.id ? S.fb.pick : null, option: S.fb?.card === c.id ? S.fb.option : null, note: S.fb?.card === c.id ? S.fb.note : "" }; fbRedraw(); }
   function fbClose() { if (!S.fb) return false; S.fb = { card: S.fb.card, where: null, pick: S.fb.pick, option: S.fb.option, note: S.fb.note }; fbRedraw(); return true; }
-  function fbRedraw() { renderDetail(); }
+  function fbRedraw() { renderDetail(); if (S.ws.open) renderWorkspace(); }
   document.addEventListener("input", (e) => { if (e.target.id === "fb-note" && S.fb) S.fb.note = e.target.value; });
   document.addEventListener("input", (e) => { if (e.target.closest?.(".sreply") && e.target.dataset.reply === S.replyOpen) S.replyText = e.target.value; });
   document.addEventListener("click", (e) => { if (S.fb?.where && !e.target.closest?.(".fbw")) fbClose(); }, true);
@@ -7704,7 +7740,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // Every button that opens the design workspace carries its mark, so it reads as the same way in.
   const wsMark = () => `<svg class="ico ws-mark" viewBox="0 0 24 24" aria-hidden="true">${ICONS.workspace}</svg>`;
 
-  // The bar on top: the request, what Design Desk does on it now, Figma, and the one way out.
+  // The bar on top: the request, what Design Desk does on it now, Figma, Submit feedback (as in
+  // every dialog's head, docs/desk-page.md → Submit feedback) and the one way out.
   function wsTop(c, v) {
     const busy = [v, ...(c.variants || []).filter((x) => x.id !== v.id)].flatMap((x) => busyOn(c, x.id).map((w) => ({ ...w, on: x.name }))).concat(working(c).includes("explore") ? [{ state: "claimed", what: "Drawing a new option" }] : [])
       .concat((c.waiting || []).filter((w) => w.kind === "figma" && !w.variant && !workDone(c, w)).map((w) => ({ ...w, what: "Bringing a frame in from Figma" })));
@@ -7714,7 +7751,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const title = S.ws.check ? `<span class="title">Final check: ${esc(v.name)} goes live</span><span class="chip" title="The version that goes live">version ${esc(v.version || 1)}</span>`
       : `<span class="title" title="${esc(c.title)}">${esc(c.title)}</span><span class="vsep" aria-hidden="true"></span>`;
     const opts = S.ws.check ? "" : `<div class="ws-opts" role="tablist" aria-label="Design options"><span class="k">Option</span><span class="ws-seg">${(c.variants || []).map((x, i) => wsTab(c, x, i, x.id === v.id)).join("")}</span>${wsAddOption(c)}</div>`;
-    return `${title}${opts}<span class="grow"></span>${agent}${figBtn}${!S.ws.check && c.status === "feedback" && slackModes(c).length ? `<button class="btn ws-slack" data-act="slack">Send to Slack…</button>` : ""}<button type="button" class="dlg-x" data-ws-close aria-label="Close the design workspace">✕</button>`;
+    return `${title}${opts}<span class="grow"></span>${agent}${figBtn}${!S.ws.check && c.status === "feedback" && slackModes(c).length ? `<button class="btn ws-slack" data-act="slack">Send to Slack…</button>` : ""}${S.ws.check ? "" : fbButton(c, "ws")}<button type="button" class="dlg-x" data-ws-close aria-label="Close the design workspace">✕</button>`;
   }
 
   // An option's tab: its number and name, a spinner while Design Desk changes it (a clock while it waits to), its open comments.
@@ -7834,19 +7871,21 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const panel = S.ws.panel || "comments";
     const kept = ["#ws-whole", "#ws-part"].map((q) => { const b = $(q); return { q, focus: document.activeElement === b, value: b?.value || "", caret: b ? [b.selectionStart, b.selectionEnd] : null }; });
     const open = notesOf(c).filter((n) => n.anchor.variant === v.id && n.state !== "resolved").length;
-    side.innerHTML = `<div class="ws-ptabs" role="tablist"><button role="tab" data-ws-panel="comments" aria-selected="${panel === "comments"}">Comments${open ? `<span class="n">${open}</span>` : ""}</button><button role="tab" data-ws-panel="props" aria-selected="${panel === "props"}">Properties${S.ws.selected ? `<span class="dot" title="A part is selected"></span>` : ""}</button>${can("comment") && !c.send ? `<button role="tab" data-ws-panel="feedback" aria-selected="${panel === "feedback"}">Your feedback${feedbackCount(c) ? `<span class="n">${feedbackCount(c)}</span>` : ""}</button>` : ""}</div>
-      <div class="ws-pbody">${panel === "comments" ? renderWsNotes(c, v, old) : panel === "feedback" ? renderWsFeedback(c) : wsProps(c, v, old)}</div>`;
+    side.innerHTML = `<div class="ws-ptabs" role="tablist"><button role="tab" data-ws-panel="comments" aria-selected="${panel === "comments"}">Comments${open ? `<span class="n">${open}</span>` : ""}</button><button role="tab" data-ws-panel="props" aria-selected="${panel === "props"}">Properties${S.ws.selected ? `<span class="dot" title="A part is selected"></span>` : ""}</button>${wsFeedbackTab(c) ? `<button role="tab" data-ws-panel="feedback" aria-selected="${panel === "feedback"}">Your feedback${feedbackCount(c) ? `<span class="n">${feedbackCount(c)}</span>` : ""}</button>` : ""}</div>
+      <div class="ws-pbody">${panel === "props" ? wsProps(c, v, old) : panel === "feedback" && wsFeedbackTab(c) ? renderWsFeedback(c) : renderWsNotes(c, v, old)}</div>`;
     for (const k of kept) { const b = $(k.q); if (!b) continue; b.value = k.value; if (k.focus) { b.focus(); b.setSelectionRange(k.caret[0], k.caret[1]); } }
     loadPictures(side);
   }
 
-  // Your feedback in the workspace: every note of the viewer's on this request waiting to be sent,
-  // across its options; a click shows its option and part; Send feedback… opens the page's dialog.
+  // Your feedback in the workspace: where the viewer's notes gather as they add them, across options,
+  // the same boxes as in Submit feedback's panel; Submit feedback… opens that panel on the bar on top.
+  const wsFeedbackTab = (c) => can("comment") && !c.send;
   function renderWsFeedback(c) {
-    const ds = draftsOf(c), looks = lookFeedback(c);
-    if (!ds.length && !looks.length) return `<p class="hint ws-fb-empty">Nothing in your feedback yet. Add to feedback keeps a note here until you send it.</p>`;
-    return `<ul class="ws-drafts">${ds.map((d) => `<li><button class="ws-fb-go" data-ws-draft-go="${esc(d.id)}" title="Shows where it is">${draftAbout(c, d) ? `<span class="about">${esc(draftAbout(c, d))}</span>` : ""}<span class="tx">${esc(d.work_in ? workInWords(c, d) : d.text || "")}</span></button><button class="x" data-draft-del="${esc(d.id)}" aria-label="Remove this comment from your feedback" title="Remove from your feedback">✕</button></li>`).join("")}${looks.map((x) => `<li><span class="ws-fb-go"><span class="about">Look of ${esc(x.e.label)} · this browser</span><span class="tx">${esc(changeWords(x.e).join("; "))}</span></span><button class="x" data-look-unfb="${esc(`${x.key}\n${x.selector}`)}" aria-label="Take this look edit out of your feedback" title="Take it out of your feedback; the edit stays in the design">✕</button></li>`).join("")}</ul>
-      <div class="ws-fb-bar"><span class="hint">${esc(plural(ds.length + looks.length, "note", "notes"))}, seen by you alone</span><button class="btn primary" data-review="">Send feedback…</button></div>`;
+    const ds = draftsOf(c), looks = lookFeedback(c), n = ds.length + looks.length;
+    const send = fbButton(c, "ws") ? `<button type="button" class="btn primary" data-fb="ws" title="Opens Submit feedback on the bar on top, to send it with a verdict">Submit feedback…</button>` : "";
+    if (!n) return `<p class="hint ws-fb-empty">Nothing in your feedback yet. Add to feedback keeps a note here until you send it with Submit feedback.</p>`;
+    return `<div class="fb-items ws-fb-items">${ds.map((d) => fbItem(c, d)).join("")}${looks.map((x) => lookBubble(x)).join("")}</div>
+      <div class="ws-fb-bar"><span class="hint">${esc(plural(n, "note", "notes"))}, seen by you alone</span>${send}</div>`;
   }
 
   function wsProps(c, v, old) {
@@ -8936,11 +8975,12 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const text = box?.value.trim() || ""; if (!text || !v) return;
     const anchor = { variant: v.id, ...(S.ws.state ? { state: S.ws.state } : {}), ...(sel ? { selector: sel.selector, ...(sel.name ? { name: sel.name } : {}), text: sel.text, tag: sel.tag, label: sel.label, view: sel.view || null, view_name: sel.view_name || null } : { label: S.ws.state ? `the whole state “${wsDrawing(v).name}”` : "the whole option" }), ...(S.ws.edit && !whole ? { edit: S.ws.edit } : {}) };
     if (draft) {
-      await addDraft(c, { text, anchor });
+      // No toast: the side panel turns to Your feedback, the note in it, which says so.
+      await addDraft(c, { text, anchor }, { quiet: true });
       box.value = "";
       if (from === "pop") { S.ws.edit = null; S.ws.pop = null; S.ws.target = null; frameSay({ type: "desk-track", selector: "" }); }
       S.ws.panel = "feedback";
-      renderWorkspace();
+      renderDetail(); renderWorkspace();
       return;
     }
     const { thread } = await api("POST", `/api/cards/${c.id}/threads`, { kind, text, anchor });
@@ -9143,7 +9183,13 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if ("fbSend" in ds && S.card && S.fb) {
       const c = S.card, note = ($("#fb-note")?.value || "").trim();
       el.disabled = true;
-      try { if (await sendFeedback(c, fbPick(c), note) && $("#element-dialog").open) $("#element-dialog").close(); } finally { el.disabled = false; }
+      try {
+        if (await sendFeedback(c, fbPick(c), note)) {
+          if ($("#element-dialog").open) $("#element-dialog").close();
+          // Sent from the design workspace, the part selected is let go (docs/desk-page.md → Submit feedback).
+          if (S.ws.open && S.ws.selected) { S.ws.selected = null; S.ws.edit = null; frameSay({ type: "desk-select", selector: null }); renderWorkspace(); }
+        }
+      } finally { el.disabled = false; }
       return;
     }
     if (ds.stage && S.card) { await moveStage(S.card, ds.stage); return; }
@@ -9481,10 +9527,14 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     }
     if (ds.wsFilter) { S.ws.filter = ds.wsFilter; renderWorkspace(); return; }
     if ("wsClear" in ds) { S.ws.selected = null; S.ws.edit = null; renderWorkspace(); frameSay({ type: "desk-select", selector: null }); return; }
+    if (ds.dtxMore) { S.dtxOpen ||= new Set(); if (S.dtxOpen.has(ds.dtxMore)) S.dtxOpen.delete(ds.dtxMore); else S.dtxOpen.add(ds.dtxMore);
+      for (const t of document.querySelectorAll(`[data-dtx="${CSS.escape(ds.dtxMore)}"]`)) t.classList.toggle("open", S.dtxOpen.has(ds.dtxMore));
+      dtxMeasure(); return; }
     if (ds.wsDraftGo) {
-      // A note in Your feedback: its option and state, the part selected where it has one.
+      // A note in Submit feedback's panel: its option and state, the part selected where it has one.
       const d = draftsOf(S.card).find((x) => x.id === ds.wsDraftGo), a = d?.work_in ? workInOf(S.card, d)?.anchor : d?.anchor;
       if (!a?.variant) return;
+      if (S.fb) S.fb.where = null;
       if (a.variant !== S.variant) { S.variant = a.variant; S.ws.version = null; }
       if ((a.state || null) !== (S.ws.state || null)) { S.ws.state = a.state || null; S.ws.version = null; }
       S.ws.selected = a.selector ? { selector: a.selector, ...(a.name ? { name: a.name } : {}), text: a.text || "", tag: a.tag || "", label: a.label || "", view: a.view || null, view_name: a.view_name || null } : null;
