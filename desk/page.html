@@ -2323,17 +2323,17 @@
   <path class="f-e" d="M750 116 V193" marker-end="url(#fl-issue)"/><text class="f-lbl f-start" x="758" y="158">Design this</text>
   <path class="f-e" d="M660 226 H613" marker-end="url(#fl-issue)"/><text class="f-lbl" x="636" y="218">sent</text>`,
     "The plan is this sprint, the next one, the issues someone has taken and the ones labelled for design; the sprint's are sketched first. <b>Draw it</b> sketches one again now. Once the request from <b>Design this</b> goes to developers, the issue leaves the plan's filters and stays in <b>All</b> with a purple Designed dot.");
-  const FLOW_CHANGE = () => flow(760, 240, `A merged pull request: Design Desk explains it with screenshots, puts it under PR Changes${full(" and updates Product")}; its title is bold until each person opens it, a designer marks it Handled, and Adjust the design turns it into a request.`, `${flowHead("fl-change")}
+  const FLOW_CHANGE = () => flow(760, 240, `A merged pull request: Design Desk explains it with screenshots, puts it under PR Changes and updates Product; its title is bold until each person opens it, a designer marks it Handled, and Adjust the design turns it into a request.`, `${flowHead("fl-change")}
   <rect class="f-n" x="10" y="92" width="140" height="56" rx="10"/><text x="80" y="116">A change ships</text><text class="f-sub" x="80" y="134">a merged pull request</text>
   <rect class="f-n f-checking" x="200" y="92" width="160" height="56" rx="10"/><text x="280" y="116">Design Desk explains</text><text class="f-sub" x="280" y="134">what, why, screenshots</text>
   <rect class="f-n f-waiting" x="410" y="92" width="130" height="56" rx="10"/><text x="475" y="116">PR Changes</text><text class="f-sub" x="475" y="134">days are counted</text>
-  ${full(`<rect class="f-n" x="200" y="186" width="160" height="44" rx="10"/><text x="280" y="213">Product is updated</text>`)}
+  <rect class="f-n" x="200" y="186" width="160" height="44" rx="10"/><text x="280" y="213">Product is updated</text>
   <rect class="f-n" x="590" y="16" width="160" height="48" rx="10"/><text x="670" y="36">Opened</text><text class="f-sub" x="670" y="53">each of you: no longer bold</text>
   <rect class="f-n f-approved" x="590" y="96" width="160" height="48" rx="10"/><text x="670" y="116">Handled</text><text class="f-sub" x="670" y="133">a designer; the count stops</text>
   <rect class="f-n f-checking" x="590" y="176" width="160" height="48" rx="10"/><text x="670" y="196">Adjust the design</text><text class="f-sub" x="670" y="213">it becomes a request</text>
   <path class="f-e" d="M150 120 H197" marker-end="url(#fl-change)"/><text class="f-lbl" x="174" y="112">hourly</text>
   <path class="f-e" d="M360 120 H407" marker-end="url(#fl-change)"/><text class="f-lbl" x="384" y="112">posts</text>
-  ${full(`<path class="f-e f-dash" d="M280 148 V183" marker-end="url(#fl-change)"/><text class="f-lbl f-start" x="288" y="170">screens, parts</text>`)}
+  <path class="f-e f-dash" d="M280 148 V183" marker-end="url(#fl-change)"/><text class="f-lbl f-start" x="288" y="170">screens, parts</text>
   <path class="f-e" d="M540 120 C566 120 562 40 587 40" marker-end="url(#fl-change)"/><path class="f-e" d="M540 120 H587" marker-end="url(#fl-change)"/><path class="f-e" d="M540 120 C566 120 562 200 587 200" marker-end="url(#fl-change)"/>`,
     "Every change that ships gets its card with screenshots; a designer marks it handled, or adjusts its design through a new request.");
   // How it works: the processes, each as a tab's intro draws it (its flow, its steps, the buttons
@@ -2765,11 +2765,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // You opened a request's parts for a developer (Contact a developer): its step moves on, for you.
   const devAsked = (c) => store.get(`desk-dev-asked:${c.id}`) === "1";
   // Simple mode (a switch in your menu, kept for you on the Desk) is review-first: one list of
-  // requests and changes with three states (simpleState, below). Besides, it hides: Designs, People,
-  // Product and Issues leave the tabs, a sent request its Show the design, Product's pages their bar, the presentation its page and buttons,
+  // requests and changes with three states (simpleState, below). Besides, it hides: Designs, People
+  // and Issues leave the tabs (Product stays, every page of it), a sent request its Show the design, the presentation its page and buttons,
   // and a request its buttons that build a live prototype and an option its Why it looks like
   // this strip (the design workspace keeps it). A link to anything in them still opens it: a D-3 in a request opens the decision.
-  const SIMPLE_HIDES = ["designs", "issues", "product", "people"];
+  const SIMPLE_HIDES = ["designs", "issues", "people"];
   // The tabs simple mode hides from this viewer: none from an admin, for now, who keeps every page
   // (docs/desk-page.md → Simple mode).
   const tabsHidden = () => (simple() && S.me?.role !== "admin" ? SIMPLE_HIDES : []);
@@ -3377,7 +3377,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const opens = reviews.length ? simpleCards({ states: reviews, kinds: SIM_KINDS.map(([k]) => k), who: "all" }).length : 0;
     const one = `<button data-tab="requests" aria-current="${S.tab === "requests" || S.tab === "new"}" class="main">Requests &amp; PRs${opens ? `<span class="count" title="${opens} in ${esc(reviews.map((k) => SIM_PILL[k]).join(" or "))}">${opens}</span>` : ""}</button>`;
     // An admin keeps every page in simple mode, for now; Requests & PRs stands for Requests and PR Changes.
-    const html = simple() ? (tabsHidden().length ? one : [one, ...[...designs, [["issues", openIssues]], [["product"], ["people"]]].map((group) => group.map(tab).join(""))].join(sep)) : [[["requests", open.length, asks && plural(asks, "request waits", "requests wait") + " for an answer"]], ...designs, [["new", unseen], ["issues", openIssues]], [["product"], ["people"]]]
+    // Product stays in simple mode, with all of its pages (docs/desk-page.md → Simple mode).
+    const html = simple() ? (tabsHidden().length ? [one, tab(["product"])].join(sep) : [one, ...[...designs, [["issues", openIssues]], [["product"], ["people"]]].map((group) => group.map(tab).join(""))].join(sep)) : [[["requests", open.length, asks && plural(asks, "request waits", "requests wait") + " for an answer"]], ...designs, [["new", unseen], ["issues", openIssues]], [["product"], ["people"]]]
       .map((group) => group.map(tab).join("")).join(sep);
     // The poll redraws the menu every few seconds: an unchanged menu is left as it is, so a
     // tooltip stays open and keyboard focus stays where it was.
@@ -8823,7 +8824,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       if (!res) return;
     } else if (name === "close") {
       const how = [can("close") && { id: "close", name: "Just close it", hint: "Nothing is recorded as a decision" },
-        can("skip") && { id: "decide", name: "Close it and record a decision", hint: `In your name${full(", under Product → Decisions")}` }].filter(Boolean);
+        can("skip") && { id: "decide", name: "Close it and record a decision", hint: "In your name, under Product → Decisions" }].filter(Boolean);
       res = await ask({ title: "Close this request", body: `Design Desk stops working on it${live(c) || !simple() ? " and switches off its live prototype" : ""}. You can reopen it later.`, ok: "Close it",
         choices: how.length > 1 ? how : null, pick: how[0].id, note: how.some((x) => x.id === "decide") ? "What did you decide, and why?" : null, noteFor: how.length > 1 ? "decide" : null, noteMax: 600,
         send: (a) => {
@@ -10051,8 +10052,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const b = $("#simple"), on = simple();
     b.innerHTML = `<span>Simple mode</span><span class="sw" aria-hidden="true"></span>`;
     b.setAttribute("aria-pressed", String(on));
-    b.title = on ? "Simple mode is on. Turn it off to show Designs, Issues, Product, People, the presentation and live prototypes again"
-      : "Simple mode is off. Turn it on to hide Designs, Issues, Product, People, the presentation and live prototypes";
+    b.title = on ? "Simple mode is on. Turn it off to show Designs, Issues, People, the presentation and live prototypes again"
+      : "Simple mode is off. Turn it on to hide Designs, Issues, People, the presentation and live prototypes";
   }
   let simpleSaves = Promise.resolve(), simpleSeq = 0;
   function saveSimple(on, { quiet = false } = {}) {
@@ -10165,10 +10166,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const NOTE_KIND = { request: "Request", change: "PR change", issue: "Issue", screen: "Screen", element: "Element", decision: "Decision" };
   const noteBy = (by) => !by ? "" : by.agent ? "Design Desk" : by.name && !by.email ? by.name : personName(by.email, by.name || "someone");
   const ago = (iso) => { const s = (Date.now() - Date.parse(iso)) / 1000; return s < 60 ? "just now" : s < 3600 ? `${Math.floor(s / 60)} min` : s < 86400 ? `${Math.floor(s / 3600)} h` : dayWord(iso) === "Yesterday" ? "Yesterday" : new Date(iso).toLocaleDateString("en", { month: "short", day: "numeric" }); };
-  // Simple mode leaves out what lives on the pages it hides: Issues' issues, Product's screens,
-  // elements and decisions (docs/desk-page.md → Notifications); the count counts what is left.
-  const NOTE_HIDDEN = ["issue", "screen", "element", "decision"];
-  const noteShown = (x) => !(tabsHidden().length && NOTE_HIDDEN.includes(x.kind));
+  // Simple mode leaves out what lives on the pages it hides: Issues' issues (Product's screens,
+  // elements and decisions show, as Product does; docs/desk-page.md → Notifications); the count counts what is left.
+  const NOTE_TAB = { issue: "issues", screen: "product", element: "product", decision: "product" };
+  const noteShown = (x) => !tabsHidden().includes(NOTE_TAB[x.kind]);
   // Only while simple mode hides some notifications does the count come from the list fetched; an
   // admin's, who sees them all, is the server's, as in full mode.
   const noteUnread = () => tabsHidden().length ? S.notes.items.filter((x) => noteShown(x) && x.for_you && !x.read).length : S.notes.unread;
