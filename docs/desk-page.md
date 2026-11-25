@@ -459,7 +459,10 @@ its final check), and in full mode's **Your feedback**.
 - **Who gets it:** whoever may send a verdict on the item (`verdictsFor`); someone who may only
   comment, once something of theirs waits to be sent.
 - **Its panel** opens under it and never moves the page; one is open at a time, closed by Esc, a
-  click outside it or **Keep drafting**, and kept through the page's redraws: on a change, how many
+  click outside it or **Keep drafting**, and kept through the page's redraws. Opening it, closing it
+  or picking in it draws only the Submit feedback buttons and their panels again, never the item or
+  the dialog around them: what the person typed or picked elsewhere (an answer to Design Desk's
+  questions, a comment) stays, as do focus and scroll. It holds: on a change, how many
   of the changes to look at were looked at, a bar, and the ones not looked at as chips that open them
   (else "✓ All looked at"); for whoever may mark it handled, the differences from Figma not taken or
   marked fine yet, as chips of their changes with how many ("Sending leaves them as they are"); each
