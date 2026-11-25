@@ -3995,7 +3995,26 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // The panel follows a redraw of what holds it; one open at a time, closed by Esc or a click outside it.
   function fbToggle(c, where) { S.fb = S.fb?.card === c.id && S.fb.where === where ? null : { card: c.id, where, pick: S.fb?.card === c.id ? S.fb.pick : null, option: S.fb?.card === c.id ? S.fb.option : null, note: S.fb?.card === c.id ? S.fb.note : "" }; fbRedraw(); }
   function fbClose() { if (!S.fb) return false; S.fb = { card: S.fb.card, where: null, pick: S.fb.pick, option: S.fb.option, note: S.fb.note }; fbRedraw(); return true; }
-  function fbRedraw() { renderDetail(); if (S.ws.open) renderWorkspace(); }
+  // Opening, closing or changing the panel changes nothing outside it: only each Submit feedback and
+  // its panel are drawn again, so what the person typed elsewhere on the page stays, as do focus and
+  // scroll (docs/desk-page.md → Submit feedback). Focus inside one stays on the same control, else on
+  // its button.
+  function fbRedraw() {
+    const c = S.card;
+    if (!c) return;
+    const a = document.activeElement;
+    for (const w of document.querySelectorAll(".fbw")) {
+      const where = w.querySelector(":scope > [data-fb]")?.dataset.fb;
+      if (!where) continue;
+      const t = document.createElement("template");
+      t.innerHTML = fbButton(c, where);
+      const n = t.content.firstElementChild;
+      if (n) w.replaceWith(n); else w.remove();
+      if (!n || !w.contains(a)) continue;
+      const same = a.dataset.fbV ? `[data-fb-v="${CSS.escape(a.dataset.fbV)}"]` : a.dataset.fbOpt ? `[data-fb-opt="${CSS.escape(a.dataset.fbOpt)}"]` : null;
+      (same && n.querySelector(same) || n.querySelector(":scope > [data-fb]")).focus({ preventScroll: true });
+    }
+  }
   document.addEventListener("input", (e) => { if (e.target.id === "fb-note" && S.fb) S.fb.note = e.target.value; });
   document.addEventListener("input", (e) => { if (e.target.closest?.(".sreply") && e.target.dataset.reply === S.replyOpen) S.replyText = e.target.value; });
   document.addEventListener("click", (e) => { if (S.fb?.where && !e.target.closest?.(".fbw")) fbClose(); }, true);

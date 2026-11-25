@@ -4560,6 +4560,40 @@ test("simple mode: a request with one option shows no design picker in Submit fe
   assert.equal(await desk.locator(".fb-pop .fb-opt").count(), 0);
 }));
 
+// Opening, closing or changing Submit feedback's panel draws only the button and its panel again
+// (docs/desk-page.md → Submit feedback): answers typed in a question form stay, and so does the form itself.
+const asking = { ...drawn, threads: [{ id: "t1", kind: "asks", state: "open", step: "spec", messages: [{ by: { agent: true }, at: "2026-11-18T10:00:00Z", text: "Two things first." }],
+  questions: [{ text: "Empty list?", options: ["A hint", "Nothing"], suggested: "A hint" }, { text: "Button words?", options: ["Send", "Send message"] }] }] };
+test("Submit feedback opens, changes and closes without drawing the rest of the request again: typed answers stay", (t) => open(t, HEAD_DESK(HEAD_ME, [asking]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="R-5"]');
+  await desk.click('#list [data-card="R-5"]');
+  await desk.waitForSelector("#form-t1");
+  await desk.check('#form-t1 [data-q="0"] input[value="Nothing"]');
+  await desk.fill('#form-t1 [data-q="1"] [data-q-note]', "Shorter is better");
+  await desk.evaluate(() => { document.querySelector("#form-t1").kept = true; });
+  const answers = () => desk.evaluate(() => ({ kept: document.querySelector("#form-t1")?.kept === true, picked: document.querySelector('#form-t1 [data-q="0"] input:checked')?.value,
+    note: document.querySelector('#form-t1 [data-q="1"] [data-q-note]')?.value }));
+  const same = { kept: true, picked: "Nothing", note: "Shorter is better" };
+  await openFeedback(desk);
+  assert.deepEqual(await answers(), same, "opening it keeps the form and its answers");
+  await desk.click('.fb-pop [data-fb-v="comment"]');
+  assert.equal(await picked(desk), "comment");
+  assert.deepEqual(await answers(), same, "picking a verdict too");
+  assert.equal(await desk.evaluate(() => document.activeElement?.dataset.fbV), "comment", "the verdict picked keeps the focus");
+  await desk.click(".fb-pop [data-fb-close]");
+  assert.equal(await desk.locator(".fb-pop").count(), 0, "Keep drafting closes it");
+  assert.deepEqual(await answers(), same, "and keeps them");
+  await openFeedback(desk);
+  await desk.keyboard.press("Escape");
+  assert.equal(await desk.locator(".fb-pop").count(), 0, "Esc closes it");
+  await openFeedback(desk);
+  await desk.click('#form-t1 [data-q="1"] [data-q-note]');
+  assert.equal(await desk.locator(".fb-pop").count(), 0, "a click outside closes it");
+  assert.deepEqual(await answers(), same, "and none of them loses an answer");
+  await openFeedback(desk);
+  assert.equal(await picked(desk), "comment", "the verdict picked is still the one it sends");
+}));
+
 // Submit feedback's buttons are a footer fixed to the panel's bottom, as tall as Submit feedback.
 test("Submit feedback's buttons stay in view while many notes scroll, as tall as Submit feedback", (t) => open(t, REVIEW_DESK(HEAD_ME, [drawn]), async (desk) => {
   await desk.setViewportSize({ width: 1200, height: 600 });
