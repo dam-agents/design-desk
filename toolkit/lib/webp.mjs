@@ -5,7 +5,7 @@ import { launch } from "./core.mjs";
 
 export const WEBP_QUALITY = 0.9;
 const MAX_SIDE = 16383;
-const RASTER = new Set(["image/png", "image/jpeg", "image/jpg", "image/bmp", "image/webp"]);
+const RASTER = new Set(["image/png", "image/jpeg", "image/jpg", "image/webp"]);
 
 // A file's content type is one WebP can stand in for: a still raster picture (an SVG stays
 // text, a GIF may move).

@@ -40,11 +40,20 @@ if [ -z "$u" ] || [ "$u" != "$(lower "$want")" ]; then
   echo "design-desk: refusing to push to $url — prototype_remote is $remote_cfg" >&2; exit 1
 fi
 zero=0000000000000000000000000000000000000000
-while read -r _local lsha remote_ref _rsha; do
+while read -r _local lsha remote_ref rsha; do
   case "$remote_ref" in
     refs/heads/design-desk/*) ;;
     *) echo "design-desk: refusing to push to $remote_ref — only design-desk/ branches (CLAUDE.md → Hard invariants)" >&2; exit 1;;
   esac
+  # design-desk/assets keeps every handoff a published comment links to: never deleted,
+  # never rewound, only moved forward from the tip the remote has (docs/handoff.md step 5).
+  if [ "$remote_ref" = refs/heads/design-desk/assets ]; then
+    [ "$lsha" = "$zero" ] && { echo "design-desk: refusing to delete $remote_ref — old comments link to its commits" >&2; exit 1; }
+    if [ -n "$rsha" ] && [ "$rsha" != "$zero" ]; then
+      git cat-file -e "$rsha^{commit}" 2>/dev/null || { echo "design-desk: refusing to push $remote_ref — fetch it first: its tip $rsha is not here" >&2; exit 1; }
+      git merge-base --is-ancestor "$rsha" "$lsha" 2>/dev/null || { echo "design-desk: refusing to push $remote_ref — not a fast-forward of its tip; it is never rewound" >&2; exit 1; }
+    fi
+  fi
   [ "$lsha" = "$zero" ] && continue   # deleting the branch
   # Every commit this push brings that the remote does not have yet (merges by their own
   # changes): none may touch .github/. -z: git writes every path as it is, never quoted
@@ -57,8 +66,13 @@ while read -r _local lsha remote_ref _rsha; do
   fi
   # Handoff bundles live on design-desk/assets alone, and it holds nothing else
   # (docs/handoff.md step 5): a prototype that merges can never bring one into the product.
+  # On assets, every commit of its whole history: a tip that brings product history (main
+  # pushed onto it) or a commit the remote already has elsewhere is judged too, not skipped.
   if [ "$remote_ref" = refs/heads/design-desk/assets ]; then
-    if printf '%s\n' "$paths" | grep -v -e '^$' -e '^\.design-desk/handoff/R-[0-9][0-9]*/' | grep -q .; then
+    if ! all="$(set -o pipefail; git log -z --format= --name-only --no-renames --cc "$lsha" 2>/dev/null | tr '\0' '\n')"; then
+      echo "design-desk: refusing to push $remote_ref — cannot tell which files $lsha holds" >&2; exit 1
+    fi
+    if printf '%s\n' "$all" | grep -v -e '^$' -e '^\.design-desk/handoff/R-[0-9][0-9]*/' | grep -q .; then
       echo "design-desk: refusing to push $remote_ref — it holds handoff bundles only (.design-desk/handoff/R-<n>/)" >&2; exit 1
     fi
   elif printf '%s\n' "$paths" | grep -q '^\.design-desk/handoff/'; then

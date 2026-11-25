@@ -118,7 +118,7 @@ card the people who may approve it read the spec in its banner ([desk-page.md](d
    never deleted, so every commit a comment links to stays. It holds no product code, so its
    check is the command's own: it refuses a commit that touches another path, and a branch that
    shares history with the default branch; the pre-push hook refuses a bundle on any other
-   branch, and anything but bundles on this one. Push its `push` refspec,
+   branch, anything but bundles in this one's history, and its deletion or a rewind. Push its `push` refspec,
    `git -C <clone> push <remote-url> <push>`, never `--force`; refused as not a fast-forward
    (another handoff pushed first), run the command again and push its new sha. A refusal or a
    failed push sends nothing on: the delivery carries `design.json` in the issue alone and its
