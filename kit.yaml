@@ -31,7 +31,7 @@ description: >-
   reports on it over MCP.
 category: productivity
 icon: paint-brush
-avatar: spark
+avatar: {path: desk/brand/avatar.png}
 docsUrl: https://github.com/dam-agents/design-desk#readme
 harnesses: [claude-code]
 

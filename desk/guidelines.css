@@ -1,5 +1,7 @@
 /* desk/page.html's own <style>, copied by `node desk/dev/guidelines.mjs` for desk/guidelines.html; never edit it here. */
   :root {
+    /* Design Desk's mark (desk/brand/mark.svg): its disc and its D's. */
+    --mk-disc: #de9950; --mk-d: #ffffff;
     --bg: #fcfbfc; --panel: #ffffff; --ink: #1b1b1a; --muted: #6b6b66; --line: #e4e3df; --soft: #f0efeb;
     --tip-opens: #6fd3a0; --accent: #2f5bd3; --accent-ink: #ffffff; --ok: #1f7a4d; --ok-soft: #e3f3ea; --warn: #9a6200; --warn-soft: #fbf0d9;
     --bad: #b3261e; --bad-soft: #fbe5e3; --info-soft: #e7edfc; --live: #6b3fc4; --live-soft: #efe8fb; --why: #0d7d78; --why-soft: #e0f3f1; --r-sm: 6px; --radius: 12px; --shadow: 0 1px 2px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.04);
@@ -15,11 +17,13 @@
   @media (min-width: 2200px) { :root { --measure: 150ch; --pad-x: 64px; --list-w: 550px; --side-w: 520px; --shot-w: 400px; --shot-h: 440px; } }
   /* Night follows the system unless the header switch chose a mode (data-theme). */
   @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) { --bg: #151514; --panel: #1e1e1c; --ink: #ecebe7; --muted: #a09f99; --line: #33332f; --soft: #262624;
+    :root:not([data-theme="light"]) { --mk-disc: #de9950; --mk-d: #ffffff;
+      --bg: #151514; --panel: #1e1e1c; --ink: #ecebe7; --muted: #a09f99; --line: #33332f; --soft: #262624;
       --tip-opens: #1f7a4d; --accent: #8aa8ff; --accent-ink: #10142a; --ok: #6fd3a0; --ok-soft: #1c2f25; --warn: #f0c060; --warn-soft: #34291a;
       --bad: #ff8a80; --bad-soft: #3a1f1d; --info-soft: #1f2640; --live: #c3a6ff; --live-soft: #2a2140; --why: #62d2c8; --why-soft: #16302e; --shadow: none; --float: 0 0 0 1px rgba(255,255,255,.10), 0 14px 36px rgba(0,0,0,.6), 0 36px 90px rgba(0,0,0,.7); color-scheme: dark; }
   }
-  :root[data-theme="dark"] { --bg: #151514; --panel: #1e1e1c; --ink: #ecebe7; --muted: #a09f99; --line: #33332f; --soft: #262624;
+  :root[data-theme="dark"] { --mk-disc: #de9950; --mk-d: #ffffff;
+    --bg: #151514; --panel: #1e1e1c; --ink: #ecebe7; --muted: #a09f99; --line: #33332f; --soft: #262624;
     --tip-opens: #1f7a4d; --accent: #8aa8ff; --accent-ink: #10142a; --ok: #6fd3a0; --ok-soft: #1c2f25; --warn: #f0c060; --warn-soft: #34291a;
     --bad: #ff8a80; --bad-soft: #3a1f1d; --info-soft: #1f2640; --live: #c3a6ff; --live-soft: #2a2140; --why: #62d2c8; --why-soft: #16302e; --shadow: none; --float: 0 0 0 1px rgba(255,255,255,.10), 0 14px 36px rgba(0,0,0,.6), 0 36px 90px rgba(0,0,0,.7); color-scheme: dark; }
   :root[data-theme="light"] { color-scheme: light; }
@@ -41,7 +45,7 @@
   header h1 { font-size: var(--fs-ui); margin: 0; font-weight: 600; letter-spacing: .01em; }
   /* Requests leads the menu; the other tabs are smaller, their counts grey. */
   nav { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
-  nav button { border: 0; background: transparent; padding: 8px 12px; border-radius: var(--r-sm); cursor: pointer; color: var(--muted); font-size: var(--fs-meta); }
+  nav button { border: 0; background: transparent; height: 32px; padding: 0 12px; border-radius: var(--r-sm); cursor: pointer; color: var(--muted); font-size: var(--fs-meta); }
   nav button[aria-current="true"] { background: var(--soft); color: var(--ink); font-weight: 600; }
   nav .sep, header > .head-sep { width: 1px; height: 18px; background: var(--line); margin: 0 8px; }
   /* New request sits right after the tabs, behind one more separator. */
@@ -84,6 +88,7 @@
   #notes .note.unread { border-left-color: var(--accent); background: color-mix(in srgb, var(--info-soft) 55%, transparent); }
   #notes .note .ic { grid-row: 1 / span 2; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); }
   #notes .note .ic svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  #notes .note .ic.mk-on-ink { background: none; } #notes .note .ic.mk-on-ink svg { width: 28px; height: 28px; }
   /* A row is at most three lines: what and who, the item, what was said; each line cuts with … */
   #notes .note .ev { font-weight: 600; color: var(--ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #notes .note .ev span { font-weight: 400; color: var(--muted); }
@@ -238,11 +243,15 @@
   .srow .kic { grid-row: span 2; color: var(--muted); padding-top: 2px; position: relative; }
   .srow .kic[data-s="pr-open"] { color: var(--gh-open); } .srow .kic[data-s="pr-draft"] { color: var(--gh-draft); } .srow .kic[data-s="pr-merged"] { color: var(--gh-merged); }
   .srow .kic .kdot { position: absolute; top: 0; left: 10px; width: 8px; height: 8px; border-radius: 50%; background: var(--bad); box-shadow: 0 0 0 2px var(--row-bg, var(--panel)); } .kic svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; display: block; }
+  /* Design Desk at work: the spinner at the row's top right, and beside the head's buttons. */
+  .srow .open > .srow-spin { grid-column: 3; grid-row: 1; justify-self: end; align-self: start; margin-left: 8px; }
+  .srow .open:has(> .srow-spin) > .spill { grid-row: 2; align-self: end; }
+  .sh-acts .sh-spin { align-self: center; margin-right: 4px; width: 20px; height: 20px; }
   .srow .sline { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: var(--fs-meta); color: var(--muted); min-height: 20px; }
   .srow .open > .spill { grid-column: 3; grid-row: 1 / span 2; align-self: center; margin-left: 8px; }
   /* A phone narrower than 400 px has no room for a long date beside the pill (it never breaks):
      there the pill takes a line of its own under the date, at the row's right end. */
-  @media (max-width: 399px) { .row.item.srow > .open { grid-template-columns: 20px minmax(0, 1fr); } .srow .kic { grid-row: span 3; } .srow .open > .spill { grid-column: 2; grid-row: 3; justify-self: end; margin-left: 0; } }
+  @media (max-width: 399px) { .row.item.srow > .open { grid-template-columns: 20px minmax(0, 1fr); } .srow .kic { grid-row: span 3; } .srow .open > .spill { grid-column: 2; grid-row: 3; justify-self: end; margin-left: 0; } .srow .open > .srow-spin { grid-column: 2; grid-row: 3; justify-self: start; align-self: center; margin-left: 0; } .srow .open:has(> .srow-spin) > .spill { grid-row: 3; align-self: center; } }
   .srow .sline .sdate { display: inline-flex; gap: 4px; white-space: nowrap; } .srow .sline .snum { color: var(--muted); }
   .srow .sline .sby { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .srow .sline .sby::before { content: "·"; margin-right: 4px; }
   .spill { --p: var(--muted); display: inline-flex; align-items: center; gap: 4px; padding: 0 8px; border-radius: 999px; font-size: var(--fs-micro); font-weight: 500; line-height: 20px; white-space: nowrap;
@@ -291,7 +300,7 @@
   /* What Design Desk found: a fold like the others, the first of them. Its head carries Design
      Desk's mark and its answer, so a glance tells whether there is anything to check. */
   details.sfound > summary .sf-mark { width: 24px; height: 24px; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--ink); color: var(--bg); }
-  details.sfound > summary .sf-mark svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+  details.sfound > summary .sf-mark.mk-on-ink { background: none; } details.sfound > summary .sf-mark svg.dd-mark { width: 24px; height: 24px; }
   details.sfound > summary .sf-say { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-meta); font-weight: 500; color: var(--ok); }
   details.sfound > summary .sf-say[data-k="warn"] { padding: 0 8px; line-height: 24px; border-radius: 999px; color: var(--warn); background: var(--warn-soft); }
   details.sfound > summary .sf-say svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
@@ -331,7 +340,7 @@
   .sthread .sreplies .smsg.re { margin-left: 0; } .sthread .sreplies .pending { padding: 4px 12px; }
   .sav { width: 28px; height: 28px; flex: none; border-radius: 50%; display: grid; place-items: center; font-size: var(--fs-meta); font-weight: 600; color: var(--ink); background: var(--soft); }
   .sav[data-r="designer"], .sav[data-r="admin"] { background: var(--live-soft); color: var(--live); } .sav[data-r="developer"], .sav[data-r="ui-dev-owner"] { background: var(--info-soft); color: var(--accent); }
-  .sav[data-r="agent"] { background: var(--ink); color: var(--bg); } .smsg .sav[data-r="agent"] { background: var(--panel); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); } .sav svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+  .sav svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; }
   .sthread .chip { margin-bottom: 8px; } .sthread .reply { margin-top: 12px; margin-left: 40px; }
   .sh-after { margin-top: 4px; font-size: var(--fs-meta); color: var(--muted); } .sh-after a { color: inherit; }
   /* A review in the making: the person's drafts, seen by them alone (docs/desk.md → Reviews). */
@@ -1000,7 +1009,6 @@
   .ask-row { display: flex; gap: 8px; align-items: flex-start; align-self: flex-start; max-width: 92%; }
   .ask-row .ask-msg { max-width: none; }
   .ask-avatar { flex: none; width: 28px; height: 28px; border-radius: 50%; background: var(--ink); color: var(--panel); display: grid; place-items: center; font-size: var(--fs-micro); font-weight: 600; line-height: 1; }
-  .dd-mark svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .ask-name { display: block; font-size: var(--fs-micro); font-weight: 600; color: var(--muted); margin-bottom: 2px; }
   .ask-msg.agent { align-self: flex-start; background: var(--soft); border-bottom-left-radius: 4px; }
   /* Design Desk is answering: a typing bubble, three dots that rise in turn. */
@@ -1648,7 +1656,7 @@
   .made-col details.fold { max-width: none; }
   .made-col details.fold > summary { font-size: var(--fs-meta); color: var(--muted); margin: 12px 0 8px; }
   .made-col details.fold > summary .cnt { display: inline-block; margin-left: 8px; padding: 0 8px; border-radius: 999px; background: color-mix(in srgb, var(--muted) 14%, transparent); font-size: var(--fs-meta); line-height: 18px; }
-  .brief-k .face.agent { background: var(--ink); color: var(--panel); }
+  .brief-k .face.agent { background: none; color: var(--panel); }
   .made-sec + .made-sec { margin-top: 16px; }
   .made-sec .srcs { margin: 8px 0 0; font-size: var(--fs-meta); color: var(--muted); }
   .made-sec .srcs > summary { cursor: pointer; list-style: none; display: inline-flex; align-items: center; gap: 4px; padding: 2px 0; }
@@ -1877,7 +1885,8 @@
   /* Design Desk at work: the DD pair. The Ds flip one at a time and rest in three ways: as DD, with the
      round sides out, with the round sides in; back as DD, the pair turns once round. Its size follows the
      font size, its color the text color. Queued: still and faint. */
-  .dd-spin { position: relative; display: inline-block; width: 1.25em; height: 1.25em; flex: none; vertical-align: -0.25em; color: var(--warn); animation: dd-spin-turn 5s cubic-bezier(.65,0,.35,1) infinite; }
+  /* Design Desk at work: the DD pair, as before #215, in the mark's colour (--mk-disc). */
+  .dd-spin { position: relative; display: inline-block; width: 1.25em; height: 1.25em; flex: none; vertical-align: -0.25em; color: var(--mk-disc); animation: dd-spin-turn 5s cubic-bezier(.65,0,.35,1) infinite; }
   .dd-spin::before, .dd-spin::after { content: ""; position: absolute; top: 29.167%; width: 37.5%; height: 41.667%; background: currentColor; border-radius: 0 999px 999px 0; animation: dd-spin-left 5s cubic-bezier(.65,0,.35,1) infinite; }
   .dd-spin::before { left: 7.5%; }
   .dd-spin::after { left: 55%; animation-name: dd-spin-right; }
@@ -1888,6 +1897,19 @@
   @keyframes dd-spin-left { 0%, 12% { transform: scaleX(1); } 20%, 34% { transform: scaleX(-1); } 42%, 100% { transform: scaleX(1); } }
   @keyframes dd-spin-right { 0%, 40% { transform: scaleX(1); } 48%, 58% { transform: scaleX(-1); } 66%, 100% { transform: scaleX(1); } }
   @media (prefers-reduced-motion: reduce) { .dd-spin, .dd-spin::before, .dd-spin::after { animation-duration: 10s; } }
+  /* Design Desk's mark, wherever it speaks or acts (docs/desk-page.md → The mark). Its colours follow
+     the mode; on the ink circle of its avatar (.mk-on-ink) it takes the other mode's. */
+  svg.dd-mark { display: block; flex: none; }
+  svg.dd-mark circle, svg.dd-mark path { stroke: none; }
+  svg.dd-mark .mk-disc { fill: var(--mk-disc); } svg.dd-mark .mk-d { fill: var(--mk-d); }
+  /* As its avatar the mark is the circle itself. */
+  .mk-on-ink { background: none; }
+  /* As an avatar the mark fills its circle: 28px (.sav, .ask-avatar, the bell), 24px (.face), 18px (.msg-av). */
+  .mk-on-ink svg.dd-mark { width: 28px; height: 28px; } .brief-k .face.mk-on-ink svg.dd-mark { width: 24px; height: 24px; } .msg .who .msg-av svg.dd-mark { width: 18px; height: 18px; }
+  .msg .who .msg-av { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; vertical-align: -4px; margin-right: 8px; }
+  .prov svg.dd-mark { width: 12px; height: 12px; }
+  .banner .mk-off { display: inline-block; vertical-align: -3px; margin-right: 8px; filter: grayscale(1); opacity: .55; } .banner .mk-off svg.dd-mark { width: 16px; height: 16px; }
+  h2.with-mark { display: flex; align-items: center; gap: 8px; } h2.with-mark svg.dd-mark { width: 28px; height: 28px; }
   .ws-sub { min-height: 40px; padding: 4px 16px; }
   .ws-sub .step-by { display: inline-flex; align-items: center; gap: 2px; } .ws-sub .step-by .hint { margin: 0; min-width: 8ch; text-align: center; font-variant-numeric: tabular-nums; }
   .ws-canvas { flex-direction: column; gap: 8px; background: color-mix(in srgb, var(--ink) 9%, var(--bg)); }

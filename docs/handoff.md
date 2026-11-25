@@ -103,6 +103,10 @@ card the people who may approve it read the spec in its banner ([desk-page.md](d
   `comment_on`, the default there). Approve then asks no such thing; with `spec_review: disabled` Approve still does.
 ## Sending it
 
+Every comment, issue and draft pull request a send writes is signed with the mark line
+([watch.md](watch.md) → The mark line; [`handoff-github`](../.agents/skills/handoff-github/SKILL.md)):
+the mark at 16 px before a bold **Design Desk**. The hidden marker stays exactly as it is.
+
 5. **The bundle.** `design desk bundle R-<n> /tmp/design-desk-r<n>-<item>/handoff` (it clears an earlier bundle there, and refuses any other directory that is not empty): `spec.md` (the
    text for people), `design.json` (the same design for a coding agent: the approved option,
    the boundary and what needs a developer, every element and state with its selector in the

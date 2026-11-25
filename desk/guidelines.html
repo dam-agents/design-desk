@@ -9,6 +9,7 @@
      desk/page.html's <style>, copied by `node desk/dev/guidelines.mjs`; never edit it by hand.
      This page adds only its layout, in the .gl- block after it: each rule's subject is a .gl-
      class. desk/tests/guidelines.test.mjs keeps both true. -->
+<link rel="icon" href="brand/favicon.svg">
 <link rel="stylesheet" href="guidelines.css">
 <style data-guidelines>
   .gl-page { max-width: 1040px; margin: 0 auto; padding: 32px 32px 96px; }
@@ -48,6 +49,7 @@
   .gl-palette { width: 340px; max-width: 100%; }
   .gl-static { position: relative; margin: 0; }
   .gl-no { color: var(--bad); }
+  .gl-mk { display: inline-grid; justify-items: center; gap: 4px; margin-right: 16px; font-size: var(--fs-micro); color: var(--muted); }
   @media (max-width: 760px) { .gl-item { grid-template-columns: minmax(0, 1fr); } }
 </style>
 </head>
@@ -63,11 +65,27 @@
 </header>
 <p class="gl-lead">What the Desk's interface is made of, when each piece is used, and what it means. Build a new screen from these pieces; do not invent another look for a job one of them already does. Every example here is the Desk's own component in its own stylesheet, so this page is what the Desk looks like.</p>
 <ul class="gl-toc">
-  <li><a href="#tabs">Tabs and switchers</a></li><li><a href="#buttons">Buttons</a></li><li><a href="#state">State</a></li>
+  <li><a href="#mark">The mark</a></li><li><a href="#tabs">Tabs and switchers</a></li><li><a href="#buttons">Buttons</a></li><li><a href="#state">State</a></li>
   <li><a href="#colour">Colour</a></li><li><a href="#chips">Chips</a></li><li><a href="#folds">Folds</a></li><li><a href="#text">Text</a></li>
   <li><a href="#comments">Comments</a></li><li><a href="#dialogs">Dialogs and forms</a></li><li><a href="#tiles">Tiles and empty states</a></li>
   <li><a href="#toast">The toast</a></li><li><a href="#tokens">Tokens</a></li>
 </ul>
+
+<section class="gl-sect" id="mark">
+  <h2 class="gl-h2">The mark</h2>
+  <div class="gl-item">
+    <div class="gl-rule">
+      <h3 class="gl-h3">Design Desk speaking or acting</h3>
+      <p class="gl-p">DD on an orange disc, a spark cut from the second D. It stands for Design Desk where it speaks or acts, never for the product (that is the brand skill's). No letters stand for Design Desk.</p>
+      <ul class="gl-ul"><li>16 px at the smallest; clear space a quarter of its size.</li><li>DAM's avatar orange, white D's, in light and dark mode alike. Never recoloured.</li><li>Source: <code>desk/brand/mark.svg</code>, by <code>build.mjs</code>.</li></ul>
+    </div>
+    <div class="gl-ex"><div class="gl-row"><span class="gl-mk"><img src="brand/mark.svg" width="16" height="16" alt="">16</span><span class="gl-mk"><img src="brand/mark.svg" width="32" height="32" alt="">32</span><span class="gl-mk"><img src="brand/mark.svg" width="48" height="48" alt="">48</span><span class="gl-mk"><img src="brand/avatar.svg" width="48" height="48" alt="">avatar</span></div></div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-rule"><h3 class="gl-h3">At work</h3><p class="gl-p">The spinner is the DD pair turning, in the mark's colour. In a list row, top right; in a request, beside its buttons.</p></div>
+    <div class="gl-ex"><span class="dd-spin"></span></div>
+  </div>
+</section>
 
 <section class="gl-sect" id="tabs">
   <h2 class="gl-h2">Tabs and switchers</h2>
@@ -402,13 +420,13 @@
   <div class="gl-item">
     <div class="gl-rule">
       <h3 class="gl-h3">A thread, a resolved thread</h3>
-      <p class="gl-p">Replies hang on a line; only a designer's role shows; yours are tinted, Design Desk's grey. A resolved one folds.</p>
+      <p class="gl-p">Replies hang on a line; only a designer's role shows; yours are tinted, Design Desk's grey, with its mark. A resolved one folds.</p>
     </div>
     <div class="gl-ex gl-wide">
       <article class="sthread">
         <div class="smsg"><span class="sav" data-r="designer">AN</span><div class="sm-b"><div class="who"><b>Alice Novak</b><span class="role" data-r="designer">Designer</span><span class="at">Today, 9:12 AM</span></div><p>Can the empty state say what to do next?</p></div></div>
         <div class="sreplies">
-          <div class="smsg re" data-k="agent"><span class="sav" data-r="agent">DD</span><div class="sm-b"><div class="who"><b>Design Desk</b><span class="at">Today, 9:14 AM</span></div><p>Version 2 adds a button for it.</p></div></div>
+          <div class="smsg re" data-k="agent"><span class="sav mk-on-ink" title="Design Desk"><img src="brand/mark.svg" width="28" height="28" alt=""></span><div class="sm-b"><div class="who"><b>Design Desk</b><span class="at">Today, 9:14 AM</span></div><p>Version 2 adds a button for it.</p></div></div>
         </div>
         <div class="sacts"><button class="slk">Reply</button><button class="slk">Resolve</button></div>
       </article>

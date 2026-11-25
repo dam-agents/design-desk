@@ -4313,6 +4313,13 @@ test("simple mode lists every request and change in one list, each in one state,
   assert.equal((await desk.textContent('#nav [data-tab="requests"]')).replace(/\d+$/, "").trim(), "Requests & PRs", "one entry, no PR Changes");
   assert.deepEqual(await rows(desk), [["r-check", "Design review"], ["r-busy", "Design review"], ["r-draft", "Design review"], ["c-open", "Design review"]], "Design review by default, newest change first, the pill on every row even with one state");
   assert.equal(await desk.locator('#list [data-card="r-busy"] .dd-spin').count(), 1, "Design Desk at work: the spinner, still Open");
+  // On a phone (under 400px) the row has two columns: the spinner and the pill share its third line.
+  await desk.setViewportSize({ width: 360, height: 800 });
+  const busy = await desk.$eval('#list [data-card="r-busy"]', (el) => { const r = el.getBoundingClientRect(), t = el.querySelector(".t").getBoundingClientRect(), pill = el.querySelector(".spill").getBoundingClientRect();
+    return { cols: getComputedStyle(el).gridTemplateColumns.split(" ").length, title: t.width / r.width, pillIn: pill.left >= r.left && pill.right <= r.right }; });
+  assert.deepEqual(busy, { ...busy, cols: 2, pillIn: true }, "a row at work keeps the phone's two columns, its pill inside it");
+  assert.ok(busy.title > 0.7, "and its title keeps the width");
+  await desk.setViewportSize({ width: 1280, height: 720 });
   await desk.click("details.sf > summary");
   await desk.click('[data-simf="states:proposal"]');
   await desk.click('[data-simf="states:dev"]');
@@ -4949,6 +4956,8 @@ test("simple mode's request page with no summary: the request in full, designs, 
   assert.equal(await desk.locator('#th-T-1 .smsg.re[data-k="agent"]').count(), 1, "Design Desk's reply is told apart");
   assert.equal(await desk.locator('#th-T-1 .smsg:not(.re)[data-k]').count(), 0, "someone else's message is on no tint");
   assert.doesNotMatch(await desk.textContent("#th-T-2 .smsg .who"), /developer/i, "only a designer's role is named");
+  assert.equal(await desk.locator("#th-T-1 .smsg.re .sav.mk-on-ink svg.dd-mark").count(), 1, "Design Desk's avatar is its mark (#215)");
+  assert.doesNotMatch(await desk.textContent("#th-T-1 .smsg.re .sav"), /\S/, "never letters");
   assert.equal(await desk.locator("#th-T-3 [data-work-in]").count(), 1, "a comment on a design can be worked in");
   assert.match(await desk.textContent("#th-T-3 .sjump"), /Option 1: Calm · Title/, "its option and part, a jump to them");
   assert.equal(await desk.locator("#th-T-1 [data-work-in]").count(), 0, "one on no design cannot");
@@ -4957,6 +4966,36 @@ test("simple mode's request page with no summary: the request in full, designs, 
   await desk.click("#th-T-2 summary");
   assert.equal(await desk.locator("#th-T-2[open]").count(), 1, "and opens on a click");
 }));
+
+test("in full mode Design Desk's messages carry its mark, people's none", (t) => open(t, HEAD_DESK({ ...HEAD_ME, simple: false }, [talked, drawn]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="R-7"]');
+  await desk.click('#list [data-card="R-7"]');
+  await desk.waitForSelector("#th-T-1", { state: "attached" });
+  assert.equal(await desk.locator("#th-T-1 .msg.agent .who .msg-av.mk-on-ink svg.dd-mark").count(), 1, "the agent's message opens with the mark");
+  assert.equal(await desk.locator("#th-T-1 .msg:not(.agent) .msg-av").count(), 0, "a person's message keeps its name alone");
+}));
+
+// Design Desk's mark (#215): one drawing, desk/brand/build.mjs, wherever it stands.
+test("the mark on the page is desk/brand/mark.svg, and the spark is Draw options' icon outside it", async () => {
+  const brand = await import("../brand/build.mjs");
+  const brandFile = (name) => readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "brand", name), "utf8");
+  assert.equal(brandFile("mark.svg"), brand.MARK_SVG, "desk/brand/mark.svg is stale: run node desk/brand/build.mjs");
+  const head = page.match(/<template id="dd-mark">(<svg class="dd-mark"[\s\S]*?<\/svg>)<\/template>/);
+  assert.ok(head, "the page keeps the mark in a template");
+  assert.equal(head[1], brand.MARK_INLINE, "its copy is build.mjs's");
+  assert.doesNotMatch(page, /<a class="brand"/, "the head carries no mark");
+  assert.ok(head[1].includes(`d="${brand.D_PATH}"`) && brand.MARK_SVG.includes(`d="${brand.D_PATH}"`), "the same DD and spark as mark.svg");
+  assert.equal(page.match(/<svg class="dd-mark"/g).length, 1, "one inline copy; the script reuses it");
+  assert.ok(page.includes(`<link rel="icon" href="${brand.FAVICON_HREF}" />`), "the favicon is the mark");
+  // The review bar's and the walkthrough's credits carry the mark in fixed colours: the same drawing.
+  for (const chrome of ["review-bar.html", "tour.html"]) {
+    const html = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "..", "toolkit", "chrome", chrome), "utf8");
+    assert.ok(html.includes(`d="${brand.D_PATH}"`) && html.includes(`fill="${brand.COLORS.light.disc}"`), `toolkit/chrome/${chrome}'s credit is build.mjs's mark`);
+  }
+  assert.match(page, /\.dd-spin \{[^}]*color: var\(--mk-disc\)/, "the spinner is the DD pair in the mark's colour");
+  assert.deepEqual([...page.matchAll(/["']spark["']|ICON_PATH\.spark/g)].map((m) => m[0]), ['"spark"'], "the Desk's spark icon only for Draw options (BTN_ICON explore); the mark's own is drawn in it");
+  assert.doesNotMatch(page, /data-r="agent">DD</, "no letters stand for Design Desk");
+});
 
 // Who asked, a short summary first, and the request as asked folded under it (docs/desk-page.md →
 // Simple mode): a request from Slack written in Czech, with Design Desk's English and its gist.

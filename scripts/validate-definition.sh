@@ -79,6 +79,24 @@ else
     pass ".gitignore re-includes kit.yaml"
   fi
 
+  # An image avatar ({path: …}) is read at the kit's commit: a PNG or JPG of at most 2 MB, or the
+  # kit lists with no avatar and only a server log says why.
+  avatar_path="$(sed -nE 's/^avatar:[[:space:]]*\{[[:space:]]*path:[[:space:]]*([^}[:space:]]+)[[:space:]]*\}[[:space:]]*$/\1/p' kit.yaml)"
+  avatar_path="${avatar_path#[\"\']}"; avatar_path="${avatar_path%[\"\']}" # YAML may quote it
+  if [ -n "$avatar_path" ]; then
+    if [ ! -f "$avatar_path" ]; then
+      fail "kit.yaml avatar path $avatar_path does not exist"
+    elif ! printf '%s' "$avatar_path" | grep -qiE '\.(png|jpe?g)$'; then
+      fail "kit.yaml avatar $avatar_path must be a PNG or JPG"
+    elif [ "$(wc -c < "$avatar_path")" -gt 2097152 ]; then
+      fail "kit.yaml avatar $avatar_path is over 2 MB"
+    else
+      pass "kit.yaml avatar is an image: $avatar_path"
+    fi
+  elif grep -qE '^avatar:[[:space:]]*\{' kit.yaml; then
+    fail "kit.yaml avatar must read 'avatar: {path: <file>}' on one line"
+  fi
+
   if grep -qE '^onboarding:' kit.yaml; then
     fail "kit.yaml declares 'onboarding:' — leave it out, or the agent is stamped onboarded at create and loses the gate, the checklist tools and the hold on its schedules"
   else

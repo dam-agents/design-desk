@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Design Desk</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2048%2048%22%3E%3Cstyle%3E.mk-disc%7Bfill%3A%23de9950%7D.mk-d%7Bfill%3A%23ffffff%7D%40media%20(prefers-color-scheme%3Adark)%7B.mk-disc%7Bfill%3A%23de9950%7D.mk-d%7Bfill%3A%23ffffff%7D%7D%3C%2Fstyle%3E%3Ccircle%20cx%3D%2224%22%20cy%3D%2224%22%20r%3D%2224%22%20class%3D%22mk-disc%22%2F%3E%3Cpath%20transform%3D%22translate(24%2024)%20scale(0.74)%20translate(-24%20-24)%22%20fill-rule%3D%22evenodd%22%20d%3D%22M4%2014H12A10%2010%200%200%201%2012%2034H4Z%20M26%2014H34A10%2010%200%200%201%2034%2034H26Z%20M33%2018Q33.45%2023.55%2039%2024Q33.45%2024.45%2033%2030Q32.55%2024.45%2027%2024Q32.55%2023.55%2033%2018Z%22%20class%3D%22mk-d%22%2F%3E%3C%2Fsvg%3E" />
 <script>
   // Before the first paint, so a chosen mode never flashes the other one.
   // Each person's copy is their own (desk-theme:<email>); before the Desk says who is viewing,
@@ -12,6 +13,8 @@
 </script>
 <style>
   :root {
+    /* Design Desk's mark (desk/brand/mark.svg): its disc and its D's. */
+    --mk-disc: #de9950; --mk-d: #ffffff;
     --bg: #fcfbfc; --panel: #ffffff; --ink: #1b1b1a; --muted: #6b6b66; --line: #e4e3df; --soft: #f0efeb;
     --tip-opens: #6fd3a0; --accent: #2f5bd3; --accent-ink: #ffffff; --ok: #1f7a4d; --ok-soft: #e3f3ea; --warn: #9a6200; --warn-soft: #fbf0d9;
     --bad: #b3261e; --bad-soft: #fbe5e3; --info-soft: #e7edfc; --live: #6b3fc4; --live-soft: #efe8fb; --why: #0d7d78; --why-soft: #e0f3f1; --r-sm: 6px; --radius: 12px; --shadow: 0 1px 2px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.04);
@@ -27,11 +30,13 @@
   @media (min-width: 2200px) { :root { --measure: 150ch; --pad-x: 64px; --list-w: 550px; --side-w: 520px; --shot-w: 400px; --shot-h: 440px; } }
   /* Night follows the system unless the header switch chose a mode (data-theme). */
   @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) { --bg: #151514; --panel: #1e1e1c; --ink: #ecebe7; --muted: #a09f99; --line: #33332f; --soft: #262624;
+    :root:not([data-theme="light"]) { --mk-disc: #de9950; --mk-d: #ffffff;
+      --bg: #151514; --panel: #1e1e1c; --ink: #ecebe7; --muted: #a09f99; --line: #33332f; --soft: #262624;
       --tip-opens: #1f7a4d; --accent: #8aa8ff; --accent-ink: #10142a; --ok: #6fd3a0; --ok-soft: #1c2f25; --warn: #f0c060; --warn-soft: #34291a;
       --bad: #ff8a80; --bad-soft: #3a1f1d; --info-soft: #1f2640; --live: #c3a6ff; --live-soft: #2a2140; --why: #62d2c8; --why-soft: #16302e; --shadow: none; --float: 0 0 0 1px rgba(255,255,255,.10), 0 14px 36px rgba(0,0,0,.6), 0 36px 90px rgba(0,0,0,.7); color-scheme: dark; }
   }
-  :root[data-theme="dark"] { --bg: #151514; --panel: #1e1e1c; --ink: #ecebe7; --muted: #a09f99; --line: #33332f; --soft: #262624;
+  :root[data-theme="dark"] { --mk-disc: #de9950; --mk-d: #ffffff;
+    --bg: #151514; --panel: #1e1e1c; --ink: #ecebe7; --muted: #a09f99; --line: #33332f; --soft: #262624;
     --tip-opens: #1f7a4d; --accent: #8aa8ff; --accent-ink: #10142a; --ok: #6fd3a0; --ok-soft: #1c2f25; --warn: #f0c060; --warn-soft: #34291a;
     --bad: #ff8a80; --bad-soft: #3a1f1d; --info-soft: #1f2640; --live: #c3a6ff; --live-soft: #2a2140; --why: #62d2c8; --why-soft: #16302e; --shadow: none; --float: 0 0 0 1px rgba(255,255,255,.10), 0 14px 36px rgba(0,0,0,.6), 0 36px 90px rgba(0,0,0,.7); color-scheme: dark; }
   :root[data-theme="light"] { color-scheme: light; }
@@ -53,7 +58,7 @@
   header h1 { font-size: var(--fs-ui); margin: 0; font-weight: 600; letter-spacing: .01em; }
   /* Requests leads the menu; the other tabs are smaller, their counts grey. */
   nav { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
-  nav button { border: 0; background: transparent; padding: 8px 12px; border-radius: var(--r-sm); cursor: pointer; color: var(--muted); font-size: var(--fs-meta); }
+  nav button { border: 0; background: transparent; height: 32px; padding: 0 12px; border-radius: var(--r-sm); cursor: pointer; color: var(--muted); font-size: var(--fs-meta); }
   nav button[aria-current="true"] { background: var(--soft); color: var(--ink); font-weight: 600; }
   nav .sep, header > .head-sep { width: 1px; height: 18px; background: var(--line); margin: 0 8px; }
   /* New request sits right after the tabs, behind one more separator. */
@@ -96,6 +101,7 @@
   #notes .note.unread { border-left-color: var(--accent); background: color-mix(in srgb, var(--info-soft) 55%, transparent); }
   #notes .note .ic { grid-row: 1 / span 2; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); }
   #notes .note .ic svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  #notes .note .ic.mk-on-ink { background: none; } #notes .note .ic.mk-on-ink svg { width: 28px; height: 28px; }
   /* A row is at most three lines: what and who, the item, what was said; each line cuts with … */
   #notes .note .ev { font-weight: 600; color: var(--ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #notes .note .ev span { font-weight: 400; color: var(--muted); }
@@ -250,11 +256,15 @@
   .srow .kic { grid-row: span 2; color: var(--muted); padding-top: 2px; position: relative; }
   .srow .kic[data-s="pr-open"] { color: var(--gh-open); } .srow .kic[data-s="pr-draft"] { color: var(--gh-draft); } .srow .kic[data-s="pr-merged"] { color: var(--gh-merged); }
   .srow .kic .kdot { position: absolute; top: 0; left: 10px; width: 8px; height: 8px; border-radius: 50%; background: var(--bad); box-shadow: 0 0 0 2px var(--row-bg, var(--panel)); } .kic svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; display: block; }
+  /* Design Desk at work: the spinner at the row's top right, and beside the head's buttons. */
+  .srow .open > .srow-spin { grid-column: 3; grid-row: 1; justify-self: end; align-self: start; margin-left: 8px; }
+  .srow .open:has(> .srow-spin) > .spill { grid-row: 2; align-self: end; }
+  .sh-acts .sh-spin { align-self: center; margin-right: 4px; width: 20px; height: 20px; }
   .srow .sline { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: var(--fs-meta); color: var(--muted); min-height: 20px; }
   .srow .open > .spill { grid-column: 3; grid-row: 1 / span 2; align-self: center; margin-left: 8px; }
   /* A phone narrower than 400 px has no room for a long date beside the pill (it never breaks):
      there the pill takes a line of its own under the date, at the row's right end. */
-  @media (max-width: 399px) { .row.item.srow > .open { grid-template-columns: 20px minmax(0, 1fr); } .srow .kic { grid-row: span 3; } .srow .open > .spill { grid-column: 2; grid-row: 3; justify-self: end; margin-left: 0; } }
+  @media (max-width: 399px) { .row.item.srow > .open { grid-template-columns: 20px minmax(0, 1fr); } .srow .kic { grid-row: span 3; } .srow .open > .spill { grid-column: 2; grid-row: 3; justify-self: end; margin-left: 0; } .srow .open > .srow-spin { grid-column: 2; grid-row: 3; justify-self: start; align-self: center; margin-left: 0; } .srow .open:has(> .srow-spin) > .spill { grid-row: 3; align-self: center; } }
   .srow .sline .sdate { display: inline-flex; gap: 4px; white-space: nowrap; } .srow .sline .snum { color: var(--muted); }
   .srow .sline .sby { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .srow .sline .sby::before { content: "·"; margin-right: 4px; }
   .spill { --p: var(--muted); display: inline-flex; align-items: center; gap: 4px; padding: 0 8px; border-radius: 999px; font-size: var(--fs-micro); font-weight: 500; line-height: 20px; white-space: nowrap;
@@ -303,7 +313,7 @@
   /* What Design Desk found: a fold like the others, the first of them. Its head carries Design
      Desk's mark and its answer, so a glance tells whether there is anything to check. */
   details.sfound > summary .sf-mark { width: 24px; height: 24px; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--ink); color: var(--bg); }
-  details.sfound > summary .sf-mark svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+  details.sfound > summary .sf-mark.mk-on-ink { background: none; } details.sfound > summary .sf-mark svg.dd-mark { width: 24px; height: 24px; }
   details.sfound > summary .sf-say { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-meta); font-weight: 500; color: var(--ok); }
   details.sfound > summary .sf-say[data-k="warn"] { padding: 0 8px; line-height: 24px; border-radius: 999px; color: var(--warn); background: var(--warn-soft); }
   details.sfound > summary .sf-say svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
@@ -343,7 +353,7 @@
   .sthread .sreplies .smsg.re { margin-left: 0; } .sthread .sreplies .pending { padding: 4px 12px; }
   .sav { width: 28px; height: 28px; flex: none; border-radius: 50%; display: grid; place-items: center; font-size: var(--fs-meta); font-weight: 600; color: var(--ink); background: var(--soft); }
   .sav[data-r="designer"], .sav[data-r="admin"] { background: var(--live-soft); color: var(--live); } .sav[data-r="developer"], .sav[data-r="ui-dev-owner"] { background: var(--info-soft); color: var(--accent); }
-  .sav[data-r="agent"] { background: var(--ink); color: var(--bg); } .smsg .sav[data-r="agent"] { background: var(--panel); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); } .sav svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+  .sav svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; }
   .sthread .chip { margin-bottom: 8px; } .sthread .reply { margin-top: 12px; margin-left: 40px; }
   .sh-after { margin-top: 4px; font-size: var(--fs-meta); color: var(--muted); } .sh-after a { color: inherit; }
   /* A review in the making: the person's drafts, seen by them alone (docs/desk.md → Reviews). */
@@ -1012,7 +1022,6 @@
   .ask-row { display: flex; gap: 8px; align-items: flex-start; align-self: flex-start; max-width: 92%; }
   .ask-row .ask-msg { max-width: none; }
   .ask-avatar { flex: none; width: 28px; height: 28px; border-radius: 50%; background: var(--ink); color: var(--panel); display: grid; place-items: center; font-size: var(--fs-micro); font-weight: 600; line-height: 1; }
-  .dd-mark svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .ask-name { display: block; font-size: var(--fs-micro); font-weight: 600; color: var(--muted); margin-bottom: 2px; }
   .ask-msg.agent { align-self: flex-start; background: var(--soft); border-bottom-left-radius: 4px; }
   /* Design Desk is answering: a typing bubble, three dots that rise in turn. */
@@ -1660,7 +1669,7 @@
   .made-col details.fold { max-width: none; }
   .made-col details.fold > summary { font-size: var(--fs-meta); color: var(--muted); margin: 12px 0 8px; }
   .made-col details.fold > summary .cnt { display: inline-block; margin-left: 8px; padding: 0 8px; border-radius: 999px; background: color-mix(in srgb, var(--muted) 14%, transparent); font-size: var(--fs-meta); line-height: 18px; }
-  .brief-k .face.agent { background: var(--ink); color: var(--panel); }
+  .brief-k .face.agent { background: none; color: var(--panel); }
   .made-sec + .made-sec { margin-top: 16px; }
   .made-sec .srcs { margin: 8px 0 0; font-size: var(--fs-meta); color: var(--muted); }
   .made-sec .srcs > summary { cursor: pointer; list-style: none; display: inline-flex; align-items: center; gap: 4px; padding: 2px 0; }
@@ -1889,7 +1898,8 @@
   /* Design Desk at work: the DD pair. The Ds flip one at a time and rest in three ways: as DD, with the
      round sides out, with the round sides in; back as DD, the pair turns once round. Its size follows the
      font size, its color the text color. Queued: still and faint. */
-  .dd-spin { position: relative; display: inline-block; width: 1.25em; height: 1.25em; flex: none; vertical-align: -0.25em; color: var(--warn); animation: dd-spin-turn 5s cubic-bezier(.65,0,.35,1) infinite; }
+  /* Design Desk at work: the DD pair, as before #215, in the mark's colour (--mk-disc). */
+  .dd-spin { position: relative; display: inline-block; width: 1.25em; height: 1.25em; flex: none; vertical-align: -0.25em; color: var(--mk-disc); animation: dd-spin-turn 5s cubic-bezier(.65,0,.35,1) infinite; }
   .dd-spin::before, .dd-spin::after { content: ""; position: absolute; top: 29.167%; width: 37.5%; height: 41.667%; background: currentColor; border-radius: 0 999px 999px 0; animation: dd-spin-left 5s cubic-bezier(.65,0,.35,1) infinite; }
   .dd-spin::before { left: 7.5%; }
   .dd-spin::after { left: 55%; animation-name: dd-spin-right; }
@@ -1900,6 +1910,19 @@
   @keyframes dd-spin-left { 0%, 12% { transform: scaleX(1); } 20%, 34% { transform: scaleX(-1); } 42%, 100% { transform: scaleX(1); } }
   @keyframes dd-spin-right { 0%, 40% { transform: scaleX(1); } 48%, 58% { transform: scaleX(-1); } 66%, 100% { transform: scaleX(1); } }
   @media (prefers-reduced-motion: reduce) { .dd-spin, .dd-spin::before, .dd-spin::after { animation-duration: 10s; } }
+  /* Design Desk's mark, wherever it speaks or acts (docs/desk-page.md → The mark). Its colours follow
+     the mode; on the ink circle of its avatar (.mk-on-ink) it takes the other mode's. */
+  svg.dd-mark { display: block; flex: none; }
+  svg.dd-mark circle, svg.dd-mark path { stroke: none; }
+  svg.dd-mark .mk-disc { fill: var(--mk-disc); } svg.dd-mark .mk-d { fill: var(--mk-d); }
+  /* As its avatar the mark is the circle itself. */
+  .mk-on-ink { background: none; }
+  /* As an avatar the mark fills its circle: 28px (.sav, .ask-avatar, the bell), 24px (.face), 18px (.msg-av). */
+  .mk-on-ink svg.dd-mark { width: 28px; height: 28px; } .brief-k .face.mk-on-ink svg.dd-mark { width: 24px; height: 24px; } .msg .who .msg-av svg.dd-mark { width: 18px; height: 18px; }
+  .msg .who .msg-av { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; vertical-align: -4px; margin-right: 8px; }
+  .prov svg.dd-mark { width: 12px; height: 12px; }
+  .banner .mk-off { display: inline-block; vertical-align: -3px; margin-right: 8px; filter: grayscale(1); opacity: .55; } .banner .mk-off svg.dd-mark { width: 16px; height: 16px; }
+  h2.with-mark { display: flex; align-items: center; gap: 8px; } h2.with-mark svg.dd-mark { width: 28px; height: 28px; }
   .ws-sub { min-height: 40px; padding: 4px 16px; }
   .ws-sub .step-by { display: inline-flex; align-items: center; gap: 2px; } .ws-sub .step-by .hint { margin: 0; min-width: 8ch; text-align: center; font-variant-numeric: tabular-nums; }
   .ws-canvas { flex-direction: column; gap: 8px; background: color-mix(in srgb, var(--ink) 9%, var(--bg)); }
@@ -1941,6 +1964,7 @@
 </style>
 </head>
 <body>
+<template id="dd-mark"><svg class="dd-mark" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="24" class="mk-disc"/><path transform="translate(24 24) scale(0.74) translate(-24 -24)" fill-rule="evenodd" d="M4 14H12A10 10 0 0 1 12 34H4Z M26 14H34A10 10 0 0 1 34 34H26Z M33 18Q33.45 23.55 39 24Q33.45 24.45 33 30Q32.55 24.45 27 24Q32.55 23.55 33 18Z" class="mk-d"/></svg></template>
 <div class="app">
   <header>
     <nav id="nav" aria-label="Desk"></nav>
@@ -2338,7 +2362,7 @@
     "Every change that ships gets its card with screenshots; a designer marks it handled, or adjusts its design through a new request.");
   // How it works: the processes, each as a tab's intro draws it (its flow, its steps, the buttons
   // the person may press), then what Design Desk cannot do and how long things take.
-  const GUIDE = () => `<h2>How Design Desk works</h2>
+  const GUIDE = () => `<h2 class="with-mark">${MARK}How Design Desk works</h2>
 <p class="lead">Design Desk tells you what changed in the product, explains it in plain words, and turns your ideas into design options${full(" and live prototypes")}. It changes only how the product <b>looks</b>, never what it <b>does</b>.</p>
 <h3>A design request</h3>${process("requests")}
 <h3>Changing a design</h3>${process("workspace")}
@@ -2501,6 +2525,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // A list row's button covers the whole card: it shows no line and no preview of its own; its
   // labels and its issue or pull request link show theirs (docs/desk-page.md → Tooltips).
   const ROW_OPEN = ".row.item > .open";
+  // Design Desk's mark, its one inline copy, in a template (desk/brand/mark.svg; a test keeps
+  // them equal). The head carries none. It stands for Design Desk wherever it speaks or acts; the spark is Draw options' icon.
+  const MARK = document.querySelector("#dd-mark").innerHTML;
+  // Its avatar: the mark on an ink circle, in the class of the circle it replaces.
+  const agentAvatar = (cls) => `<span class="${cls} mk-on-ink" title="Design Desk" aria-hidden="true">${MARK}</span>`;
   // A button's icon, by its data- action (or id), drawn before its words; a button whose
   // words start with a sign of their own (▶, ✓, 👍, +…) keeps that sign instead.
   const ICON_PATH = {
@@ -2891,7 +2920,6 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // The Desk itself: a desk with a screen on it.
     desk: '<rect x="4.5" y="1.8" width="7" height="5" rx="1"/><path d="M8 6.8v2.2M1.5 9h13M3 9v5.2M13 9v5.2"/>',
     chat: '<circle cx="8" cy="5.5" r="2.6"/><path d="M2.8 14.2c.4-2.8 2.6-4.3 5.2-4.3s4.8 1.5 5.2 4.3"/>',
-    agent: '<path d="M8 1.8 9.5 6.5 14.2 8 9.5 9.5 8 14.2 6.5 9.5 1.8 8 6.5 6.5z"/>',
     test: '<path d="M6 1.8h4M6.6 1.8v4.4L2.7 12.9a1 1 0 0 0 .9 1.4h8.8a1 1 0 0 0 .9-1.4L9.4 6.2V1.8M4.6 10h6.8"/>',
     digest: '<rect x="2.2" y="3" width="11.6" height="11" rx="1.5"/><path d="M2.2 6.5h11.6M5.5 1.8v2.4M10.5 1.8v2.4"/>',
     auto: '<path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2.5v3h-3"/>',
@@ -2908,7 +2936,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       <span class="ask-who"><b>${esc(name)}</b> asked, from</span>
       <span class="prov"><span class="src" data-k="${p.kind}">${icon(p.kind)}${p.src}</span>${p.auto}${p.parent}</span>${c.created ? `<span class="ask-when">· ${esc(when(c.created))}</span>` : ""}`;
   }
-  const icon = (k) => `<svg viewBox="0 0 16 16" aria-hidden="true">${ICON[k]}</svg>`;
+  // What Design Desk filed or drew on its own carries its mark.
+  const icon = (k) => k === "agent" ? MARK : `<svg viewBox="0 0 16 16" aria-hidden="true">${ICON[k]}</svg>`;
   function origin(c, { parts = false } = {}) {
     const o = c.origin || {}, by = c.by || c.created_by || {}, from = c.from || c.request?.from || null;
     const out = (url, text) => url ? `<a href="${safeUrl(url)}" target="_blank" rel="noopener noreferrer">${text}&nbsp;↗</a>` : text;
@@ -3393,8 +3422,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   function renderBanners() {
     const out = [];
     if (S.offline) out.push(S.stale
-      ? `<div class="banner warn">Can't reach Design Desk. If it was just updated, copy what you're writing, then <button class="btn small" data-reload>Reload the page</button></div>`
-      : `<div class="banner warn">Can't reach Design Desk right now. Retrying… <button class="btn small" data-reload>Reload the page</button></div>`);
+      ? `<div class="banner warn"><span class="mk-off" aria-hidden="true">${MARK}</span>Can't reach Design Desk. If it was just updated, copy what you're writing, then <button class="btn small" data-reload>Reload the page</button></div>`
+      : `<div class="banner warn"><span class="mk-off" aria-hidden="true">${MARK}</span>Can't reach Design Desk right now. Retrying… <button class="btn small" data-reload>Reload the page</button></div>`);
     if (S.me?.role === "guest") out.push(`<div class="banner">You can read, ask and comment. To vote or send requests, ask ${esc(contact())} to add ${esc(S.me.email || "you")} as a designer, PM, UI dev owner or developer.</div>`);
     $("#banners").innerHTML = out.join("");
   }
@@ -3775,7 +3804,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // where it stands, who and when, at most two moves and ⋯ for the rest; it stays in view.
   function simpleHead(c) {
     const s = simpleState(c, true), k = s.pill || s.state, src = c.source || {}, change = c.kind === "change";
-    const work = atWork(c) ? `<span class="sh-work"><span class="dd-spin"></span>${esc(working(c).map((w) => WORK_SHORT[w] || "Working on it").join(", ") || "Design Desk is working on it")}</span>` : "";
+    // At work, the spinner stands beside the head's buttons; the line says what it does.
+    const work = atWork(c) ? `<span class="sh-work">${esc(working(c).map((w) => WORK_SHORT[w] || "Working on it").join(", ") || "Design Desk is working on it")}</span>` : "";
     const pr = change && src.pr ? `<a class="sh-pr" data-s="${src.merged_at ? "pr-merged" : src.draft ? "pr-draft" : "pr-open"}" href="${safeUrl(src.url || "")}" target="_blank" rel="noopener noreferrer" title="Open the pull request on GitHub">#${esc(src.pr)} ${src.merged_at ? "Merged" : src.draft ? "Draft" : "Open"} ↗</a>` : "";
     const o = c.origin || {}, by = c.by || c.created_by || {};
     const who = change ? src.author || "" : by.agent ? "Design Desk" : shortName(o.email || by.email, by.name || o.reporter);
@@ -3816,7 +3846,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const more = items ? `<details class="more sh-more"><summary class="btn" aria-label="More" title="More">⋯</summary><div class="menu">${items}</div></details>` : "";
     return `<div class="shead"><div class="sh-main"><h2>${kindIcon(c)}<span class="sh-t" title="${esc(sTitle(c))}">${txt(sTitle(c))}</span>${num(c)}${titleLink(c)}</h2>
       <div class="sh-line"><span class="spill" data-s="${k}" title="${esc(simTip(c, k))}">${SIM_PILL[k]}</span>${bug}${respOf(c) ? `<span class="sh-resp" title="${esc(respOf(c)[1])}">Changes requested · ${esc(respOf(c)[0])}</span>` : ""}${work}${facts ? `<span class="sh-facts">${facts}</span>` : ""}</div>${after ? `<div class="sh-after">${after}</div>` : ""}</div>
-      <div class="sh-acts">${moves}${more}</div></div>`;
+      <div class="sh-acts">${atWork(c) ? `<span class="dd-spin sh-spin" title="Design Desk is working on it"></span>` : ""}${moves}${more}</div></div>`;
   }
   // What Design Desk found: what it checked the item against — the decisions in force, what a
   // designer should look at and why, the approved design, Figma (when on), its check on GitHub —
@@ -3842,7 +3872,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const say = n ? `<span class="sf-say" data-k="warn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9.5 17h-19z"/><path d="M12 10v4M12 17h.01"/></svg>${esc(plural(n, "thing", "things"))} to check</span>`
       : `<span class="sf-say" data-k="ok"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>Nothing to flag</span>`;
     const open = S.folds.found ?? n > 0;
-    return `<details class="fold big sfold sfound"${open ? " open" : ""}><summary><span class="sf-mark" title="Design Desk" aria-hidden="true"><svg viewBox="0 0 24 24">${ICON_PATH.spark}</svg></span><h3>What Design Desk found</h3>${say}</summary>
+    return `<details class="fold big sfold sfound"${open ? " open" : ""}><summary>${agentAvatar("sf-mark")}<h3>What Design Desk found</h3>${say}</summary>
       <div class="section">${body || `<p class="hint">It goes against no decision in force${c.kind === "change" ? ", and nothing in it waits for a designer" : ""}.</p>`}</div></details>`;
   }
   // A sent review shows once, as one block: who, the verdict, the note, then each of its comments
@@ -4124,7 +4154,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const last = (th) => Date.parse(th.messages[th.messages.length - 1]?.at || 0) || 0;
     const person = (by) => by?.agent ? { n: "Design Desk", r: "", k: "agent" }
       : { n: shortName(by?.email, by?.name) || "someone", r: by?.role && by.role !== "slack" ? by.role : "", k: by?.role || "" };
-    const av = (p) => `<span class="sav" data-r="${esc(p.k)}" aria-hidden="true">${p.k === "agent" ? `<svg viewBox="0 0 24 24">${ICON_PATH.spark}</svg>` : esc((p.n === "you" ? S.me?.my_name || "Y" : p.n)[0].toUpperCase())}</span>`;
+    const av = (p) => p.k === "agent" ? agentAvatar("sav") : `<span class="sav" data-r="${esc(p.k)}" aria-hidden="true">${esc((p.n === "you" ? S.me?.my_name || "Y" : p.n)[0].toUpperCase())}</span>`;
     // Whose it is, quietly: the viewer's own on a faint tint, Design Desk's on a soft panel with its mark
     // outlined; only a designer's role is named, in its colour: theirs is the word on a design.
     const msg = (m, reply) => { const p = person(m.by), k = p.k === "agent" ? "agent" : p.n === "you" ? "mine" : "";
@@ -4396,7 +4426,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     };
     const simpleRow = (c) => `<div class="row item srow${c.read === false ? " unread" : ""}">
       <button class="open" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}">${kindIcon(c, noteDot(c), true)}<span class="t"><span title="${esc(sTitle(c))}">${esc(sTitle(c))}</span></span>
-      <span class="sline"><span class="sdate"><span class="when">${esc(sWhen(lastChange(c)))}</span>${sNum(c)}</span>${simpleWho(c) ? `<span class="sby">${simpleWho(c)}</span>` : ""}${atWork(c) ? `<span class="dd-spin" title="Design Desk is working on it"></span>` : ""}</span>${simplePill(c)}</button></div>`;
+      <span class="sline"><span class="sdate"><span class="when">${esc(sWhen(lastChange(c)))}</span>${sNum(c)}</span>${simpleWho(c) ? `<span class="sby">${simpleWho(c)}</span>` : ""}</span>${simplePill(c)}${atWork(c) ? `<span class="dd-spin srow-spin" title="Design Desk is working on it"></span>` : ""}</button></div>`;
     if (simpleList()) list.innerHTML = filters + drawn.map(simpleRow).join("") + (drawn.length < cards.length ? `<div class="list-more" data-list-more>Loading more…</div>` : "");
     else list.innerHTML = filters + drawn.map((c) => `<div class="row item${overdue(c) ? " overdue" : ""}${c.design ? " fromdesign" : ""}${c.read === false ? " unread" : ""}">
       <button class="open" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}"><div class="t"><span title="${esc(c.title)}">${esc(c.title)}</span>${onDiffs() ? figNum(c) : S.tab === "designs" ? designNum(c) : num(c)}${S.tab === "designs" ? "" : rowDot(c)}</div>${againstDot(c)}</button>
@@ -5324,7 +5354,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       const mini = th.state === "resolved";
       return `${mini ? `<details class="thread mini" id="th-${esc(th.id)}"><summary>${kind}<span class="q"><b>${esc(((n) => n.includes("@") ? n : n.replace(/^./, (x) => x.toUpperCase()))(noteBy(th.messages[0]?.by) || "someone"))}</b> — ${esc(String(th.messages[0]?.text || "").replace(/[*_`#>]+/g, "").replace(/\s+/g, " ").trim())}</span>${state}</summary>${anchor ? `<div class="head">${anchor}</div>` : ""}` : `<article class="thread" id="th-${esc(th.id)}">
         <div class="head">${kind}${anchor}${state}</div>`}
-        ${th.messages.map((m, i) => `<div class="msg ${m.by?.agent ? "agent" : ""}" data-m="${i}"><div class="who">${who(m.by)} · ${esc(when(m.at))}${m.decision ? ` · <a href="#${esc(m.decision)}" data-ref="${esc(m.decision)}">Decision ${esc(m.decision)}</a>` : !m.by?.agent && can("decide") ? ` · <button class="link" data-decide="${esc(th.id)}:${i}" title="Design Desk records it as a numbered decision, with who said it and a link back here">Record as a decision</button>` : ""}</div>${md(m.text)}${warnsOf(m)}${changed(m)}</div>`).join("")}
+        ${th.messages.map((m, i) => `<div class="msg ${m.by?.agent ? "agent" : ""}" data-m="${i}"><div class="who">${m.by?.agent ? agentAvatar("msg-av") : ""}${who(m.by)} · ${esc(when(m.at))}${m.decision ? ` · <a href="#${esc(m.decision)}" data-ref="${esc(m.decision)}">Decision ${esc(m.decision)}</a>` : !m.by?.agent && can("decide") ? ` · <button class="link" data-decide="${esc(th.id)}:${i}" title="Design Desk records it as a numbered decision, with who said it and a link back here">Record as a decision</button>` : ""}</div>${md(m.text)}${warnsOf(m)}${changed(m)}</div>`).join("")}
         ${th.needs_agent ? `<div class="msg"><span class="pending">Waiting for Design Desk…</span></div>` : ""}
         ${th.state !== "resolved" ? `<div class="reply">${mayIn(th, "reply") ? `<input placeholder="Reply…" data-reply="${esc(th.id)}" /><button class="btn small" data-send-reply="${esc(th.id)}">Reply</button>` : ""}${mayIn(th, "resolve") ? `<button class="btn small" data-resolve="${esc(th.id)}" title="Closes this conversation">Mark done</button>` : ""}${workable(c, th) ? `${workInBtn(c, th)}` : ""}</div>` : mayIn(th, "reply") ? `<div class="reply"><button class="btn small" data-reopen="${esc(th.id)}">Reopen</button></div>` : ""}
       ${mini ? "</details>" : "</article>"}`;
@@ -5458,8 +5488,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // One linear chat per item or page: its questions and answers oldest first, the person's
   // on the right and Design Desk's on the left. Each question is its own private ask; a
   // different option, state or part starts with its label.
-  // Design Desk's mark is the spark of its own actions, never letters that read as a person.
-  const DD_AVATAR = `<span class="ask-avatar dd-mark" title="Design Desk" aria-hidden="true"><svg viewBox="0 0 24 24">${ICON_PATH.spark}</svg></span>`;
+  // Design Desk's avatar is its mark, never letters that read as a person.
+  const DD_AVATAR = agentAvatar("ask-avatar");
   function stream(list, ctx) {
     let last = null;
     return [...list].sort((a, b) => a.created.localeCompare(b.created)).map((th) => {
@@ -6691,7 +6721,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ${renderLinked(c)}
       <div class="section">${bug ? `<h4>What happens</h4>` : ""}${md(r.problem)}${r.vision ? `<h4>How they picture it</h4>${md(r.vision)}` : ""}${more ? `<details class="fold"><summary>${bug && r.goal ? (r.steps ? "What should happen and the steps" : "What should happen") : "Steps"}</summary><div class="panel">${more}</div></details>` : ""}${skillLine(r.skills)}${r.figma ? `<p class="hint"><a href="${safeUrl(r.figma)}" target="_blank" rel="noopener noreferrer">The Figma design ↗</a></p>` : ""}</div>
       ${shots(given)}</div>${briefToggle(S.folds.brief, bug)}</div>
-      <div class="brief made-col${S.folds.made ? " clamped" : ""}"><div class="brief-k"><span class="face agent dd-mark" title="Design Desk" aria-hidden="true"><svg viewBox="0 0 24 24">${ICON_PATH.spark}</svg></span><span class="ask-who"><b>What's already known</b></span></div><div class="brief-body">
+      <div class="brief made-col${S.folds.made ? " clamped" : ""}"><div class="brief-k">${agentAvatar("face agent")}<span class="ask-who"><b>What's already known</b></span></div><div class="brief-body">
       ${againstBox(c)}${followsLine(c)}
       ${renderResearch(c.research)}
       ${renderIssueBrief(c)}
@@ -7363,7 +7393,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // is outlined while its comment is open or its pin is pointed at. One Design Desk works on carries its spinner.
     const spinCss = document.createElement("style");
     // The DD pair, as on the Desk (.dd-spin), on a white disc beside a pin Design Desk works on.
-    spinCss.textContent = ".desk-dd{position:absolute;right:-10px;top:-10px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);font-size:14px;display:grid;place-items:center}.desk-dd i{position:relative;display:block;width:1em;height:1em;color:#9a6200;animation:dd-t 5s cubic-bezier(.65,0,.35,1) infinite}.desk-dd i::before,.desk-dd i::after{content:'';position:absolute;top:29.167%;width:37.5%;height:41.667%;background:currentColor;border-radius:0 999px 999px 0;animation:dd-l 5s cubic-bezier(.65,0,.35,1) infinite}.desk-dd i::before{left:7.5%}.desk-dd i::after{left:55%;animation-name:dd-r}@keyframes dd-t{0%,72%{transform:rotate(0)}94%,100%{transform:rotate(360deg)}}@keyframes dd-l{0%,12%{transform:scaleX(1)}20%,34%{transform:scaleX(-1)}42%,100%{transform:scaleX(1)}}@keyframes dd-r{0%,40%{transform:scaleX(1)}48%,58%{transform:scaleX(-1)}66%,100%{transform:scaleX(1)}}@media (prefers-reduced-motion:reduce){.desk-dd i,.desk-dd i::before,.desk-dd i::after{animation-duration:10s}}";
+    spinCss.textContent = ".desk-dd{position:absolute;right:-10px;top:-10px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);font-size:14px;display:grid;place-items:center}.desk-dd i{position:relative;display:block;width:1em;height:1em;color:#de9950;animation:dd-t 5s cubic-bezier(.65,0,.35,1) infinite}.desk-dd i::before,.desk-dd i::after{content:'';position:absolute;top:29.167%;width:37.5%;height:41.667%;background:currentColor;border-radius:0 999px 999px 0;animation:dd-l 5s cubic-bezier(.65,0,.35,1) infinite}.desk-dd i::before{left:7.5%}.desk-dd i::after{left:55%;animation-name:dd-r}@keyframes dd-t{0%,72%{transform:rotate(0)}94%,100%{transform:rotate(360deg)}}@keyframes dd-l{0%,12%{transform:scaleX(1)}20%,34%{transform:scaleX(-1)}42%,100%{transform:scaleX(1)}}@keyframes dd-r{0%,40%{transform:scaleX(1)}48%,58%{transform:scaleX(-1)}66%,100%{transform:scaleX(1)}}@media (prefers-reduced-motion:reduce){.desk-dd i,.desk-dd i::before,.desk-dd i::after{animation-duration:10s}}";
     document.documentElement.appendChild(spinCss);
     // The pins drawn and where (page coordinates): the pointer over one is found from these, so a redraw never flickers it.
     let pinHover = null, pinAt = [];
@@ -10246,7 +10276,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       const by = many ? `${names.slice(0, 2).join(", ")}${names.length > 2 ? ` +${names.length - 2}` : ""}` : noteBy(x.by), d = dayWord(x.at), head = d !== lastDay ? `<div class="day">${esc(d)}</div>` : "";
       lastDay = d;
       return `${head}<button class="note${x.read ? "" : " unread"}" data-g="${g}" data-note="${i}">
-        <span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24">${icon}</svg></span>
+        ${g === "agent" ? agentAvatar("ic") : `<span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24">${icon}</svg></span>`}
         <span class="ev">${esc(label)}${by && !label.startsWith(by) ? ` <span>· ${esc(by)}</span>` : ""}</span><time datetime="${esc(x.at)}" title="${esc(when(x.at))}">${esc(ago(x.at))}</time>
         <span class="ti"><span>${NOTE_KIND[x.kind] ? `<em>${esc(NOTE_KIND[x.kind])}:</em> ` : ""}${esc(x.title || "Untitled")}</span><span class="num">${esc(x.item || "")}</span></span>
         ${x.detail ? `<span class="q">${esc(x.detail)}</span>` : ""}</button>`;

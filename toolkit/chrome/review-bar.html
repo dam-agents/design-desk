@@ -20,6 +20,9 @@
   #review{position:sticky;top:0;z-index:9999;height:var(--review-h);box-sizing:border-box;display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 16px;font:500 12px/1.4 "IBM Plex Sans",system-ui,sans-serif;background:#f2f4f8;color:#161616;border-bottom:1px dashed #a2a9b0;}
   .dark #review{background:#262626;color:#f4f4f4;border-color:#525252;}
   #review b{font-weight:600;margin-right:4px;}
+  /* Design Desk's credit: its mark (desk/brand/mark.svg), at the bar's left — the chrome is the Desk's, not the product's. */
+  #review-credit{display:inline-flex;align-items:center;gap:6px;padding-right:10px;border-right:1px solid #c1c7cd;}
+  .dark #review-credit{border-color:#525252;}
   #review .style{opacity:.65;font-weight:400;margin-left:auto;}
   #review .seg{display:inline-flex;gap:2px;padding:2px;border-radius:8px;border:1px solid #c1c7cd;}
   #review .seg button{all:unset;cursor:pointer;padding:4px 10px;border-radius:6px;opacity:.7;}
@@ -49,6 +52,7 @@
   html.review-hot :is([data-goto-view],[data-menu-trigger],[onclick],[data-clickable]):not(#review *){outline:2px solid rgba(15,98,254,.75) !important;outline-offset:1px;}
 </style>
 <div id="review">
+  <span id="review-credit" title="A prototype from Design Desk"><svg class="dd-credit" width="14" height="14" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><circle cx="24" cy="24" r="24" fill="#de9950"/><path transform="translate(24 24) scale(0.74) translate(-24 -24)" fill-rule="evenodd" d="M4 14H12A10 10 0 0 1 12 34H4Z M26 14H34A10 10 0 0 1 34 34H26Z M33 18Q33.45 23.55 39 24Q33.45 24.45 33 30Q32.55 24.45 27 24Q32.55 23.55 33 18Z" fill="#ffffff"/></svg><span style="opacity:.7">Design Desk</span></span>
   <b id="review-title"></b>
   <span class="seg" id="review-back" hidden><button data-review-back>← Back</button></span>
   <span class="seg" id="review-views"></span>

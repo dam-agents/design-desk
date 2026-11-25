@@ -1,4 +1,4 @@
-# Design Desk
+# <img src="desk/brand/mark.svg" width="28" height="28" alt=""> Design Desk
 
 Design Desk is a design partner for a product team. It watches what ships in your product's
 screens and explains it to designers in plain words, then turns their ideas into variants,

@@ -440,7 +440,7 @@ Give the operator a short **summary**:
 4. A **welcome note** the owner can paste to the team (in Slack or an email), filled in with
    the Desk's share link and the product's name:
 
-   > The design Desk for <product> is ready: <share link>.
+   > The Design Desk for <product> is ready: <share link>.
    > It shows every change to the product's screens in plain words, answers questions about
    > why things work the way they do, and turns your design requests into options you can
    > compare and a live version you can click through.

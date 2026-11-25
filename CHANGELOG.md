@@ -7,6 +7,22 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.120.0 — 2026-11-26
+
+**Upgrade:**
+1. Restart the Desk server ([desk.md](docs/desk.md) → Server) and republish the page
+   ([desk.md](docs/desk.md) → Publishing the page): Design Desk has one mark, `desk/brand/mark.svg` —
+   white DD on an orange disc — wherever it speaks or acts: the favicon, its avatar in every thread,
+   the ask panel, What's already known, What Design Desk found, the bell; the spinner is in its
+   orange ([desk-page.md](docs/desk-page.md) → The mark). Restart the Satellite too, when it runs
+   (`rc-service --user design-desk-satellite restart`): `desk/mcp.mjs` changed, and its server
+   names itself Design Desk with the mark as its icon ([mcp.md](docs/mcp.md)). No data migration.
+2. **Set the agent's avatar by hand.** A Kit Update never changes an agent's avatar: the operator
+   uploads `desk/brand/avatar.png` in the agent's avatar picker. New agents start with it
+   (`kit.yaml` `avatar`). It is also what Slack shows beside the agent's replies where the install
+   has `chat:write.customize`. The GitHub account's avatar and the Slack app's own icon are the
+   platform's and the operator's, not this repository's.
+
 ## 1.119.0 — 2026-11-25
 
 **Upgrade:**
