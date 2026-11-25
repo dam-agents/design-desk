@@ -4980,6 +4980,11 @@ test("the mark on the page is desk/brand/mark.svg, and the spark is Draw options
   assert.ok(head[1].includes(`d="${brand.D_PATH}"`) && brand.MARK_SVG.includes(`d="${brand.D_PATH}"`), "the same DD and spark as mark.svg");
   assert.equal(page.match(/<svg class="dd-mark"/g).length, 1, "one inline copy; the script reuses it");
   assert.ok(page.includes(`<link rel="icon" href="${brand.FAVICON_HREF}" />`), "the favicon is the mark");
+  // The review bar's and the walkthrough's credits carry the mark in fixed colours: the same drawing.
+  for (const chrome of ["review-bar.html", "tour.html"]) {
+    const html = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "..", "toolkit", "chrome", chrome), "utf8");
+    assert.ok(html.includes(`d="${brand.D_PATH}"`) && html.includes(`fill="${brand.COLORS.light.disc}"`), `toolkit/chrome/${chrome}'s credit is build.mjs's mark`);
+  }
   assert.match(page, /\.dd-spin \{[^}]*color: var\(--mk-disc\)/, "the spinner is the DD pair in the mark's colour");
   assert.deepEqual([...page.matchAll(/["']spark["']|ICON_PATH\.spark/g)].map((m) => m[0]), ['"spark"'], "the Desk's spark icon only for Draw options (BTN_ICON explore); the mark's own is drawn in it");
   assert.doesNotMatch(page, /data-r="agent">DD</, "no letters stand for Design Desk");

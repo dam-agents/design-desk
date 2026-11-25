@@ -82,6 +82,7 @@ else
   # An image avatar ({path: …}) is read at the kit's commit: a PNG or JPG of at most 2 MB, or the
   # kit lists with no avatar and only a server log says why.
   avatar_path="$(sed -nE 's/^avatar:[[:space:]]*\{[[:space:]]*path:[[:space:]]*([^}[:space:]]+)[[:space:]]*\}[[:space:]]*$/\1/p' kit.yaml)"
+  avatar_path="${avatar_path#[\"\']}"; avatar_path="${avatar_path%[\"\']}" # YAML may quote it
   if [ -n "$avatar_path" ]; then
     if [ ! -f "$avatar_path" ]; then
       fail "kit.yaml avatar path $avatar_path does not exist"
