@@ -1029,11 +1029,12 @@
   #peek .t { display: flex; gap: 8px; align-items: baseline; justify-content: space-between; }
   #peek .sub { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0 0; color: var(--muted); font-size: var(--fs-meta); }
   #peek p { margin: 8px 0 0; } #peek h4 { margin: 12px 0 2px; font-size: var(--fs-meta); } #peek ul { margin: 0; padding-left: 20px; }
-  /* The toast: a compact box in the top right corner, over the bars, newest on top, with ✕; it goes by itself. */
+  /* The toast: a compact box in the top right corner, over the bars, newest on top, with ✕; it goes by itself.
+     Only its ✕ takes a click: one on its words reaches the bar's control under it. */
   .toasts { position: fixed; top: 12px; right: 24px; z-index: 90; display: grid; gap: 8px; justify-items: end; width: min(360px, calc(100% - 32px)); pointer-events: none; }
-  .toast { pointer-events: auto; display: flex; align-items: flex-start; gap: 8px; width: 100%; max-width: 360px; box-sizing: border-box; padding: 12px 8px 12px 16px; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 10px 30px rgba(0,0,0,.18); font-size: var(--fs-meta); line-height: 1.45; }
+  .toast { display: flex; align-items: flex-start; gap: 8px; width: 100%; max-width: 360px; box-sizing: border-box; padding: 12px 8px 12px 16px; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 10px 30px rgba(0,0,0,.18); font-size: var(--fs-meta); line-height: 1.45; }
   .toast .t-m { flex: 1; min-width: 0; overflow-wrap: anywhere; padding-top: 1px; }
-  .toast .t-x { flex: none; border: 0; background: none; color: var(--muted); cursor: pointer; font: inherit; width: 24px; height: 24px; border-radius: var(--r-sm); display: grid; place-items: center; }
+  .toast .t-x { pointer-events: auto; flex: none; border: 0; background: none; color: var(--muted); cursor: pointer; font: inherit; width: 24px; height: 24px; border-radius: var(--r-sm); display: grid; place-items: center; }
   .toast .t-x .ico { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
   .toast .t-x:hover { color: var(--ink); background: var(--soft); }
   dialog { border: 1px solid var(--line); border-radius: var(--radius); padding: 0; width: min(560px, calc(100% - 32px)); background: var(--panel); color: var(--ink); }

@@ -61,7 +61,7 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   to be sent, across options, in the same boxes as Submit feedback's panel, and **Submit feedback…**,
   which opens that panel. **Submit feedback** stands on the bar on top, before ✕, as in every
   dialog's head ([Submit feedback](#submit-feedback)); in the tab and the panel a note's option and
-  part shows where it is — its option, state and part — and closes the panel. Once the feedback is
+  part line shows the design there and closes the panel. Once the feedback is
   sent, the part selected is let go. A note in the feedback is no pin. Pins are in the Desk's brown,
   small and green once done, with a spinner while Design Desk works on them. The design fills the
   canvas a little in from its edges and the tool bar stands under it, so the canvas never scrolls. A part selected is let go

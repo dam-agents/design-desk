@@ -2913,6 +2913,7 @@ test("the look palette: in the side panel under the part picked, a preview only,
     // The toast says it in the top right corner, a box with ✕ that closes it.
     const tb = await desk.$eval(".toasts .toast", (t) => { const r = t.getBoundingClientRect(); return { right: innerWidth - r.right, top: r.top, x: Boolean(t.querySelector(".t-x[aria-label]")) }; });
     assert.ok(tb.right < 40 && tb.top < 40 && tb.x, `the toast at the top right with its ✕: ${JSON.stringify(tb)}`);
+    assert.equal(await desk.$eval(".toasts .toast .t-m", (m) => getComputedStyle(m).pointerEvents), "none", "a click on its words reaches the bar under it");
     const before = await desk.locator(".toasts .toast").count();
     await desk.click(".toasts .toast .t-x");
     assert.equal(await desk.locator(".toasts .toast").count(), before - 1, "✕ closes it");
