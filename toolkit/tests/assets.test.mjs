@@ -8,10 +8,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ASSETS_BRANCH, commitAssets, outside } from "../bin/assets.mjs";
 
-const ENV = { GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@example.com", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@example.com", GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_NOSYSTEM: "1" };
-Object.assign(process.env, ENV);
+// No identity anywhere, as in a clone from scripts/checkout.sh on a sandbox with no global one:
+// the seed commits below name theirs, the command must bring its own.
+for (const k of ["GIT_AUTHOR_NAME", "GIT_AUTHOR_EMAIL", "GIT_COMMITTER_NAME", "GIT_COMMITTER_EMAIL", "EMAIL"]) delete process.env[k];
+Object.assign(process.env, { GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_NOSYSTEM: "1" });
 const git = (dir, ...a) => {
-  const r = spawnSync("git", ["-C", dir, ...a], { encoding: "utf8" });
+  const r = spawnSync("git", ["-C", dir, "-c", "user.name=t", "-c", "user.email=t@example.com", ...a], { encoding: "utf8" });
   if (r.status !== 0) throw new Error(`git ${a.join(" ")}: ${r.stderr}`);
   return r.stdout.trim();
 };
@@ -46,6 +48,7 @@ test("the first handoff makes design-desk/assets an orphan holding only its fold
   assert.deepEqual(git(clone, "ls-tree", "-r", "--name-only", out.sha).split("\n"),
     [".design-desk/handoff/R-8/design.json", ".design-desk/handoff/R-8/pictures/A-1.webp", ".design-desk/handoff/R-8/shots/s1.webp"]);
   assert.equal(git(clone, "rev-list", "--count", out.sha), "1", "a root commit");
+  assert.equal(git(clone, "log", "-1", "--format=%an <%ae>", out.sha), "design-desk <design-desk@agents.local>", "a clone with no identity gets the Desk's");
   assert.equal(git(clone, "rev-parse", "HEAD"), head, "the clone's checkout is left alone");
   assert.equal(git(clone, "status", "--porcelain"), "", "and its index too");
   git(clone, "push", "-q", origin, out.push);

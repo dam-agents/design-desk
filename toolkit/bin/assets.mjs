@@ -63,7 +63,7 @@ export function commitAssets(clone, card, dir, { git = gitIn(clone), now = new D
     }
     const tree = must(git(["write-tree"], env), "write-tree").trim();
     const msg = `Design Desk handoff ${card}\n\n${folder}/ as sent on ${now.toISOString()}.\n`;
-    const sha = must(git(["commit-tree", tree, ...(parent ? ["-p", parent] : []), "-m", msg]), "commit-tree").trim();
+    const sha = must(git(["commit-tree", tree, ...(parent ? ["-p", parent] : []), "-m", msg], identity(git)), "commit-tree").trim();
     // What the commit changes, checked on the commit itself, not on how it was built.
     const changed = must(git(parent ? ["diff", "--name-only", "--no-renames", parent, sha] : ["ls-tree", "-r", "--name-only", sha]), "diff")
       .split("\n").filter(Boolean);
@@ -71,6 +71,15 @@ export function commitAssets(clone, card, dir, { git = gitIn(clone), now = new D
     if (extra.length) throw new Error(`the commit would change ${extra.length} path(s) outside ${folder}/: ${extra.slice(0, 3).join(", ")}`);
     return { branch: ASSETS_BRANCH, sha, parent, folder, files: files.map((f) => `${folder}/${f}`), push: `${sha}:refs/heads/${ASSETS_BRANCH}` };
   } finally { rmSync(index, { force: true }); }
+}
+
+// The clone's own identity when it has one; else the Desk's, as scripts/work-backup.sh names it:
+// a clone from scripts/checkout.sh sets none, and the sandbox may have no global one.
+export const DESK_IDENTITY = { name: "design-desk", email: "design-desk@agents.local" };
+function identity(git) {
+  if (git(["var", "GIT_AUTHOR_IDENT"]).status === 0 && git(["var", "GIT_COMMITTER_IDENT"]).status === 0) return {};
+  const { name, email } = DESK_IDENTITY;
+  return { GIT_AUTHOR_NAME: name, GIT_AUTHOR_EMAIL: email, GIT_COMMITTER_NAME: name, GIT_COMMITTER_EMAIL: email };
 }
 
 function must(r, what) {

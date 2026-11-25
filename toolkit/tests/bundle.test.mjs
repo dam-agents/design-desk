@@ -89,3 +89,28 @@ test("the toolkit's Chromium encodes a PNG as WebP", async (t) => {
     assert.equal(out.subarray(8, 12).toString(), "WEBP");
   } finally { await enc.close(); }
 });
+
+test("design webp reads a picture's type from its bytes and refuses a GIF, an SVG or a non-picture before writing any", async (t) => {
+  const { pictureType } = await import("../lib/webp.mjs");
+  const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==", "base64");
+  assert.equal(pictureType(png), "image/png");
+  assert.equal(pictureType(Buffer.from([0xff, 0xd8, 0xff, 0xe0])), "image/jpeg");
+  assert.equal(pictureType(Buffer.from("GIF89a....")), "image/gif");
+  assert.equal(pictureType(Buffer.from("<svg/>")), null);
+  const { mkdtempSync, writeFileSync, existsSync, rmSync } = await import("node:fs");
+  const { spawnSync } = await import("node:child_process");
+  const { join } = await import("node:path");
+  const { tmpdir } = await import("node:os");
+  const dir = mkdtempSync(join(tmpdir(), "design-desk-webp-"));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  writeFileSync(join(dir, "a.png"), png);
+  writeFileSync(join(dir, "moving.png"), Buffer.from("GIF89a...."));
+  writeFileSync(join(dir, "icon.svg"), "<svg/>");
+  const design = join(import.meta.dirname, "..", "bin", "design.mjs");
+  for (const bad of ["moving.png", "icon.svg"]) {
+    const r = spawnSync(process.execPath, [design, "webp", join(dir, "a.png"), join(dir, bad)], { encoding: "utf8" });
+    assert.notEqual(r.status, 0, `${bad} is refused`);
+    assert.match(r.stderr, new RegExp(bad.replace(".", "\\.")), "the refusal names the file");
+  }
+  assert.equal(existsSync(join(dir, "a.webp")), false, "nothing is written when one of them is refused");
+});

@@ -33,17 +33,36 @@ export async function webpEncoder({ quality = WEBP_QUALITY, browser = null } = {
   return { encode, close: async () => { await page.close(); if (!browser) await b.close(); } };
 }
 
-// `design webp <file>...` — each picture written beside itself as <name>.webp; prints the paths.
+// A picture's type from its first bytes, never its name: PNG, JPEG, WebP, GIF, or null.
+export function pictureType(buf) {
+  const b = Buffer.from(buf);
+  if (b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return "image/png";
+  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return "image/jpeg";
+  if (b.subarray(0, 4).toString("latin1") === "RIFF" && b.subarray(8, 12).toString("latin1") === "WEBP") return "image/webp";
+  if (/^GIF8[79]a/.test(b.subarray(0, 6).toString("latin1"))) return "image/gif";
+  return null;
+}
+
+// `design webp <file>...` — each still picture written beside itself as <name>.webp; prints the
+// paths. Anything else (a GIF, an SVG, not a picture) is refused before any is written.
 export async function main(_cmd, argv) {
   const { readFileSync, writeFileSync } = await import("node:fs");
   const { fail } = await import("./core.mjs");
   if (!argv.length) fail("usage: design webp <picture>...");
+  const todo = argv.map((f) => {
+    let data;
+    try { data = readFileSync(f); } catch (e) { fail(`${f}: cannot read it (${e.code || e.message})`); }
+    const type = pictureType(data);
+    if (!isRaster(type)) fail(`${f}: not a still PNG, JPEG or WebP picture (${type || "unknown type"}); send it as it is`);
+    return { f, data, type };
+  });
   const enc = await webpEncoder();
   try {
-    for (const f of argv) {
-      const type = /\.jpe?g$/i.test(f) ? "image/jpeg" : /\.webp$/i.test(f) ? "image/webp" : "image/png";
+    for (const { f, data, type } of todo) {
       const to = f.replace(/\.[a-z0-9]+$/i, "") + ".webp";
-      writeFileSync(to, await enc.encode(readFileSync(f), type));
+      let out;
+      try { out = await enc.encode(data, type); } catch (e) { fail(`${f}: cannot encode it as WebP (${String(e.message || e).split("\n")[0]})`); }
+      writeFileSync(to, out);
       process.stdout.write(`${to}\n`);
     }
   } finally { await enc.close(); }

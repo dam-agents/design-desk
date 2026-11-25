@@ -109,15 +109,16 @@ card the people who may approve it read the spec in its banner ([desk-page.md](d
    mockup, the user stories, the acceptance criteria, the decisions it follows, the
    prototype's branch and patch), `mockup.html` (the approved option, the exact reference),
    `states/` and `shots/` (each state alone), `pictures/` (the spec's pictures, its lines pointing at them). Look at `design.json`: every element has its
-   states, every acceptance line names something on the screens. Its shots and raster pictures
-   are WebP, encoded as they are saved. With `prototype_remote` set, the bundle goes on the
+   states, every acceptance line names something on the screens. Its shots and still pictures
+   (PNG, JPEG) are WebP, encoded as they are saved; an SVG or a GIF stays as it is. With `prototype_remote` set, the bundle goes on the
    product's **`design-desk/assets`** branch, never a prototype's or a request's own branch:
    `design assets commit <clone> R-<n> /tmp/design-desk-r<n>/handoff` (the clone from
    `scripts/checkout.sh`) makes one commit adding or replacing `.design-desk/handoff/R-<n>/`
    and nothing else, on an orphan branch it starts when there is none. It is never merged and
    never deleted, so every commit a comment links to stays. It holds no product code, so its
    check is the command's own: it refuses a commit that touches another path, and a branch that
-   shares history with the default branch. Push its `push` refspec,
+   shares history with the default branch; the pre-push hook refuses a bundle on any other
+   branch, and anything but bundles on this one. Push its `push` refspec,
    `git -C <clone> push <remote-url> <push>`, never `--force`; refused as not a fast-forward
    (another handoff pushed first), run the command again and push its new sha. A refusal or a
    failed push sends nothing on: the delivery carries `design.json` in the issue alone and its
