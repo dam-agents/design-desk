@@ -374,6 +374,8 @@ test("nothing is sent or handed off while Design Desk's questions on the spec wa
   const { thread } = s.openThread(card.id, { agent: true }, { kind: "asks", text: "Two things the design does not settle.", step: "handoff",
     questions: [{ text: "Empty state?", options: ["A line", "A picture"], suggested: "A line" }, { text: "On a phone?", options: ["Stacked", "Hidden"], suggested: "Stacked" }] });
   s.done(item.id, "s1", "asked");
+  const bell = s.notifications(alice).items.find((x) => x.event === "agent-asks");
+  assert.deepEqual([bell.detail, bell.for_you], ["2 questions before the spec", true], "the bell counts them, For you who approved it");
   const open = /questions on this request are still open/;
   assert.throws(() => s.upsertCard({ id: card.id, spec: { asset: spec(), review: "sent" } }), open, "a spec written as sent");
   assert.throws(() => s.upsertCard({ id: card.id, spec: { asset: spec(), review: "draft", sent: { by: { agent: true } } } }), open, "a send written by the agent");

@@ -125,7 +125,7 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   on a narrow screen; the presentation's Exit, a picture's ✕).
   `desk/tests/page.test.mjs` drives every dialog in such a frame. It reports itself skipped
   only when it finds no Chromium or the toolkit's `playwright-core` is not installed.
-- **The spec banner.** A spec draft waiting for its review, or rewritten after Ask for changes,
+- <a id="the-spec-banner"></a>**The spec banner.** A spec draft waiting for its review, or rewritten after Ask for changes,
   stands under the request's head as a banner, in both modes; the spec itself stays closed in it, so
   the page below keeps its place. Waiting: green, *The developer spec is ready. Read it, then send it
   to developers.*, its version, who wrote it and where it goes, and one row of buttons along its bottom: **Read the
@@ -646,14 +646,16 @@ person has seen an item is its bold title alone ([Read and unread](#read-and-unr
 **In simple mode** an item has one state, by who works on it, whatever its side, and no status dot. **Draft**
 (grey, dashed): a draft, its author's ([desk.md](desk.md) → Draft and Proposal). **Dev review**
 (amber; its key `proposal`): the dev team decides — a proposal, and, For Developers, an open request
-at any step before it is approved, one approved whose spec draft waits for a person to send it or is
-rewritten after Ask for changes, and a
+at any step before it is approved, one approved whose spec is not yet sent, and a
 change nobody marked handled that is not auto handled; a UI dev owner approves it for developers or
 sends it to design. Its pill says **Proposal** on a request not yet approved (a proposal, or an open
-For Developers request), **Dev review** on a change and on a spec draft waiting or rewritten, as Closed's pill says
-how it ended. **Design review** (green; its key `open`): it needs a design decision — the same
+For Developers request), **Dev review** on a change, as Closed's pill says
+how it ended. An approved request whose spec is not yet sent, in either review, says where the spec stands on its pill
+instead: **Writing spec** (blue: Design Desk reads the design and may ask, writes the spec from the answers, or
+rewrites it after Ask for changes), **Answers needed** (magenta: its questions wait, [The spec banner](#the-spec-banner))
+or **Spec ready** (green: the draft waits for **Send to developers**). **Design review** (green; its key `open`): it needs a design decision — the same
 three For Designers. Design Desk at work on an item leaves it in its review: the spinner says so. **In dev** (the accent): it is
-approved and developers build it — a request writing its first spec or sent to developers and not yet
+approved and developers build it — a request sent to developers and not yet
 built, a change handled or auto handled whose pull request is not merged, and a change a review asked
 changes of until new commits arrive (its head says **Changes requested · developer**, and **Changes
 requested · you** to its pull request's author, by the GitHub username People keeps, in both modes; a request a
@@ -698,7 +700,7 @@ icon's upper right corner, gone once the notification is read. The events:
 | --- | --- |
 | New request, New PR change, New issue | an item is created (a request before design: when it opens) |
 | New comment, New question, New reply | a message in a conversation |
-| Design Desk answered, Design Desk asks | the agent answers a question, or asks one |
+| Design Desk answered, Design Desk asks | the agent answers a question, or asks one; the spec's questions read *N questions before the spec* |
 | New options drawn, Options redrawn | a run draws options, or new versions of them |
 | New vote, Option approved, Spec ready, Closed with a decision | a request moves on |
 | Back to feedback | a person takes a request's approval back ([desk.md](desk.md) → Taking an approval back); For you for whose approval it was, too |

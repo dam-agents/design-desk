@@ -262,6 +262,7 @@
   .spill[data-s="open"] { --p: var(--ok); } .spill[data-s="dev"] { --p: var(--accent); } .spill[data-s="shipped"] { --p: var(--live); }
   .spill[data-s="none"] { --p: var(--muted); } .spill[data-s="closed"] { --p: var(--bad); }
   .spill[data-s="draft"] { --p: var(--muted); background: transparent; border: 1px dashed color-mix(in srgb, var(--p) 70%, transparent); line-height: 18px; } .spill:is([data-s="proposal"], [data-s="proposed"]) { --p: var(--warn); }
+  .spill[data-s="writing"] { --p: var(--accent); } .spill[data-s="answers"] { --p: var(--turn); } .spill[data-s="specready"] { --p: var(--ok); }
   /* Simple mode's head of an item: kept in view while the page scrolls. Its moves sit beside the
      title alone; the line of its state and facts takes the whole width under both. The title keeps
      to one line, cut with an ellipsis (its full words on hover), the number and the link close by. */
@@ -2184,7 +2185,7 @@
   const stageSub = (c) => {
     const proto = typeof c.prototype === "string" ? c.prototype : c.prototype?.state;
     if (c.status === "declined") return "";
-    if (asking(c)) return "Design Desk asks you";
+    if (asking(c)) return specPhase(c)?.phase === "asks" ? "Questions for you" : "Design Desk asks you";
     if (c.status === "triage") return checked(c) ? "done, no options yet" : "";
     if (c.status === "variants") return held(c) ? `${optionCount(c)} drawn` : emptied(c) ? "none left" : "";
     if (c.status === "feedback") return voteEnded(c) ? "the vote ended" : "votes and comments";
@@ -3618,23 +3619,42 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // An approved request whose spec draft waits for a person to send it is theirs to move: in its review.
   // As full mode reads it: a spec draft waits until a person sends it, unless its approver asked it to go by itself.
   const specWaits = (c) => c.status === "spec" && c.spec?.review === "draft" && !c.approved?.auto_send;
-  // A spec sent back for changes is still not with developers, whatever its approver asked: it stays
-  // in its review while Design Desk rewrites it, and comes back as a draft to read (docs/desk-page.md
-  // → A request's state in the list).
-  const specInReview = (c) => specWaits(c) || (c.status === "spec" && c.spec?.review === "changes");
+  // Where an approved request's spec stands (docs/desk-page.md → The spec banner): null before it is
+  // approved or once closed; else `writing` (Design Desk reads the design, or writes the spec from the
+  // answers: `answered`), `asks` (its questions wait), `ready` (a draft to read and send), `rewriting`
+  // (after Ask for changes) or `sent`. A list row reads the same from what the server sends with it.
+  const handoffForm = (c) => (c.threads || []).filter((th) => th.kind === "asks" && th.step === "handoff" && th.questions);
+  const handoffAt = (c) => (c.waiting || []).some((w) => w.kind === "handoff" && w.scope !== "deliver");
+  function specPhase(c) {
+    if (c?.kind !== "request" || c.status === "declined" || preDesign(c)) return null;
+    if (c.status === "handed-off" || c.spec?.review === "sent") return { phase: "sent" };
+    // A request at the spec's step is approved, whatever a row carries of it.
+    if (!(c.approved || c.approved_at || c.status === "spec")) return null;
+    const shown = asShown(c).status === "spec" || Boolean(c.approved_at);
+    const answered = handoffForm(c).some((th) => th.state !== "open");
+    if (shown && asking(c)) return { phase: "asks" };
+    if (c.spec?.review === "changes") return { phase: "rewriting" };
+    if (c.status === "spec" && c.spec?.review === "draft" && (c.spec.asset || !c.threads) && !handoffAt(c)) return { phase: "ready" };
+    return { phase: "writing", answered };
+  }
+  const SPEC_PILL = { writing: "writing", asks: "answers", ready: "specready", rewriting: "writing" };
   // Its review, by its side: Dev review (key `proposal`) For Developers, Design review (key `open`) For Designers.
-  // In Dev review a request not yet approved says Proposal on its pill; a change, or a spec draft waiting, Dev review.
+  // In Dev review a request not yet approved says Proposal on its pill; a change, or a spec on its way, Dev review.
   const reviewOf = (c) => (forOf(c) !== "developers" ? { state: "open", pill: null }
-    : { state: "proposal", pill: c.kind === "request" && !specInReview(c) ? "proposed" : null });
+    : { state: "proposal", pill: c.kind === "request" && !specPhase(c) ? "proposed" : null });
   function simpleState(c, onPage = false) {
     if (!c || !["request", "change"].includes(c.kind)) return null;
     if (c.kind === "request") {
       if (c.status === "declined") return { state: "closed", pill: "closed" };
       if (preDesign(c)) return { state: c.stage, pill: c.stage === "proposal" ? "proposed" : null };
       if (c.status === "handed-off") return c.built ? { state: "closed", pill: "shipped" } : { state: "dev", pill: null };
-      return c.status === "spec" && !specInReview(c) ? { state: "dev", pill: null } : reviewOf(c);
+      // Approved, its spec not yet sent: still in its review, the pill naming where the spec stands.
+      // Only a spec sent is In dev (docs/desk-page.md → A request's state in the list).
+      const sp = specPhase(c);
+      if (sp?.phase === "sent") return { state: "dev", pill: null };
+      return sp ? { ...reviewOf(c), pill: SPEC_PILL[sp.phase] } : reviewOf(c);
     }
-    // An archived change is never listed, but its link still opens it: nobody works on it.
+  // An archived change is never listed, but its link still opens it: nobody works on it.
     if (c.status === "archived") return onPage ? { state: "closed", pill: c.source?.merged_at ? (c.handled ? "shipped" : "none") : "closed" } : null;
     // A review asked the developer for changes: theirs until new commits arrive (docs/desk.md → Reviews).
     if (c.responsible?.who === "developer" && !c.source?.merged_at) return { state: "dev", pill: null };
@@ -3649,10 +3669,13 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const seesStage = (k) => (k === "draft" ? startsDraft() && can("request") : true) || S.cards.some((c) => !closed(c) && preDesign(c) === k);
   const simStates = () => SIM_ALL.filter(([k]) => seesStage(k));
   const SIM_KINDS = [["request", "Requests"], ["change", "PR changes"]];
-  const SIM_PILL = { draft: "Draft", proposal: "Dev review", proposed: "Proposal", open: "Design review", dev: "In dev", shipped: "Shipped", none: "No review needed", closed: "Closed" };
+  const SIM_PILL = { draft: "Draft", proposal: "Dev review", proposed: "Proposal", open: "Design review", dev: "In dev", shipped: "Shipped", none: "No review needed", closed: "Closed",
+    writing: "Writing spec", answers: "Answers needed", specready: "Spec ready" };
   const SIM_TIP = { draft: "A draft: only its author sees it until they send it on", proposal: "Dev review: the dev team approves it for dev or sends it to design; everyone may read it",
     proposed: "A proposal: the dev team approves it for dev or sends it to design; everyone may read it",
-    open: "Design review: it needs a design decision", dev: "Approved: developers are building it", shipped: "Approved by a person and shipped",
+    open: "Design review: it needs a design decision", dev: "Approved: developers are building it",
+    writing: "Design Desk is writing the developer spec; nothing has gone to developers yet", answers: "Design Desk has questions before it writes the spec",
+    specready: "The spec is written; someone who may approve it reads it and sends it", shipped: "Approved by a person and shipped",
     none: "Merged; Design Desk found nothing to review", closed: "Closed without being built" };
   // The filter: states and kinds, any of each; kept in this browser (desk-simFilter). By default
   // Design review for a designer, Draft and Dev review for a developer or a UI dev owner, every
@@ -4083,7 +4106,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       // In Dev review after design opened, the approval is Approve for dev; before design, the UI dev
       // owner's Approve for dev is the only one (docs/desk.md → Draft and Proposal).
       const dev = simpleState(c, true)?.state === "proposal";
-      if (open && !preDesign(c) && !specInReview(c) && canApprove(c) && (c.triage || (c.variants || []).length) && !closed(c)) out.push({ id: "approve", name: dev ? "Approve for dev" : "Approve", hint: dev ? "It goes to In dev, without a designer; your comments go with it." : "You approve the request; your comments go with it." });
+      if (open && !preDesign(c) && !specPhase(c) && canApprove(c) && (c.triage || (c.variants || []).length) && !closed(c)) out.push({ id: "approve", name: dev ? "Approve for dev" : "Approve", hint: dev ? "It goes to In dev, without a designer; your comments go with it." : "You approve the request; your comments go with it." });
       if (preDesign(c) && !closed(c) && stageMoves(c)[2]) out.push({ id: "approve-dev", name: "Approve for dev", hint: "It goes to In dev at once, without a designer; your comments go with it." });
     } else if (mayHandle(c) && c.status !== "archived") {
       // Merged: no next version to ask for, but a change nobody handled yet may still be approved.
@@ -6110,7 +6133,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       : { text: none || "Next: a designer, PM or developer starts the design options.", wait: "a designer", ways: [dev], buttons: row };
     // Nothing goes to developers with an open question: Design Desk asks here first (docs/handoff.md).
     if (c.status === "spec" && (c.threads || []).some((th) => th.kind === "asks" && th.state === "open"))
-      return { text: "Before it goes to developers, Design Desk needs your answers below.", sub: "The spec it will send is under The developer spec, below; your answers go into it.", buttons: "", ways: [] };
+      return { text: "Before Design Desk writes the spec, it needs your answers.", sub: "It writes the spec from them; you read it before it goes to developers.", buttons: "", ways: [] };
     // The spec waits for a person: read it, edit it or ask for changes, then send it (docs/handoff.md → Review before it goes).
     // Edit and Ask for changes sit on the spec itself, below.
     if (c.status === "spec" && c.spec?.review === "draft") {
@@ -6348,7 +6371,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const still = (text) => `<span class="way still">${esc(text)}</span>`;
     const ways = (nx.ways || []).filter(Boolean).map((w, k) => w.replace('class="way"', k ? 'class="way lnk"' : 'class="way btn primary"'));
     const row = ways.length ? ways
-      : asks.length ? [still(asks.length === 1 ? "Answer the question below" : "Answer the questions below")]
+      : asks.length ? [still(specPhase(c)?.phase === "asks" && asks.length === 1 && asks[0].questions ? (asks[0].questions.length > 1 ? `Answer ${asks[0].questions.length} questions` : "Answer the question") : asks.length === 1 ? "Answer the question below" : "Answer the questions below")]
       : busy.length ? [still("Nothing for you to do yet.")]
       : c.status === "declined" ? (nx.sub ? [still(nx.sub)] : [])
       : c.status === "handed-off" ? [still("Developers build it.")]

@@ -3096,7 +3096,7 @@ test("For Developers: the UI dev owner moves it there, a developer but its autho
   assert.equal(await count("[data-size]"), 0, "an approved request keeps its size");
 
   // docs/handoff.md step 2: a question the spec leaves open is asked on the Desk, next to the spec.
-  assert.match(await card("dana", "C-6"), /Before it goes to developers, Design Desk needs your answers/);
+  assert.match(await card("dana", "C-6"), /Before Design Desk writes the spec, it needs your answers/);
   assert.equal(await count("[data-send-form]"), 1, "the question is a form on the card");
   assert.equal(await count("details.fold[open] #spec-body"), 1, "the spec it will send is open to read");
 
@@ -4311,13 +4311,13 @@ const ticked = (desk) => desk.$eval(".sf .menu", (m) => { const on = (g) => [...
 test("simple mode lists every request and change in one list, each in one state, and its menu has one entry for them", (t) => open(t, DESK(SIMPLE_ME, SIMPLE_CARDS), async (desk) => {
   await desk.waitForSelector('#list [data-card="r-check"]');
   assert.equal((await desk.textContent('#nav [data-tab="requests"]')).replace(/\d+$/, "").trim(), "Requests & PRs", "one entry, no PR Changes");
-  assert.deepEqual(await rows(desk), [["r-check", "Design review"], ["r-busy", "Design review"], ["r-draft", "Design review"], ["c-open", "Design review"]], "Design review by default, newest change first, the pill on every row even with one state");
+  assert.deepEqual(await rows(desk), [["r-check", "Design review"], ["r-busy", "Design review"], ["r-draft", "Spec ready"], ["c-open", "Design review"]], "Design review by default, newest change first, the pill on every row even with one state; a spec draft waiting names it");
   assert.equal(await desk.locator('#list [data-card="r-busy"] .dd-spin').count(), 1, "Design Desk at work: the spinner, still Open");
   await desk.click("details.sf > summary");
   await desk.click('[data-simf="states:proposal"]');
   await desk.click('[data-simf="states:dev"]');
   await desk.click('[data-simf="states:closed"]');
-  assert.deepEqual(await rows(desk), [["r-check", "Design review"], ["r-busy", "Design review"], ["r-draft", "Design review"], ["r-spec", "In dev"], ["r-sent", "In dev"], ["r-built", "Shipped"],
+  assert.deepEqual(await rows(desk), [["r-check", "Design review"], ["r-busy", "Design review"], ["r-draft", "Spec ready"], ["r-spec", "In dev"], ["r-sent", "In dev"], ["r-built", "Shipped"],
     ["r-declined", "Closed"], ["r-decided", "Closed"], ["r-small", "Proposal"], ["c-open", "Design review"], ["c-review", "In dev"], ["c-shipped", "Shipped"], ["c-auto", "No review needed"], ["c-small", "Dev review"]],
     "every item one state, whatever its side; only an archived change is not listed");
   assert.equal(await desk.locator("details.sf[open]").count(), 1, "the menu stays open while ticking");
@@ -4448,7 +4448,7 @@ test("a developer's simple mode starts at Dev review, and Design review holds th
   assert.equal((await desk.textContent("#nav .count")).trim(), "2", "the menu counts what Dev review holds");
   await desk.click("details.sf > summary");
   await desk.click('[data-simf="states:open"]');
-  assert.deepEqual(await rows(desk), [["r-check", "Design review"], ["r-busy", "Design review"], ["r-draft", "Design review"], ["r-small", "Proposal"], ["c-open", "Design review"], ["c-small", "Dev review"]],
+  assert.deepEqual(await rows(desk), [["r-check", "Design review"], ["r-busy", "Design review"], ["r-draft", "Spec ready"], ["r-small", "Proposal"], ["c-open", "Design review"], ["c-small", "Dev review"]],
     "nothing is left out by its side");
 }));
 
@@ -4464,7 +4464,7 @@ test("a For Developers request in feedback is in Dev review for a designer too, 
   assert.match(await desk.textContent('[data-simf="states:proposal"]'), /Dev review\s*2/);
   await desk.click('[data-simf="states:proposal"]');
   await desk.click('[data-simf="states:dev"]');
-  assert.deepEqual(await rows(desk), [["R-6", "Proposal"], ["R-7", "In dev"], ["R-8", "Dev review"]], "in Dev review a request not yet approved says Proposal; a spec draft waiting, Dev review");
+  assert.deepEqual(await rows(desk), [["R-6", "Proposal"], ["R-7", "In dev"], ["R-8", "Spec ready"]], "in Dev review a request not yet approved says Proposal; a spec draft waiting, Spec ready");
 }));
 
 // Simple mode's head of an item (docs/desk-page.md → Simple mode): what it is, where it stands,
@@ -4879,7 +4879,7 @@ test("simple mode: a spec draft that cannot go by itself is Open with Send to de
   await desk.waitForSelector('#list [data-card="R-6"]');
   await desk.click('#list [data-card="R-6"]');
   await desk.waitForSelector("#detail .shead");
-  assert.match(await desk.textContent("#detail .sh-line .spill"), /Design review/);
+  assert.match(await desk.textContent("#detail .sh-line .spill"), /Spec ready/, "in Design review, its pill naming where the spec stands");
   assert.deepEqual(await shActs(desk), ["Send to developers"], "approved: nothing but comments to send, and none waits");
 }));
 
@@ -5382,7 +5382,8 @@ test("who may not approve a request is not offered to take its approval back", (
 }));
 
 // A spec sent back with Ask for changes is not with developers yet: it keeps the review it was in,
-// For Designers and For Developers alike, and its banner says Design Desk rewrites it (docs/desk-page.md → The spec banner).
+// For Designers and For Developers alike, its pill saying Writing spec, and its banner says Design Desk
+// rewrites it (docs/desk-page.md → The spec banner).
 test("a spec sent back for changes keeps its review, not In dev", (t) => open(t, HEAD_DESK(HEAD_ME, [
   { ...drawn, id: "R-7", title: "Rewritten for design", status: "spec", approved: { by: { email: "d@example.com" }, at: "2026-11-18T09:00:00Z" }, spec: { review: "changes", asset: "A-2", asked: { by: { email: "d@example.com" }, at: "2026-11-18T10:00:00Z", note: "Bigger prices." } } },
   { ...drawn, id: "R-8", title: "Rewritten for dev", status: "spec", for: "developers", approved: { by: { email: "d@example.com" }, at: "2026-11-18T09:00:00Z" }, spec: { review: "changes", asset: "A-2" } },
@@ -5394,16 +5395,46 @@ test("a spec sent back for changes keeps its review, not In dev", (t) => open(t,
     await desk.waitForFunction((x) => (document.querySelector("#detail .shead h2")?.textContent || "").includes(x), title);
     return desk.textContent("#detail .sh-line .spill");
   };
-  assert.match(await pill("R-8", "Rewritten for dev"), /Dev review/, "For Developers: still in Dev review");
+  assert.match(await pill("R-8", "Rewritten for dev"), /Writing spec/, "For Developers: still in Dev review, the pill saying where the spec stands");
+  assert.equal(await desk.getAttribute("#detail .sh-line .spill", "data-s"), "writing");
   assert.match(await pill("R-9", "Sent on"), /In dev/, "only a sent spec is In dev");
-  assert.match(await pill("R-10", "Asked to go by itself"), /Design review/, "sent back for changes, whatever its approver asked");
-  assert.match(await pill("R-7", "Rewritten for design"), /Design review/, "For Designers: still in Design review");
+  assert.match(await pill("R-10", "Asked to go by itself"), /Writing spec/, "sent back for changes, whatever its approver asked");
+  assert.match(await pill("R-7", "Rewritten for design"), /Writing spec/, "For Designers: still in Design review");
   await desk.waitForSelector('#detail .spec-banner[data-s="rewriting"]');
   assert.match(await desk.textContent("#detail .spec-banner"), /Design Desk is rewriting the spec as you asked\.\s*Asked by you/);
-  assert.match(await desk.textContent("#detail .sh-line .spill"), /Design review/);
+  assert.match(await desk.textContent("#detail .sh-line .spill"), /Writing spec/);
   assert.equal(await desk.locator("#detail [data-spec-send]").count(), 0, "no send while it is rewritten");
   assert.equal(await desk.locator("#detail .spec-banner [data-spec-read]").count(), 1, "the last version still reads");
   assert.equal(await desk.locator('#detail [data-fb="head"]').count(), 0, "no Submit feedback offering Approve again: it is approved, and nothing waits to be sent");
+}));
+
+// From Approve to Send an approved request stays in its review (docs/desk-page.md → A request's state
+// in the list): its pill says Writing spec, Answers needed or Spec ready, in the list as on its page,
+// and it counts with its review, never with In dev, until its spec is sent.
+const HANDOFF_FORM = (state = "open") => [{ id: "T-5", kind: "asks", step: "handoff", state, may: { reply: true }, messages: [{ by: { agent: true }, at: "2026-11-18T09:05:00Z", text: "Two things the design does not settle." }],
+  questions: [{ text: "Empty state?", options: ["A line", "A picture"], suggested: "A line" }, { text: "On a phone?", options: ["Stacked", "Hidden"], suggested: "Stacked" }] }];
+const APPROVED = { by: { email: "d@example.com" }, at: "2026-11-18T09:00:00Z" };
+test("an approved request names where its spec stands, in its review, until it is sent", (t) => open(t, HEAD_DESK(HEAD_ME, [
+  { ...drawn, id: "R-11", title: "Just approved", status: "feedback", approved: APPROVED },
+  { ...drawn, id: "R-12", title: "Questions wait", status: "spec", approved: APPROVED, threads: HANDOFF_FORM() },
+  { ...drawn, id: "R-13", title: "Questions for dev", status: "spec", for: "developers", approved: APPROVED, threads: HANDOFF_FORM() },
+  { ...drawn, id: "R-14", title: "Writing from answers", status: "spec", approved: APPROVED, threads: HANDOFF_FORM("answered"), waiting: [{ kind: "handoff", state: "claimed", created: "2026-11-18T09:10:00Z" }] },
+  { ...drawn, id: "R-15", title: "Spec to send", status: "spec", approved: APPROVED, spec: { review: "draft", asset: "A-2" } },
+  { ...drawn, id: "R-16", title: "Sent to devs", status: "handed-off", approved: APPROVED, spec: { review: "sent", asset: "A-2" } }]), async (desk) => {
+  await desk.evaluate(() => localStorage.setItem("desk-simFilter", JSON.stringify({ states: ["proposal", "open", "dev", "closed"], kinds: ["request", "change"] })));
+  await desk.reload();
+  await desk.waitForSelector('#list [data-card="R-16"]');
+  const row = (id) => desk.$eval(`.row.item:has([data-card="${id}"]) .spill`, (x) => [x.dataset.s, x.textContent.trim()]);
+  assert.deepEqual(await row("R-11"), ["writing", "Writing spec"], "approved, its handoff not started: Writing spec");
+  assert.deepEqual(await row("R-12"), ["answers", "Answers needed"]);
+  assert.deepEqual(await row("R-13"), ["answers", "Answers needed"], "For Developers too");
+  assert.deepEqual(await row("R-14"), ["writing", "Writing spec"], "answered: Design Desk writes the spec");
+  assert.deepEqual(await row("R-15"), ["specready", "Spec ready"]);
+  assert.deepEqual(await row("R-16"), ["dev", "In dev"], "only a sent spec is In dev");
+  assert.match(await desk.$eval('.row.item:has([data-card="R-12"]) .spill', (e) => e.dataset.tip || e.title), /questions before it writes the spec/);
+  await desk.evaluate(() => { location.hash = "#R-12"; });
+  await desk.waitForFunction(() => (document.querySelector("#detail .shead h2")?.textContent || "").includes("Questions wait"));
+  assert.match(await desk.textContent("#detail .sh-line .spill"), /Answers needed/, "the head says the same");
 }));
 
 // Ask for changes takes a note of any length: the dialog sets no limit, and the note goes whole.

@@ -570,6 +570,8 @@ export class Store {
         triage: c.triage?.verdict || null, prototype: c.prototype?.state || null, team_feedback: c.team_feedback || null,
         // A spec draft waits on a person: the list's dot reads it as the page does (docs/desk-page.md → A request's state in the list).
         spec: c.spec ? { review: c.spec.review || null } : null,
+        // When it was approved: an approved request writing its spec is in its review, Writing spec (docs/desk-page.md → A request's state in the list).
+        approved_at: c.kind === "request" && c.approved?.at || null,
         // A Slack vote on its options: running, or one that ended (the list's Your turn, docs/desk-page.md → Pages and filters).
         voting: !c.vote_ended && (c.polls || []).some((x) => x.state === "open"), voted: Boolean(c.vote_ended) || (c.polls || []).some((x) => x.state === "closed"),
         type: c.request?.type || null, reporter: c.origin?.reporter || null,
@@ -1415,7 +1417,10 @@ export class Store {
         (t.messages || []).forEach((m, i) => {
           const event = i === 0 ? (t.dev ? "dev-question" : t.kind === "asks" ? "agent-asks" : t.kind === "question" ? "question" : "comment")
             : m.by?.agent ? (t.kind === "question" ? "answer" : "reply") : "reply";
-          push(m.at, event, it, m.by, { detail: String(m.text || "").replace(/\s+/g, " ").slice(0, 140), thread: t.id, msg: i, ...(t.dev ? { designs: true } : {}) }, yours || (t.dev && designer));
+          // The spec's questions say how many wait before it is written (docs/desk-page.md → Notifications).
+          const spec = i === 0 && t.kind === "asks" && t.step === "handoff" && (t.questions || []).length;
+          const detail = spec ? `${spec === 1 ? "1 question" : `${spec} questions`} before the spec` : String(m.text || "").replace(/\s+/g, " ").slice(0, 140);
+          push(m.at, event, it, m.by, { detail, thread: t.id, msg: i, ...(t.dev ? { designs: true } : {}) }, yours || (t.dev && designer));
         });
       }
     }
