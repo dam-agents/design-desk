@@ -5674,14 +5674,15 @@ for (const role of ["designer", "pm", "developer", "ui-dev-owner", "guest"]) tes
   assert.equal(await desk.getAttribute("#simple", "aria-pressed"), "true");
 }));
 
-test("in simple mode Product shows in the menu, and each of its pages opens as in full mode", (t) => open(t, DESK({ ...SIMPLE_ME, role: "designer" }, SIMPLE_CARDS), async (desk) => {
+// A designer sees Kit, and with Figma on, Differences: both pages where they show today.
+test("in simple mode Product shows in the menu, and each of its pages opens as in full mode", (t) => open(t, DESK({ ...SIMPLE_ME, role: "designer", figma: true, figma_pref: true }, SIMPLE_CARDS), async (desk) => {
   await desk.waitForSelector("#nav [data-tab]");
   assert.equal(await desk.getAttribute("#simple", "aria-pressed"), "true");
   assert.deepEqual(await navTabs(desk), ["requests", "product"], "Designs, Issues and People stay hidden");
   await desk.click('#nav [data-tab="product"]');
   await desk.waitForSelector('[data-filter="productFilter:screens"]');
   const pages = await desk.$$eval('[data-filter^="productFilter:"]', (xs) => xs.map((x) => x.dataset.filter.split(":")[1]));
-  for (const k of ["screens", "elements", "decisions", "history"]) assert.ok(pages.includes(k), `${k} in Product's bar`);
+  assert.deepEqual(pages, ["screens", "elements", "decisions", "kit", "differences", "history"], "every page of Product's bar, Kit and Differences included");
   for (const k of pages) {
     await desk.click(`[data-filter="productFilter:${k}"]`);
     await desk.waitForSelector(`[data-filter="productFilter:${k}"][aria-current="page"]`);
