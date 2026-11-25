@@ -72,7 +72,8 @@ chat. The list, with defaults: [`docs/config.md`](docs/config.md).
   prototypes).
 - A **GitHub** connection, with read access to the watched repositories. Write access is used
   only when you turn it on: `prototype_remote` pushes prototype branches (named
-  `design-desk/…`), `handoff: issue` files issues, `handoff: draft-pr` opens draft pull requests.
+  `design-desk/…`) and every handoff's pictures and bundle to one long-lived `design-desk/assets`
+  branch, `handoff: issue` files issues, `handoff: draft-pr` opens draft pull requests.
 - A product's live prototype also needs what its profile's engine names: registries for its
   images (onboarding proposes the hosts to the owner).
 

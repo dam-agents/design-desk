@@ -1,10 +1,11 @@
 // design desk <command> — the agent's side of the Desk. Every write goes through the
 // Desk server (its store has one writer), authenticated by work/desk/.agent-token.
 // Text comes from files (or - for stdin), never from argv. Prints JSON on stdout.
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { basename, extname, join } from "node:path";
 import { WORK, cfg, fail, run, tableIn, withRosterRow, writeConfig } from "../lib/core.mjs";
 import { ADDABLE_ROLES, rosterOf, personOf } from "../../desk/store.mjs";
+import { isRaster, webpEncoder } from "../lib/webp.mjs";
 
 const USAGE = `usage: design desk <command>   (<card> is any card's number, <R-n> a request's)
   health                                   is the server up; store counts
@@ -206,19 +207,52 @@ export function acceptanceOf(text) {
 }
 
 // The spec's pictures are Desk assets (`![view](asset:A-n)`): each fetched once into pictures/,
-// and the spec's lines pointed at the saved file. `fetch(id)` answers as the Desk's asset route.
-export async function specPictures(text, fetch) {
+// and the spec's lines pointed at the saved file. `fetch(id)` answers as the Desk's asset route;
+// with `webp(data, type)`, a still raster picture is saved as WebP (docs/handoff.md → The bundle).
+export async function specPictures(text, fetch, webp = null) {
   const files = [];
   for (const id of [...new Set([...String(text).matchAll(/\]\(asset:(A-\d+)\)/g)].map((m) => m[1]))]) {
     const a = await fetch(id);
-    const name = `pictures/${id}.${(String(a.contentType).split("/")[1] || "bin").replace(/[^a-z0-9]/g, "").slice(0, 5)}`;
-    files.push({ name, data: Buffer.from(a.data, a.encoding === "base64" ? "base64" : "utf8") });
+    let data = Buffer.from(a.data, a.encoding === "base64" ? "base64" : "utf8");
+    let ext = extOf(a.contentType);
+    if (webp && isRaster(a.contentType)) { data = await webp(data, a.contentType); ext = "webp"; }
+    const name = `pictures/${id}.${ext}`;
+    files.push({ name, data });
     text = text.split(`](asset:${id})`).join(`](${name})`);
   }
   return { text, files };
 }
 
+// The bundle's directory starts empty, so no file of an earlier attempt is published with it: the
+// names a bundle writes are cleared, and a directory holding anything else is refused untouched.
+export const BUNDLE_NAMES = ["design.json", "spec.md", "mockup.html", "prototype.patch", "states", "shots", "pictures"];
+export function freshBundleDir(dir) {
+  if (!existsSync(dir)) return;
+  const entries = readdirSync(dir);
+  if (!entries.length) return;
+  const other = entries.filter((e) => !BUNDLE_NAMES.includes(e));
+  if (other.length) throw new Error(`${dir} holds ${other.slice(0, 3).join(", ")}, which no bundle writes; give the bundle an empty directory`);
+  if (!entries.includes("design.json")) throw new Error(`${dir} is not empty and holds no earlier bundle (no design.json); give the bundle an empty directory`);
+  for (const e of BUNDLE_NAMES) rmSync(join(dir, e), { recursive: true, force: true });
+}
+
+// A file's extension from its content type: the usual one where the subtype is not it.
+const EXT = { "svg+xml": "svg", jpeg: "jpg", "x-icon": "ico", "vnd.microsoft.icon": "ico" };
+export function extOf(contentType) {
+  const sub = String(contentType || "").toLowerCase().split(";")[0].trim().split("/")[1] || "";
+  return EXT[sub] || sub.replace(/[^a-z0-9]/g, "").slice(0, 5) || "bin";
+}
+
+// A shot is WebP only when its asset is a still picture; another keeps its own type's extension.
+export function shotPath(path, contentType) {
+  if (!path.endsWith(".webp") || isRaster(contentType)) return path;
+  return `${path.slice(0, -".webp".length)}.${extOf(contentType)}`;
+}
+
 export function bundleOf(card) {
+  // A prototype's patch is handed off only once the guard passed on it (CLAUDE.md → Design only):
+  // the card's guard record says so, nothing else (docs/prototype.md step 4).
+  const patch = card.prototype?.patch && card.prototype?.guard?.ok === true ? card.prototype.patch : null;
   const pick = card.live_pick?.variant || card.approved?.variant;
   const v = (card.variants || []).find((x) => x.id === pick) || (card.variants || [])[0] || null;
   // What a live prototype showed counts only when there is one, for this option.
@@ -230,7 +264,7 @@ export function bundleOf(card) {
   if (mockup) files.push({ path: "mockup.html", asset: mockup });
   const slug = (t) => String(t || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "state";
   const states = (v?.states || []).map((x) => {
-    const page = `states/${x.id}-${slug(x.name)}.html`, shot = x.shot ? `shots/${x.id}-${slug(x.name)}.png` : null;
+    const page = `states/${x.id}-${slug(x.name)}.html`, shot = x.shot ? `shots/${x.id}-${slug(x.name)}.webp` : null;
     files.push({ path: page, asset: x.asset });
     if (shot) files.push({ path: shot, asset: x.shot });
     return { id: x.id, name: x.name, part: x.part, element: x.element || null, when: x.how || "", use: x.use || "", stories: x.stories || [], page, shot, selector: x.selector || null };
@@ -250,10 +284,10 @@ export function bundleOf(card) {
     // Written by Design Desk with the spec (docs/handoff.md → The bundle): each checks one thing a person can see.
     acceptance: card.spec?.acceptance || [],
     decisions: (v?.reasons || []).map((r) => ({ decision: r.decision, how: r.how })),
-    prototype: card.prototype?.branch || card.prototype?.patch ? { branch: card.prototype.branch || null, patch: card.prototype.patch ? "prototype.patch" : null, note: "A starting point; not reviewed as production code." } : null,
+    prototype: card.prototype?.branch || patch ? { branch: card.prototype.branch || null, patch: patch ? "prototype.patch" : null, note: "A starting point; not reviewed as production code." } : null,
     desk: card.link || null,
   };
-  if (card.prototype?.patch) files.push({ path: "prototype.patch", asset: card.prototype.patch });
+  if (patch) files.push({ path: "prototype.patch", asset: patch });
   return { design, files };
 }
 
@@ -418,26 +452,44 @@ export async function main(_cmd, argv) {
       const { card } = await call("GET", `/agent/cards/${pos[0]}`);
       if (card.kind !== "request" || !card.approved) fail(`${pos[0]} is not an approved request`);
       const { design, files } = bundleOf(card);
+      try { freshBundleDir(pos[1]); } catch (e) { fail(e.message); }
       for (const d of ["", "states", "shots"]) mkdirSync(join(pos[1], d), { recursive: true });
-      for (const f of files) {
-        const a = await call("GET", `/agent/assets/${f.asset}`);
-        writeFileSync(join(pos[1], f.path), Buffer.from(a.data, a.encoding === "base64" ? "base64" : "utf8"));
-      }
-      // The spec's pictures are Desk assets: saved under pictures/, the spec pointing at them there.
-      const specFile = join(pos[1], "spec.md"), pictures = [];
+      // A placeholder first, the real design.json last: a bundle that dies halfway leaves a
+      // directory the next try recognises as its own and clears.
+      writeFileSync(join(pos[1], "design.json"), `${JSON.stringify({ format: design.format, partial: true })}\n`);
+      // Every picture the bundle pushes is WebP: a shot named .webp is encoded as it is saved,
+      // by one browser started on the first picture.
+      let enc = null;
+      const encode = async (data, type) => (enc ||= await webpEncoder()).encode(data, type);
       try {
-        const got = await specPictures(readFileSync(specFile, "utf8"), (id) => call("GET", `/agent/assets/${id}`));
-        if (got.files.length) mkdirSync(join(pos[1], "pictures"), { recursive: true });
-        for (const f of got.files) { writeFileSync(join(pos[1], f.name), f.data); pictures.push(f.name); }
-        const text = got.text;
-        writeFileSync(specFile, text);
-        // The spec's newest text wins over the list written with its first version.
-        const fromText = acceptanceOf(text);
-        if (fromText) design.acceptance = fromText;
-      } catch (e) { if (e.code !== "ENOENT") throw e; }
-      design.pictures = pictures;
-      writeFileSync(join(pos[1], "design.json"), `${JSON.stringify(design, null, 2)}\n`);
-      return out({ bundle: pos[1], files: ["design.json", ...files.map((f) => f.path), ...pictures], acceptance: design.acceptance.length });
+        for (const f of files) {
+          const a = await call("GET", `/agent/assets/${f.asset}`);
+          let data = Buffer.from(a.data, a.encoding === "base64" ? "base64" : "utf8");
+          const path = shotPath(f.path, a.contentType);
+          if (path !== f.path) {
+            for (const x of design.states) if (x.shot === f.path) x.shot = path;
+          } else if (path.endsWith(".webp")) {
+            data = await encode(data, a.contentType);
+          }
+          f.path = path;
+          writeFileSync(join(pos[1], f.path), data);
+        }
+        // The spec's pictures are Desk assets: saved under pictures/, the spec pointing at them there.
+        const specFile = join(pos[1], "spec.md"), pictures = [];
+        try {
+          const got = await specPictures(readFileSync(specFile, "utf8"), (id) => call("GET", `/agent/assets/${id}`), encode);
+          if (got.files.length) mkdirSync(join(pos[1], "pictures"), { recursive: true });
+          for (const f of got.files) { writeFileSync(join(pos[1], f.name), f.data); pictures.push(f.name); }
+          const text = got.text;
+          writeFileSync(specFile, text);
+          // The spec's newest text wins over the list written with its first version.
+          const fromText = acceptanceOf(text);
+          if (fromText) design.acceptance = fromText;
+        } catch (e) { if (e.code !== "ENOENT") throw e; }
+        design.pictures = pictures;
+        writeFileSync(join(pos[1], "design.json"), `${JSON.stringify(design, null, 2)}\n`);
+        return out({ bundle: pos[1], files: ["design.json", ...files.map((f) => f.path), ...pictures], acceptance: design.acceptance.length });
+      } finally { if (enc) await enc.close(); }
     }
     case "fetch": {
       const a = await call("GET", `/agent/assets/${pos[0]}`);

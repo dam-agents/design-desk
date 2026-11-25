@@ -36,7 +36,7 @@ file is unchanged; exit 3 means another writer came first (an admin's roster row
 - `prototype_requesters` (`designer, pm, admin`; roles read as in `## Desk people`, so `UI dev owner`
   is `ui-dev-owner`), `max_prototypes` (`2`; `0` = none),
   `prototype_expiry_days` (`7`), `spec_review` (`enabled`) — a person reads, edits and sends the developer spec before it leaves the Desk ([handoff.md](handoff.md) → Review before it goes; `disabled`: it goes on its own, save a request from Slack), `prototype_remote` (`none` | the repo a prototype branch
-  is pushed to); `handoff` — `desk` (default) | `issue` | `draft-pr`, for ideas and
+  is pushed to, and every handoff's bundle on its `design-desk/assets` branch, [handoff.md](handoff.md) step 5); `handoff` — `desk` (default) | `issue` | `draft-pr`, for ideas and
   proposals; `issue_writeback` (`enabled`) — a feature's design goes back into its issue;
   `implementer` — `pr-comment` (default) | `issue`, how an adjustment or a bug reaches the
   coding agent; `implementer_mention` — its handle, the comment's first line (empty: none).
