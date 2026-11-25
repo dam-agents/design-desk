@@ -15,7 +15,7 @@ import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { abilities, replaceText } from "../store.mjs";
-import { CARDS, ASSETS, NOTES } from "./mock-data.mjs";
+import { CARDS, ASSETS, NOTES, HANDOFF_QUESTIONS } from "./mock-data.mjs";
 
 const [port = "5610"] = process.argv.slice(2);
 const page = join(dirname(fileURLToPath(import.meta.url)), "..", "page.html");
@@ -26,6 +26,7 @@ function shim() {
   const q = new URLSearchParams(location.search);
   const role = q.get("role") || "designer";
   const me = { role, email: "alice@example.com", emails: ["alice@example.com", "alice@slack.example.com"], names: { "alice@example.com": "Alice Novak", "alice@slack.example.com": "Alice Novak", "pat@example.com": "Pat Lee" }, name: "Alice Novak", my_name: "Alice Novak", can: CAN[role] || CAN.designer, figma: true, screens: q.get("screens") !== "0", theme: q.get("theme") || "light", due_days: 21, auto_days: 14 };
+  me.spec_review = true; // the Desk's default: a spec waits for a person's Send to developers (docs/config.md → spec_review)
   me.link = "https://desk.example.com/a/mock"; // the Desk's own link: the title's link icon copies an item's link from it
   if (q.get("simple")) me.simple = q.get("simple") === "1";
   me.github = q.get("github") || null;
@@ -54,6 +55,22 @@ function shim() {
       if (c.responsible?.who === "design-desk") delete c.responsible;
     }, 25000);
   };
+  // The developer spec after Approve (docs/handoff.md): queued, claimed after 4 s; after 20 s
+  // Design Desk asks its questions first, or, once they are answered, writes the spec as a draft.
+  const handoff = (c, answered) => {
+    const w = { kind: "handoff", state: "queued", created: now() };
+    c.waiting.push(w);
+    setTimeout(() => Object.assign(w, { state: "claimed", started: now(), usual_min: 1 }), 4000);
+    setTimeout(() => {
+      c.waiting = c.waiting.filter((x) => x !== w);
+      c.status = "spec"; c.updated = now();
+      if (!answered) { c.threads.push({ id: `T-${++n}`, kind: "asks", step: "handoff", state: "open", may: { reply: true }, questions: structuredClone(HANDOFF_QUESTIONS.questions), messages: [{ by: { agent: true }, at: now(), text: HANDOFF_QUESTIONS.text }] }); return; }
+      const t = c.threads.filter((x) => x.kind === "asks" && x.step === "handoff").at(-1), id = `A-spec-${c.id}-${++n}`;
+      const settled = (t?.questions || []).map((q, i) => `- ${q.text} **${t.answers?.[i]?.choice || `${q.suggested}** (left to Design Desk)`}${t.answers?.[i]?.choice ? "**" : ""}`).join("\n");
+      ASSETS[id] = { id, contentType: "text/markdown", encoding: "utf8", data: `# ${c.title}\n\n## What changes\nAs the approved option shows.\n\n## Settled at handoff\n${settled || "- Nothing was left open."}\n` };
+      c.spec = { asset: id, at: now(), by: { agent: true }, review: "draft" };
+    }, 20000);
+  };
   // A request before design shows only to whom the server shows it (docs/desk.md → Draft and Proposal).
   // Only a draft is private: its author's (who files drafts) and an admin's; a proposal is everyone's.
   const seen = (c) => c.stage !== "draft" || role === "admin" || (!["designer", "guest"].includes(role) && c.by?.email === me.email);
@@ -64,7 +81,9 @@ function shim() {
     || (Boolean(me.github) && c.kind === "change" && String(c.source?.author || "").toLowerCase() === me.github.toLowerCase())
     || Object.values(c.votes || {}).some((x) => Object.keys(x || {}).some((e) => me.emails.includes(e.toLowerCase())))
     || (c.reviews || []).some((r) => isMe(r.by)) || (c.threads || []).some((t) => t.kind !== "private" && (t.messages || []).some((m) => isMe(m.by)));
-  const list = () => cards.filter(seen).map((c) => ({ ...c, variants: c.variants.length, threads: undefined, mine: mineOf(c) }));
+  // As the server's rows: whether Design Desk's question waits, and when it was approved.
+  const list = () => cards.filter(seen).map((c) => ({ ...c, variants: c.variants.length, threads: undefined, mine: mineOf(c),
+    asks: (c.threads || []).some((t) => t.kind === "asks" && t.state === "open"), approved_at: c.approved?.at || null }));
   const answer = (method, path, body) => {
     const p = path.replace(/\?.*$/, ""), m = (re) => p.match(re);
     if (p === "/api/me") return me;
@@ -157,6 +176,15 @@ function shim() {
     }
     if ((x = m(/^\/api\/cards\/([^/]+)\/work-in$/))) { const c = card(x[1]); const ts = c.threads.filter((t) => body.threads.includes(t.id)); for (const t of ts) t.kind = "change"; work(c, ts); return {}; }
     if ((x = m(/^\/api\/threads\/([^/]+)\/messages$/))) { const [, t] = thread(x[1]); t?.messages.push({ by: { name: me.name, email: me.email }, at: now(), text: body.text }); return {}; }
+    // A question form answered (store.answerForm): its answers, as one reply; a handoff's goes on to the spec.
+    if ((x = m(/^\/api\/threads\/([^/]+)\/answers$/))) {
+      const [c, t] = thread(x[1]);
+      if (!t || t.state !== "open") return { error: "These questions are already answered." };
+      t.answers = body.answers; t.state = "answered";
+      t.messages.push({ by: { name: me.name, email: me.email }, at: now(), text: t.questions.map((q, i) => `**${q.text}**\n${body.answers[i]?.choice ?? "Leave it to Design Desk"}${body.answers[i]?.note ? ` — ${body.answers[i].note}` : ""}`).join("\n\n") });
+      if (t.step === "handoff") handoff(c, true);
+      return { inbox: { kind: t.step } };
+    }
     if ((x = m(/^\/api\/threads\/([^/]+)\/resolve$/))) { const [, t] = thread(x[1]); if (t) t.state = "resolved"; return {}; }
     if ((x = m(/^\/api\/threads\/([^/]+)\/reopen$/))) { const [, t] = thread(x[1]); if (t) t.state = "open"; return {}; }
     // The developer spec, read before it goes (docs/handoff.md → Review before it goes): Edit saves a
@@ -188,6 +216,8 @@ function shim() {
       const c = card(x[1]);
       if (body.action === "pick-alternative") { const v = c.variants.find((y) => y.id === body.variant), a = v.alternatives.find((y) => y.id === body.note); v.history = [{ version: v.version, asset: v.asset, at: now() }, ...(v.history || [])]; v.version++; v.asset = a.asset; v.alternatives = []; }
       if (body.action === "drop-option") c.variants = c.variants.filter((y) => y.id !== body.variant);
+      // Approve: Design Desk writes the spec, asking its questions first (docs/handoff.md).
+      if (body.action === "approve") { c.approved = { by: { email: me.email }, at: now(), ...(body.auto_send ? { auto_send: true } : {}) }; handoff(c, false); return { card: structuredClone(c), inbox: c.waiting.at(-1) }; }
       // A part from the product: waits, then comes back as its picture before (docs/requests.md → The part before, from the product).
       if (body.action === "take-before") {
         const w = { kind: "explore", scope: "before", element: body.element, state: "queued", created: now() };
@@ -214,7 +244,7 @@ function shim() {
 }
 
 const SHIM = `<script>const replaceText = ${replaceText.toString()};
-const CAN = ${JSON.stringify(CAN)}, CARDS = ${JSON.stringify(CARDS)}, NOTES = ${JSON.stringify(NOTES)}, ASSETS = ${JSON.stringify(ASSETS).replace(/</g, "\\u003c")};
+const CAN = ${JSON.stringify(CAN)}, CARDS = ${JSON.stringify(CARDS)}, NOTES = ${JSON.stringify(NOTES)}, HANDOFF_QUESTIONS = ${JSON.stringify(HANDOFF_QUESTIONS)}, ASSETS = ${JSON.stringify(ASSETS).replace(/</g, "\\u003c")};
 (${shim.toString()})();</script>`;
 
 createServer((req, res) => {

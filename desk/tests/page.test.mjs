@@ -3095,7 +3095,7 @@ test("For Developers: the UI dev owner moves it there, a developer but its autho
   assert.match(await desk.$eval("#detail .line5 li:nth-child(4)", (e) => e.dataset.tip || e.title), /^Approved: .*dana@example\.com for developers/, "the stage line names who approved it");
   assert.equal(await count("[data-size]"), 0, "an approved request keeps its size");
 
-  // docs/handoff.md step 4: a question the spec leaves open is asked on the Desk, next to the spec.
+  // docs/handoff.md step 2: a question the spec leaves open is asked on the Desk, next to the spec.
   assert.match(await card("dana", "C-6"), /Before it goes to developers, Design Desk needs your answers/);
   assert.equal(await count("[data-send-form]"), 1, "the question is a form on the card");
   assert.equal(await count("details.fold[open] #spec-body"), 1, "the spec it will send is open to read");
@@ -4497,7 +4497,7 @@ const openFeedback = async (desk, where = "head") => { await desk.click(`[data-f
 const verdicts = (desk) => desk.$$eval(".fb-pop [data-fb-v]", (xs) => xs.map((x) => x.dataset.fbV));
 const picked = (desk) => desk.$eval('.fb-pop [data-fb-v][aria-checked="true"]', (x) => x.dataset.fbV);
 
-test("simple mode heads a request with its number, link, state, author and Submit feedback; its Approve sends as soon as the spec is written", (t) => open(t, HEAD_DESK(HEAD_ME, [drawn, slackDraft, prChange]), async (desk) => {
+test("simple mode heads a request with its number, link, state, author and Submit feedback; its Approve leaves the spec to read and send", (t) => open(t, HEAD_DESK(HEAD_ME, [drawn, slackDraft, prChange]), async (desk) => {
   await desk.waitForSelector('#list [data-card="R-5"]');
   await desk.click('#list [data-card="R-5"]');
   await desk.waitForSelector("#detail .shead");
@@ -4513,11 +4513,12 @@ test("simple mode heads a request with its number, link, state, author and Submi
   assert.equal(await picked(desk), "approve");
   await desk.click(".fb-pop [data-fb-send]");
   await desk.waitForSelector("#confirm-dialog[open]");
-  assert.equal(await desk.locator("#cf-check2-wrap").isHidden(), true, "no box to tick: it goes as soon as it is written");
-  assert.match(await desk.textContent("#cf-body"), /as soon as it is written/);
+  assert.equal(await desk.locator("#cf-check2-wrap").isHidden(), true, "no box to tick: simple mode never sends unread");
+  assert.match(await desk.textContent("#cf-body"), /Send to developers/, "the spec waits for Send to developers");
+  assert.doesNotMatch(await desk.textContent("#cf-body"), /as soon as it is written|unless you tick/);
   await desk.click("#cf-ok");
   await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/R-5/actions"));
-  assert.equal((await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/R-5/actions").body)).auto_send, true);
+  assert.equal((await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/R-5/actions").body)).auto_send, undefined, "no auto_send");
 }));
 
 // Which design an approval is for (docs/desk-page.md → Submit feedback): picked in the panel, the

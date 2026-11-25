@@ -362,6 +362,31 @@ test("a spec for a request from Slack is sent only by a person, whatever spec_re
   assert.equal(s.card(chat).spec.review, "sent", "any other request goes straight on with spec_review disabled");
 });
 
+test("nothing is sent or handed off while Design Desk's questions on the spec wait, whoever writes it", () => {
+  const s = fresh();
+  const spec = () => s.addAsset({ kind: "spec", name: "spec.md", contentType: "text/markdown", data: "# Spec", encoding: "utf8" }).asset.id;
+  const { card } = s.createRequest({ agent: true }, { title: "Calmer header", problem: "Too loud.", origin: { channel: "chat", reporter: "Lukas" } });
+  s.upsertCard({ id: card.id, status: "feedback", triage: { verdict: "design", reasons: ["Look only."] } });
+  const { inbox: item } = s.act(card.id, alice, "approve");
+  s.claim(item.id, "s1");
+  // Questions first: the pass asks and writes no spec (docs/handoff.md step 2).
+  s.upsertCard({ id: card.id, status: "spec" });
+  const { thread } = s.openThread(card.id, { agent: true }, { kind: "asks", text: "Two things the design does not settle.", step: "handoff",
+    questions: [{ text: "Empty state?", options: ["A line", "A picture"], suggested: "A line" }, { text: "On a phone?", options: ["Stacked", "Hidden"], suggested: "Stacked" }] });
+  s.done(item.id, "s1", "asked");
+  const open = /questions on this request are still open/;
+  assert.throws(() => s.upsertCard({ id: card.id, spec: { asset: spec(), review: "sent" } }), open, "a spec written as sent");
+  assert.throws(() => s.upsertCard({ id: card.id, spec: { asset: spec(), review: "draft", sent: { by: { agent: true } } } }), open, "a send written by the agent");
+  assert.throws(() => s.upsertCard({ id: card.id, status: "handed-off" }), open, "a hand-off");
+  assert.deepEqual([s.card(card.id).spec, s.card(card.id).status], [null, "spec"], "a refused write leaves the card as it was");
+  s.upsertCard({ id: card.id, spec: { asset: spec(), review: "draft" } });
+  assert.equal(s.card(card.id).spec.review, "draft", "a draft may be written; only sending waits");
+  s.answerForm(thread.id, alice, [{ choice: "A picture" }, { choice: null }]);
+  s.upsertCard({ id: card.id, spec: { ...s.card(card.id).spec, review: "sent" } });
+  s.upsertCard({ id: card.id, status: "handed-off" });
+  assert.deepEqual([s.card(card.id).spec.review, s.card(card.id).status], ["sent", "handed-off"], "once answered it goes on");
+});
+
 test("For Developers: the reporter of a request the agent filed is its author; a decision in force needs a designer", () => {
   const s = fresh();
   const lee = { email: "lee@example.com", role: "ui-dev-owner" };

@@ -6248,7 +6248,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const specWho = (e) => e && e === S.me?.email ? "you" : e || "someone";
   const specBy = (x) => x.by?.agent || !x.by ? "Design Desk" : specWho(x.by.email);
   // A spec once sent, or not waiting for a review: a fold further down, closed; open while Design
-  // Desk's question about it waits, so its answers are read beside it (docs/handoff.md step 4).
+  // Desk's question about it waits, so its answers are read beside it (docs/handoff.md step 2).
   function specPanel(c) {
     const sp = c.spec, asks = c.status === "spec" && (c.threads || []).some((th) => th.kind === "asks" && th.state === "open");
     const state = sp.sent ? `<span class="chip ok" title="Sent by ${esc(specWho(sp.sent.by?.email))}">✓ Sent ${esc(day(sp.sent.at))}</span>` : "";
@@ -8778,15 +8778,16 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       // With the spec read before it goes, the approver may send it unread; never a request from Slack (docs/handoff.md → Review before it goes).
       // From a pull request still open, the spec waits too: Send to developers picks a new issue or a comment on it.
       const unread = Boolean(S.me?.spec_review) && c.origin?.channel !== "slack" && !c.from_pr;
-      // Simple mode asks nothing: the spec goes as soon as it is written, wherever the store lets it.
-      const auto = simple() && unread;
-      const waits = Boolean(S.me?.spec_review || c.from_pr) && !auto;
-      res = await ask({ title: forDev ? "Approve it for developers" : options.length ? "Approve a design" : "Approve without design options", body: `${forDev ? "It opens For Developers and goes to In dev at once, without a designer; it does not come back to a draft. " : ""}${waits ? `Design Desk writes the developer spec for ${what}. It waits here for you to read and edit; nothing goes to ${to} until you press **Send to developers**${c.from_pr ? `, where you pick a new issue or a comment on PR #${c.from_pr.pr}` : ""}${unread ? ", unless you tick the box below" : ""}.` : `Design Desk writes the developer spec for ${what} and sends it to ${to}${auto ? " as soon as it is written" : ""}. Once sent, it can't be taken back.`}${against.length ? `\n\n⚠ **It goes against ${against.join(", ")}.** Approve it only if the team means to; then revoke the decision, or Design Desk records this approval as going against it.` : ""}${earlier ? `\n\n${earlier.line}` : ""}`, ok: "Approve", choices: options.length && !built && !picked ? options : null, pick: options.length === 1 ? options[0].id : null, note: options.length ? null : "What should developers build? (optional)",
+      // Simple mode asks nothing and never sends unread: its spec waits in the banner for Send to developers.
+      // Only full mode offers the box that sends it as soon as it is written (docs/handoff.md → Review before it goes).
+      const unreadBox = unread && !simple();
+      const waits = Boolean(S.me?.spec_review || c.from_pr);
+      res = await ask({ title: forDev ? "Approve it for developers" : options.length ? "Approve a design" : "Approve without design options", body: `${forDev ? "It opens For Developers and goes to In dev at once, without a designer; it does not come back to a draft. " : ""}${waits ? `Design Desk writes the developer spec for ${what}. It waits here for you to read and edit; nothing goes to ${to} until you press **Send to developers**${c.from_pr ? `, where you pick a new issue or a comment on PR #${c.from_pr.pr}` : ""}${unreadBox ? ", unless you tick the box below" : ""}.` : `Design Desk writes the developer spec for ${what} and sends it to ${to}. Once sent, it can't be taken back.`}${against.length ? `\n\n⚠ **It goes against ${against.join(", ")}.** Approve it only if the team means to; then revoke the decision, or Design Desk records this approval as going against it.` : ""}${earlier ? `\n\n${earlier.line}` : ""}`, ok: "Approve", choices: options.length && !built && !picked ? options : null, pick: options.length === 1 ? options[0].id : null, note: options.length ? null : "What should developers build? (optional)",
         ...(against.length ? { check: `I know it goes against ${against.join(", ")}` } : {}),
         ...(github && !waits && !simple() ? { check2: `Straight to implementation: the spec goes on ${to.startsWith("the GitHub issue it came from") ? "that issue" : "a GitHub issue (a new one, with the spec and pictures, if none is filed)"} with the coding agent's label, when its manifest names one` } : {}),
-        ...(unread && !auto ? { check2: `Send it to ${to} as soon as the spec is written, without waiting for me to read it. Once sent, it can't be taken back` } : {}),
-        ...(earlier?.open ? { check3: unread ? `${earlier.check} (only with the box above ticked; else you pick it when you send)` : earlier.check } : {}),
-        send: (a) => post(built?.id || picked?.id || a.choice || a.note || "", { ...(forDev ? { for_dev: true } : {}), ...(against.length ? { overrule: a.check } : {}), ...(auto ? { auto_send: true } : a.check2 ? (unread ? { auto_send: true } : { implement: true }) : {}), ...(a.check3 && (!unread || a.check2) ? { close_earlier: true } : {}) }) });
+        ...(unreadBox ? { check2: `Send it to ${to} as soon as the spec is written, without waiting for me to read it. Once sent, it can't be taken back` } : {}),
+        ...(earlier?.open ? { check3: unreadBox ? `${earlier.check} (only with the box above ticked; else you pick it when you send)` : earlier.check } : {}),
+        send: (a) => post(built?.id || picked?.id || a.choice || a.note || "", { ...(forDev ? { for_dev: true } : {}), ...(against.length ? { overrule: a.check } : {}), ...(a.check2 ? (unreadBox ? { auto_send: true } : { implement: true }) : {}), ...(a.check3 && (!unreadBox || a.check2) ? { close_earlier: true } : {}) }) });
       if (!res) return;
     }
     // Build: pick the option, then look at its latest version and states once more in the

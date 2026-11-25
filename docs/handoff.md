@@ -23,7 +23,22 @@ sent; the developer or coding agent gets only answers.
    version. A write the store refuses with *not approved any more* means the approval was taken
    back while you worked: the item is cancelled already; delete your own scratch directory (below) and
    stop, sending nothing.
-2. Work in a scratch directory of this item's own, `/tmp/design-desk-r<n>-<item>` (`<item>` the
+2. **Questions on the Desk, never in the spec — asked before it is written.** Before you
+   write anything, list what the card leaves to the developer's judgement that changes what
+   gets built (a state, a copy, a breakpoint, an edge case the options never showed, which of
+   two readings of a note) and that the card, its threads and the answers of an earlier pass do
+   not settle. None → go on to step 3 in this same pass. Some → one form,
+   `design desk ask R-<n> <file> --step handoff --form` with `{text, questions: [{text,
+   options, suggested}]}`: at most 6 questions, 2–4 concrete options each, `suggested` your
+   pick ([The questions form](desk.md#the-questions-form)). Keep `status: spec`, write **no
+   spec** (nothing uploaded, no `spec` on the card), `done --outcome asked` and stop. The Desk
+   shows the questions one at a time in the spec banner ([desk-page.md](desk-page.md) → The
+   spec banner). The answer re-queues the handoff with the same option; the next pass reads the
+   form's answers, takes `suggested` for a question left to Design Desk, and writes the spec
+   once, with them in **Settled at handoff**. Ask once per pass; a question already answered
+   is never asked again. While a question is open the store refuses a sent spec and
+   `status: handed-off`, whoever writes them.
+3. Work in a scratch directory of this item's own, `/tmp/design-desk-r<n>-<item>` (`<item>` the
    handoff item's id, `Q-<m>`): after an approval taken back, the next approval's run works on the
    same request at the same time. Write `/tmp/design-desk-r<n>-<item>/spec.md` in plain words ([desk.md](desk.md) → Writing on the
    Desk): a developer reads it, but so do the designers who approved it. These sections:
@@ -52,32 +67,21 @@ sent; the developer or coding agent gets only answers.
      and `build` (what to wire to build the design) and any guard refusal, each with the reason.
    - **Tests to update** — tests in the repository that assert copy or structure the design
      changes (`git grep` the old strings under the profile's `tests` paths).
-   - **Settled at handoff** — each question the Desk answered before sending, with its
+   - **Settled at handoff** — each question the Desk answered before the spec was written (step 2), with its
      answer and who gave it (or "left to Design Desk": your suggested answer). Never a
      section of open questions.
    End it with **Acceptance criteria**: one line per thing a person can check on the built
    screen, as *Given … When … Then …*, every state and every user story covered. Write the
    same list on the card as `spec.acceptance: [{given, when, then, state?, story?}]`: the
    bundle carries it to the coding agent.
-3. Upload it (`design desk asset spec.md --kind spec`) and set `spec: {asset, acceptance,
+4. Upload it (`design desk asset spec.md --kind spec`) and set `spec: {asset, acceptance,
    review: "draft"}`; the card shows it under **The developer spec**. With `spec_review:
    disabled`, or the card's `approved.auto_send` (the approver ticked **Send it as soon as the
-   spec is written**, or approved in simple mode, which asks for it; the store never sets it on a
+   spec is written** on full mode's Approve; simple mode never asks for it, and the store never sets it on a
    request from Slack or from an open pull request), write `review: "sent"`, except for a request with a Slack `origin` or a `from_pr`, which always
    waits (until a person's Send to developers, the store refuses `review: "sent"` and
    `status: handed-off` on it, and reads the stored `origin`, not the one a write gives): a
    spec without it waits for a person.
-4. **Questions on the Desk, never in the spec.** List what the spec leaves to the developer's
-   judgement that changes what gets built (a state, a copy, a breakpoint, an edge case the
-   options never showed, which of two readings of a note) and that the card, its threads and
-   the answers of an earlier pass do not settle. None → go on. Some → one form,
-   `design desk ask R-<n> <file> --step handoff --form` with `{text, questions: [{text,
-   options, suggested}]}`: at most 6 questions, 2–4 concrete options each, `suggested` your
-   pick ([The questions form](desk.md#the-questions-form)). Keep
-   `status: spec`, `done --outcome asked` and stop. The answer re-queues the handoff with the
-   same option; the next pass reads the form's answers, takes `suggested` for a question left
-   to Design Desk, rewrites **Settled at handoff**, re-uploads the spec and goes on. Ask once
-   per pass; a question already answered is never asked again.
 
 ## Review before it goes
 
@@ -86,10 +90,10 @@ steps (**Approved** → **Spec written** → **Sent to developers**, Send a pers
 Approve), its state word (*Spec draft — read it, then send*), and Approve's words (the spec waits on the
 Desk; nothing goes to developers until **Send to developers**).
 Nothing leaves the Desk until a person sends it (`spec_review`, default `enabled`; `disabled`, or the card's `approved.auto_send`
-→ go straight on to step 5 as an issue for developers, never for a request with a Slack `origin` or one from a pull request still open (the card's `from_pr`), and never past an open question of step 4). After step 4 with no open question: keep `status: spec`,
-`done --outcome review` and stop. Simple mode's Approve asks for the send as soon as the spec is written (`auto_send`) wherever
-that is allowed — not for a Slack origin or a request from an open pull request, whose spec
-waits as above ([desk-page.md](desk-page.md) → The page). On the
+→ go straight on to step 5 as an issue for developers, never for a request with a Slack `origin` or one from a pull request still open (the card's `from_pr`), and never past an open question of step 2). After step 4: keep `status: spec`,
+`done --outcome review` and stop. Simple mode's Approve never asks for the send as soon as the
+spec is written: with `spec_review` enabled its spec waits for **Send to developers**; only full
+mode's Approve offers the box ([desk-page.md](desk-page.md) → The page). On the
 card the people who may approve it read the spec in its banner ([desk-page.md](desk-page.md) → The spec banner), and:
 - **Edit the spec** — their text becomes the newest version (`spec.history` keeps the others);
 - **Ask for changes…** — a `handoff` item with `scope: "spec-revise"` and their note: rewrite

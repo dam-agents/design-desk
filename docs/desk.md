@@ -811,7 +811,7 @@ Requests use **Your turn** instead): only the cards that wait for a designer's d
   what goes in, bullets or prose, the words, examples, the last check — is the
   [`explain`](../.agents/skills/explain/SKILL.md) skill: read it before you write any of them.
   The developer spec keeps what a developer builds from (styles, tokens, patch files, tests
-  to update); the skill governs only how it is worded ([handoff.md](handoff.md) step 2).
+  to update); the skill governs only how it is worded ([handoff.md](handoff.md) step 3).
 - Never write an inbox item or
   thread id (`Q-4`, `T-9`), a status name (`triage`, `feedback`, `spec`), a branch or an
   Environment name: refer to things by their title, another card by its title and number

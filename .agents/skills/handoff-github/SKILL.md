@@ -92,7 +92,7 @@ Every call names the repository with `-R <[host/]owner/name>`.
 
 What this skill sends is built from without asking: never an open question, a "please
 confirm" or a choice left to the reader. Every question went to the Desk first
-([docs/handoff.md](../../../docs/handoff.md) step 4); a spec that still holds one goes back
+([docs/handoff.md](../../../docs/handoff.md) step 2); a spec that still holds one goes back
 there instead of out. The body's last line before the marker names the Desk card
 (`<desk_link>#R-<n>`) as the place for a question that still comes up.
 

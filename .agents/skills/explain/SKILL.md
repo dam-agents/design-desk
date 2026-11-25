@@ -38,7 +38,7 @@ A text answers the one question its reader has, and stops:
 | Answer, private ask | Their own question | the answer in one sentence, then the layers below |
 | Digest | What happened this week, and what waits for a decision? | one line per item |
 | Presentation brief | What do we decide, and between what? | three to six lines, the decision asked and its options last |
-| Developer spec | What do I build? | its sections ([docs/handoff.md](../../../docs/handoff.md) step 2) |
+| Developer spec | What do I build? | its sections ([docs/handoff.md](../../../docs/handoff.md) step 3) |
 
 - **Every sentence earns its place**: it changes what the reader does or knows. A sentence
   that only says nothing was found, nothing changed or that all is as usual is cut; where the
