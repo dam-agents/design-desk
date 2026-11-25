@@ -16,6 +16,16 @@ const BOX = 48, C = 24, SCALE = 0.74;
 export const D1_PATH = "M4 14H12A10 10 0 0 1 12 34H4Z";
 export const D2_PATH = "M26 14H34A10 10 0 0 1 34 34H26Z M33 18Q33.45 23.55 39 24Q33.45 24.45 33 30Q32.55 24.45 27 24Q32.55 23.55 33 18Z";
 export const D_PATH = `${D1_PATH} ${D2_PATH}`;
+const f = (n) => +n.toFixed(3);
+// Above 128 px the spark is thinner: the operator's first, finest spark (rays curving almost to
+// its centre), a touch fuller. Only the app icon is that large; every other use takes D2_PATH.
+const sparkFine = (cx, cy, ry, rl, rr, t) => {
+  const c = (sx, sy) => `${f(cx + sx * t)} ${f(cy + sy * t)}`;
+  return `M${cx} ${f(cy - ry)}C${c(1, -1)} ${c(1, -1)} ${f(cx + rr)} ${cy}C${c(1, 1)} ${c(1, 1)} ${cx} ${f(cy + ry)}`
+    + `C${c(-1, 1)} ${c(-1, 1)} ${f(cx - rl)} ${cy}C${c(-1, -1)} ${c(-1, -1)} ${cx} ${f(cy - ry)}Z`;
+};
+export const D2_LARGE_PATH = `M26 14H34A10 10 0 0 1 34 34H26Z ${sparkFine(33.5, 24, 7.5, 7, 7.5, 0.35)}`;
+export const D_LARGE_PATH = `${D1_PATH} ${D2_LARGE_PATH}`;
 
 /** Its colours, light and dark mode: the disc and the D's. Finalised here (#215). */
 export const COLORS = {
@@ -47,7 +57,6 @@ export const AVATAR_SVG = markIn("light");
  * their share of it. The circle stays wherever the mark is small (avatars, favicon, GitHub).
  */
 const APP = { canvas: 1024, body: 824 };
-const f = (n) => +n.toFixed(3);
 export const APP_SVG = (() => {
   const k = BOX / APP.canvas, body = APP.body * k, sc = f(SCALE * (body / BOX));
   // macOS's corner is no circle's quarter but a continuous curve: a superellipse, |x|^5 + |y|^5 = 1.
@@ -56,7 +65,7 @@ export const APP_SVG = (() => {
     return `${f(C + h * Math.sign(c) * Math.abs(c) ** 0.4)} ${f(C + h * Math.sign(sn) * Math.abs(sn) ** 0.4)}`;
   });
   return svg(`<path d="M${pts.join("L")}Z" fill="${COLORS.light.disc}"/>`
-    + `<path transform="translate(${C} ${C}) scale(${sc}) translate(${-C} ${-C})" fill-rule="evenodd" d="${D_PATH}" fill="${COLORS.light.d}"/>`) + "\n";
+    + `<path transform="translate(${C} ${C}) scale(${sc}) translate(${-C} ${-C})" fill-rule="evenodd" d="${D_LARGE_PATH}" fill="${COLORS.light.d}"/>`) + "\n";
 })();
 
 /** The mark as the page draws it inline: classes only, its colours from the page's CSS. */
