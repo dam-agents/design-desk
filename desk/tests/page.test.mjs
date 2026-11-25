@@ -5345,14 +5345,11 @@ test("simple mode's head says, muted, who approved it and where it went; a bug s
 // An approval is taken back while the spec is still on the Desk (docs/desk.md → Taking an approval back).
 const specDraft = { ...drawn, id: "R-7", title: "Spec on the Desk", status: "spec", approved: { by: { email: "jana.novak@example.com", role: "designer" }, at: "2026-11-18T09:00:00Z", variant: "v1" }, spec: { review: "draft", asset: "A-2" } };
 const specSent = { ...specDraft, id: "R-9", title: "Spec sent", spec: { review: "sent", asset: "A-2" } };
-test("an approved request whose spec is still on the Desk goes back to feedback, from ⋯ or with Request changes; a sent one does not", (t) => open(t, HEAD_DESK(HEAD_ME, [specDraft, specSent]), async (desk) => {
+test("an approved request whose spec is still on the Desk goes back to feedback from ⋯; a sent one does not", (t) => open(t, HEAD_DESK(HEAD_ME, [specDraft, specSent]), async (desk) => {
   await desk.waitForSelector("#list");
   await desk.evaluate(() => { location.hash = "#R-7"; });
   await desk.waitForFunction(() => /Spec on the Desk/.test(document.querySelector("#detail .shead h2")?.textContent || ""));
-  await openFeedback(desk);
-  assert.ok((await verdicts(desk)).includes("request-changes"), "Request changes is offered again");
-  assert.match(await desk.getAttribute('.fb-pop [data-fb-v="request-changes"]', "data-tip"), /approval and its spec draft are taken back/, "and says what it does first");
-  await desk.click(".fb-pop [data-fb-close]");
+  assert.equal(await desk.locator('#detail [data-fb="head"]').count(), 0, "with no note waiting the head stays calm: Back to feedback is under ⋯");
   await desk.click("#detail .sh-more > summary");
   await desk.click('#detail .sh-more [data-act="take-back"]');
   assert.match(await desk.textContent("#confirm-dialog"), /Take the approval back\?[\s\S]*jana\.novak approved it and hears of it[\s\S]*next approval's spec starts from it/);
@@ -5362,6 +5359,16 @@ test("an approved request whose spec is still on the Desk goes back to feedback,
   await desk.evaluate(() => { location.hash = "#R-9"; });
   await desk.waitForFunction(() => /Spec sent/.test(document.querySelector("#detail .shead h2")?.textContent || ""));
   assert.equal(await desk.locator('#detail [data-act="take-back"]').count(), 0, "sent: only an admin's Reopen goes back");
+}));
+
+test("with a note waiting, Submit feedback on an approved request offers Request changes, which takes the approval back first", (t) => open(t, HEAD_DESK(HEAD_ME, [specDraft]).replace("path.endsWith(\"/drafts\") ? { drafts: [] }", "path.endsWith(\"/drafts\") ? { drafts: [{ id: \"d1\", text: \"The empty state is missing.\" }] }"), async (desk) => {
+  await desk.waitForSelector("#list");
+  await desk.evaluate(() => { location.hash = "#R-7"; });
+  await desk.waitForSelector('#detail [data-fb="head"]');
+  await openFeedback(desk);
+  assert.ok((await verdicts(desk)).includes("request-changes"), "Request changes is offered again");
+  assert.equal(await desk.getAttribute('.fb-pop [data-fb-v="request-changes"]', "aria-checked"), "true", "picked: a note waits");
+  assert.match(await desk.getAttribute('.fb-pop [data-fb-v="request-changes"]', "data-tip"), /approval and its spec draft are taken back/, "and says what it does first");
 }));
 
 test("who may not approve a request is not offered to take its approval back", (t) => open(t, HEAD_DESK({ ...HEAD_ME, role: "developer", can: { comment: true, change: true, revise: true } }, [specDraft]), async (desk) => {

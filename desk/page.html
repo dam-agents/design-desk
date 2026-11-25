@@ -3942,8 +3942,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // `where`: the head, a dialog's head, or full mode's Questions and comments; one panel is open at a time.
   function fbButton(c, where) {
     const vs = verdictsFor(c), n = notesWaiting(c), g = marksWaiting(c);
-    // Someone who may only comment gets it only once something of theirs waits to be sent.
-    if (!vs.length || (!n && !g && vs.every((x) => x.id === "comment"))) return "";
+    // Someone who may only comment gets it only once something of theirs waits to be sent; so does
+    // anyone on an approved request, whose way back without a note is ⋯ → Back to feedback.
+    const quiet = c.kind === "request" && Boolean(c.approved) ? ["comment", "request-changes"] : ["comment"];
+    if (!vs.length || (!n && !g && vs.every((x) => quiet.includes(x.id)))) return "";
     const v = fbPick(c), open = S.fb?.card === c.id && S.fb.where === where;
     const counts = `${n ? `<span class="cnt" title="${esc(plural(n, "note waits", "notes wait"))} to be sent">${fbSvg("pen")}${n}</span>` : ""}${g ? `<span class="cnt" title="${esc(plural(g, "mark", "marks"))}: changes marked Looks good, differences from Figma marked fine as it is">${fbSvg("checkOnly")}${g}</span>` : ""}`;
     const says = { ok: "approves it", rc: "asks for changes", c: "only comments" }[VERDICT_TONE[v]];

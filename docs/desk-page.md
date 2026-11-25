@@ -479,7 +479,8 @@ its final check), and in full mode's **Your feedback**.
   changes · 2`, `Approve with 2 notes`, `Approve for dev`, `Send comments`) and **Keep drafting**,
   each as tall as Submit feedback.
 - **The verdicts**, the viewer's own: **Request changes** (with options drawn on a request — on one
-  approved whose spec has not gone to developers, only for who may approve it, its hint saying the
+  approved whose spec has not gone to developers, only for who may approve it, once a note of theirs
+  waits (without one the head shows no Submit feedback, and ⋯ → Back to feedback… goes back), its hint saying the
   approval is taken back first, [desk.md](desk.md) → Taking an approval back; on a
   change for who may handle it), the approval — **Approve** in Design review, **Approve for dev** in
   Dev review and, for the UI dev owner, before design — and **Comment only**. A change whose pull
