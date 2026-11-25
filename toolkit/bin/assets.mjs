@@ -1,4 +1,4 @@
-// design assets commit <clone> <R-n> <bundle-dir> — the handoff bundle as one commit on the
+// design assets commit <clone> <R-n> <bundle-dir> [--remote <url>] — the handoff bundle as one commit on the
 // product's `design-desk/assets` branch (docs/handoff.md → The bundle), made in the product's
 // clone without a checkout and never pushed: the agent pushes the printed sha.
 // The branch is an orphan: it shares no history with the default branch, so merging it into
@@ -6,7 +6,7 @@
 // links to stays reachable. A commit adds or replaces `.design-desk/handoff/R-<n>/` and
 // nothing else; one that would change anything more, or a branch that shares history with
 // the default branch, is refused.
-import { lstatSync, readdirSync, rmSync } from "node:fs";
+import { lstatSync, mkdirSync, readdirSync, rmdirSync, rmSync, statSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { join, relative, resolve, sep } from "node:path";
 import { fail } from "../lib/core.mjs";
@@ -33,19 +33,26 @@ export function filesOf(dir) {
 // The paths a commit changes, beside the folder it may change: what is outside it.
 export function outside(paths, folder) { return paths.filter((p) => !p.startsWith(`${folder}/`)); }
 
-export function commitAssets(clone, card, dir, { git = gitIn(clone), now = new Date() } = {}) {
+// `remote` is where the commit is pushed (prototype_remote's URL), so its tip is read from there,
+// not from the clone's origin. The fetch and the refs it writes take the clone's lock, the one
+// scripts/checkout.sh takes.
+export function commitAssets(clone, card, dir, { git = gitIn(clone), now = new Date(), remote = "origin" } = {}) {
   if (!/^R-\d+$/.test(card)) throw new Error(`${card} is not a request card (R-<n>)`);
   const files = filesOf(dir);
   if (!files.length) throw new Error(`${dir} holds no files`);
-  const folder = folderOf(card), ref = `refs/remotes/origin/${ASSETS_BRANCH}`;
+  return withCloneLock(clone, () => commitLocked(clone, card, dir, files, { git, now, remote }));
+}
+
+function commitLocked(clone, card, dir, files, { git, now, remote }) {
+  const folder = folderOf(card), ref = `refs/design-desk/${ASSETS_BRANCH.split("/")[1]}-tip`;
   // The branch as GitHub has it now: absent is a first handoff, a failed answer is no guess.
-  const ls = git(["ls-remote", "--heads", "origin", ASSETS_BRANCH]);
-  if (ls.status !== 0) throw new Error(`cannot read origin's branches: ${ls.stderr.trim().split("\n")[0]}`);
+  const ls = git(["ls-remote", "--heads", remote, ASSETS_BRANCH]);
+  if (ls.status !== 0) throw new Error(`cannot read the remote's branches: ${ls.stderr.trim().split("\n")[0]}`);
   let parent = null;
   if (ls.stdout.trim()) {
-    const f = git(["fetch", "-q", "origin", `+refs/heads/${ASSETS_BRANCH}:${ref}`]);
+    const f = git(["fetch", "-q", remote, `+refs/heads/${ASSETS_BRANCH}:${ref}`]);
     if (f.status !== 0) throw new Error(`cannot fetch ${ASSETS_BRANCH}: ${f.stderr.trim().split("\n")[0]}`);
-    parent = git(["rev-parse", ref]).stdout.trim();
+    parent = must(git(["rev-parse", "--verify", `${ref}^{commit}`]), "rev-parse").trim();
     // An orphan shares no commit with the default branch: merge-base finds none (exit 1).
     const base = git(["merge-base", "origin/HEAD", parent]);
     if (base.status === 0) throw new Error(`${ASSETS_BRANCH} shares history with the default branch; a person must remove or rename it before a handoff pushes there`);
@@ -73,6 +80,22 @@ export function commitAssets(clone, card, dir, { git = gitIn(clone), now = new D
   } finally { rmSync(index, { force: true }); }
 }
 
+// The clone's lock (`<clone>.lock`, scripts/checkout.sh): taken for the call, a dead run's (older
+// than 5 minutes) taken over, and after 60 s of waiting the call goes on without it, as there.
+export function withCloneLock(clone, fn, { waitMs = 60000, staleMs = 300000 } = {}) {
+  const lock = `${resolve(clone).replace(/\/+$/, "")}.lock`, until = Date.now() + waitMs;
+  let held = false;
+  while (Date.now() < until) {
+    try { mkdirSync(lock); held = true; break; }
+    catch (e) {
+      if (e.code !== "EEXIST") break;
+      try { if (Date.now() - statSync(lock).mtimeMs > staleMs) { rmdirSync(lock); continue; } } catch {}
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 200);
+    }
+  }
+  try { return fn(); } finally { if (held) try { rmdirSync(lock); } catch {} }
+}
+
 // The clone's own identity when it has one; else the Desk's, as scripts/work-backup.sh names it:
 // a clone from scripts/checkout.sh sets none, and the sandbox may have no global one.
 export const DESK_IDENTITY = { name: "design-desk", email: "design-desk@agents.local" };
@@ -95,8 +118,9 @@ function gitIn(clone) {
 }
 
 export async function main(_cmd, argv) {
-  const [verb, clone, card, dir] = argv;
-  if (verb !== "commit" || !clone || !card || !dir) fail("usage: design assets commit <clone> <R-n> <bundle-dir>");
-  try { process.stdout.write(`${JSON.stringify(commitAssets(clone, card, dir))}\n`); }
+  const at = argv.indexOf("--remote"), remote = at >= 0 ? argv[at + 1] : "origin";
+  const [verb, clone, card, dir] = at >= 0 ? argv.filter((_, i) => i !== at && i !== at + 1) : argv;
+  if (verb !== "commit" || !clone || !card || !dir || !remote) fail("usage: design assets commit <clone> <R-n> <bundle-dir> [--remote <url>]");
+  try { process.stdout.write(`${JSON.stringify(commitAssets(clone, card, dir, { remote }))}\n`); }
   catch (e) { fail(e.message); }
 }

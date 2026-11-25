@@ -223,12 +223,14 @@ export async function specPictures(text, fetch, webp = null) {
   return { text, files };
 }
 
-// The bundle's directory starts empty, so no file of an earlier attempt is published with it: one
-// that holds an earlier bundle (its design.json) is cleared, any other that is not empty refused.
+// The bundle's directory starts empty, so no file of an earlier attempt is published with it: the
+// names a bundle writes are cleared, and a directory holding anything else is refused untouched.
+export const BUNDLE_NAMES = ["design.json", "spec.md", "mockup.html", "prototype.patch", "states", "shots", "pictures"];
 export function freshBundleDir(dir) {
-  if (!existsSync(dir) || !readdirSync(dir).length) return;
-  if (!existsSync(join(dir, "design.json"))) throw new Error(`${dir} is not empty and holds no earlier bundle; give the bundle an empty directory`);
-  rmSync(dir, { recursive: true, force: true });
+  if (!existsSync(dir)) return;
+  const other = readdirSync(dir).filter((e) => !BUNDLE_NAMES.includes(e));
+  if (other.length) throw new Error(`${dir} holds ${other.slice(0, 3).join(", ")}, which no bundle writes; give the bundle an empty directory`);
+  for (const e of BUNDLE_NAMES) rmSync(join(dir, e), { recursive: true, force: true });
 }
 
 // A shot is WebP only when its asset is a still picture; another keeps its own type's extension.

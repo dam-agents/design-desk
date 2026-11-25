@@ -131,7 +131,7 @@ test("a shot is WebP only when its asset is a still picture", () => {
   assert.equal(shotPath("states/s1-x.html", "text/html"), "states/s1-x.html", "only a planned .webp is touched");
 });
 
-test("the bundle's directory starts empty: an earlier bundle is cleared, anything else refused", async (t) => {
+test("the bundle's directory starts empty: what a bundle writes is cleared, anything else refused", async (t) => {
   const { mkdtempSync, mkdirSync, writeFileSync, existsSync, rmSync } = await import("node:fs");
   const { join } = await import("node:path");
   const { tmpdir } = await import("node:os");
@@ -142,7 +142,20 @@ test("the bundle's directory starts empty: an earlier bundle is cleared, anythin
   writeFileSync(join(old, "design.json"), "{}"); writeFileSync(join(old, "shots", "stale.webp"), "x");
   freshBundleDir(old);
   assert.equal(existsSync(join(old, "shots", "stale.webp")), false, "an earlier attempt's file is gone");
-  const other = join(root, "other"); mkdirSync(other); writeFileSync(join(other, "notes.txt"), "keep");
-  assert.throws(() => freshBundleDir(other), /not empty and holds no earlier bundle/);
-  assert.equal(existsSync(join(other, "notes.txt")), true, "a directory that is not a bundle is left alone");
+  const other = join(root, "other"); mkdirSync(other); writeFileSync(join(other, "design.json"), "{}"); writeFileSync(join(other, "notes.txt"), "keep");
+  assert.throws(() => freshBundleDir(other), /holds notes\.txt, which no bundle writes/);
+  assert.equal(existsSync(join(other, "notes.txt")), true, "a directory holding anything else is left alone, a design.json in it or not");
+  assert.equal(existsSync(join(other, "design.json")), true);
+});
+
+test("the encoder hands back the browser's WebP, and refuses a browser that answers another format", async () => {
+  const { webpEncoder } = await import("../lib/webp.mjs");
+  let answer = `data:image/webp;base64,${Buffer.from("RIFF0000WEBP").toString("base64")}`, closed = 0;
+  const browser = { newPage: async () => ({ evaluate: async () => answer, close: async () => { closed++; } }) };
+  const enc = await webpEncoder({ browser });
+  assert.equal((await enc.encode(Buffer.from("png"), "image/png")).toString(), "RIFF0000WEBP");
+  answer = "data:image/png;base64,AAAA";
+  await assert.rejects(enc.encode(Buffer.from("png"), "image/png"), /did not encode WebP/, "a PNG fallback is never saved as .webp");
+  await enc.close();
+  assert.equal(closed, 1, "its page is closed; a browser it was given stays open");
 });

@@ -7,6 +7,7 @@ import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ASSETS_BRANCH, commitAssets, outside } from "../bin/assets.mjs";
+import { existsSync } from "node:fs";
 
 // No identity anywhere, as in a clone from scripts/checkout.sh on a sandbox with no global one:
 // the seed commits below name theirs, the command must bring its own.
@@ -89,4 +90,17 @@ test("only a request card, and only regular files", (t) => {
 test("a path outside the handoff's folder is named", () => {
   assert.deepEqual(outside([".design-desk/handoff/R-8/a", ".design-desk/handoff/R-80/a", "app.js"], ".design-desk/handoff/R-8"),
     [".design-desk/handoff/R-80/a", "app.js"]);
+});
+
+test("the tip is read from the remote the commit is pushed to, and the clone's lock is let go", (t) => {
+  const { root, origin, clone } = product();
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const other = join(root, "other.git");
+  git(root, "init", "-q", "--bare", "-b", "main", other);
+  const first = commitAssets(clone, "R-1", bundle(root, "b1", { "design.json": "{}\n" }), { remote: other });
+  git(clone, "push", "-q", other, first.push);
+  const second = commitAssets(clone, "R-2", bundle(root, "b2", { "design.json": "{}\n" }), { remote: other });
+  assert.equal(second.parent, first.sha, "the other repository's tip, not origin's (which has none)");
+  assert.equal(spawnSync("git", ["-C", clone, "ls-remote", "--heads", origin, ASSETS_BRANCH], { encoding: "utf8" }).stdout, "", "origin is untouched");
+  assert.equal(existsSync(`${clone}.lock`), false, "the lock is released");
 });

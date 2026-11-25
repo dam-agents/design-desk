@@ -66,7 +66,11 @@ expect 1 "$onassets $onassets refs/heads/design-desk/c1-x $z" "" "a branch built
 g checkout -q "$look"; mkdir -p "$wc/.design-desk/handoff/R-8"; echo b > "$wc/.design-desk/handoff/R-8/a.webp"; g add .design-desk; g commit -qm add
 g rm -rq .design-desk; g commit -qm gone; gone="$(g rev-parse HEAD)"
 expect 1 "$gone $gone refs/heads/design-desk/c1-x $z" "" "a bundle deleted again before the tip must be refused"
-expect 1 "nothere nothere refs/heads/design-desk/c1-x $z" "" "an unreadable history must be refused"
+# A history the bundle rule cannot read: every other read works, rev-list alone fails.
+shim="$SANDBOX/shim"; mkdir -p "$shim"; real="$(command -v git)"
+printf '#!/usr/bin/env bash\n[ "$1" = rev-list ] && exit 128\nexec "%s" "$@"\n' "$real" > "$shim/git"; chmod +x "$shim/git"
+PATH="$shim:$PATH" expect 1 "$look $look refs/heads/design-desk/c1-x $z" "" "a history the bundle rule cannot read must be refused"
+expect 0 "$look $look refs/heads/design-desk/c1-x $z" "" "the same push passes once its history can be read"
 printf -- '- prototype_remote: ghe.example.com/acme/widgets\n' > "$WORK_DIR/CONFIG.md"
 expect 0 "refs/heads/design-desk/c1-x $look refs/heads/design-desk/c1-x $z" https://ghe.example.com/acme/widgets "an enterprise host is matched"
 expect 1 "refs/heads/design-desk/c1-x $look refs/heads/design-desk/c1-x $z" "" "github.com is not the enterprise host"

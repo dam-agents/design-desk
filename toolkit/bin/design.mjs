@@ -34,7 +34,8 @@ const USAGE = `usage: design <command> [args]
                                        a component's state dimensions (props, values, conditions, hooks)
   guard <worktree> --base <ref> [--profile <profile.json>]
                                        the design-only check of a prototype diff; JSON verdict
-  assets commit <clone> <R-n> <dir>    a handoff bundle as one commit on the product's design-desk/assets
+  assets commit <clone> <R-n> <dir> [--remote <url>]
+                                       a handoff bundle as one commit on the product's design-desk/assets
                                        branch, in its clone, not pushed; prints {sha, push, files}
   webp <picture>...                    each picture beside itself as <name>.webp
   desk <command>                       the Desk store (run \`design desk\` for its commands)

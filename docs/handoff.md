@@ -103,7 +103,7 @@ card the people who may approve it read the spec in its banner ([desk-page.md](d
   `comment_on`, the default there). Approve then asks no such thing; with `spec_review: disabled` Approve still does.
 ## Sending it
 
-5. **The bundle.** `design desk bundle R-<n> /tmp/design-desk-r<n>-<item>/handoff` (an earlier bundle there is cleared first): `spec.md` (the
+5. **The bundle.** `design desk bundle R-<n> /tmp/design-desk-r<n>-<item>/handoff` (it clears what an earlier bundle wrote there, and refuses a directory holding anything else): `spec.md` (the
    text for people), `design.json` (the same design for a coding agent: the approved option,
    the boundary and what needs a developer, every element and state with its selector in the
    mockup, the user stories, the acceptance criteria, the decisions it follows, the
@@ -112,7 +112,7 @@ card the people who may approve it read the spec in its banner ([desk-page.md](d
    states, every acceptance line names something on the screens. Its shots and still pictures
    (PNG, JPEG) are WebP, encoded as they are saved; an SVG or a GIF stays as it is. With `prototype_remote` set, the bundle goes on the
    product's **`design-desk/assets`** branch, never a prototype's or a request's own branch:
-   `design assets commit <clone> R-<n> /tmp/design-desk-r<n>-<item>/handoff` (the clone from
+   `design assets commit <clone> R-<n> /tmp/design-desk-r<n>-<item>/handoff --remote <remote-url>` (the clone from
    `scripts/checkout.sh`) makes one commit adding or replacing `.design-desk/handoff/R-<n>/`
    and nothing else, on an orphan branch it starts when there is none. It is never merged and
    never deleted, so every commit a comment links to stays. Its one piece of product code is
