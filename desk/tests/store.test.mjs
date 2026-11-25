@@ -3230,11 +3230,42 @@ test("reviews hold up: a stale option, a closed item, two reviews in one second,
   s.addDraft(chg.id, alice, { text: "fine" });
   s.sendReview(chg.id, alice, { verdict: "approve" });
   assert.equal(s.getCard(chg.id).responsible, null, "the later review wins, whatever the second");
-  // A merged change takes Comment only.
+  // A merged change that is handled takes Comment only.
   s.card(chg.id).source.merged_at = "2026-11-18T10:00:00Z";
   s.addDraft(chg.id, alice, { text: "late" });
   assert.throws(() => s.sendReview(chg.id, alice, { verdict: "request-changes" }), /Comment only/);
+  assert.throws(() => s.sendReview(chg.id, alice, { verdict: "approve" }), /handled: send your comments with Comment only/);
   assert.equal(s.sendReview(chg.id, alice, { verdict: "comment" }).review.verdict, "comment");
+});
+
+test("a change merged before anyone approved it may still be approved: it is handled, its notes saved, nothing posted", () => {
+  const s = fresh();
+  const chg = s.upsertCard({ kind: "change", title: "Spend", source: { repo: "acme/widgets", pr: 7, merged_at: "2026-11-18T10:00:00Z" } }).card;
+  // Request changes stays refused: there is no next version to ask for.
+  s.addDraft(chg.id, alice, { text: "Label is a bit long." });
+  assert.throws(() => s.sendReview(chg.id, alice, { verdict: "request-changes" }), /no next version/);
+  assert.equal(s.getCard(chg.id).handled, undefined, "a refused review changes nothing");
+  // Only whoever may mark it handled approves it.
+  assert.throws(() => s.sendReview(chg.id, { email: "g@x.com", role: "guest" }, { verdict: "approve" }));
+  // Approve with a note: handled, as Mark handled does; the draft is a comment; nothing goes to GitHub, review_post or not.
+  const before = Object.keys(s.db.inbox).length;
+  const { review, inbox } = s.sendReview(chg.id, alice, { verdict: "approve", note: "Fine as shipped.", post: true });
+  assert.equal(review.verdict, "approve");
+  assert.equal(review.note, "Fine as shipped.");
+  assert.equal(review.threads.length, 1);
+  assert.equal(s.thread(review.threads[0]).kind, "comment");
+  assert.equal(s.getCard(chg.id).status, "handled");
+  assert.equal(s.getCard(chg.id).handled.by.email, alice.email);
+  assert.equal(inbox, null, "no review item: nothing is posted to a merged pull request");
+  assert.equal(Object.values(s.db.inbox).filter((x) => x.kind === "review").length, 0);
+  assert.equal(Object.keys(s.db.inbox).length, before);
+  assert.equal(s.getCard(chg.id).responsible, null);
+  // Approve with no drafts and no note is still refused.
+  const other = s.upsertCard({ kind: "change", title: "Other", source: { repo: "acme/widgets", pr: 8, merged_at: "2026-11-18T10:00:00Z" } }).card;
+  assert.throws(() => s.sendReview(other.id, alice, { verdict: "approve" }), /Write a comment or a note first/);
+  // An archived merged change stays Comment only.
+  s.card(other.id).status = "archived";
+  assert.throws(() => s.sendReview(other.id, alice, { verdict: "approve", note: "ok" }), /archived/);
 });
 
 test("a new version is judged against what the reviewer saw: a copy that was behind, or a push before the post, never fools it", () => {

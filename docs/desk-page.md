@@ -470,7 +470,9 @@ head, in every dialog's head (a change's, a part's), and in full mode's **Your f
   each as tall as Submit feedback.
 - **The verdicts**, the viewer's own: **Request changes** (with options drawn on a request; on a
   change for who may handle it), the approval — **Approve** in Design review, **Approve for dev** in
-  Dev review and, for the UI dev owner, before design — and **Comment only**. Look edits and comments
+  Dev review and, for the UI dev owner, before design — and **Comment only**. A change whose pull
+  request is merged has no Request changes; while nobody handled it, its **Approve** ("Design is done
+  with this change.") still closes it out, as Shipped. Look edits and comments
   to work in say they go only with Request changes; a change whose review goes to GitHub says so,
   and that the differences from Figma taken and marked fine go with it.
 - **Sending:** an approval with nothing drafted and no note is the approval alone (a request's asks
