@@ -103,7 +103,7 @@ card the people who may approve it read the spec in its banner ([desk-page.md](d
   `comment_on`, the default there). Approve then asks no such thing; with `spec_review: disabled` Approve still does.
 ## Sending it
 
-5. **The bundle.** `design desk bundle R-<n> /tmp/design-desk-r<n>-<item>/handoff` (it clears what an earlier bundle wrote there, and refuses a directory holding anything else): `spec.md` (the
+5. **The bundle.** `design desk bundle R-<n> /tmp/design-desk-r<n>-<item>/handoff` (it clears an earlier bundle there, and refuses any other directory that is not empty): `spec.md` (the
    text for people), `design.json` (the same design for a coding agent: the approved option,
    the boundary and what needs a developer, every element and state with its selector in the
    mockup, the user stories, the acceptance criteria, the decisions it follows, the
@@ -117,8 +117,8 @@ card the people who may approve it read the spec in its banner ([desk-page.md](d
    and nothing else, on an orphan branch it starts when there is none. It is never merged and
    never deleted, so every commit a comment links to stays. Its one piece of product code is
    the prototype's patch, which the bundle carries only once the card's guard passed on it
-   (`prototype.guard.ok`, [prototype.md](prototype.md) step 4); the commit's check is the command's own: it refuses a commit that touches another path, and a branch that
-   shares history with the default branch; the pre-push hook refuses a bundle on any other
+   (`prototype.guard.ok`, [prototype.md](prototype.md) step 4); the commit's check is the command's own: it refuses a commit that touches another path, and a branch whose
+   history holds anything but bundles; the pre-push hook refuses a bundle on any other
    branch, anything but bundles in this one's history, and its deletion or a rewind. Push its `push` refspec,
    `git -C <clone> push <remote-url> <push>`, never `--force`; refused as not a fast-forward
    (another handoff pushed first), run the command again and push its new sha. A refusal or a

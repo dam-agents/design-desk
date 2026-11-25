@@ -6,7 +6,7 @@ import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { ASSETS_BRANCH, commitAssets, outside } from "../bin/assets.mjs";
+import { ASSETS_BRANCH, argsOf, commitAssets, outside } from "../bin/assets.mjs";
 import { existsSync } from "node:fs";
 
 // No identity anywhere, as in a clone from scripts/checkout.sh on a sandbox with no global one:
@@ -71,11 +71,12 @@ test("a later handoff adds one commit on top, and a resend replaces only its own
   assert.equal(git(clone, "cat-file", "-p", `${a.sha}:.design-desk/handoff/R-8/shots/old.webp`), "o", "an older commit still has what its comment shows");
 });
 
-test("a design-desk/assets branch that shares history with the default branch is refused", (t) => {
+test("a design-desk/assets branch that shares history with the product is refused, with no origin/HEAD needed", (t) => {
   const { root, origin, clone } = product();
   t.after(() => rmSync(root, { recursive: true, force: true }));
   git(clone, "push", "-q", origin, "HEAD:refs/heads/design-desk/assets");
-  assert.throws(() => commitAssets(clone, "R-8", bundle(root, "b8", { "design.json": "{}" })), /shares history with the default branch/);
+  git(clone, "remote", "set-head", "origin", "-d");
+  assert.throws(() => commitAssets(clone, "R-8", bundle(root, "b8", { "design.json": "{}" })), /shares history with the product \(app\.js\)/);
 });
 
 test("only a request card, and only regular files", (t) => {
@@ -103,4 +104,23 @@ test("the tip is read from the remote the commit is pushed to, and the clone's l
   assert.equal(second.parent, first.sha, "the other repository's tip, not origin's (which has none)");
   assert.equal(spawnSync("git", ["-C", clone, "ls-remote", "--heads", origin, ASSETS_BRANCH], { encoding: "utf8" }).stdout, "", "origin is untouched");
   assert.equal(existsSync(`${clone}.lock`), false, "the lock is released");
+});
+
+test("--remote is read wherever it stands, and a malformed call is refused", (t) => {
+  assert.deepEqual(argsOf(["commit", "c", "R-1", "d"]), { clone: "c", card: "R-1", dir: "d", remote: "origin" });
+  assert.deepEqual(argsOf(["commit", "--remote", "u", "c", "R-1", "d"]), { clone: "c", card: "R-1", dir: "d", remote: "u" });
+  assert.deepEqual(argsOf(["commit", "c", "R-1", "d", "--remote", "u"]), { clone: "c", card: "R-1", dir: "d", remote: "u" });
+  for (const bad of [["commit", "c", "R-1", "d", "--remote"], ["commit", "c", "R-1", "d", "--remote", "--x"], ["commit", "c", "R-1"], ["commit", "c", "R-1", "d", "e"], ["commit", "c", "R-1", "d", "--force"], ["push", "c", "R-1", "d"]])
+    assert.equal(argsOf(bad), null, JSON.stringify(bad));
+  // The command line itself: the tip comes from the repository --remote names.
+  const { root, clone } = product();
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const other = join(root, "other.git");
+  git(root, "init", "-q", "--bare", "-b", "main", other);
+  const first = commitAssets(clone, "R-1", bundle(root, "b1", { "design.json": "{}\n" }), { remote: other });
+  git(clone, "push", "-q", other, first.push);
+  const design = join(import.meta.dirname, "..", "bin", "design.mjs");
+  const r = spawnSync(process.execPath, [design, "assets", "commit", clone, "R-2", bundle(root, "b2", { "design.json": "{}\n" }), "--remote", other], { encoding: "utf8" });
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(JSON.parse(r.stdout).parent, first.sha);
 });

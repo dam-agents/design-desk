@@ -53,10 +53,12 @@ function commitLocked(clone, card, dir, files, { git, now, remote }) {
     const f = git(["fetch", "-q", remote, `+refs/heads/${ASSETS_BRANCH}:${ref}`]);
     if (f.status !== 0) throw new Error(`cannot fetch ${ASSETS_BRANCH}: ${f.stderr.trim().split("\n")[0]}`);
     parent = must(git(["rev-parse", "--verify", `${ref}^{commit}`]), "rev-parse").trim();
-    // An orphan shares no commit with the default branch: merge-base finds none (exit 1).
-    const base = git(["merge-base", "origin/HEAD", parent]);
-    if (base.status === 0) throw new Error(`${ASSETS_BRANCH} shares history with the default branch; a person must remove or rename it before a handoff pushes there`);
-    if (base.status !== 1) throw new Error(`cannot compare ${ASSETS_BRANCH} with the default branch: ${base.stderr.trim().split("\n")[0]}`);
+    // An orphan of bundles alone: no commit of its whole history touches a path outside
+    // .design-desk/handoff/R-<n>/, the rule the pre-push hook holds it to. Product history (the
+    // default branch pushed onto it) fails it, whichever repository `remote` is.
+    const all = must(git(["log", "--format=", "--name-only", "--no-renames", parent]), "log").split("\n").filter(Boolean);
+    const stray = all.filter((p) => !/^\.design-desk\/handoff\/R-\d+\//.test(p));
+    if (stray.length) throw new Error(`${ASSETS_BRANCH} shares history with the product (${stray[0]}); a person must remove or rename it before a handoff pushes there`);
   }
   // A private index: the clone's own index, checkout and HEAD stay as they were.
   const index = join(must(git(["rev-parse", "--absolute-git-dir"]), "rev-parse").trim(), `design-desk-assets-${process.pid}.index`);
@@ -117,10 +119,21 @@ function gitIn(clone) {
   };
 }
 
+// `commit <clone> <R-n> <dir> [--remote <url>]`, the flag anywhere: null when it is not that.
+export function argsOf(argv) {
+  const pos = []; let remote = "origin";
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i] === "--remote") { remote = argv[++i]; if (!remote || remote.startsWith("--")) return null; }
+    else if (argv[i].startsWith("--")) return null;
+    else pos.push(argv[i]);
+  }
+  const [verb, clone, card, dir] = pos;
+  return verb === "commit" && clone && card && dir && pos.length === 4 ? { clone, card, dir, remote } : null;
+}
+
 export async function main(_cmd, argv) {
-  const at = argv.indexOf("--remote"), remote = at >= 0 ? argv[at + 1] : "origin";
-  const [verb, clone, card, dir] = at >= 0 ? argv.filter((_, i) => i !== at && i !== at + 1) : argv;
-  if (verb !== "commit" || !clone || !card || !dir || !remote) fail("usage: design assets commit <clone> <R-n> <bundle-dir> [--remote <url>]");
-  try { process.stdout.write(`${JSON.stringify(commitAssets(clone, card, dir, { remote }))}\n`); }
+  const a = argsOf(argv);
+  if (!a) fail("usage: design assets commit <clone> <R-n> <bundle-dir> [--remote <url>]");
+  try { process.stdout.write(`${JSON.stringify(commitAssets(a.clone, a.card, a.dir, { remote: a.remote }))}\n`); }
   catch (e) { fail(e.message); }
 }

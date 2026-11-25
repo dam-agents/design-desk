@@ -214,7 +214,7 @@ export async function specPictures(text, fetch, webp = null) {
   for (const id of [...new Set([...String(text).matchAll(/\]\(asset:(A-\d+)\)/g)].map((m) => m[1]))]) {
     const a = await fetch(id);
     let data = Buffer.from(a.data, a.encoding === "base64" ? "base64" : "utf8");
-    let ext = (String(a.contentType).split("/")[1] || "bin").replace(/[^a-z0-9]/g, "").slice(0, 5);
+    let ext = extOf(a.contentType);
     if (webp && isRaster(a.contentType)) { data = await webp(data, a.contentType); ext = "webp"; }
     const name = `pictures/${id}.${ext}`;
     files.push({ name, data });
@@ -228,16 +228,25 @@ export async function specPictures(text, fetch, webp = null) {
 export const BUNDLE_NAMES = ["design.json", "spec.md", "mockup.html", "prototype.patch", "states", "shots", "pictures"];
 export function freshBundleDir(dir) {
   if (!existsSync(dir)) return;
-  const other = readdirSync(dir).filter((e) => !BUNDLE_NAMES.includes(e));
+  const entries = readdirSync(dir);
+  if (!entries.length) return;
+  const other = entries.filter((e) => !BUNDLE_NAMES.includes(e));
   if (other.length) throw new Error(`${dir} holds ${other.slice(0, 3).join(", ")}, which no bundle writes; give the bundle an empty directory`);
+  if (!entries.includes("design.json")) throw new Error(`${dir} is not empty and holds no earlier bundle (no design.json); give the bundle an empty directory`);
   for (const e of BUNDLE_NAMES) rmSync(join(dir, e), { recursive: true, force: true });
+}
+
+// A file's extension from its content type: the usual one where the subtype is not it.
+const EXT = { "svg+xml": "svg", jpeg: "jpg", "x-icon": "ico", "vnd.microsoft.icon": "ico" };
+export function extOf(contentType) {
+  const sub = String(contentType || "").toLowerCase().split(";")[0].trim().split("/")[1] || "";
+  return EXT[sub] || sub.replace(/[^a-z0-9]/g, "").slice(0, 5) || "bin";
 }
 
 // A shot is WebP only when its asset is a still picture; another keeps its own type's extension.
 export function shotPath(path, contentType) {
   if (!path.endsWith(".webp") || isRaster(contentType)) return path;
-  const ext = (String(contentType || "").split(";")[0].split("/")[1] || "bin").replace(/[^a-z0-9]/g, "").slice(0, 5) || "bin";
-  return `${path.slice(0, -".webp".length)}.${ext}`;
+  return `${path.slice(0, -".webp".length)}.${extOf(contentType)}`;
 }
 
 export function bundleOf(card) {

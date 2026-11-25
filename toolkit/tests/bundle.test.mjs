@@ -2,7 +2,7 @@
 // and design.json for any product.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { bundleOf, acceptanceOf, specPictures, freshBundleDir, shotPath } from "../bin/desk.mjs";
+import { bundleOf, acceptanceOf, specPictures, freshBundleDir, shotPath, extOf } from "../bin/desk.mjs";
 
 const card = {
   id: "C-7", title: "Calmer header", request: { type: "idea", problem: "The header is too loud." },
@@ -69,7 +69,7 @@ test("with an encoder, a raster picture is saved as WebP and the spec points at 
   const webp = async (data, type) => { seen.push(type); return Buffer.from("RIFFxxxxWEBP"); };
   const fetch = async (id) => id === "A-12" ? { contentType: "image/png", encoding: "base64", data: "iVBORw0KGgo=" } : { contentType: "image/svg+xml", encoding: "utf8", data: "<svg/>" };
   const { text, files } = await specPictures("![Before](asset:A-12)\n![Icon](asset:A-13)", fetch, webp);
-  assert.equal(text, "![Before](pictures/A-12.webp)\n![Icon](pictures/A-13.svgxm)");
+  assert.equal(text, "![Before](pictures/A-12.webp)\n![Icon](pictures/A-13.svg)");
   assert.deepEqual(seen, ["image/png"], "only the raster picture is encoded");
   assert.equal(files[0].data.toString(), "RIFFxxxxWEBP");
   assert.equal(files[1].data.toString(), "<svg/>");
@@ -127,7 +127,8 @@ test("a prototype's patch is bundled only when the card says its guard passed", 
 test("a shot is WebP only when its asset is a still picture", () => {
   assert.equal(shotPath("shots/s1-x.webp", "image/png"), "shots/s1-x.webp");
   assert.equal(shotPath("shots/s1-x.webp", "image/gif"), "shots/s1-x.gif", "a GIF keeps its type");
-  assert.equal(shotPath("shots/s1-x.webp", "image/svg+xml"), "shots/s1-x.svgxm");
+  assert.equal(shotPath("shots/s1-x.webp", "image/svg+xml"), "shots/s1-x.svg");
+  assert.deepEqual(["image/svg+xml", "image/jpeg", "image/png; x=1", "", "image/x-icon"].map(extOf), ["svg", "jpg", "png", "bin", "ico"]);
   assert.equal(shotPath("states/s1-x.html", "text/html"), "states/s1-x.html", "only a planned .webp is touched");
 });
 
@@ -146,6 +147,9 @@ test("the bundle's directory starts empty: what a bundle writes is cleared, anyt
   assert.throws(() => freshBundleDir(other), /holds notes\.txt, which no bundle writes/);
   assert.equal(existsSync(join(other, "notes.txt")), true, "a directory holding anything else is left alone, a design.json in it or not");
   assert.equal(existsSync(join(other, "design.json")), true);
+  const noBundle = join(root, "nobundle"); mkdirSync(join(noBundle, "pictures"), { recursive: true }); writeFileSync(join(noBundle, "pictures", "mine.png"), "x");
+  assert.throws(() => freshBundleDir(noBundle), /holds no earlier bundle/, "bundle names alone, with no design.json, are not a bundle");
+  assert.equal(existsSync(join(noBundle, "pictures", "mine.png")), true, "and are left alone");
 });
 
 test("the encoder hands back the browser's WebP, and refuses a browser that answers another format", async () => {
