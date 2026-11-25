@@ -739,6 +739,43 @@ test("an approval is taken back while its spec is on the Desk: back where it was
   assert.throws(() => s.act(card.id, alice, "take-back"), /on its way to developers/);
 });
 
+test("an approval taken back returns where it was given: Live while its prototype is up, its options, Team feedback; the vote opens again", () => {
+  const s = fresh();
+  const setup = (status, extra = {}) => {
+    const { card, inbox: item } = s.createRequest(alice, { title: `From ${status}`, problem: "Too loud." });
+    s.claim(item.id, "s1"); s.done(item.id, "s1", "triaged");
+    const page = s.addAsset({ kind: "variant", name: "v.html", contentType: "text/html", data: "<p>v</p>", encoding: "utf8" }).asset.id;
+    s.upsertCard({ id: card.id, status: "variants", triage: { verdict: "design", reasons: ["Look only."] }, variants: [{ id: "v1", name: "Quiet", asset: page }] });
+    if (status === "feedback") s.openFeedback(card.id, alice);
+    Object.assign(s.card(card.id), extra);
+    s.act(card.id, alice, "approve", "v1");
+    return card.id;
+  };
+  const options = setup("variants");
+  assert.equal(s.act(options, alice, "take-back").card.status, "variants", "approved straight from its options: back at them, no team asked");
+  const asked = setup("feedback", { vote_ended: { by: alice, at: "2026-11-25T09:00:00Z" } });
+  const back = s.act(asked, alice, "take-back").card;
+  assert.deepEqual([back.status, back.vote_ended], ["feedback", undefined], "back at Team feedback, its vote open again");
+  assert.ok(s.vote(asked, bob, { variant: "v1", vote: "prefer" }), "the next version is voted on");
+  const live = setup("feedback", { prototype: { state: "live" } });
+  assert.equal(s.act(live, alice, "take-back").card.status, "testing", "its prototype still up: back at Live");
+  // An approval taken back still counts as its approver's doing on People.
+  assert.equal(s.peopleActivity([{ email: "alice@example.com" }])["alice@example.com"].approved, 3);
+});
+
+test("a request For Developers is taken back by a developer who may approve it, never by its author", () => {
+  const s = fresh(), lee = { email: "lee@example.com", role: "ui-dev-owner" }, dana = { email: "dana@example.com", role: "developer" }, evan = { email: "evan@example.com", role: "developer" };
+  const { card, inbox: item } = s.createRequest(bob, { title: "Denser rows", problem: "Too airy." });
+  s.claim(item.id, "s1"); s.done(item.id, "s1", "triaged");
+  const page = s.addAsset({ kind: "variant", name: "v.html", contentType: "text/html", data: "<p>v</p>", encoding: "utf8" }).asset.id;
+  s.upsertCard({ id: card.id, status: "variants", triage: { verdict: "design", reasons: ["Look only."] }, variants: [{ id: "v1", name: "Dense", asset: page }] });
+  s.openFeedback(card.id, bob);
+  s.setSize(card.id, lee, true);
+  s.act(card.id, dana, "approve", "v1");
+  assert.throws(() => s.act(card.id, bob, "take-back"), (e) => e.status === 403, "its author does not approve it, nor take an approval back");
+  assert.deepEqual([s.act(card.id, evan, "take-back").card.approved, s.card(card.id).taken_back[0].approved.by.email], [undefined, "dana@example.com"]);
+});
+
 test("Request changes on an approved request takes the approval back first, only for who may approve it", () => {
   const s = fresh(), dana = { email: "dana@example.com", role: "developer" };
   const { card, inbox: item } = s.createRequest(alice, { title: "Calmer header", problem: "Too loud." });

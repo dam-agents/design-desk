@@ -2078,6 +2078,8 @@ export class Store {
       if (["request", "issue"].includes(c.kind)) hit(of(c.created_by) ? c.created_by : c.origin, c.created, "filed");
       for (const byKey of Object.values(c.votes || {})) for (const [email, v] of Object.entries(byKey || {})) hit({ email }, v.at, "votes");
       if (c.approved?.at) hit(c.approved.by, c.approved.at, "approved");
+      // An approval taken back was still given: it counts for whoever gave it.
+      for (const w of c.taken_back || []) if (w.approved?.at) hit(w.approved.by, w.approved.at, "approved");
       for (const tid of c.threads || []) {
         const t = own(this.db.threads, tid);
         if (!t || t.kind === "private") continue;
@@ -2331,7 +2333,8 @@ export class Store {
     if (!this.mayApproveSpec(c, who)) throw forbidden("Only the people who may approve this request take its approval back.");
     const at = this.clock(), from = c.approved.from;
     c.taken_back = [...(c.taken_back || []), { by: person(who), at, approved: c.approved, ...(c.overruled ? { overruled: c.overruled } : {}), spec: c.spec?.asset ? c.spec : null }].slice(-10);
-    for (const k of ["overruled", "approved", "spec"]) delete c[k];
+    // Its vote opens again for the next version, as a reopen's does.
+    for (const k of ["overruled", "approved", "spec", "vote_ended"]) delete c[k];
     for (const it of Object.values(this.db.inbox)) if (it.card === c.id && it.kind === "handoff" && it.state !== "done")
       Object.assign(it, { state: "done", done_at: at, outcome: "cancelled: approval taken back" });
     for (const tid of c.threads || []) {
@@ -2858,7 +2861,7 @@ export class Store {
         // goes), unless the write says otherwise (`review`, as with spec_review disabled) or it went.
         if (now?.asset && now.asset !== was?.asset && now.review === undefined && !was?.sent) now.review = "draft";
         // The first spec after an approval was taken back keeps the draft it starts from as its
-        // earlier version (docs/handoff.md, step 2).
+        // earlier version (docs/handoff.md, step 1).
         const before = !was?.asset && now?.asset ? (c?.taken_back || []).slice(-1)[0]?.spec : null;
         if (before?.asset && before.asset !== now.asset && !now.history) now.history = [...(before.history || []), { asset: before.asset, at: before.at || c.updated, by: before.by || { agent: true }, taken_back: true }].slice(-20);
         next.spec = now && was?.asset && now.asset && now.asset !== was.asset

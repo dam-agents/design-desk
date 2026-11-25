@@ -21,9 +21,11 @@ sent; the developer or coding agent gets only answers.
    download it, keep what a person edited, and rewrite only what the design changed since;
    otherwise write the spec fresh. Either way the store keeps the draft as the new spec's earlier
    version. A write the store refuses with *not approved any more* means the approval was taken
-   back while you worked: the item is cancelled already; delete `/tmp/design-desk-r<n>` and stop,
-   sending nothing.
-2. Write `/tmp/design-desk-r<n>/spec.md` in plain words ([desk.md](desk.md) → Writing on the
+   back while you worked: the item is cancelled already; delete your own scratch directory (below) and
+   stop, sending nothing.
+2. Work in a scratch directory of this item's own, `/tmp/design-desk-r<n>-<item>` (`<item>` the
+   handoff item's id, `Q-<m>`): after an approval taken back, the next approval's run works on the
+   same request at the same time. Write `/tmp/design-desk-r<n>-<item>/spec.md` in plain words ([desk.md](desk.md) → Writing on the
    Desk): a developer reads it, but so do the designers who approved it. These sections:
    - **Summary** — the problem and the approved direction, three sentences.
    - **Why** — the request in your own words, the decisions taken on the Desk (which
@@ -101,7 +103,7 @@ card the people who may approve it read the spec in its banner ([desk-page.md](d
   `comment_on`, the default there). Approve then asks no such thing; with `spec_review: disabled` Approve still does.
 ## Sending it
 
-5. **The bundle.** `design desk bundle R-<n> /tmp/design-desk-r<n>/handoff`: `spec.md` (the
+5. **The bundle.** `design desk bundle R-<n> /tmp/design-desk-r<n>-<item>/handoff`: `spec.md` (the
    text for people), `design.json` (the same design for a coding agent: the approved option,
    the boundary and what needs a developer, every element and state with its selector in the
    mockup, the user stories, the acceptance criteria, the decisions it follows, the
