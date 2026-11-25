@@ -224,6 +224,9 @@ export async function specPictures(text, fetch, webp = null) {
 }
 
 export function bundleOf(card) {
+  // A prototype's patch is handed off only once the guard passed on it (CLAUDE.md → Design only):
+  // the card's guard record says so, nothing else (docs/prototype.md step 4).
+  const patch = card.prototype?.patch && card.prototype?.guard?.ok === true ? card.prototype.patch : null;
   const pick = card.live_pick?.variant || card.approved?.variant;
   const v = (card.variants || []).find((x) => x.id === pick) || (card.variants || [])[0] || null;
   // What a live prototype showed counts only when there is one, for this option.
@@ -255,10 +258,10 @@ export function bundleOf(card) {
     // Written by Design Desk with the spec (docs/handoff.md → The bundle): each checks one thing a person can see.
     acceptance: card.spec?.acceptance || [],
     decisions: (v?.reasons || []).map((r) => ({ decision: r.decision, how: r.how })),
-    prototype: card.prototype?.branch || card.prototype?.patch ? { branch: card.prototype.branch || null, patch: card.prototype.patch ? "prototype.patch" : null, note: "A starting point; not reviewed as production code." } : null,
+    prototype: card.prototype?.branch || patch ? { branch: card.prototype.branch || null, patch: patch ? "prototype.patch" : null, note: "A starting point; not reviewed as production code." } : null,
     desk: card.link || null,
   };
-  if (card.prototype?.patch) files.push({ path: "prototype.patch", asset: card.prototype.patch });
+  if (patch) files.push({ path: "prototype.patch", asset: patch });
   return { design, files };
 }
 

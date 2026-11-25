@@ -59,6 +59,10 @@ g push -q origin "$look:refs/heads/design-desk/c1-seen" 2>/dev/null; g fetch -q 
 expect 1 "$look $look refs/heads/design-desk/assets $z" "" "product history pushed onto design-desk/assets must be refused, even when the remote has it"
 g checkout -q "$look"; mkdir -p "$wc/.design-desk/handoff/R-8"; echo b > "$wc/.design-desk/handoff/R-8/a.webp"; g add .design-desk; g commit -qm old; old="$(g rev-parse HEAD)"
 expect 1 "refs/heads/design-desk/r8-handoff $old refs/heads/design-desk/r8-handoff $z" "" "a handoff bundle on another design-desk/ branch must be refused"
+g push -q origin "$assets:refs/heads/design-desk/assets" 2>/dev/null; g fetch -q origin
+expect 1 "$assets $assets refs/heads/design-desk/r8-handoff $z" "" "a bundle commit the remote already has must be refused on another branch"
+g checkout -q "$assets"; echo c > "$wc/b.css"; g add b.css; g commit -qm built-on-assets; onassets="$(g rev-parse HEAD)"
+expect 1 "$onassets $onassets refs/heads/design-desk/c1-x $z" "" "a branch built on a bundle commit must be refused"
 printf -- '- prototype_remote: ghe.example.com/acme/widgets\n' > "$WORK_DIR/CONFIG.md"
 expect 0 "refs/heads/design-desk/c1-x $look refs/heads/design-desk/c1-x $z" https://ghe.example.com/acme/widgets "an enterprise host is matched"
 expect 1 "refs/heads/design-desk/c1-x $look refs/heads/design-desk/c1-x $z" "" "github.com is not the enterprise host"

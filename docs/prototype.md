@@ -125,6 +125,7 @@ With `prototype_remote` set, push the guarded branch there after step 4:
 never `--force` onto a branch a person changed. Without it, the patch on the card is the
 prototype's record. The pre-push hook (`scripts/git-hooks/pre-push`) accepts the repository
 only over `https://` or ssh, and refuses another repository or host, another branch and any
-change under `.github/`, whatever characters its path holds; it is a local guard only.
+change under `.github/`, whatever characters its path holds, and keeps handoff bundles to
+`design-desk/assets` ([handoff.md](handoff.md) step 5); it is a local guard only.
 **Operator-only:** the real control is on GitHub — a ruleset or a fine-grained token that lets
 the agent's identity push `design-desk/*` branches and nothing else.

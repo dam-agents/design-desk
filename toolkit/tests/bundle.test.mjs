@@ -14,7 +14,7 @@ const card = {
     stories: [{ story: "u1", met: "yes" }], reasons: [{ decision: "D-2", how: "Greys stay quiet." }] }],
   issue_brief: { stories: [{ id: "u1", text: "As an admin I see the list calmly" }] },
   spec: { asset: "A-9", acceptance: [{ given: "the agents list", when: "it opens", then: "the header is grey" }] },
-  prototype: { branch: "design-desk/c7-calm", patch: "A-8" },
+  prototype: { branch: "design-desk/c7-calm", patch: "A-8", guard: { ok: true } },
 };
 
 test("the bundle carries the approved option, its states, the boundary and the acceptance criteria", () => {
@@ -113,4 +113,13 @@ test("design webp reads a picture's type from its bytes and refuses a GIF, an SV
     assert.match(r.stderr, new RegExp(bad.replace(".", "\\.")), "the refusal names the file");
   }
   assert.equal(existsSync(join(dir, "a.webp")), false, "nothing is written when one of them is refused");
+});
+
+test("a prototype's patch is bundled only when the card says its guard passed", () => {
+  for (const guard of [undefined, { ok: false }, { ok: "true" }]) {
+    const { design, files } = bundleOf({ ...card, prototype: { ...card.prototype, guard } });
+    assert.equal(files.some((f) => f.path === "prototype.patch"), false, `no patch with guard ${JSON.stringify(guard)}`);
+    assert.equal(design.prototype.patch, null);
+    assert.equal(design.prototype.branch, "design-desk/c7-calm", "the branch is still named");
+  }
 });
