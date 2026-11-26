@@ -242,30 +242,30 @@ watch_mode() {
   if [ -f "$DESK_DIR/releases.json" ] && ! KNOWN_RELS="$(jq -ce '.keys | arrays' "$DESK_DIR/releases.json" 2>/dev/null)"; then
     KNOWN_RELS='[]'; RELS_OK=0; log "the Desk's releases.json cannot be read — no release is due until it can"
   fi
-  local ndue=0 nissues=0 deferred=0 skipped=0 seen=0 lookups=0 unread=0
-  # One files call per new candidate; a backlog is spread over passes so a pass stays
+  local ndue=0 nissues=0 deferred=0 skipped=0 seen=0 lookups=0 unread=0 waiting=0
+  # One files call per new candidate, and per carded open PR its head and, when it moved, the
+  # push's files; a backlog is spread over passes so a pass stays
   # well inside the Precheck's budget (about 2 s a call through the gateway).
   local MAX_LOOKUPS="${WATCH_MAX_LOOKUPS:-25}"
   local stale_s=$((3 * 3600))
   local OPEN_PRS LABEL; OPEN_PRS="$(jq -r '.watch_open_prs' <<<"$CONF")"; LABEL="$(jq -r '.issue_label' <<<"$CONF")"
   # The ledger's last row for (repo, number) decides: kind of work, or a reason to skip.
-  declare -A LAST_STATUS=() LAST_UPDATED=() LAST_ATTEMPTS=()
+  declare -A LAST_STATUS=() LAST_UPDATED=() LAST_ATTEMPTS=() LAST_CARD=() LAST_NOTE=()
+  # The ledger is read once, here and not in decide(), which runs in a subshell: no process per
+  # pull request (a fork is slow in a small sandbox), and the loop reads a row's card and note.
+  # The last row of a (repo, number) wins, as `tail -1` did. awk, not `read` on tabs: a tab is
+  # whitespace to IFS, so empty columns would collapse.
+  local _k _s _u _a _c _n
+  while IFS=$'\x1f' read -r _k _s _u _a _c _n; do
+    LAST_STATUS["$_k"]="$_s"; LAST_UPDATED["$_k"]="$_u"; LAST_ATTEMPTS["$_k"]="$_a"; LAST_CARD["$_k"]="$_c"; LAST_NOTE["$_k"]="$_n"
+  done < <(awk -F'\t' -v OFS='\037' 'NR>1 { r[$1 "#" $2]=$4 OFS $6 OFS $7 OFS $5 OFS $8 } END { for (k in r) print k OFS r[k] }' "$LEDGER")
   decide() {  # <repo> <number> <state: merged|open|issue> → prints kind or nothing
     local status updated attempts
-    # The ledger is read once, with no process per pull request (a fork is slow in a small sandbox):
-    # the last row of a (repo, number) wins, as `tail -1` did.
-    if [ -z "${LEDGER_LOADED:-}" ]; then
-      local _k _s _u _a
-      # awk, not `read`: a tab is whitespace to IFS, so empty columns would collapse.
-      while IFS=$'\x1f' read -r _k _s _u _a; do
-        LAST_STATUS["$_k"]="$_s"; LAST_UPDATED["$_k"]="$_u"; LAST_ATTEMPTS["$_k"]="$_a"
-      done < <(awk -F'\t' -v OFS='\037' 'NR>1 { r[$1 "#" $2]=$4 OFS $6 OFS $7 } END { for (k in r) print k OFS r[k] }' "$LEDGER")
-      LEDGER_LOADED=1
-    fi
     status="${LAST_STATUS["$1#$2"]:-}"; updated="${LAST_UPDATED["$1#$2"]:-}"; attempts="${LAST_ATTEMPTS["$1#$2"]:-}"
     case "$status" in
       carded|skipped|dispatched) return 0;;
-      open) [ "$3" = merged ] && echo merged; return 0;;   # carded while open; now it shipped
+      # Carded while open: now it shipped, or, still open, its head is compared with the one carded.
+      open) case "$3" in merged) echo merged;; open) echo head;; esac; return 0;;
       due|in_progress)
         [ $((NOW_EPOCH - $(iso2epoch "$updated"))) -ge "$stale_s" ] || { log "$1#$2: $status since $updated — left to its session"; return 0; }
         echo takeover;;
@@ -282,38 +282,72 @@ watch_mode() {
     items="$(jq -c '.items |= map(. + {state: "merged"})' <<<"$found")"
     # Open pull requests too: a developer's UI is seen, and adjusted, before it ships.
     if [ "$OPEN_PRS" = enabled ]; then
-      more="$(search "$repo" "repo:$slug is:pr is:open created:>=$since_day")" || fail_out "could not list open pull requests of $repo"
+      # Drafts are left out: one is carded once it is ready, and one carded before it went back to
+      # draft keeps its card, with nothing due while it is a draft.
+      more="$(search "$repo" "repo:$slug is:pr is:open draft:false created:>=$since_day")" || fail_out "could not list open pull requests of $repo"
       items="$(jq -c --slurpfile more <(jq -c '.items | map(. + {state: "open"})' <<<"$more") '.items += $more[0]' <<<"$items")"  # a page is too big for an argument
     fi
     paths="$(ui_paths_for "$repo")"; ere="$(globs_to_ere "$paths")"
     local SINCE_Z; SINCE_Z="$(date -u -d "@$(iso2epoch "$SINCE")" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo "$SINCE")"
-    while IFS=$'\t' read -r num state merged title url author draft; do
+    # \037, not a tab: an open PR has no merged_at, and a tab is whitespace to IFS.
+    while IFS=$'\037' read -r num state merged title url author draft; do
       [ -n "$num" ] || continue
       seen=$((seen + 1))
       # Both are UTC ISO times ending in Z, so a text comparison orders them; no `date` per pull request.
       [ "$state" = open ] || ! [[ "$merged" < "$SINCE_Z" ]] || continue
+      [ "$state" = open ] && [ "$draft" = true ] && continue
       local kind; kind="$(decide "$repo" "$num" "$state")"
       [ -n "$kind" ] || continue
-      if [ "$ndue" -ge "$MAXN" ] || [ "$lookups" -ge "$MAX_LOOKUPS" ]; then deferred=$((deferred + 1)); continue; fi
-      lookups=$((lookups + 1))
-      # Per candidate: its files, to keep only PRs that touch the UI.
-      local files ui n
-      files="$(gh api ${hostargs[@]+"${hostargs[@]}"} "repos/$slug/pulls/$num/files?per_page=100" --paginate --jq '.[].filename' 2>/dev/null)" \
-        || { log "$repo#$num: could not read its files — retried next run"; unread=$((unread + 1)); continue; }
-      ui="$(printf '%s\n' "$files" | grep -E "$ere" || true)"
-      n=$(printf '%s\n' "$ui" | grep -c . || true)
-      if [ "$n" -eq 0 ]; then
-        [ "$state" = merged ] && printf '%s\t%s\t%s\tskipped\t\t%s\t0\tno UI files\n' "$repo" "$num" "$merged" "$NOW_ISO" >> "$LEDGER"
-        skipped=$((skipped + 1)); continue
+      local files ui n head="" before="" card=""
+      if [ "$kind" = head ]; then
+        # A carded open PR: due again only when the commits since the head it was carded on touch
+        # UI files. Its row's note holds that head (`head <sha>`, ledger.sh open); a row without
+        # one records the current head and asks for no run. Both reads count as lookups.
+        if [ "$ndue" -ge "$MAXN" ] || [ "$lookups" -ge "$MAX_LOOKUPS" ]; then waiting=$((waiting + 1)); continue; fi
+        lookups=$((lookups + 1))
+        card="${LAST_CARD["$repo#$num"]:-}"; before="${LAST_NOTE["$repo#$num"]:-}"
+        [[ "$before" =~ ^head\ ([0-9a-f]{7,40})$ ]] && before="${BASH_REMATCH[1]}" || before=""
+        head="$(gh api ${hostargs[@]+"${hostargs[@]}"} "repos/$slug/pulls/$num" --jq '.head.sha' 2>/dev/null)" && [[ "$head" =~ ^[0-9a-f]{7,40}$ ]] \
+          || { log "$repo#$num: could not read its head — retried next run"; continue; }
+        [ "$head" = "$before" ] && continue
+        if [ -z "$before" ]; then
+          printf '%s\t%s\t\topen\t%s\t%s\t%s\thead %s\n' "$repo" "$num" "$card" "$NOW_ISO" "${LAST_ATTEMPTS["$repo#$num"]:-0}" "$head" >> "$LEDGER"
+          log "$repo#$num: carded with no head recorded — now at ${head:0:7}"; continue
+        fi
+        [ "$lookups" -lt "$MAX_LOOKUPS" ] || { waiting=$((waiting + 1)); continue; }
+        lookups=$((lookups + 1))
+        files="$(gh api ${hostargs[@]+"${hostargs[@]}"} "repos/$slug/compare/$before...$head?per_page=1" --jq '.files[]?.filename' 2>/dev/null)" \
+          || { log "$repo#$num: could not compare ${before:0:7} with ${head:0:7} — retried next run"; continue; }
+        ui="$(printf '%s\n' "$files" | grep -E "$ere" || true)"
+        n=$(printf '%s\n' "$ui" | grep -c . || true)
+        if [ "$n" -eq 0 ]; then
+          printf '%s\t%s\t\topen\t%s\t%s\t%s\thead %s\n' "$repo" "$num" "$card" "$NOW_ISO" "${LAST_ATTEMPTS["$repo#$num"]:-0}" "$head" >> "$LEDGER"
+          log "$repo#$num: pushed ${head:0:7}, no UI file touched"; continue
+        fi
+        kind=push
+      else
+        if [ "$ndue" -ge "$MAXN" ] || [ "$lookups" -ge "$MAX_LOOKUPS" ]; then deferred=$((deferred + 1)); continue; fi
+        lookups=$((lookups + 1))
+        # Per candidate: its files, to keep only PRs that touch the UI.
+        files="$(gh api ${hostargs[@]+"${hostargs[@]}"} "repos/$slug/pulls/$num/files?per_page=100" --paginate --jq '.[].filename' 2>/dev/null)" \
+          || { log "$repo#$num: could not read its files — retried next run"; unread=$((unread + 1)); continue; }
+        ui="$(printf '%s\n' "$files" | grep -E "$ere" || true)"
+        n=$(printf '%s\n' "$ui" | grep -c . || true)
+        if [ "$n" -eq 0 ]; then
+          [ "$state" = merged ] && printf '%s\t%s\t%s\tskipped\t\t%s\t0\tno UI files\n' "$repo" "$num" "$merged" "$NOW_ISO" >> "$LEDGER"
+          skipped=$((skipped + 1)); continue
+        fi
       fi
-      printf '%s\t%s\t%s\tdue\t\t%s\t0\t%s, %s UI files\n' "$repo" "$num" "$merged" "$NOW_ISO" "$state" "$n" >> "$LEDGER"
+      printf '%s\t%s\t%s\tdue\t%s\t%s\t0\t%s, %s UI files\n' "$repo" "$num" "$merged" "$card" "$NOW_ISO" "${head:+push $head}${head:-$state}" "$n" >> "$LEDGER"
       ndue=$((ndue + 1))
       jq -cn --arg id "$repo#$num" --arg repo "$repo" --argjson pr "$num" --arg state "$state" --arg title "$title" --arg url "$url" \
         --arg merged "$merged" --arg author "$author" --arg kind "$kind" --argjson n "$n" --argjson draft "${draft:-false}" \
+        --arg head "$head" --arg before "$before" \
         --argjson files "$(printf '%s\n' "$ui" | head -40 | jq -R . | jq -s '[.[] | select(length>0)]')" \
-        '{id:$id, repo:$repo, pr:$pr, state:$state, title:$title, url:$url, merged_at:(if $merged == "" then null else $merged end), author:$author, draft:$draft, kind:$kind, ui_file_count:$n, ui_files:$files}' >> "$DUE"
-      log "$repo#$num: $state${merged:+ $merged}, $n UI files — due ($kind)"
-    done < <(jq -r '.items[] | [.number, .state, (.pull_request.merged_at // ""), (.title | gsub("[\t\n]"; " ")), .html_url, .user.login, (.draft // false | tostring)] | @tsv' <<<"$items")
+        '{id:$id, repo:$repo, pr:$pr, state:$state, title:$title, url:$url, merged_at:(if $merged == "" then null else $merged end), author:$author, draft:$draft, kind:$kind, ui_file_count:$n, ui_files:$files}
+         + (if $kind == "push" then {head:$head, before:$before} else {} end)' >> "$DUE"
+      log "$repo#$num: $state${merged:+ $merged}${head:+, pushed ${head:0:7}}, $n UI files — due ($kind)"
+    done < <(jq -r '.items[] | [(.number | tostring), .state, (.pull_request.merged_at // ""), (.title | gsub("[\t\n\u001f]"; " ")), .html_url, .user.login, (.draft // false | tostring)] | join("\u001f")' <<<"$items")
     # Issues that ask for design work: a label the team puts on them.
     if [ "$LABEL" != none ]; then
       found="$(search "$repo" "repo:$slug is:issue is:open label:\"$LABEL\"")" || fail_out "could not list the issues labelled $LABEL in $repo"
@@ -379,6 +413,8 @@ watch_mode() {
   [ "$ngh" -gt 0 ] && log "$ngh issues or pull requests on the Desk changed on GitHub — github_due"
   [ "$skipped" -gt 0 ] && log "$skipped PRs touch no UI file — skipped"
   [ "$deferred" -gt 0 ] && log "$deferred more PRs wait for the next run (max_changes_per_run=$MAXN, at most $MAX_LOOKUPS file lookups a pass)"
+  # A carded open PR whose head waits moves no cursor: the open search does not start from it.
+  [ "$waiting" -gt 0 ] && log "$waiting carded open PRs wait for the next run to compare their head (at most $MAX_LOOKUPS lookups a pass)"
   printf '%s changes_due=%s issues_due=%s skipped=%s deferred=%s seen=%s\n' "$NOW_ISO" "$ndue" "$nissues" "$skipped" "$deferred" "$seen" >> "$WORK/WATCH.log"
   if [ "$deferred" -eq 0 ] && [ "$unread" -eq 0 ] && [ ! -e "$WORK/.search-partial" ]; then printf '%s\n%s\n' "$NOW_ISO" "$SINCE" > "$CURSOR"; fi
   rm -f "$WORK/.search-partial"

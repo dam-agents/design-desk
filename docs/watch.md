@@ -2,8 +2,10 @@
 
 A watch worklist's `changes_due` lists pull requests that touch the product's UI files and have
 no card yet: merged since `watch_since`, and, with `watch_open_prs: enabled`, open ones —
-so a designer sees a developer's new UI while it can still change. An entry's `state` is
-`open` or `merged`; `kind: merged` is an open PR's card that has now shipped.
+so a designer sees a developer's new UI while it can still change. A draft is never carded: it
+is listed once it is ready, and one carded before it went back to draft keeps its card, with
+nothing due while it is a draft. An entry's `state` is `open` or `merged`; `kind: merged` is an
+open PR's card that has now shipped, `kind: push` a new push on it ([A new push](#a-new-push)).
 `issues_due` (labelled issues) is [requests.md](requests.md) → Issues. Each becomes one card a designer reads in under a minute
 and understands without opening the code. Work them one by one; with several, the
 run already dispatched all but the first ([CLAUDE.md](../CLAUDE.md) → Fan-out).
@@ -109,9 +111,11 @@ steps say; the decision notes of step 4 are always yours to read.
    (prints the asset id); write the card JSON to a file and `design desk upsert <file>` with
    `kind: change`, the fields above and `screens: [{asset, caption}]`. The store finds an
    existing card of the same PR and updates it, so a retry never makes a second card.
-9. **Record.** An open PR: `bash "$HOME/scripts/ledger.sh" open <repo> <pr> <card id>` (it is
-   due again when it merges: then update the same card — the store finds it by the PR — say
-   it shipped, set `environment: null`, and `ledger.sh done`). A merged PR: `ledger.sh done <repo> <pr> <card id>`.
+9. **Record.** An open PR: `bash "$HOME/scripts/ledger.sh" open <repo> <pr> <card id> <head>`,
+   `<head>` the commit the card was judged on (`gh pr view <pr> -R <repo> --json headRefOid`). It
+   is due again on a push that touches UI files, and when it merges: then update the same card —
+   the store finds it by the PR — say it shipped, set `environment: null`, and `ledger.sh done`.
+   A merged PR: `ledger.sh done <repo> <pr> <card id>`.
    A merged or closed PR with a `pr<n>` screens instance: delete it ([screens.md](screens.md)
    → Clean up). With the product map, update the screens the change touched
    ([map.md](map.md) → Keep it current).
@@ -156,6 +160,16 @@ steps say; the decision notes of step 4 are always yours to read.
 
 Any step that fails after the claim → `ledger.sh fail <repo> <pr> "<what failed>"`, log it,
 and go on with the next change; the pre-flight retries it up to three times.
+
+## A new push
+
+The pre-flight compares a carded open PR's head with the one `ledger.sh open` recorded. A push
+whose commits touch no UI file only moves the recorded head; one that does is a `kind: push`
+entry, with `head`, `before` (the head the card was judged on) and the push's `ui_files`. Claim
+it, and update the card the PR already has (the store finds it by the PR): what the new commits
+(`git diff <before> <head> -- <ui files>`) change for people, its screens when they changed, its
+`attention`, and step 11's comparison on the new head; then step 13 and `ledger.sh open <repo>
+<pr> <card id> <head>`, also when nothing people see changed.
 
 ## CI gate
 
@@ -206,10 +220,10 @@ Merged and closed pull requests are never touched: their checks no longer matter
   requests" (`ci_gate` off). No comment is created for a pass. Facts only: the
   reasons as on the card, no opinion, no suggestion. A failed comment write is logged
   (`logev warn ci …`) and never changes `ci`; the next status write tries again.
-- **A new commit** on a PR with `ci`: the Comments on GitHub pass below finds it (a push puts
-  the copy behind GitHub). Look at what the new commits change; when it changes what people
-  see, update the card's `attention` (and `design_check`, step 11). Set the status on the new
-  head as above and upsert the new `sha`. A card a person marked handled stays handled.
+- **A new commit** on a PR with `ci`: one that touches UI files is [A new push](#a-new-push);
+  any other the Comments on GitHub pass below finds (a push puts the copy behind GitHub). Either
+  way, set the status on the new head as above and upsert the new `sha`. A card a person marked
+  handled stays handled.
 - **Cards already on the Desk.** The gate's first step runs when a card is written, so the
   inbox pre-flight also lists, while `ci_gate` is `enabled`, every judged change card of an
   open PR (its `attention`, a `design_check`, a decision that counts it goes against: in force and

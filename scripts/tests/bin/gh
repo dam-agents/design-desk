@@ -15,7 +15,7 @@ case "$args" in
   *"--jq .private"*) cat "$STUB_DIR/private.txt" 2>/dev/null || { echo "stub: no such repository" >&2; exit 1; };;
   *milestones*) cat "$STUB_DIR/milestones.json" 2>/dev/null || echo '[]';;
   *repos/*/releases*) cat "$STUB_DIR/releases.json" 2>/dev/null || echo '[]';;
-  # The first line of each commit's message between two tags, as the pre-flight's --jq asks.
+  # As the pre-flight's --jq asks: the first line of each commit's message between two tags, or the files a push changed.
   *repos/*/compare/*)
     t="$(printf '%s' "$args" | sed -E 's#.*compare/([^ ?]+).*#\1#; s#[^A-Za-z0-9.-]#_#g')"
     cat "$STUB_DIR/compare-$t.txt" 2>/dev/null || { echo "stub: no compare $t" >&2; exit 1; };;
@@ -25,7 +25,7 @@ case "$args" in
   *pulls/*/files*)
     n="$(printf '%s' "$args" | sed -E 's#.*pulls/([0-9]+)/files.*#\1#')"
     f="$STUB_DIR/files-$n.txt"; [ -f "$f" ] && cat "$f";;
-  *repos/*/pulls/[0-9]*) # one pull request: "<head repo>\t<base repo>", as pr_same_repo's --jq asks
+  *repos/*/pulls/[0-9]*) # one pull request, as the caller's --jq asks: "<head repo>\t<base repo>" (pr_same_repo), its head sha (the watch)
     n="$(printf '%s' "$args" | sed -E 's#.*pulls/([0-9]+).*#\1#')"
     f="$STUB_DIR/pull-$n.tsv"; [ -f "$f" ] || { echo "stub: no pull $n" >&2; exit 1; }; cat "$f";;
   *) echo "stub: unhandled gh $args" >&2; exit 1;;

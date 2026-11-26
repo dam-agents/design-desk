@@ -17,7 +17,8 @@ file is unchanged; exit 3 means another writer came first (an admin's roster row
   (the hourly search starts later by itself, two days before the last pass that left nothing
   behind or at the oldest change still due: `work/.watch-cursor`);
   `max_changes_per_run` (`10`); `watch_paths` — UI globs for a repo without a profile;
-  `watch_open_prs` (`enabled`) — open PRs get cards too; `ci_gate` (`disabled`) — `enabled`:
+  `watch_open_prs` (`enabled`) — ready open PRs get cards too, drafts not, and a push that
+  touches UI files updates one ([watch.md](watch.md) → A new push); `ci_gate` (`disabled`) — `enabled`:
   Design Desk's check on GitHub passes an open PR nobody needs to look at and fails one that
   waits for a designer or a UI dev owner until it is marked handled, and keeps one comment on
   the PR that says why (both as the agent's account). It covers new cards as they

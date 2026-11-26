@@ -82,6 +82,50 @@ printf -- '- repos: acme/widgets
 ' > "$WORK_DIR/CONFIG.md"
 assert "issue_label none and watch_open_prs disabled turn both off" '(.issues_due | length) == 0 and ([.changes_due[]? | select(.state == "open")] | length) == 0' "$(bash "$ROOT/scripts/preflight.sh" watch)"
 
+# Drafts stay off the Desk until they are ready; a carded open PR is due again only on a push
+# that touches UI files, compared with the head it was carded on.
+printf -- '- repos: acme/widgets\n- watch_since: 2026-10-01T00:00:00Z\n- issue_label: none\n- max_changes_per_run: 5\n' > "$WORK_DIR/CONFIG.md"
+rm -f "$WORK_DIR/CHANGES.tsv" "$WORK_DIR/.watch-cursor" "$STUB_DIR/gh.calls"
+printf '{"incomplete_results":false,"items":[]}' > "$STUB_DIR/search.json"
+openpr() { printf '{"number":%s,"title":"PR %s","html_url":"https://github.com/acme/widgets/pull/%s","user":{"login":"erin"},"draft":%s,"pull_request":{"merged_at":null}}' "$1" "$1" "$1" "$2"; }
+printf '{"incomplete_results":false,"items":[%s,%s]}' "$(openpr 40 true)" "$(openpr 41 false)" > "$STUB_DIR/open.json"
+printf 'src/a.tsx\n' > "$STUB_DIR/files-40.txt"; printf 'src/b.tsx\n' > "$STUB_DIR/files-41.txt"
+outd="$(bash "$ROOT/scripts/preflight.sh" watch)"
+assert "a draft is left out, a ready PR is listed" '[.changes_due[].pr] == [41]' "$outd"
+assert "an open PR's fields line up (it has no merge time)" '.changes_due[0] | .title == "PR 41" and .author == "erin" and .merged_at == null and .draft == false' "$outd"
+assert "the open search asks for ready PRs only" '. == true' "$(grep 'is:open' "$STUB_DIR/gh.calls" | grep -q 'draft:false' && echo true || echo false)"
+printf '{"incomplete_results":false,"items":[%s]}' "$(openpr 40 false)" > "$STUB_DIR/open.json"
+assert "the draft, now ready, is listed" '[.changes_due[] | select(.pr == 40) | .kind] == ["first"]' "$(bash "$ROOT/scripts/preflight.sh" watch)"
+bash "$ROOT/scripts/ledger.sh" open acme/widgets 40 C-40 aaaaaaa1 >/dev/null
+bash "$ROOT/scripts/ledger.sh" open acme/widgets 41 C-41 ccccccc1 >/dev/null
+bash "$ROOT/scripts/ledger.sh" open acme/widgets 42 C-42 >/dev/null
+assert "ledger.sh open records the head in the note" '.row.status == "open" and .row.note == "head aaaaaaa1"' "$(bash "$ROOT/scripts/ledger.sh" show acme/widgets 40)"
+assert "a head that is no sha is refused" '.outcome == "error"' "$(bash "$ROOT/scripts/ledger.sh" open acme/widgets 40 C-40 'x y' 2>/dev/null)"
+printf '{"incomplete_results":false,"items":[%s,%s,%s,%s]}' "$(openpr 40 false)" "$(openpr 41 false)" "$(openpr 42 false)" "$(openpr 43 false)" > "$STUB_DIR/open.json"
+printf 'bbbbbbb2\n' > "$STUB_DIR/pull-40.tsv"; printf 'src/a.tsx\nREADME.md\n' > "$STUB_DIR/compare-aaaaaaa1...bbbbbbb2.txt"
+printf 'ddddddd2\n' > "$STUB_DIR/pull-41.tsv"; printf 'README.md\n' > "$STUB_DIR/compare-ccccccc1...ddddddd2.txt"
+printf 'eeeeeee2\n' > "$STUB_DIR/pull-42.tsv"
+bash "$ROOT/scripts/ledger.sh" open acme/widgets 43 C-43 fffffff1 >/dev/null   # its head cannot be read: no pull-43
+outp="$(bash "$ROOT/scripts/preflight.sh" watch)"
+assert "a push with UI files is due as a push" '[.changes_due[] | select(.pr == 40) | {kind, state, head, before, ui_files}] == [{kind: "push", state: "open", head: "bbbbbbb2", before: "aaaaaaa1", ui_files: ["src/a.tsx"]}]' "$outp"
+assert "a push without UI files is not due" '[.changes_due[].pr] == [40]' "$outp"
+assert "its recorded head moves on" '.row.status == "open" and .row.card == "C-41" and .row.note == "head ddddddd2"' "$(bash "$ROOT/scripts/ledger.sh" show acme/widgets 41)"
+assert "no recorded head records the current one, with no run" '.row.status == "open" and .row.card == "C-42" and .row.note == "head eeeeeee2"' "$(bash "$ROOT/scripts/ledger.sh" show acme/widgets 42)"
+assert "the push's row is due and keeps its card" '.row.status == "due" and .row.card == "C-40"' "$(bash "$ROOT/scripts/ledger.sh" show acme/widgets 40)"
+assert "a head that cannot be read is logged, the row left as it was" '(.logs | map(test("43: could not read its head")) | any)' "$outp"
+assert "and retried next pass" '.row.note == "head fffffff1"' "$(bash "$ROOT/scripts/ledger.sh" show acme/widgets 43)"
+outq="$(bash "$ROOT/scripts/preflight.sh" watch)"
+assert "an unchanged head is due for nothing" '[.changes_due[]?.pr] == []' "$outq"
+assert "the unread head is read again" '(.logs | map(test("43: could not read its head")) | any)' "$outq"
+# Back to draft: it keeps its card, and nothing is due for it, not even a head lookup.
+bash "$ROOT/scripts/ledger.sh" open acme/widgets 40 C-40 bbbbbbb2 >/dev/null
+printf 'ggggggg3\n' > "$STUB_DIR/pull-40.tsv"; printf 'src/a.tsx\n' > "$STUB_DIR/compare-bbbbbbb2...ggggggg3.txt"
+printf '{"incomplete_results":false,"items":[%s]}' "$(openpr 40 true)" > "$STUB_DIR/open.json"; : > "$STUB_DIR/gh.calls"
+assert "a carded PR back to draft is due for nothing" '[.changes_due[]?.pr] == []' "$(bash "$ROOT/scripts/preflight.sh" watch)"
+assert "and its head is not read" '. == false' "$(grep -q 'pulls/40' "$STUB_DIR/gh.calls" && echo true || echo false)"
+assert "its card stays recorded" '.row.status == "open" and .row.card == "C-40"' "$(bash "$ROOT/scripts/ledger.sh" show acme/widgets 40)"
+printf '{"incomplete_results":false,"items":[]}' > "$STUB_DIR/open.json"
+
 # The Desk's GitHub copies: one never read, and one GitHub changed since, open a run alone;
 # one never read whose last 3 reads failed does not, nor does one outside the watched
 # repositories, read or not: github-sync never reads it.
