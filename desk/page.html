@@ -262,6 +262,7 @@
   .spill[data-s="open"] { --p: var(--ok); } .spill[data-s="dev"] { --p: var(--accent); } .spill[data-s="shipped"] { --p: var(--live); }
   .spill[data-s="none"] { --p: var(--muted); } .spill[data-s="closed"] { --p: var(--bad); }
   .spill[data-s="draft"] { --p: var(--muted); background: transparent; border: 1px dashed color-mix(in srgb, var(--p) 70%, transparent); line-height: 18px; } .spill:is([data-s="proposal"], [data-s="proposed"]) { --p: var(--warn); }
+  .spill[data-s="writing"] { --p: var(--accent); } .spill[data-s="answers"] { --p: var(--turn); } .spill[data-s="specready"] { --p: var(--ok); }
   /* Simple mode's head of an item: kept in view while the page scrolls. Its moves sit beside the
      title alone; the line of its state and facts takes the whole width under both. The title keeps
      to one line, cut with an ellipsis (its full words on hover), the number and the link close by. */
@@ -1522,12 +1523,33 @@
   h3 .locked-note { font-weight: 400; font-size: var(--fs-meta); margin-left: 12px; }
   .anchor-text, .brief-toggle { text-decoration: underline; text-decoration-thickness: 1px; text-decoration-color: color-mix(in srgb, currentColor 28%, transparent); text-underline-offset: 3px; transition: color .12s ease, text-decoration-color .12s ease; }
   .anchor-text { border: 0; background: none; padding: 0; font: inherit; color: var(--ink); cursor: pointer; } .anchor-text:hover, .brief-toggle:hover { text-decoration-color: currentColor; }
-  /* A spec that waits for its review: a banner under the head, in Approve's green; Design Desk rewriting it, in its blue (docs/desk-page.md → The spec banner). */
-  .spec-banner { margin: 12px 0; border-radius: var(--radius); background: var(--approved-soft); border: 1px solid color-mix(in srgb, var(--approved) 35%, transparent); overflow: hidden; }
-  .spec-banner:is([data-s="rewriting"], [data-s="asks"]) { background: var(--info-soft); border-color: color-mix(in srgb, var(--accent) 30%, transparent); }
+  /* The spec's flow, a banner under the head (docs/desk-page.md → The spec banner): on the selected row's grey in every
+     phase, its own colour only as an edge down its left and its icon — Approve's green for a spec to send, Design
+     Desk's blue while it writes or rewrites it, the magenta of a person's move while its questions wait. What sits
+     in it (the options, the spec read) stands out in white. */
+  /* A little wider than the reading column under it, so it reads as the page's head, not a strip across the window. */
+  .spec-banner { --sb: var(--approved); max-width: calc(var(--read) + 160px); margin: 12px 0; border-radius: var(--radius); background: var(--soft); border: 1px solid var(--line); box-shadow: inset 3px 0 0 var(--sb); overflow: hidden; }
+  .spec-banner:is([data-s="rewriting"], [data-s="writing"]) { --sb: var(--accent); } .spec-banner[data-s="asks"] { --sb: var(--turn); }
   .spec-banner .sb-row { display: flex; align-items: flex-start; gap: 12px 16px; padding: 12px 16px 8px; }
-  .spec-banner .sb-ico { flex: none; width: 36px; height: 36px; border-radius: var(--r-sm); display: grid; place-items: center; background: var(--panel); color: var(--approved); }
-  .spec-banner:is([data-s="rewriting"], [data-s="asks"]) .sb-ico { color: var(--accent); } .spec-banner .sb-ico .spin { margin: 0; }
+  .spec-banner .sb-ico { flex: none; width: 36px; height: 36px; border-radius: var(--r-sm); display: grid; place-items: center; background: var(--panel); color: var(--sb); }
+  .spec-banner .sb-ico .spin { margin: 0; }
+  /* The spec's questions, one at a time (docs/desk-page.md → The spec banner): a thin progress line, the question,
+     its options as rows to click, an optional note, and the moves; then every answer, each a way back. */
+  .spec-banner .sb-ask { padding: 0 16px 16px 68px; }
+  .ask-step { display: grid; gap: 12px; max-width: 640px; font-size: var(--fs-ui); }
+  .ask-step .as-bar { height: 4px; border-radius: 999px; background: color-mix(in srgb, var(--turn) 18%, transparent); overflow: hidden; }
+  .ask-step .as-bar i { display: block; height: 100%; background: var(--turn); transition: width .2s ease; }
+  .ask-step .as-text > :first-child { margin-top: 0; } .ask-step .as-text > :last-child { margin-bottom: 0; }
+  .ask-step .as-q { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: 8px; }
+  .ask-step .as-q legend { font-weight: 600; color: var(--ink); padding: 0; margin-bottom: 4px; }
+  .ask-step .as-opt { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--panel); color: var(--ink); cursor: pointer; }
+  .ask-step .as-opt:hover { border-color: color-mix(in srgb, var(--turn) 50%, var(--line)); }
+  .ask-step .as-opt:has(input:checked) { border-color: var(--turn); box-shadow: inset 0 0 0 1px var(--turn); }
+  .ask-step .as-opt input[type=radio] { width: auto; margin: 0; accent-color: var(--turn); }
+  .ask-step .as-moves { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; } .ask-step .as-moves [data-specq-rest] { margin-left: auto; }
+  .ask-step .as-sum { margin: 0; padding-left: 20px; display: grid; gap: 8px; } .ask-step .as-sum .as-pick { display: block; color: var(--ink); }
+  .ask-step > .hint { margin: 0; }
+  @media (max-width: 599px) { .spec-banner .sb-ask { padding-left: 16px; } }
   .spec-banner .sb-ico svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
   .spec-banner .sb-main { flex: 1 1 280px; min-width: 0; } .spec-banner .sb-main b { display: block; font-size: var(--fs-ui); font-weight: 600; color: var(--ink); }
   /* One row of buttons along its bottom: Read the spec, a ghost, on the left, over where the spec opens; what moves it
@@ -1626,6 +1648,7 @@
   .line5 .l { display: inline-flex; align-items: center; gap: 8px; padding: 2px 0 4px; border-bottom: 2px solid transparent; }
   .line5 li + li::before { content: ""; width: 16px; height: 1px; background: var(--line); margin: 0 12px; align-self: center; }
   .line5 li.done { color: var(--ink); }
+  .line5 .l5-q { color: var(--turn); font-size: var(--fs-meta); font-weight: 500; padding: 0 8px; border-radius: 999px; background: var(--turn-soft); }
   .line5 li.done + li::before { background: color-mix(in srgb, var(--ink) 45%, var(--line)); }
   .line5 li .ck { color: var(--st-bar, var(--o)); font-weight: 600; font-size: .9em; }
   .line5 li.now { color: var(--ink); font-weight: 600; } .line5 li.now .l { border-bottom-color: var(--o); }
@@ -2184,7 +2207,7 @@
   const stageSub = (c) => {
     const proto = typeof c.prototype === "string" ? c.prototype : c.prototype?.state;
     if (c.status === "declined") return "";
-    if (asking(c)) return "Design Desk asks you";
+    if (asking(c)) return specPhase(c)?.phase === "asks" ? "Questions for you" : "Design Desk asks you";
     if (c.status === "triage") return checked(c) ? "done, no options yet" : "";
     if (c.status === "variants") return held(c) ? `${optionCount(c)} drawn` : emptied(c) ? "none left" : "";
     if (c.status === "feedback") return voteEnded(c) ? "the vote ended" : "votes and comments";
@@ -2504,6 +2527,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // A button's icon, by its data- action (or id), drawn before its words; a button whose
   // words start with a sign of their own (▶, ✓, 👍, +…) keeps that sign instead.
   const ICON_PATH = {
+    question: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 0 1 5 .5c0 1.7-2.5 2-2.5 3.5M12 17h.01"/>',
     pen: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
     cross: '<path d="M6 6l12 12M18 6L6 18"/>',
     spark: '<path d="M12 3l1.8 5.4L19 10l-5.2 1.6L12 17l-1.8-5.4L5 10l5.2-1.6Z"/><path d="M19 17v4M17 19h4"/>',
@@ -2967,6 +2991,13 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // after the newest option (a reopened request, checked again) keeps saying it checks.
   const workDone = (c, w) => ["request", "follow-up"].includes(w.kind) && (c.variants || []).some((v) => !v.by && v.drawn && w.created && v.drawn >= w.created);
   const working = (c) => [...new Set((c.waiting || []).filter((w) => !workDone(c, w)).map(workKind).filter((k) => k !== "question"))];
+  // How long Design Desk's work on it takes: since when it works and how long that usually takes;
+  // before it started, whether it starts now (the page called it) or with its next look, every 10 minutes.
+  const etaOf = (c) => {
+    const item = (c.waiting || []).find((w) => w.kind !== "question" && !workDone(c, w));
+    return !item ? "" : item.state === "claimed" && item.started ? `started ${ago(item.started) === "just now" ? "just now" : `${ago(item.started)} ago`}${item.usual_min ? `, usually about ${item.usual_min} min` : ""}`
+      : !item.created ? "" : S.me?.pings && Date.now() - Date.parse(item.created) < 12e4 ? "starting" : "in the queue, starts within 10 minutes";
+  };
   // Every open item, a finished request item too: the page polls fast until the item is closed.
   const waitingKinds = (c) => [...new Set((c.waiting || []).map(workKind).filter((k) => k !== "question"))];
   const optionName = (c, id) => (c.variants || []).find((v) => v.id === id)?.name || "an option";
@@ -3617,24 +3648,44 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const mySide = () => (DEVELOPERS.includes(S.me?.role) ? "developers" : "designers");
   // An approved request whose spec draft waits for a person to send it is theirs to move: in its review.
   // As full mode reads it: a spec draft waits until a person sends it, unless its approver asked it to go by itself.
-  const specWaits = (c) => c.status === "spec" && c.spec?.review === "draft" && !c.approved?.auto_send;
-  // A spec sent back for changes is still not with developers, whatever its approver asked: it stays
-  // in its review while Design Desk rewrites it, and comes back as a draft to read (docs/desk-page.md
-  // → A request's state in the list).
-  const specInReview = (c) => specWaits(c) || (c.status === "spec" && c.spec?.review === "changes");
+  const specWaits = (c) => specPhase(c)?.phase === "ready";
+  // Where an approved request's spec stands (docs/desk-page.md → The spec banner): null before it is
+  // approved or once closed; else `writing` (Design Desk reads the design, or writes the spec from the
+  // answers: `answered`), `asks` (its questions wait), `ready` (a draft to read and send), `rewriting`
+  // (after Ask for changes) or `sent`. A list row reads the same from what the server sends with it.
+  // Only this approval's forms count: a request reopened and approved again starts afresh.
+  const handoffForm = (c) => { const at = c.approved?.at || c.approved_at || ""; return (c.threads || []).filter((th) => th.kind === "asks" && th.step === "handoff" && th.questions && (th.messages?.[0]?.at || "") >= at); };
+  const handoffAt = (c) => (c.waiting || []).some((w) => w.kind === "handoff" && w.scope !== "deliver");
+  function specPhase(c) {
+    if (c?.kind !== "request" || c.status === "declined" || preDesign(c)) return null;
+    if (c.status === "handed-off" || c.spec?.review === "sent") return { phase: "sent" };
+    // A request at the spec's step is approved, whatever a row carries of it.
+    if (!(c.approved || c.approved_at || c.status === "spec")) return null;
+    const shown = asShown(c).status === "spec" || Boolean(c.approved_at);
+    const answered = handoffForm(c).some((th) => th.state !== "open");
+    if (shown && asking(c)) return { phase: "asks" };
+    if (c.spec?.review === "changes") return { phase: "rewriting" };
+    if (c.status === "spec" && c.spec?.review === "draft" && (c.spec.asset || !c.threads) && !handoffAt(c)) return { phase: "ready" };
+    return { phase: "writing", answered };
+  }
+  const SPEC_PILL = { writing: "writing", asks: "answers", ready: "specready", rewriting: "writing" };
   // Its review, by its side: Dev review (key `proposal`) For Developers, Design review (key `open`) For Designers.
-  // In Dev review a request not yet approved says Proposal on its pill; a change, or a spec draft waiting, Dev review.
+  // In Dev review a request not yet approved says Proposal on its pill; a change, or a spec on its way, Dev review.
   const reviewOf = (c) => (forOf(c) !== "developers" ? { state: "open", pill: null }
-    : { state: "proposal", pill: c.kind === "request" && !specInReview(c) ? "proposed" : null });
+    : { state: "proposal", pill: c.kind === "request" && !specPhase(c) ? "proposed" : null });
   function simpleState(c, onPage = false) {
     if (!c || !["request", "change"].includes(c.kind)) return null;
     if (c.kind === "request") {
       if (c.status === "declined") return { state: "closed", pill: "closed" };
       if (preDesign(c)) return { state: c.stage, pill: c.stage === "proposal" ? "proposed" : null };
       if (c.status === "handed-off") return c.built ? { state: "closed", pill: "shipped" } : { state: "dev", pill: null };
-      return c.status === "spec" && !specInReview(c) ? { state: "dev", pill: null } : reviewOf(c);
+      // Approved, its spec not yet sent: still in its review, the pill naming where the spec stands.
+      // Only a spec sent is In dev (docs/desk-page.md → A request's state in the list).
+      const sp = specPhase(c);
+      if (sp?.phase === "sent") return { state: "dev", pill: null };
+      return sp ? { ...reviewOf(c), pill: SPEC_PILL[sp.phase] } : reviewOf(c);
     }
-    // An archived change is never listed, but its link still opens it: nobody works on it.
+  // An archived change is never listed, but its link still opens it: nobody works on it.
     if (c.status === "archived") return onPage ? { state: "closed", pill: c.source?.merged_at ? (c.handled ? "shipped" : "none") : "closed" } : null;
     // A review asked the developer for changes: theirs until new commits arrive (docs/desk.md → Reviews).
     if (c.responsible?.who === "developer" && !c.source?.merged_at) return { state: "dev", pill: null };
@@ -3649,10 +3700,13 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const seesStage = (k) => (k === "draft" ? startsDraft() && can("request") : true) || S.cards.some((c) => !closed(c) && preDesign(c) === k);
   const simStates = () => SIM_ALL.filter(([k]) => seesStage(k));
   const SIM_KINDS = [["request", "Requests"], ["change", "PR changes"]];
-  const SIM_PILL = { draft: "Draft", proposal: "Dev review", proposed: "Proposal", open: "Design review", dev: "In dev", shipped: "Shipped", none: "No review needed", closed: "Closed" };
+  const SIM_PILL = { draft: "Draft", proposal: "Dev review", proposed: "Proposal", open: "Design review", dev: "In dev", shipped: "Shipped", none: "No review needed", closed: "Closed",
+    writing: "Writing spec", answers: "Answers needed", specready: "Spec ready" };
   const SIM_TIP = { draft: "A draft: only its author sees it until they send it on", proposal: "Dev review: the dev team approves it for dev or sends it to design; everyone may read it",
     proposed: "A proposal: the dev team approves it for dev or sends it to design; everyone may read it",
-    open: "Design review: it needs a design decision", dev: "Approved: developers are building it", shipped: "Approved by a person and shipped",
+    open: "Design review: it needs a design decision", dev: "Approved: developers are building it",
+    writing: "Design Desk is writing the developer spec; nothing has gone to developers yet", answers: "Design Desk has questions before it writes the spec",
+    specready: "The spec is written; someone who may approve it reads it and sends it", shipped: "Approved by a person and shipped",
     none: "Merged; Design Desk found nothing to review", closed: "Closed without being built" };
   // The filter: states and kinds, any of each; kept in this browser (desk-simFilter). By default
   // Design review for a designer, Draft and Dev review for a developer or a UI dev owner, every
@@ -4083,7 +4137,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       // In Dev review after design opened, the approval is Approve for dev; before design, the UI dev
       // owner's Approve for dev is the only one (docs/desk.md → Draft and Proposal).
       const dev = simpleState(c, true)?.state === "proposal";
-      if (open && !preDesign(c) && !specInReview(c) && canApprove(c) && (c.triage || (c.variants || []).length) && !closed(c)) out.push({ id: "approve", name: dev ? "Approve for dev" : "Approve", hint: dev ? "It goes to In dev, without a designer; your comments go with it." : "You approve the request; your comments go with it." });
+      if (open && !preDesign(c) && !specPhase(c) && canApprove(c) && (c.triage || (c.variants || []).length) && !closed(c)) out.push({ id: "approve", name: dev ? "Approve for dev" : "Approve", hint: dev ? "It goes to In dev, without a designer; your comments go with it." : "You approve the request; your comments go with it." });
       if (preDesign(c) && !closed(c) && stageMoves(c)[2]) out.push({ id: "approve-dev", name: "Approve for dev", hint: "It goes to In dev at once, without a designer; your comments go with it." });
     } else if (mayHandle(c) && c.status !== "archived") {
       // Merged: no next version to ask for, but a change nobody handled yet may still be approved.
@@ -6036,8 +6090,12 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const subs = [(v && VERDICT[typeOf(c)][v]?.[0]) || "Design Desk checks it", n ? plural(n, "option", "options") : "a few options",
       v && v !== "design" ? "votes and comments" : "votes and comments; a live prototype to try, if someone builds one", ap,
       S.me?.spec_review ? "once the spec is sent" : "after approval"];
+    // The spec's questions wait: the Approved step says how many, in a person's magenta (docs/desk-page.md → The spec banner).
+    const asks = bannerForm(c)?.questions.length || 0;
+    const waits = asks ? `${asks === 1 ? "a question waits" : `${asks} questions wait`} for your answers` : "";
+    if (asks) subs[3] = `${subs[3]}; ${waits}`;
     // The stages as words in one row: the passed ones ticked, the current one underlined.
-    return `<ol class="line5" aria-label="Stage ${i + 1} of ${STAGES.length}: ${esc(STAGES[i])}">${STAGES.map((l, k) => `<li class="${k < i ? "done" : k === i ? "now" : ""}" title="${esc(`${l}: ${subs[k]}`)}"${k === i ? ' aria-current="step"' : ""}><span class="l">${k < i ? '<span class="ck" aria-hidden="true">✓</span>' : ""}${esc(l)}</span></li>`).join("")}</ol>`;
+    return `<ol class="line5" aria-label="Stage ${i + 1} of ${STAGES.length}: ${esc(STAGES[i])}${asks ? `, ${esc(waits)}` : ""}">${STAGES.map((l, k) => `<li class="${k < i ? "done" : k === i ? "now" : ""}" title="${esc(`${l}: ${subs[k]}`)}"${k === i ? ' aria-current="step"' : ""}><span class="l">${k < i ? '<span class="ck" aria-hidden="true">✓</span>' : ""}${esc(l)}${k === 3 && asks ? `<span class="l5-q">${esc(plural(asks, "question", "questions"))}</span>` : ""}</span></li>`).join("")}</ol>`;
   }
 
   // Only a designer puts a card on the presentation, with its final version (docs/desk.md → The presentation).
@@ -6110,7 +6168,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       : { text: none || "Next: a designer, PM or developer starts the design options.", wait: "a designer", ways: [dev], buttons: row };
     // Nothing goes to developers with an open question: Design Desk asks here first (docs/handoff.md).
     if (c.status === "spec" && (c.threads || []).some((th) => th.kind === "asks" && th.state === "open"))
-      return { text: "Before it goes to developers, Design Desk needs your answers below.", sub: "The spec it will send is under The developer spec, below; your answers go into it.", buttons: "", ways: [] };
+      return { text: "Before Design Desk writes the spec, it needs your answers.", sub: "It writes the spec from them; you read it before it goes to developers.", buttons: "", ways: [] };
     // The spec waits for a person: read it, edit it or ask for changes, then send it (docs/handoff.md → Review before it goes).
     // Edit and Ask for changes sit on the spec itself, below.
     if (c.status === "spec" && c.spec?.review === "draft") {
@@ -6189,7 +6247,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (c.status === "declined") paths = [can("reopen") ? go("Reopen", "It goes back to where it was.") : no("Reopen", "Only a designer or a PM reopens it; say so in a comment.")];
     else if (c.status === "handed-off") paths = [info("Developers build it. When it ships, it appears under PR Changes; nothing for you to do here."), ...(seesDesigns() ? [go("Show the design", "It opens on Designs, as developers build it, with their questions for the designer.")] : [])];
     else if (c.status === "spec") paths = (c.threads || []).some((th) => th.kind === "asks" && th.state === "open")
-      ? [go("Answer Design Desk's questions", "They are under this box; the spec waits for them."), close()]
+      ? [go("Answer Design Desk's questions", bannerForm(c) ? "They are in the spec's banner, one at a time; Design Desk writes the spec from them." : "They are under this box; the spec waits for them."), close()]
       : [info("Design Desk writes the developer spec and sends it. Nothing for you to do."), close()];
     else if (c.status === "triage" && !c.triage) paths = [info("Design Desk checks it first: how the screen works today, who else is changing it, what a design change can do."), close()];
     // Checked, or at Options drawn with every option taken out: the way on is to draw them (again).
@@ -6247,39 +6305,114 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   }
   const specWho = (e) => e && e === S.me?.email ? "you" : e || "someone";
   const specBy = (x) => x.by?.agent || !x.by ? "Design Desk" : specWho(x.by.email);
-  // A spec once sent, or not waiting for a review: a fold further down, closed; open while Design
-  // Desk's question about it waits, so its answers are read beside it (docs/handoff.md step 4).
+  // A spec once sent, or not waiting for a review: a fold further down, closed (docs/desk-page.md → The spec banner).
   function specPanel(c) {
-    const sp = c.spec, asks = c.status === "spec" && (c.threads || []).some((th) => th.kind === "asks" && th.state === "open");
+    const sp = c.spec;
     const state = sp.sent ? `<span class="chip ok" title="Sent by ${esc(specWho(sp.sent.by?.email))}">✓ Sent ${esc(day(sp.sent.at))}</span>` : "";
-    return `<details class="fold" id="spec"${S.specEdit === c.id || asks ? " open" : ""}><summary>The developer spec${specTarget(c)} ${state}</summary><div class="panel">
+    return `<details class="fold" id="spec"${S.specEdit === c.id ? " open" : ""}><summary>The developer spec${specTarget(c)} ${state}</summary><div class="panel">
       ${specInner(c)}</div></details>`;
   }
-  // A spec waiting for its review, or rewritten after Ask for changes: a banner under the head, the
-  // spec closed in it until Read the spec, so the page below stays where it was (docs/desk-page.md → The spec banner).
-  const specBanners = (c) => c.status === "spec" && ["draft", "changes"].includes(c.spec?.review) && Boolean(c.spec?.asset);
+  // From Approve to Send to developers the spec's flow stands under the request's head as one banner,
+  // in both modes: Design Desk writing it, its questions one at a time, the spec to read and send, or
+  // rewritten after Ask for changes; once sent, the closed fold further down (docs/desk-page.md → The spec banner).
+  const specBanners = (c) => { const ph = specPhase(c)?.phase; return Boolean(ph) && ph !== "sent"; };
+  // The question form the banner asks, one question at a time: Design Desk's open handoff form.
+  const bannerForm = (c) => (specPhase(c)?.phase === "asks" ? handoffForm(c).find((th) => th.state === "open") || null : null);
+  const inBanner = (c, th) => Boolean(th) && bannerForm(c)?.id === th.id;
+  // What a person picked so far, kept in this browser until they send it (docs/desk-page.md → The spec banner).
+  const askKey = (id) => `desk-asks-${id}`;
+  function askDraft(th) {
+    let d = null; try { d = JSON.parse(store.get(askKey(th.id)) || "null"); } catch {}
+    const n = th.questions.length, answers = th.questions.map((q, i) => { const a = d?.answers?.[i] || {}; return { choice: q.options.includes(a.choice) ? a.choice : null, note: typeof a.note === "string" ? a.note : "" }; });
+    return { step: Math.max(0, Math.min(n, Number(d?.step) || 0)), answers };
+  }
+  const saveAskDraft = (th, d) => store.set(askKey(th.id), JSON.stringify(d));
+  function askStepper(c, th) {
+    const qs = th.questions, n = qs.length, d = askDraft(th), k = d.step, id = esc(th.id);
+    if (!mayIn(th, "reply")) return `<div class="ask-step ro">${md(th.messages[0].text)}<ol class="as-sum">${qs.map((q) => `<li>${txt(q.text)} <span class="hint">${q.options.map(esc).join(" · ")}</span></li>`).join("")}</ol>${notYours}</div>`;
+    const bar = `<div class="as-bar" role="progressbar" aria-label="Questions answered" aria-valuemin="0" aria-valuemax="${n}" aria-valuenow="${k}"><i style="width:${Math.round((k / n) * 100)}%"></i></div>`;
+    const rest = `<button class="btn ghost" data-specq-rest="${id}" title="Sends what you picked; Design Desk takes its recommendation for the rest">Leave the rest to Design Desk</button>`;
+    const back = k ? `<button class="btn" data-specq-back="${id}">Back</button>` : "";
+    if (k >= n) {
+      // The summary: every pick, each a way back to its question, then the one send.
+      const reads = specReads(c);
+      const rows = qs.map((q, i) => { const a = d.answers[i]; return `<li><button class="anchor-text" data-specq-goto="${id}|${i}" title="Change this answer">${txt(q.text)}</button>
+        <span class="as-pick">${a.choice ? `<b>${esc(a.choice)}</b>` : `Left to Design Desk${q.suggested ? ` <span class="hint">(recommended: ${esc(q.suggested)})</span>` : ""}`}${a.note.trim() ? ` — ${esc(a.note.trim())}` : ""}</span></li>`; }).join("");
+      return `<div class="ask-step" data-specq-step="${id}">${bar}<ol class="as-sum">${rows}</ol>
+        <p class="hint">${reads ? "Design Desk writes the spec from these; you read it before it goes." : "Design Desk writes the spec from these and sends it to developers."}</p>
+        <div class="as-moves">${back}<button class="btn primary" data-specq-send="${id}">Send answers</button></div></div>`;
+    }
+    const q = qs[k], a = d.answers[k];
+    const opts = q.options.map((o, i) => `<label class="as-opt"><input type="radio" name="as-${id}-${k}" value="${esc(o)}" data-specq-opt="${id}|${k}|${i}"${a.choice === o ? " checked" : ""} /><span>${esc(o)}</span>${o === q.suggested ? ` <span class="chip info" title="Design Desk takes this one if you leave the question">recommended</span>` : ""}</label>`).join("");
+    return `<div class="ask-step" data-specq-step="${id}">${bar}${k === 0 && th.messages[0]?.text ? `<div class="as-text">${md(th.messages[0].text)}</div>` : ""}
+      <fieldset class="as-q"><legend>${txt(q.text)}</legend>${opts}
+      <input class="as-note" placeholder="Anything to add? (optional)" aria-label="Anything to add? (optional)" data-specq-note="${id}|${k}" value="${esc(a.note)}" /></fieldset>
+      <div class="as-moves">${back}<button class="btn primary" data-specq-next="${id}">${k === n - 1 ? "Review your answers" : "Next"}</button>${rest}</div></div>`;
+  }
+  // Whether a person reads the spec before it goes: `spec_review` on, or a request from an open pull
+  // request or from Slack, which always waits, unless its approver ticked the box that sends it as soon
+  // as it is written (docs/handoff.md → Review before it goes).
+  const specReads = (c) => Boolean(S.me?.spec_review || c.from_pr || c.origin?.channel === "slack") && !c.approved?.auto_send;
+  // Who answered the spec's questions, and when: the banner says so while Design Desk writes from them.
+  function answeredBy(c) {
+    const th = handoffForm(c).filter((x) => x.state !== "open").at(-1), m = th?.messages?.slice(1).find((x) => !x.by?.agent);
+    return m ? { mine: isMe(m.by?.email), line: `Answered by ${esc(personName(m.by?.email, m.by?.name || "someone"))}${m.at ? ` · ${esc(when(m.at))}` : ""}.` } : null;
+  }
   function specBanner(c) {
-    const sp = c.spec, rewriting = sp.review === "changes", may = canApprove(c);
-    const asks = (c.threads || []).some((th) => th.kind === "asks" && th.state === "open");
-    const versions = (sp.history || []).length + 1, shown = S.specOpen === c.id || S.specEdit === c.id;
-    const s = rewriting ? "rewriting" : asks ? "asks" : may ? "ready" : "waits";
-    const title = { rewriting: "Design Desk is rewriting the spec as you asked.", asks: "Before the spec goes, Design Desk needs your answers below.",
+    const sp = c.spec || {}, ph = specPhase(c), may = canApprove(c), form = bannerForm(c);
+    const s = ph.phase === "ready" ? (may ? "ready" : "waits") : ph.phase;
+    const versions = (sp.history || []).length + 1, shown = Boolean(sp.asset) && (S.specOpen === c.id || S.specEdit === c.id);
+    const d = form ? askDraft(form) : null, n = form?.questions.length || 0, by = ph.answered ? answeredBy(c) : null;
+    // Writing, but nothing of Design Desk's is queued or at work on it: say so, with no spinner.
+    const idle = s === "writing" && c.status === "spec" && !handoffAt(c) && !working(c).length;
+    const title = idle ? "Design Desk has not written the spec yet." : { writing: ph.answered ? `Design Desk is writing the spec with ${!by || by.mine ? "your" : "the"} answers.` : "Design Desk is reading the design and may have a few questions before it writes the spec.",
+      asks: form ? "Before Design Desk writes the spec" : "Before Design Desk writes the spec, it needs your answer below.",
+      rewriting: "Design Desk is rewriting the spec as you asked.",
       ready: "The developer spec is ready. Read it, then send it to developers.", waits: "The developer spec is written. It goes to developers once someone who may approve it has read it." }[s];
-    const last = versions > 1 ? `Version ${versions} of ${versions}` : "Version 1", latest = { at: sp.at, by: sp.by };
-    const sub = rewriting && sp.asked ? `Asked by ${esc(specWho(sp.asked.by?.email))}${sp.asked.at ? ` · ${esc(when(sp.asked.at))}` : ""}. It comes back here to read.`
+    const last = versions > 1 ? `Version ${versions} of ${versions}` : "Version 1", latest = { at: sp.at, by: sp.by }, eta = etaOf(c);
+    const sub = idle ? `${by?.line ? `${by.line} ` : ""}If it stays like this, tell ${esc(contact())}.` : s === "writing" ? [by?.line || "", eta ? `${esc(eta[0].toUpperCase() + eta.slice(1))}.` : "", c.approved?.auto_send ? "It goes to developers as soon as it is written." : "It comes back here to read."].filter(Boolean).join(" ")
+      : s === "asks" ? (form ? (d.step >= n ? "Your answers, before they go" : `Question ${d.step + 1} of ${n}`) : "")
+      : s === "rewriting" && sp.asked ? `Asked by ${esc(specWho(sp.asked.by?.email))}${sp.asked.at ? ` · ${esc(when(sp.asked.at))}` : ""}. It comes back here to read.`
       : `${last}, by ${esc(specBy(latest))}${sp.at ? ` · ${esc(when(sp.at))}` : ""}${specTarget(c) ? ` ·${specTarget(c)}` : ""}.${s === "waits" ? (c.size?.small ? " A developer reads it and sends it." : " A designer, a PM or a UI dev owner reads it and sends it.") : ""}`;
-    const ico = rewriting ? `<span class="spin" aria-hidden="true"></span>` : `<svg viewBox="0 0 24 24" aria-hidden="true">${ICON_PATH.doc}</svg>`;
-    const read = `<button class="btn ghost" data-spec-read aria-expanded="${shown}" aria-controls="spec-read">${shown ? "Hide the spec" : rewriting ? "Read the last version" : "Read the spec"}${XCHEV}</button>`;
-    const acts = may && !rewriting && S.specEdit !== c.id ? `<button class="btn" data-spec-edit title="Change the text here; it becomes the newest version">✎ Edit</button><button class="btn" data-spec-changes title="Say what to change; Design Desk rewrites it and brings it back here">Ask for changes…</button>${asks ? "" : `<button class="btn primary" data-spec-send>Send to developers</button>`}` : "";
+    const ico = ["rewriting", "writing"].includes(s) && !idle ? `<span class="spin" aria-hidden="true"></span>` : `<svg viewBox="0 0 24 24" aria-hidden="true">${s === "asks" ? ICON_PATH.question : ICON_PATH.doc}</svg>`;
+    const read = sp.asset ? `<button class="btn ghost" data-spec-read aria-expanded="${shown}" aria-controls="spec-read">${shown ? "Hide the spec" : ["rewriting", "writing", "asks"].includes(s) ? "Read the last version" : "Read the spec"}${XCHEV}</button>` : "";
+    const acts = may && s === "ready" && S.specEdit !== c.id ? `<button class="btn" data-spec-edit title="Change the text here; it becomes the newest version">✎ Edit</button><button class="btn" data-spec-changes title="Say what to change; Design Desk rewrites it and brings it back here">Ask for changes…</button><button class="btn primary" data-spec-send>Send to developers</button>` : "";
+    const bar = read || acts ? `<div class="sb-bar">${read}${acts ? `<div class="sb-acts">${acts}</div>` : ""}</div>` : "";
     return `<section class="spec-banner" id="spec" data-s="${s}" aria-label="The developer spec">
-      <div class="sb-row"><span class="sb-ico">${ico}</span><div class="sb-main"><b>${esc(title)}</b><p class="hint">${sub}</p></div></div>
-      <div class="sb-bar">${read}${acts ? `<div class="sb-acts">${acts}</div>` : ""}</div>
+      <div class="sb-row"><span class="sb-ico">${ico}</span><div class="sb-main"><b>${esc(title)}</b>${sub ? `<p class="hint">${sub}</p>` : ""}</div></div>
+      ${form ? `<div class="sb-ask">${askStepper(c, form)}</div>` : ""}${bar}
       ${shown ? `<div class="sb-body" id="spec-read">${specInner(c)}</div>` : ""}</section>`;
   }
 
   // While the spec is edited, the text on the left reads on the right, pictures included.
   let specTimer = null;
   async function specPreview() { const t = $("#spec-text"), p = $("#spec-preview"); if (!t || !p) return; p.innerHTML = md(t.value); await loadPictures(p); }
+  // A pick or a note on the spec's questions is kept in this browser as it is made, until it is sent.
+  const askThread = (key) => { const [id, k, i] = key.split("|"); return [(S.card?.threads || []).find((x) => x.id === id), Number(k), Number(i)]; };
+  document.addEventListener("change", (e) => {
+    const key = e.target.dataset?.specqOpt; if (!key) return;
+    const [th, k, i] = askThread(key); if (!th?.questions) return;
+    const d = askDraft(th); d.answers[k].choice = th.questions[k].options[i]; saveAskDraft(th, d);
+  });
+  document.addEventListener("input", (e) => {
+    const key = e.target.dataset?.specqNote; if (!key) return;
+    const [th, k] = askThread(key); if (!th?.questions) return;
+    const d = askDraft(th); d.answers[k].note = e.target.value; saveAskDraft(th, d);
+  });
+  // Enter on a question moves on, as Next does.
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" || e.isComposing || !(e.target.dataset?.specqNote || e.target.dataset?.specqOpt)) return;
+    e.preventDefault(); e.target.closest(".ask-step")?.querySelector("[data-specq-next], [data-specq-send]")?.click();
+  });
+  // The step opened is focused on its pick (or its first option), the summary on Send answers.
+  const focusAsk = () => { const st = $(".ask-step[data-specq-step]"); (st?.querySelector("input[type=radio]:checked") || st?.querySelector("input[type=radio]") || st?.querySelector("[data-specq-send]"))?.focus({ preventScroll: true }); };
+  // A redraw (a poll) keeps the person on the option or in the note they were in, caret and all.
+  const askFocus = () => {
+    const a = document.activeElement, attr = a?.dataset?.specqOpt ? "data-specq-opt" : a?.dataset?.specqNote ? "data-specq-note" : null;
+    if (!attr) return () => {};
+    const key = a.getAttribute(attr), sel = attr === "data-specq-note" ? [a.selectionStart, a.selectionEnd] : null;
+    return () => { const b = document.querySelector(`[${attr}="${CSS.escape(key)}"]`); if (!b || b === a) return; b.focus({ preventScroll: true }); if (sel) try { b.setSelectionRange(...sel); } catch {} };
+  };
   document.addEventListener("input", (e) => { if (e.target.id === "spec-text") { S.specDraft = { card: S.card?.id, text: e.target.value }; clearTimeout(specTimer); specTimer = setTimeout(specPreview, 300); } });
 
   // The prototype's demo account in the facts' style: grey words, the values in ink.
@@ -6330,9 +6463,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const asks = (c.threads || []).filter((th) => th.kind === "asks" && th.state === "open");
     // How long: since when Design Desk works on it and how long that usually takes; before it
     // started, whether it starts now (the page called it) or with its next look, every 10 minutes.
-    const item = (c.waiting || []).find((w) => w.kind !== "question" && !workDone(c, w));
-    const eta = !item ? "" : item.state === "claimed" && item.started ? `started ${ago(item.started) === "just now" ? "just now" : `${ago(item.started)} ago`}${item.usual_min ? `, usually about ${item.usual_min} min` : ""}`
-      : !item.created ? "" : S.me?.pings && Date.now() - Date.parse(item.created) < 12e4 ? "starting" : "in the queue, starts within 10 minutes";
+    const eta = etaOf(c);
     const nx = nextFor(c);
     // Close stays at hand while the request is open, whatever step it is at.
     if (!closed(c) && (preDesign(c) ? closesStaged(c) : can("close") || can("skip")) && !nx.buttons.includes('data-act="close"')) nx.buttons += `<button class="btn" data-act="close">Close</button>`;
@@ -6348,7 +6479,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const still = (text) => `<span class="way still">${esc(text)}</span>`;
     const ways = (nx.ways || []).filter(Boolean).map((w, k) => w.replace('class="way"', k ? 'class="way lnk"' : 'class="way btn primary"'));
     const row = ways.length ? ways
-      : asks.length ? [still(asks.length === 1 ? "Answer the question below" : "Answer the questions below")]
+      : asks.length ? [still(specPhase(c)?.phase === "asks" && asks.length === 1 && asks[0].questions ? (asks[0].questions.length > 1 ? `Answer ${asks[0].questions.length} questions` : "Answer the question") : asks.length === 1 ? "Answer the question below" : "Answer the questions below")]
       : busy.length ? [still("Nothing for you to do yet.")]
       : c.status === "declined" ? (nx.sub ? [still(nx.sub)] : [])
       : c.status === "handed-off" ? [still("Developers build it.")]
@@ -6368,7 +6499,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ${sizeLine(c)}
       ${c.status === "handed-off" ? `<div class="s-row">${sentBox(c, "", true)}${moves}</div>` : moves}${stageLine(c)}
     </div>
-    ${asksBox(asks)}`;
+    ${asksBox(asks.filter((th) => !inBanner(c, th)))}`;
   }
   // Design Desk's open questions on a request, each with its answer box.
   function asksBox(asks) {
@@ -6648,7 +6779,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const given = (c.screens || []).filter(theirs), found = (c.screens || []).filter((x) => !theirs(x));
     foldsFor(c);
     const head = simple() ? `${backBar()}${simpleHead(c)}
-      <div class="standing">${asksBox((c.threads || []).filter((th) => th.kind === "asks" && th.state === "open"))}${renderPolls(c)}
+      <div class="standing">${asksBox((c.threads || []).filter((th) => th.kind === "asks" && th.state === "open" && !inBanner(c, th)))}${renderPolls(c)}
       ${specBanners(c) ? specBanner(c) : ""}${cannotFold(c)}${live(c) ? renderPrototype(c) : ""}</div>` : "";
     return head ? head + simpleBody() : `${backBar()}
       <h2 class="renamable">${txt(title)}${num(c)}${titleLink(c)}${!simple() && (filedIt(c) || can("close")) ? `<button class="linkbtn rename" data-rename aria-label="Rename this request" title="Give this request a clearer name; Design Desk keeps it">${PEN_ICON}</button>` : ""}</h2>${respLine(c)}
@@ -8474,7 +8605,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     }
   }
 
-  function renderDetail() { const tabs = tabsNow(); renderDetailBody(); keepTabs(tabs); renderAsk(); if (S.el) renderElementDialog(); keepPlace(); }
+  function renderDetail() { const tabs = tabsNow(), back = askFocus(); renderDetailBody(); keepTabs(tabs); back(); renderAsk(); if (S.el) renderElementDialog(); keepPlace(); }
   // The option tabs' row on a redraw: the same item keeps it scrolled where the person left it;
   // only another tab picked (or side by side) moves the row, just enough to show that tab.
   // Another item's row starts at its beginning.
@@ -8612,6 +8743,14 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // Drafts are read again each time another item is opened: another device may have changed them.
     await loadDrafts(card, before?.id !== card.id);
     S.card = card;
+    // The spec's questions arrived on the request open here: one toast, once per form in this browser;
+    // nothing opens by itself. A form answered elsewhere drops what was picked here (docs/desk-page.md → The spec banner).
+    const form = bannerForm(card);
+    if (form && !store.get(`desk-asks-seen-${form.id}`)) {
+      store.set(`desk-asks-seen-${form.id}`, "1");
+      if (before?.id === card.id && !bannerForm(before)) toast(`Design Desk has ${plural(form.questions.length, "question", "questions")} before it writes the spec. They are in the banner at the top.`);
+    }
+    for (const th of handoffForm(card)) if (th.state !== "open") for (const k of [askKey(th.id), `desk-asks-seen-${th.id}`]) if (store.get(k) != null) store.del(k);
     // The first open marks it read for this person: its title stops being bold in their list.
     const listed = S.cards.find((x) => x.id === card.id);
     if (listed && listed.read === false) { listed.read = true; S.justRead.add(listed.id); api("POST", `/api/cards/${encodeURIComponent(card.id)}/read`, {}).catch(() => {}); if (quiet && !changed) renderList(); }
@@ -8778,15 +8917,16 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       // With the spec read before it goes, the approver may send it unread; never a request from Slack (docs/handoff.md → Review before it goes).
       // From a pull request still open, the spec waits too: Send to developers picks a new issue or a comment on it.
       const unread = Boolean(S.me?.spec_review) && c.origin?.channel !== "slack" && !c.from_pr;
-      // Simple mode asks nothing: the spec goes as soon as it is written, wherever the store lets it.
-      const auto = simple() && unread;
-      const waits = Boolean(S.me?.spec_review || c.from_pr) && !auto;
-      res = await ask({ title: forDev ? "Approve it for developers" : options.length ? "Approve a design" : "Approve without design options", body: `${forDev ? "It opens For Developers and goes to In dev at once, without a designer; it does not come back to a draft. " : ""}${waits ? `Design Desk writes the developer spec for ${what}. It waits here for you to read and edit; nothing goes to ${to} until you press **Send to developers**${c.from_pr ? `, where you pick a new issue or a comment on PR #${c.from_pr.pr}` : ""}${unread ? ", unless you tick the box below" : ""}.` : `Design Desk writes the developer spec for ${what} and sends it to ${to}${auto ? " as soon as it is written" : ""}. Once sent, it can't be taken back.`}${against.length ? `\n\n⚠ **It goes against ${against.join(", ")}.** Approve it only if the team means to; then revoke the decision, or Design Desk records this approval as going against it.` : ""}${earlier ? `\n\n${earlier.line}` : ""}`, ok: "Approve", choices: options.length && !built && !picked ? options : null, pick: options.length === 1 ? options[0].id : null, note: options.length ? null : "What should developers build? (optional)",
+      // Simple mode asks nothing: with `spec_review` on, its spec waits in the banner for Send to developers.
+      // Only full mode offers the box that sends it as soon as it is written (docs/handoff.md → Review before it goes).
+      const unreadBox = unread && !simple();
+      const waits = specReads(c);
+      res = await ask({ title: forDev ? "Approve it for developers" : options.length ? "Approve a design" : "Approve without design options", body: `${forDev ? "It opens For Developers and goes to In dev at once, without a designer; it does not come back to a draft. " : ""}${waits ? `Design Desk may ask a few questions, then writes the developer spec for ${what} for you to read and send. Nothing goes to ${to} until you press **Send to developers**${c.from_pr ? `, where you pick a new issue or a comment on PR #${c.from_pr.pr}` : ""}${unreadBox ? ", unless you tick the box below" : ""}.` : `Design Desk writes the developer spec for ${what} and sends it to ${to}. Once sent, it can't be taken back.`}${against.length ? `\n\n⚠ **It goes against ${against.join(", ")}.** Approve it only if the team means to; then revoke the decision, or Design Desk records this approval as going against it.` : ""}${earlier ? `\n\n${earlier.line}` : ""}`, ok: "Approve", choices: options.length && !built && !picked ? options : null, pick: options.length === 1 ? options[0].id : null, note: options.length ? null : "What should developers build? (optional)",
         ...(against.length ? { check: `I know it goes against ${against.join(", ")}` } : {}),
         ...(github && !waits && !simple() ? { check2: `Straight to implementation: the spec goes on ${to.startsWith("the GitHub issue it came from") ? "that issue" : "a GitHub issue (a new one, with the spec and pictures, if none is filed)"} with the coding agent's label, when its manifest names one` } : {}),
-        ...(unread && !auto ? { check2: `Send it to ${to} as soon as the spec is written, without waiting for me to read it. Once sent, it can't be taken back` } : {}),
-        ...(earlier?.open ? { check3: unread ? `${earlier.check} (only with the box above ticked; else you pick it when you send)` : earlier.check } : {}),
-        send: (a) => post(built?.id || picked?.id || a.choice || a.note || "", { ...(forDev ? { for_dev: true } : {}), ...(against.length ? { overrule: a.check } : {}), ...(auto ? { auto_send: true } : a.check2 ? (unread ? { auto_send: true } : { implement: true }) : {}), ...(a.check3 && (!unread || a.check2) ? { close_earlier: true } : {}) }) });
+        ...(unreadBox ? { check2: `Send it to ${to} as soon as the spec is written, without waiting for me to read it. Once sent, it can't be taken back` } : {}),
+        ...(earlier?.open ? { check3: unreadBox ? `${earlier.check} (only with the box above ticked; else you pick it when you send)` : earlier.check } : {}),
+        send: (a) => post(built?.id || picked?.id || a.choice || a.note || "", { ...(forDev ? { for_dev: true } : {}), ...(against.length ? { overrule: a.check } : {}), ...(a.check2 ? (unreadBox ? { auto_send: true } : { implement: true }) : {}), ...(a.check3 && (!unreadBox || a.check2) ? { close_earlier: true } : {}) }) });
       if (!res) return;
     }
     // Build: pick the option, then look at its latest version and states once more in the
@@ -9312,6 +9452,24 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       const r = await api("POST", `/api/threads/${ds.sendReply}/messages`, { text });
       S.replyOpen = null; S.replyText = "";
       if (r.inbox) toast("Sent. Design Desk is on it.");
+      await refreshList(); await openCard(S.card.id); return;
+    }
+    // The spec's questions, one at a time in its banner (docs/desk-page.md → The spec banner): Next,
+    // Back and a summary line move between them; Send answers and Leave the rest send what is picked.
+    if (ds.specqNext || ds.specqBack || ds.specqGoto) {
+      const [id, at] = (ds.specqNext || ds.specqBack || ds.specqGoto).split("|"), th = (S.card?.threads || []).find((x) => x.id === id);
+      if (!th?.questions) return;
+      const d = askDraft(th);
+      d.step = ds.specqGoto ? Number(at) : Math.max(0, Math.min(th.questions.length, d.step + (ds.specqNext ? 1 : -1)));
+      saveAskDraft(th, d); renderDetail(); focusAsk(); return;
+    }
+    if (ds.specqSend || ds.specqRest) {
+      const id = ds.specqSend || ds.specqRest, th = (S.card?.threads || []).find((x) => x.id === id);
+      if (!th?.questions) return;
+      const d = askDraft(th);
+      await api("POST", `/api/threads/${id}/answers`, { answers: d.answers.map((x) => ({ choice: x.choice, note: x.note.trim() })) });
+      store.del(askKey(id));
+      toast("Sent. Design Desk writes the spec from your answers.");
       await refreshList(); await openCard(S.card.id); return;
     }
     if (ds.sendForm || ds.skipForm) {

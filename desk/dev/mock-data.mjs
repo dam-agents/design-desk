@@ -278,6 +278,19 @@ The three plans sit side by side as cards, the current one marked **Current**.
 - New plans or prices.
 ` };
 const r10 = req("R-10", "Billing: a clearer plan picker", "spec", 20, { approved: { by: ALICE, at: ago(40) }, spec: { asset: "A-spec-r10", at: ago(20), by: { agent: true }, review: "draft" } });
+// R-11: approved a few minutes ago; Design Desk asked its questions before writing the spec, so it
+// has none yet (docs/handoff.md step 2). Answered, the spec comes back as a draft to read and send.
+export const HANDOFF_QUESTIONS = {
+  text: "Three things the design does not settle. Your answers go into the spec.",
+  questions: [
+    { text: "What does the table show while the export runs?", options: ["A spinner on the button", "A line above the table", "Nothing until it is done"], suggested: "A spinner on the button" },
+    { text: "Where does Export sit on a phone?", options: ["Under the ⋯ menu", "Below the table"], suggested: "Under the ⋯ menu" },
+    { text: "The export fails: what does the person read?", options: ["A toast with Try again", "An error line above the table"], suggested: "A toast with Try again" },
+  ],
+};
+const r11 = req("R-11", "Reports: an Export button on every table", "spec", 3, { approved: { by: ALICE, at: ago(6) }, spec: null,
+  threads: [{ id: "T-90", kind: "asks", step: "handoff", state: "open", may: { reply: true }, questions: HANDOFF_QUESTIONS.questions,
+    messages: [{ by: { agent: true }, at: ago(3), text: HANDOFF_QUESTIONS.text }] }] });
 const r5 = req("R-5", "Login: a calmer error state", "handed-off", 60 * 26, { approved: { by: ALICE, at: ago(60 * 30) }, built: { by: DEV, at: ago(60 * 26) } });
 const r6 = req("R-6", "A second primary button on Billing", "declined", 60 * 50);
 const r7 = req("R-7", "Rounded corners on every table", "declined", 60 * 24 * 400, { decided: { by: ALICE, at: ago(60 * 24 * 400), text: "Tables keep square corners." } });
@@ -321,5 +334,5 @@ const r8 = { ...r3, id: "R-8", title: "Agents list: fewer columns", stage: "draf
   request: { type: "idea", problem: "The agents list has more columns than anyone reads." }, threads: [], votes: {} };
 const r9 = { ...r3, id: "R-9", title: "A quieter usage chart", stage: "proposal", created: ago(300), updated: ago(15),
   request: { type: "idea", problem: "The usage chart pulls the eye from the totals." }, threads: [], votes: {} };
-export const CARDS = [r1, r2, r3, r10, r4, r5, r6, r7, r8, r9, p1, p2, p3, p4, p5, p6];
+export const CARDS = [r1, r2, r3, r11, r10, r4, r5, r6, r7, r8, r9, p1, p2, p3, p4, p5, p6];
 export const ASSETS = A;

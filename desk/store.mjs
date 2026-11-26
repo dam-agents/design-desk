@@ -570,6 +570,8 @@ export class Store {
         triage: c.triage?.verdict || null, prototype: c.prototype?.state || null, team_feedback: c.team_feedback || null,
         // A spec draft waits on a person: the list's dot reads it as the page does (docs/desk-page.md → A request's state in the list).
         spec: c.spec ? { review: c.spec.review || null } : null,
+        // When it was approved: an approved request writing its spec is in its review, Writing spec (docs/desk-page.md → A request's state in the list).
+        approved_at: c.kind === "request" && c.approved?.at || null,
         // A Slack vote on its options: running, or one that ended (the list's Your turn, docs/desk-page.md → Pages and filters).
         voting: !c.vote_ended && (c.polls || []).some((x) => x.state === "open"), voted: Boolean(c.vote_ended) || (c.polls || []).some((x) => x.state === "closed"),
         type: c.request?.type || null, reporter: c.origin?.reporter || null,
@@ -581,7 +583,7 @@ export class Store {
         mine: this.mineOf(c, me, login, wrote),
         group: c.group || null, thumb: c.screens?.[0]?.asset || c.design_part?.shot || null, state_count: (c.states || []).length, looks: (c.history || []).length,
         busy: Object.values(this.db.inbox).some((i) => i.card === c.id && i.state !== "done" && i.kind !== "question"),
-        asks: (c.threads || []).some((t) => this.db.threads[t]?.kind === "asks" && this.db.threads[t]?.state === "open"),
+        asks: this.openAsks(c),
         in_progress: c.kind === "change" && Boolean(c.source?.pr) && !c.source?.merged_at,
         // Who makes the next version after a review asked for changes (docs/desk.md → Reviews).
         responsible: this.responsibleOf(c),
@@ -651,6 +653,11 @@ export class Store {
   // The open pull request a request came from (`request.from`, a change card): its spec may go
   // back to it as a comment (docs/handoff.md → Review before it goes). Null once it merged or
   // the Desk's GitHub copy says it is closed.
+  // Design Desk's question on the card still waits for a person: nothing is sent past it
+  // (docs/handoff.md → Review before it goes).
+  openAsks(c) {
+    return (c?.threads || []).some((t) => this.db.threads[t]?.kind === "asks" && this.db.threads[t]?.state === "open");
+  }
   fromPr(c) {
     const ch = c.kind === "request" && c.request?.from ? own(this.db.cards, c.request.from) : null;
     if (ch?.kind !== "change" || !ch.source?.pr || ch.source.merged_at) return null;
@@ -693,7 +700,7 @@ export class Store {
     const differs = c.design_check?.verdict === "differs" ? `Differs from the approved design ${c.design_check.request}` : null;
     if (differs) (dev ? mine : reasons).push(differs);
     if (c.kind === "request") {
-      const asks = (c.threads || []).some((t) => this.db.threads[t]?.kind === "asks" && this.db.threads[t]?.state === "open");
+      const asks = this.openAsks(c);
       const busy = Object.values(this.db.inbox).some((i) => i.card === c.id && i.state !== "done" && i.kind !== "question");
       if (asks) reasons.push("Design Desk is waiting for an answer");
       else if (!busy && c.status === "triage" && c.triage) reasons.push("Checked: draw options, decide or close it");
@@ -1410,7 +1417,10 @@ export class Store {
         (t.messages || []).forEach((m, i) => {
           const event = i === 0 ? (t.dev ? "dev-question" : t.kind === "asks" ? "agent-asks" : t.kind === "question" ? "question" : "comment")
             : m.by?.agent ? (t.kind === "question" ? "answer" : "reply") : "reply";
-          push(m.at, event, it, m.by, { detail: String(m.text || "").replace(/\s+/g, " ").slice(0, 140), thread: t.id, msg: i, ...(t.dev ? { designs: true } : {}) }, yours || (t.dev && designer));
+          // The spec's questions say how many wait before it is written (docs/desk-page.md → Notifications).
+          const spec = i === 0 && t.kind === "asks" && t.step === "handoff" && (t.questions || []).length;
+          const detail = spec ? `${spec === 1 ? "1 question" : `${spec} questions`} before the spec` : String(m.text || "").replace(/\s+/g, " ").slice(0, 140);
+          push(m.at, event, it, m.by, { detail, thread: t.id, msg: i, ...(t.dev ? { designs: true } : {}) }, yours || (t.dev && designer));
         });
       }
     }
@@ -2359,7 +2369,7 @@ export class Store {
     if (c.kind !== "request" || c.status !== "spec" || !c.spec?.asset) throw bad("There is no developer spec to look at yet.");
     if (!["draft", "changes"].includes(c.spec.review || "")) throw bad(c.spec.review === "sent" ? "This spec is already on its way to developers." : "This spec is not waiting for a review.");
     if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === "handoff")) throw bad(BUSY);
-    if ((c.threads || []).some((t) => this.db.threads[t]?.kind === "asks" && this.db.threads[t]?.state === "open")) throw bad("Answer Design Desk's questions first; the spec takes your answers in.");
+    if (this.openAsks(c)) throw bad("Answer Design Desk's questions first; the spec takes your answers in.");
     if (!this.mayApproveSpec(c, who)) throw forbidden("Only the people who may approve this request read and send its spec.");
     const at = this.clock();
     if (action === "edit") {
@@ -2873,16 +2883,22 @@ export class Store {
       else next[k] = cleanLinks(k, fields[k]);
     }
     // A spec for a request from Slack never leaves unread: only a person's Send to developers
-    // (specAction) marks it sent, whatever `spec_review` says (docs/handoff.md step 3). The
+    // (specAction) marks it sent, whatever `spec_review` says (docs/handoff.md step 4). The
     // stored origin counts too, so a write cannot rename it away, and the card is not handed
     // off before that send.
     // So does one from a pull request still open: the person picks a new issue or a comment on it.
     const waits = [c?.origin, next.origin].some((o) => o?.channel === "slack") || Boolean(c && this.fromPr(c));
     if (waits && !c?.spec?.sent && ((fields.spec !== undefined && next.spec && (next.spec.review === "sent" || next.spec.sent)) || (next.status === "handed-off" && c?.status !== "handed-off")))
-      throw bad("a request from Slack or from an open pull request waits for a person's Send to developers: write its spec with review \"draft\", and hand it off only after that send (docs/handoff.md step 3)");
+      throw bad("a request from Slack or from an open pull request waits for a person's Send to developers: write its spec with review \"draft\", and hand it off only after that send (docs/handoff.md step 4)");
     // An approval taken back while a session wrote its spec: that session's late spec or send is refused (docs/desk.md → Taking an approval back).
     if (c && next.kind === "request" && !c.approved && (c.taken_back || []).length && ((["spec", "handed-off"].includes(next.status) && !["spec", "handed-off"].includes(c.status)) || (fields.spec !== undefined && next.spec?.asset && next.spec.asset !== c.spec?.asset)))
       throw new DeskError(409, `${c.id} is not approved any more: its spec waits for the next approval`);
+    // Nothing is sent, nor handed off, while Design Desk's question waits: whoever writes it, whatever
+    // `spec_review` says. The answers come first; the spec is written from them (docs/handoff.md).
+    const sends = (fields.spec !== undefined && next.spec && (next.spec.review === "sent" || next.spec.sent) && !(c?.spec?.review === "sent" || c?.spec?.sent))
+      || (next.status === "handed-off" && c?.status !== "handed-off");
+    if (c && sends && this.openAsks(c))
+      throw bad("Design Desk's questions on this request are still open: wait for the answers, then write the spec (docs/handoff.md step 2).");
     if (!next.title) throw bad("a card needs a title");
     // Every option of a request shows the request's elements, or says why not (docs/requests.md → The same elements in every option).
     if (next.kind === "request" && next.shared_elements?.length && (fields.variants !== undefined || fields.shared_elements !== undefined))

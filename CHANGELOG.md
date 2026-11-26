@@ -7,6 +7,21 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.120.0 — 2026-11-25
+
+**Upgrade:**
+1. Restart the Desk server ([desk.md](docs/desk.md) → Server): the store refuses a sent spec and
+   `status: handed-off` while Design Desk's question on the request is open; list rows carry
+   `approved_at`; the bell counts the spec's questions.
+2. Republish the page ([desk.md](docs/desk.md) → Publishing the page): the spec banner carries the
+   flow from Approve to Send, asking the spec's questions one at a time; simple mode's Approve no
+   longer sends the spec unread; an approved request stays in its review until the spec is sent,
+   its pill saying Writing spec, Answers needed or Spec ready ([desk-page.md](docs/desk-page.md) →
+   The spec banner, A request's state in the list).
+3. Nothing to migrate: the handoff asks its questions before it writes the spec from the next
+   pass on ([handoff.md](docs/handoff.md) step 2); a request already approved in simple mode keeps
+   what its Approve asked for.
+
 ## 1.119.0 — 2026-11-25
 
 **Upgrade:**

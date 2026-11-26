@@ -11,7 +11,7 @@ description: >-
 The `deliver` action ([docs/actions.md](../../../docs/actions.md)). Reads `handoff`,
 `issue_writeback`, `implementer`, `implementer_mention`, `prototype_remote` and `desk_link` from
 `work/CONFIG.md`. The spec is written and uploaded ([docs/handoff.md](../../../docs/handoff.md)
-steps 1 to 3); the **Approve** on the Desk (a designer's, or a developer's on a request For Developers,
+steps 1 to 4); the **Approve** on the Desk (a designer's, or a developer's on a request For Developers,
 [docs/desk.md](../../../docs/desk.md) → For Developers or For Designers), with their name on the item, is the
 approval to send it, and with `spec_review` on, **Send to developers** on the spec too (a
 `deliver` item). Send the spec's newest version as it is: a person may have edited it.
@@ -92,7 +92,7 @@ Every call names the repository with `-R <[host/]owner/name>`.
 
 What this skill sends is built from without asking: never an open question, a "please
 confirm" or a choice left to the reader. Every question went to the Desk first
-([docs/handoff.md](../../../docs/handoff.md) step 4); a spec that still holds one goes back
+([docs/handoff.md](../../../docs/handoff.md) step 2); a spec that still holds one goes back
 there instead of out. The body's last line before the marker names the Desk card
 (`<desk_link>#R-<n>`) as the place for a question that still comes up.
 
