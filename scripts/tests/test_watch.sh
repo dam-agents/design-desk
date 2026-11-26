@@ -117,6 +117,12 @@ assert "and retried next pass" '.row.note == "head fffffff1"' "$(bash "$ROOT/scr
 outq="$(bash "$ROOT/scripts/preflight.sh" watch)"
 assert "an unchanged head is due for nothing" '[.changes_due[]?.pr] == []' "$outq"
 assert "the unread head is read again" '(.logs | map(test("43: could not read its head")) | any)' "$outq"
+# A force-push: the old head cannot be compared any more, so the PR's own files decide, once.
+bash "$ROOT/scripts/ledger.sh" open acme/widgets 41 C-41 ddddddd2 >/dev/null
+printf 'abcdef44\n' > "$STUB_DIR/pull-41.tsv"; printf 'src/b.tsx\n' > "$STUB_DIR/files-41.txt"
+printf '{"incomplete_results":false,"items":[%s]}' "$(openpr 41 false)" > "$STUB_DIR/open.json"
+outf="$(bash "$ROOT/scripts/preflight.sh" watch)"
+assert "a head no longer comparable falls back to the PR's files" '[.changes_due[] | select(.pr == 41) | {kind, head, ui_files}] == [{kind: "push", head: "abcdef44", ui_files: ["src/b.tsx"]}]' "$outf"
 # Back to draft: it keeps its card, and nothing is due for it, not even a head lookup.
 bash "$ROOT/scripts/ledger.sh" open acme/widgets 40 C-40 bbbbbbb2 >/dev/null
 printf 'ggggggg3\n' > "$STUB_DIR/pull-40.tsv"; printf 'src/a.tsx\n' > "$STUB_DIR/compare-bbbbbbb2...ggggggg3.txt"

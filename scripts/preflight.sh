@@ -316,8 +316,12 @@ watch_mode() {
         fi
         [ "$lookups" -lt "$MAX_LOOKUPS" ] || { waiting=$((waiting + 1)); continue; }
         lookups=$((lookups + 1))
+        # A head no longer comparable (a force-push dropped it) falls back to the PR's own files:
+        # compared whole once, never retried every pass.
         files="$(gh api ${hostargs[@]+"${hostargs[@]}"} "repos/$slug/compare/$before...$head?per_page=1" --jq '.files[]?.filename' 2>/dev/null)" \
-          || { log "$repo#$num: could not compare ${before:0:7} with ${head:0:7} — retried next run"; continue; }
+          || { log "$repo#$num: could not compare ${before:0:7} with ${head:0:7} — its files instead"
+               files="$(gh api ${hostargs[@]+"${hostargs[@]}"} "repos/$slug/pulls/$num/files?per_page=100" --paginate --jq '.[].filename' 2>/dev/null)"; } \
+          || { log "$repo#$num: could not read its files — retried next run"; continue; }
         ui="$(printf '%s\n' "$files" | grep -E "$ere" || true)"
         n=$(printf '%s\n' "$ui" | grep -c . || true)
         if [ "$n" -eq 0 ]; then
