@@ -3214,6 +3214,88 @@ test("linked builds: the request's Build section and Build state, the change's B
   assert.deepEqual(await desk.$$eval("#list .row .open", (xs) => xs.map((x) => [x.dataset.card, x.querySelector(".bchip")?.textContent || ""])), [["R-1", "Build"], ["R-2", ""]], "To build says Build on its row");
 }));
 
+// docs/desk-page.md → A change's differences from its design: one row each, its state, the three
+// actions for who may; the fixed ones folded.
+const DIFFS = (me, conflicts = []) => `<script>
+window.posts = [];
+const at = "2026-11-03T10:00:00Z", lou = { email: "lou@example.com", name: "Lou", role: "ui-dev-owner" }, bob = { email: "bob@example.com", role: "designer" };
+const cards = [
+  { id: "R-1", kind: "request", title: "Calmer spend", status: "handed-off", for: "developers", building: true, updated: at, triage: { verdict: "design", reasons: [] }, created_by: bob, approved: { by: bob, at }, design_id: "G-1",
+    build_prs: [{ card: "P-1", title: "Spend column", pr: 50, repo: "acme/w", url: "https://github.com/acme/w/pull/50", state: "open", how: "explicit", verdict: "differs", differences: 3, accepted: 1 }] },
+  { id: "P-1", kind: "change", title: "Spend column", status: "new", updated: at, for: "developers", conflicts: ${JSON.stringify(conflicts)}, source: { repo: "acme/w", pr: 50, url: "https://github.com/acme/w/pull/50" },
+    builds: { card: "R-1", title: "Calmer spend", at, url: null, how: "explicit" },
+    design_check: { request: "R-1", verdict: "differs", sha: "9c1e7a4f2b", summary: "A label reads otherwise.", differences: [
+      { key: "spend label", element: "Spend label", what: "It says of.", new_in: "9c1e7a4f2b" },
+      { key: "E-4", element: "Spend pill", card: "E-4", what: "It is blue.", asked: { by: lou, at } },
+      { key: "icon", element: "Icon", what: "Missing.", fix: { by: lou, at } },
+      { key: "width", element: "Width", what: "Wider.", accepted: { by: lou, at } },
+      { key: "line", element: "Limit line", what: "Gone.", fixed: { sha: "9c1e7a4f2b", at } }] } },
+];
+window.platform = { async request({ method, path, body }) {
+  if (method === "POST") { posts.push({ path, body: body && JSON.parse(body) }); return { status: 200, contentType: "application/json", body: "{}" }; }
+  const one = path.startsWith("/api/cards/") && cards.find((c) => c.id === decodeURIComponent(path.slice(11)));
+  const answer = path === "/api/me" ? ${JSON.stringify(me)} : path === "/api/cards" ? { cards } : path === "/api/agenda" ? { agenda: [] } : one ? { card: one } : {};
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
+</script>`;
+const OWNER = { role: "ui-dev-owner", email: "lou@example.com", simple: false, can: { "handle-small": true, comment: true, designs: true } };
+
+test("differences from the approved design: a table with each one's state; Fix in code, Fine as built, Ask the designer for who may", (t) => open(t, DIFFS(OWNER), async (desk) => {
+  const base = desk.url().replace(/[?#].*$/, "");
+  await desk.goto(`${base}#P-1`);
+  await desk.waitForSelector("#detail .dcheck .dtab");
+  const rows = () => desk.$$eval("#detail .dcheck > .dtab .ft-r", (xs) => xs.map((x) => [x.querySelector(".ft-s").textContent.trim(), x.querySelector(".ft-d p").textContent.trim(), [...x.querySelectorAll("[data-dd-act]")].map((b) => b.textContent.trim())]));
+  assert.deepEqual(await rows(), [
+    ["New", "Spend label: It says of.", ["Fix in code", "Fine as built", "Ask the designer"]],
+    ["Asked a designer · you", "Spend pill E-4: It is blue.", ["Fix in code", "Fine as built", "Undo"]],
+    ["Fix asked · you", "Icon: Missing.", ["Fine as built", "Ask the designer", "Undo"]],
+    ["Fine as built · you", "Width: Wider.", ["Fix in code", "Ask the designer", "Undo"]]], "one row per difference not fixed, its state and what may be done");
+  assert.equal(await desk.locator("#detail .dcheck > .dtab .ft-r").first().locator("figure, .hint").count(), 2, "both sides, a picture or No picture");
+  assert.match(await desk.textContent("#detail .dc-fixed > summary"), /^Fixed · 1$/);
+  assert.match(await desk.textContent("#detail .dc-fixed .ft-s"), /^Fixed in 9c1e7a4$/);
+  assert.equal(await desk.locator("#detail .dc-fixed [data-dd-act]").count(), 0, "nothing to do on a fixed one");
+  const hint = await desk.textContent("#detail .dcheck");
+  assert.match(hint, /The UI dev owner settles each one first: fix it in code, keep it as built, or ask a designer about a bigger one\./);
+  assert.doesNotMatch(hint, /A designer decides whether it stays/);
+
+  // Fix in code opens a box; its words become the draft.
+  await desk.click('#detail [data-dd-act="fix"][data-dd-key="spend label"]');
+  await desk.waitForSelector("#detail [data-dc-text]");
+  assert.equal(await desk.inputValue("#detail [data-dc-text]"), "It says of.");
+  await desk.fill("#detail [data-dc-text]", "Use the slash.");
+  await desk.click('#detail [data-dc-add="spend label"]');
+  await desk.waitForFunction(() => window.posts.length === 1);
+  await desk.click('#detail [data-dd-act="fine"][data-dd-key="E-4"]');
+  await desk.waitForFunction(() => window.posts.length === 2);
+  await desk.click('#detail [data-dd-act="none"][data-dd-key="width"]');
+  await desk.waitForFunction(() => window.posts.length === 3);
+  await desk.click('#detail [data-dd-act="ask"][data-dd-key="icon"]');
+  await desk.waitForFunction(() => window.posts.length === 4);
+  assert.deepEqual(await desk.evaluate(() => window.posts), [
+    { path: "/api/cards/P-1/design-difference", body: { key: "spend label", action: "fix", text: "Use the slash." } },
+    { path: "/api/cards/P-1/design-difference", body: { key: "E-4", action: "fine" } },
+    { path: "/api/cards/P-1/design-difference", body: { key: "width", action: "none" } },
+    { path: "/api/cards/P-1/design-difference", body: { key: "icon", action: "ask" } }]);
+
+  await desk.goto(`${base}#R-1`);
+  await desk.waitForSelector("#detail .build-prs li");
+  assert.match(await desk.textContent("#detail .build-prs li"), /3 differences, 1 fine as built/, "the Build line counts open ones");
+}));
+
+test("differences from the approved design: no actions for a developer, nor for a UI dev owner on a change against a decision in force", async (t) => {
+  for (const [me, conflicts] of [[{ role: "developer", email: "dev@example.com", simple: false, can: { comment: true } }, []], [OWNER, [{ decision: "D-1", why: "x", status: "active", text: "Pills stay green" }]]]) {
+    await open(t, DIFFS(me, conflicts), async (desk) => {
+      const base = desk.url().replace(/[?#].*$/, "");
+      await desk.goto(`${base}#P-1`);
+      await desk.waitForSelector("#detail .dcheck .dtab");
+      assert.equal(await desk.locator("#detail .dcheck .ft-r").count(), 5, me.role);
+      assert.equal(await desk.locator("#detail [data-dd-act]").count(), 0, `${me.role}: sees them, settles none`);
+      assert.match(await desk.textContent("#detail .dcheck .ft-s"), /New/);
+    });
+  }
+});
+
 test("linked builds: who may not mark a change For Developers handled sees no Link; simple mode's pill reads Build, kept In dev", (t) => open(t, LINKED({ role: "developer", email: "dev@example.com", simple: true, can: {} }), async (desk) => {
   const base = desk.url().replace(/[?#].*$/, "");
   await desk.goto(`${base}#P-2`);

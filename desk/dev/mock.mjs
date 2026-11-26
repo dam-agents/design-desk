@@ -174,6 +174,15 @@ function shim() {
       if (!thumb && !worry) delete box[me.email]; else box[me.email] = { vote: thumb, ...(worry ? { concern: true } : {}), role, at: now() };
       return { votes: c.votes };
     }
+    // A difference from the approved design settled (store.designDifference): one action per difference; Fix in code is a draft about it.
+    if ((x = m(/^\/api\/cards\/([^/]+)\/design-difference$/))) {
+      const c = card(x[1]), d = c.design_check.differences.find((y) => y.key === body.key), stamp = { by: { email: me.email, name: me.name, role }, at: now() };
+      for (const k of ["fix", "accepted", "asked"]) delete d[k];
+      if (body.action !== "none") d[{ fix: "fix", fine: "accepted", ask: "asked" }[body.action]] = stamp;
+      c.drafts = (c.drafts || []).filter((y) => y.design !== d.key);
+      if (body.action === "fix") c.drafts.push({ id: `d${++n}`, design: d.key, text: body.text, anchor: null, at: now() });
+      return { card: structuredClone(c), drafts: c.drafts };
+    }
     // Link / Not this one (store.linkBuild): the suggestion goes; Link makes it the change's design.
     if ((x = m(/^\/api\/cards\/([^/]+)\/build-link$/))) {
       const c = card(x[1]), r = card(body.request);

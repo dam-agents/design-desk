@@ -355,11 +355,13 @@ worked like any other ([handoff.md](handoff.md)); the approver is `approved.by`.
 
 **PR Changes** and **Issues** have the same two tabs, opened the same way. A change or an issue
 starts where you judged it (`attention.level`: `developer` → For Developers, else For
-Designers; [watch.md](watch.md) step 7, [issues.md](issues.md) → Read an issue) until a UI dev
+Designers; [watch.md](watch.md) step 7, [issues.md](issues.md) → Read an issue; a judged change
+that builds an approved design → For Developers, [Needs a designer](#needs-a-designer)) until a UI dev
 owner or an admin moves it (**For Developers** / **For Designers** on the card, the same
 `size`, any one not handled). One For Developers is marked handled by a UI dev owner or a
 designer, one that goes against a decision in force by a designer only; a change For
-Developers is in Needs a designer only for such a decision.
+Developers is in Needs a designer only for such a decision or a difference asked about
+([Needs a designer](#needs-a-designer)).
 
 ### Draft and Proposal
 
@@ -563,7 +565,9 @@ difference (`figma` on the conversation); the review names every one marked fine
 change}]`), and those still in the table leave it for everyone, as the × takes one off (`dismissed`,
 with the review), until the frame in Figma changes; one taken off meanwhile keeps that removal. A
 difference nobody decided on stays on its change for the next review: nothing holds the feedback
-back for it. Nothing goes to GitHub before a person looked: Design Desk's own check comment names the
+back for it. A difference from the approved design taken with **Fix in code** is a draft `{design:
+<key>, text}` ([Needs a designer](#needs-a-designer)), one per person and difference; sent, it is a
+comment tagged `design`, and taking it out of the feedback takes the action back. Nothing goes to GitHub before a person looked: Design Desk's own check comment names the
 differences as its reason ([watch.md](watch.md) → CI gate), and its findings reach the pull request
 only inside a person's review (Reviews on GitHub there).
 
@@ -803,6 +807,18 @@ Requests use **Your turn** instead): only the cards that wait for a designer's d
   phrase in the product's words that says what to look at, and each names its source (the
   design, the frame, the element, the decision) in the card's section. It leaves the filter once the person saw it, a designer marked it handled, or it is auto handled.
   The store adds "Differs from the approved design R-<n>" itself ([watch.md](watch.md) step 11).
+- **A change that builds an approved design** (`builds`) and is judged starts For Developers: its
+  UI dev owner settles each difference of its `design_check` first (`key`: its element card, else
+  its name). `POST /api/cards/<id>/design-difference {key, action, text}`, by a designer, an admin
+  or a UI dev owner (a designer or an admin on a change against a decision in force), one action
+  per difference: `fix` (**Fix in code**: `fix: {by, at}`, and `text` becomes their draft
+  `{design: key, text}`, [Reviews](#reviews)), `fine` (**Fine as built**: `accepted: {by, at}`),
+  `ask` (**Ask the designer**: `asked: {by, at}`; "A UI dev owner asks a designer: <element>",
+  by the asker's role, puts the change in Needs a designer whatever its tab, For you to whoever
+  approved the design as Developer asks is), `none` (takes it back). A later comparison keeps them
+  by key; one gone is `fixed: {sha, at}`, one new `new_in: <sha>`, a fixed one back is open again.
+  Only **open** ones (not fixed, not accepted) count: the Differs reason, the request's Build line
+  (`differences`, and `accepted`), and the design marked done once its change merges.
 - **A request**: the store derives it from where the request stands, never from you:
   Design Desk asked a question, it was checked and nobody drew options or closed it, its
   options are drawn and wait to go to the team (Team feedback), its options are ready, or its

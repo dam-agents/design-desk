@@ -551,7 +551,8 @@ export class Store {
     const me = addressesOf(who), login = this.loginOf(who), wrote = this.wroteIndex(me);
     // One index of the pull requests sent requests are built by, for the whole list.
     let index = null, byRequest = null;
-    const builds = (c) => (c.kind === "change" ? this.buildsOf(c, (index ||= this.buildsIndex())) : null);
+    const idx = () => (index ||= this.buildsIndex());
+    const builds = (c) => (c.kind === "change" ? this.buildsOf(c, idx()) : null);
     // A request in Build: a pull request that builds it is open and ready (docs/desk-page.md → A request's state in the list).
     const building = (c) => c.kind === "request" && c.status === "handed-off" && this.buildingOf(c, (byRequest ||= this.buildsByRequest((index ||= this.buildsIndex()))).get(c.id));
     return Object.values(this.db.cards)
@@ -578,7 +579,7 @@ export class Store {
         voting: !c.vote_ended && (c.polls || []).some((x) => x.state === "open"), voted: Boolean(c.vote_ended) || (c.polls || []).some((x) => x.state === "closed"),
         type: c.request?.type || null, reporter: c.origin?.reporter || null,
         // Whose tab a request is on: For Developers (a developer approves it) or For Designers (docs/desk.md → For Developers or For Designers).
-        for: ["request", "change", "issue"].includes(c.kind) ? this.forOf(c) : null,
+        for: ["request", "change", "issue"].includes(c.kind) ? this.forOf(c, idx()) : null,
         // Whether the viewer voted on it: Your turn reads it on a row (docs/desk-page.md → Pages and filters).
         voted_mine: c.kind === "request" && Object.values(c.votes || {}).some((x) => Object.keys(x || {}).some((e) => me.includes(e.toLowerCase()))),
         // Whether it is the viewer's: simple mode's Mine (docs/desk-page.md → Simple mode).
@@ -600,13 +601,14 @@ export class Store {
         // When a screen or a part was drawn and last looked at again: the list says drawn: (docs/map.md → A screen card).
         drawn: c.drawn || null, checked: c.checked || null,
         bucket: c.bucket || null, needs: c.needs || [], sketches: (c.sketches || []).length,
-        attention: this.attentionOf(c), conflicts: this.activeConflicts(c).length,
+        attention: this.attentionOf(c, idx()), conflicts: this.activeConflicts(c).length,
         // The decisions in force it goes against, by number: the list's red ! (docs/desk.md → Decisions).
         against: [...new Set(this.activeConflicts(c).map((x) => x.decision))],
         designed: this.designedOf(c), sent_card: this.sentCardOf(c), builds: builds(c), building: building(c),
         // An element from an approved design, not from the product (docs/catalog.md → From approved designs).
         design: c.design ? { card: c.design.card, option: c.design.option, version: c.design.version, change: c.design.change, of: c.design.of } : null,
-        design_check: c.design_check ? { verdict: c.design_check.verdict, request: c.design_check.request, differences: c.design_check.differences.map((x) => ({ element: x.element, card: x.card })) } : null,
+        // Only its open differences: one fixed or Fine as built differs no more (docs/desk.md → Needs a designer).
+        design_check: c.design_check ? { verdict: c.design_check.verdict, request: c.design_check.request, sha: c.design_check.sha || null, differences: openDifferences(c.design_check).map((x) => ({ key: x.key, element: x.element, card: x.card })), accepted: acceptedDifferences(c.design_check).length } : null,
         in_catalog: c.in_catalog ? c.in_catalog.cards.length : 0,
         // Compared with its Figma frame (the figma skill): Product → Differences lists it.
         figma: c.figma_check ? figmaRow(c.figma_check) : null,
@@ -683,7 +685,7 @@ export class Store {
       const state = src.merged_at || /^merged$/i.test(gh?.state || "") ? "merged" : /^closed$/i.test(gh?.state || "") ? "closed" : src.draft ? "draft" : "open";
       if (!by.has(l.r.id)) by.set(l.r.id, []);
       by.get(l.r.id).push({ card: c.id, title: c.title, pr: src.pr ?? null, repo: src.repo || null, url: src.url || null, state, how: l.how,
-        verdict: k?.verdict || null, differences: k?.verdict === "differs" ? k.differences.length : 0 });
+        verdict: k?.verdict || null, differences: k?.verdict === "differs" ? openDifferences(k).length : 0, accepted: acceptedDifferences(k).length });
     }
     return by;
   }
@@ -776,24 +778,30 @@ export class Store {
   // Whose tab a request, a change or an issue is on: For Developers or For Designers. A change
   // or an issue starts on the agent's judgement (`attention.level` developer → For Developers)
   // until a person moves it (`size`), as a request does (docs/desk.md → For Developers or For Designers).
-  forOf(c) {
+  // A judged change that builds an approved design starts For Developers too: its UI dev owner
+  // settles its differences from the design first (docs/desk.md → Needs a designer).
+  forOf(c, index = null) {
     if (c.size) return c.size.small ? "developers" : "designers";
-    return (c.kind === "change" || c.kind === "issue") && c.attention?.level === "developer" ? "developers" : "designers";
+    if ((c.kind === "change" || c.kind === "issue") && c.attention?.level === "developer") return "developers";
+    return c.kind === "change" && c.attention && this.linkOf(c, index) ? "developers" : "designers";
   }
 
-  attentionOf(c) {
+  attentionOf(c, index = null) {
     if (!["change", "request", "issue"].includes(c.kind)) return null;
     if (c.kind === "request" && (c.status === "handed-off" || c.status === "declined")) return null;
     // A change or an issue For Developers waits for a UI dev owner, not a designer: its reasons
     // stay its own level unless a decision it goes against needs a designer.
     const judged = c.kind !== "request" && c.attention;
-    const dev = c.kind !== "request" && this.forOf(c) === "developers";
+    const dev = c.kind !== "request" && this.forOf(c, index) === "developers";
     const reasons = !dev && judged && (c.attention.level === "designer" || c.size) ? [...c.attention.reasons] : [];
     const mine = dev && judged ? [...c.attention.reasons] : [];
     const against = this.activeConflicts(c).map((x) => x.decision);
     if (against.length) reasons.push(`Goes against ${[...new Set(against)].join(", ")}`);
-    const differs = c.design_check?.verdict === "differs" ? `Differs from the approved design ${c.design_check.request}` : null;
-    if (differs) (dev ? mine : reasons).push(differs);
+    // Only open differences count: one fixed in code or Fine as built differs no more. One a person
+    // asked a designer about is a designer's, whatever the tab (docs/desk.md → Needs a designer).
+    const open = c.kind === "change" ? openDifferences(c.design_check) : [];
+    if (c.design_check?.verdict === "differs" && open.length) (dev ? mine : reasons).push(`Differs from the approved design ${c.design_check.request}`);
+    for (const d of open) if (d.asked) reasons.push(`${ASKER[d.asked.by?.role] || "Someone"} asks a designer: ${d.element}`);
     if (c.kind === "request") {
       const asks = this.openAsks(c);
       const busy = Object.values(this.db.inbox).some((i) => i.card === c.id && i.state !== "done" && i.kind !== "question");
@@ -805,6 +813,8 @@ export class Store {
       else if (!busy && !c.size?.small && c.status === "testing") reasons.push("The live prototype is ready to try and approve");
     }
     if (reasons.length) return { level: "designer", reasons: [...mine, ...reasons] };
+    // Nothing to look at stays so on its own tab: only a person's move or a difference makes it a developer's.
+    if (dev && !c.size && c.attention?.level === "fyi" && mine.length === c.attention.reasons.length) return { level: "fyi", reasons: c.attention.reasons };
     if (dev) return { level: "developer", reasons: mine };
     return c.attention ? { level: c.attention.level, reasons: c.attention.reasons } : null;
   }
@@ -1035,6 +1045,9 @@ export class Store {
     const c = this.card(cardId), key = this.draftsFor(who);
     const mine = own(this.db.drafts, key), list = mine && own(mine, c.id);
     if (!list?.some((d) => d.id === id)) throw missing(`no draft ${id}`);
+    // A Fix in code taken out of the feedback takes its action back too.
+    const gone = list.find((d) => d.id === id), dd = gone.design && c.design_check?.differences.find((x) => x.key === gone.design);
+    if (dd?.fix && addressesOf(who).includes(String(dd.fix.by?.email || "").toLowerCase())) { delete dd.fix; c.updated = this.clock(); }
     this.setDrafts(key, c.id, list.filter((d) => d.id !== id));
     this.save();
     return { drafts: structuredClone(own(own(this.db.drafts, key) || {}, c.id) || []) };
@@ -1116,6 +1129,7 @@ export class Store {
         r.thread.review = id;
         if (x.d.change) r.thread.change = x.d.change;
         if (x.d.figma) r.thread.figma = x.d.figma;
+        if (x.d.design) r.thread.design = x.d.design;
         threads.push(r.thread.id);
         item = r.inbox || item;
       }
@@ -1504,7 +1518,11 @@ export class Store {
         if (r.next_at) push(r.next_at, "new-version", it, { agent: true }, { review: r.id }, yours || isMine(r.by));
       }
       // A developer's question on Designs is for the designer who approved it, else for every designer (docs/desk-page.md → Designs).
-      const designer = ["designer", "admin"].includes(c.approved?.by?.role) ? isMine(c.approved.by) : ["designer", "admin"].includes(who?.role);
+      const designerOf = (r) => ["designer", "admin"].includes(r?.approved?.by?.role) ? isMine(r.approved.by) : ["designer", "admin"].includes(who?.role);
+      const designer = designerOf(c);
+      // Ask the designer on a difference from the approved design: for whoever approved that design, the same way (docs/desk.md → Needs a designer).
+      if (c.kind === "change" && c.design_check) for (const d of openDifferences(c.design_check)) if (d.asked)
+        push(d.asked.at, "design-asked", it, d.asked.by, { detail: d.element }, yours || designerOf(own(this.db.cards, c.design_check.request)));
       for (const tid of c.threads || []) {
         const t = own(this.db.threads, tid);
         // A private ask is never in a card's threads: its answers come in the loop below.
@@ -2896,7 +2914,8 @@ export class Store {
       // A shipped change read against the approved design it builds (docs/watch.md → Approved design).
       else if (k === "design_check") {
         if (next.kind !== "change") throw bad("design_check belongs to a change card");
-        next.design_check = fields.design_check === null ? null : cleanDesignCheck(fields.design_check, this.db.cards, this.db.assets, this.clock());
+        // Written whole each time; the store keeps each difference's identity and a person's action on it.
+        next.design_check = fields.design_check === null ? null : mergeDesignCheck(cleanDesignCheck(fields.design_check, this.db.cards, this.db.assets, this.clock()), c?.design_check);
       }
       // Requests a change may build, each with its reason: suggestions a person confirms or turns down (docs/watch.md → Approved design).
       else if (k === "may_build") {
@@ -3049,19 +3068,62 @@ export class Store {
     for (const it of Object.values(this.db.inbox)) if (goneLive && it.card === next.id && it.kind === "build" && it.state === "open" && it.variant === goneLive)
       Object.assign(it, { state: "done", done_at: this.clock(), outcome: "not built: its option was taken off the card" });
     if (moved && fields.decision_check === undefined) this.queueCheck(next, { agent: true }, "Its design changed without a check against the decisions.");
-    // A merged change that builds a sent design marks it done (docs/desk-page.md → Designs): its pull
-    // request is the spec's, a person linked it (Link), or its check says it matches the design.
-    if (next.kind === "change" && next.source?.merged_at) {
-      const l = this.linkOf(next);
-      const hit = ["spec", "link"].includes(l?.via) ? l.r.id : next.design_check?.verdict === "matches" ? next.design_check.request : null;
-      const r = hit ? own(this.db.cards, String(hit)) : null;
-      if (r && r.kind === "request" && r.status === "handed-off" && !r.built && !r.not_built) r.built = { by: { agent: true }, at: this.clock(), change: next.id };
-      // Shipped, its approved option's elements join the design catalog, as Add to the design catalog would (docs/catalog.md → From approved designs).
-      const v = r?.kind === "request" && r.approved && ["spec", "handed-off"].includes(r.status) ? (r.variants || []).find((x) => x.id === r.approved.variant) || ((r.variants || []).length === 1 ? r.variants[0] : null) : null;
-      if (v) for (const e of elementsOf(v)) if (!r.in_catalog?.elements?.[e.key]) this.copyToCatalog(r, v, { agent: true }, e.key);
-    }
+    this.shipFrom(next);
     this.save();
     return { card: next };
+  }
+
+  // A merged change that builds a sent design marks it done (docs/desk-page.md → Designs): its pull
+  // request is the spec's, a person linked it (Link), or its check says it matches the design — and
+  // none of its differences from that design is open. Without saving: the caller saves.
+  shipFrom(next) {
+    if (next.kind !== "change" || !next.source?.merged_at) return;
+    const l = this.linkOf(next), k = next.design_check, open = openDifferences(k).length;
+    const hit = ["spec", "link"].includes(l?.via) ? l.r.id : k?.request && !open ? k.request : null;
+    if (!hit || (k?.request === hit && open)) return;
+    const r = own(this.db.cards, String(hit));
+    if (r && r.kind === "request" && r.status === "handed-off" && !r.built && !r.not_built) r.built = { by: { agent: true }, at: this.clock(), change: next.id };
+    // Shipped, its approved option's elements join the design catalog, as Add to the design catalog would (docs/catalog.md → From approved designs).
+    const v = r?.kind === "request" && r.approved && ["spec", "handed-off"].includes(r.status) ? (r.variants || []).find((x) => x.id === r.approved.variant) || ((r.variants || []).length === 1 ? r.variants[0] : null) : null;
+    if (v) for (const e of elementsOf(v)) if (!r.in_catalog?.elements?.[e.key]) this.copyToCatalog(r, v, { agent: true }, e.key);
+  }
+
+  // A person settles one difference of a change from the approved design it builds (docs/desk.md →
+  // Needs a designer): `fix` (Fix in code) puts their words in their feedback as a draft about it
+  // (`{design: key, text}`), `fine` (Fine as built) accepts it, `ask` (Ask the designer) hands it to
+  // a designer, `none` takes the action back. Designers, admins and UI dev owners; on a change
+  // that goes against a decision in force, designers and admins only. One action per difference.
+  designDifference(cardId, who, key, action, text = null) {
+    const c = this.card(cardId), mine = this.draftsFor(who);
+    if (c.kind !== "change" || !c.design_check) throw bad("Only a change compared with its approved design has differences from it.");
+    if (!DIFF_ACTIONS.includes(action)) throw bad(`action must be one of ${DIFF_ACTIONS.join(", ")}`);
+    if (!can(who?.role, "handle-small")) throw forbidden("Only designers, admins and UI dev owners settle a difference from the design.");
+    if (!can(who?.role, "handle") && this.activeConflicts(c).length) throw forbidden("This change goes against a decision in force: a designer settles its differences.");
+    // A comparison written before differences had keys gets them here (designDiffKey).
+    const d = c.design_check.differences.find((x) => (x.key || designDiffKey(x)) === String(key ?? ""));
+    if (!d) throw bad("That difference is not in the comparison.");
+    d.key ||= designDiffKey(d);
+    if (d.fixed && action !== "none") throw bad("That difference is fixed already.");
+    if (action === "fix" && (c.source?.merged_at || c.status === "archived")) throw bad("This pull request is merged: there is no next version to fix it in. Keep it as built, or ask the designer.");
+    const words = action === "fix" ? clean(text, LIMITS.prompt, "text") : null;
+    const stamp = { by: person(who), at: this.clock() };
+    const list = (own(own(this.db.drafts, mine) || {}, c.id) || []).filter((x) => x.design !== d.key);
+    if (action === "fix" && list.length >= LIMITS.draftsPerCard) throw bad(`At most ${LIMITS.draftsPerCard} draft comments wait on one item. Send your feedback first.`);
+    for (const k of ["fix", "accepted", "asked"]) delete d[k];
+    if (action === "fix") d.fix = stamp;
+    if (action === "fine") d.accepted = stamp;
+    if (action === "ask") d.asked = stamp;
+    const drafts = action === "fix" ? [...list, { id: randomUUID().slice(0, 8), design: d.key, text: words, anchor: null, at: stamp.at }] : list;
+    if (drafts.length) {
+      const all = own(this.db.drafts, mine) || {};
+      Object.defineProperty(all, c.id, { value: drafts, enumerable: true, writable: true, configurable: true });
+      Object.defineProperty(this.db.drafts, mine, { value: all, enumerable: true, writable: true, configurable: true });
+    } else this.setDrafts(mine, c.id, []);
+    c.updated = this.clock();
+    // The last open one settled on a merged change: the design it builds is shipped now.
+    this.shipFrom(c);
+    this.save();
+    return { card: c, drafts: structuredClone(own(own(this.db.drafts, mine) || {}, c.id) || []) };
   }
 
   // ---------- how an element or a screen looked before ----------
@@ -4021,14 +4083,45 @@ function cleanDesignCheck(o, cards, assets, at) {
   const list = o.differences === undefined ? [] : o.differences;
   if (!Array.isArray(list) || list.length > LIMITS.designDifferences) throw bad(`design_check.differences is a list of at most ${LIMITS.designDifferences}`);
   if (o.verdict === "differs" && !list.length) throw bad("design_check: say what differs");
+  if (o.verdict === "matches" && list.length) throw bad("design_check: a match lists no differences; anything that differs makes it differs");
+  if (o.sha != null && !/^[0-9a-f]{7,40}$/i.test(String(o.sha))) throw bad("design_check.sha: the head commit compared");
   const pic = (id, name) => { if (id == null) return null; if (!own(assets, id)?.contentType?.startsWith("image/")) throw bad(`design_check: ${name} must be an uploaded picture`); return id; };
+  const seen = new Set();
   return { request: r.id, variant: optText(o.variant, 20, "variant") || r.approved.variant || null, version: Number.isInteger(o.version) ? o.version : r.approved.version || null,
-    verdict: o.verdict, summary: optText(o.summary, 400, "summary"), at,
+    verdict: o.verdict, summary: optText(o.summary, 400, "summary"), sha: o.sha == null ? null : String(o.sha).toLowerCase(), at,
     differences: list.map((x, i) => {
       const card = x.card == null || x.card === "" ? null : String(x.card);
       if (card && own(cards, card)?.kind !== "element") throw bad(`design_check difference ${i + 1}: ${card} is not an element`);
-      return { element: clean(x.element, 80, "element"), what: clean(x.what, 400, "what differs"), card, design: pic(x.design, "design"), shipped: pic(x.shipped, "shipped") };
+      const d = { element: clean(x.element, 80, "element"), what: clean(x.what, 400, "what differs"), card, design: pic(x.design, "design"), shipped: pic(x.shipped, "shipped") };
+      const key = designDiffKey(d);
+      if (seen.has(key)) throw bad(`design_check difference ${i + 1}: ${d.element} is listed twice; say both in one`);
+      seen.add(key);
+      return { key, ...d };
     }) };
+}
+
+// A difference's identity across comparisons: its element card, else its element's name as the
+// page's partKey writes it (docs/watch.md → A new push).
+export const designDiffKey = (d) => (d?.card ? String(d.card) : String(d?.element || "").trim().toLowerCase().replace(/\s+/g, " "));
+// What a person does with a difference from the approved design (docs/desk.md → Needs a designer).
+const DIFF_ACTIONS = ["fix", "fine", "ask", "none"];
+// Who asked a designer about one, in the reason it puts on the card.
+const ASKER = { admin: "An admin", designer: "A designer", "ui-dev-owner": "A UI dev owner" };
+// Open: neither fixed in a later push nor accepted as built. Only these differ.
+const openDifferences = (k) => (k?.differences || []).filter((d) => !d.fixed && !d.accepted);
+const acceptedDifferences = (k) => (k?.differences || []).filter((d) => !d.fixed && d.accepted);
+// A comparison written again with the same design keeps each difference by its key: one in both
+// keeps a person's action (fixed, it is open again); one gone is kept as fixed on this head (at
+// most as many as the agent may write, newest first); one new since the last gets `new_in`.
+function mergeDesignCheck(next, prev) {
+  if (!prev || prev.request !== next.request) return next;
+  const was = new Map(prev.differences.map((d) => [d.key || designDiffKey(d), d]));
+  const now = new Set(next.differences.map((d) => d.key));
+  const kept = (p) => Object.fromEntries(["fix", "accepted", "asked"].filter((k) => p[k]).map((k) => [k, p[k]]));
+  const current = next.differences.map((d) => (was.has(d.key) ? { ...d, ...kept(was.get(d.key)) } : { ...d, new_in: next.sha }));
+  const fixed = [...was].filter(([k]) => !now.has(k)).map(([k, p]) => { const { new_in, ...rest } = p; return { ...rest, key: k, fixed: p.fixed || { sha: next.sha, at: next.at } }; })
+    .sort((a, b) => String(b.fixed.at).localeCompare(String(a.fixed.at))).slice(0, LIMITS.designDifferences);
+  return { ...next, differences: [...current, ...fixed] };
 }
 
 // Requests a change may build (docs/watch.md → Approved design): each an approved request, with

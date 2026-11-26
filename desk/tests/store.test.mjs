@@ -1732,7 +1732,7 @@ test("linked builds: explicit and confirmed links count, a suggestion does not; 
   assert.deepEqual([linked.builds.card, linked.builds.how, linked.build_link.request, linked.build_link.by.email, linked.may_build], [r1.id, "confirmed", r1.id, lou.email, []]);
   assert.throws(() => s.linkBuild(ch.id, lou, r1.id), /already builds/);
   assert.throws(() => s.upsertCard({ id: ch.id, may_build: [{ request: r1.id, reason: "x" }] }), /already builds/, "no suggestion of what it builds");
-  const line = { card: ch.id, title: "PR 50", pr: 50, repo: "acme/widgets", url: "https://github.com/acme/widgets/pull/50", state: "open", how: "confirmed", verdict: null, differences: 0 };
+  const line = { card: ch.id, title: "PR 50", pr: 50, repo: "acme/widgets", url: "https://github.com/acme/widgets/pull/50", state: "open", how: "confirmed", verdict: null, differences: 0, accepted: 0 };
   assert.deepEqual(s.getCard(r1.id).build_prs, [line], "the request lists the change that builds it");
   assert.deepEqual([s.getCard(r1.id).building, s.listCards({ kind: "request" }).find((x) => x.id === r1.id).building], [true, true], "sent, not built, an open ready pull request: Build");
   s.upsertCard({ id: ch.id, design_check: { request: r1.id, verdict: "differs", differences: [{ element: "Bar", what: "Grey.", design: pic, shipped: pic }, { element: "Label", what: "Bold.", design: pic, shipped: pic }] } });
@@ -1740,7 +1740,9 @@ test("linked builds: explicit and confirmed links count, a suggestion does not; 
   s.upsertCard({ id: ch.id, source: { ...ch.source, draft: true } });
   assert.deepEqual([s.getCard(r1.id).build_prs[0].state, s.getCard(r1.id).building], ["draft", false], "a pull request back to draft is no Build");
   s.upsertCard({ id: ch.id, source: { ...ch.source, draft: false, merged_at: "2026-11-02T10:00:00Z" } });
-  assert.deepEqual([s.getCard(r1.id).build_prs[0].state, Boolean(s.getCard(r1.id).built), s.getCard(r1.id).building], ["merged", true, false], "a confirmed link merged marks the design built");
+  assert.deepEqual([s.getCard(r1.id).build_prs[0].state, Boolean(s.getCard(r1.id).built), s.getCard(r1.id).building], ["merged", false, false], "merged with differences open, it waits for a person");
+  for (const key of ["bar", "label"]) s.designDifference(ch.id, lou, key, "fine");
+  assert.deepEqual([s.getCard(r1.id).build_prs[0].differences, s.getCard(r1.id).build_prs[0].accepted, Boolean(s.getCard(r1.id).built)], [0, 2, true], "the last one kept as built: a confirmed link merged marks the design built");
 
   // Not this one: the suggestion, the comparison and the link go, and stay refused.
   const other = pr(51, { may_build: [{ request: r2.id, reason: "Same dialog." }] });
@@ -2287,6 +2289,107 @@ test("a shipped change read against its approved design: what differs waits for 
   assert.deepEqual([row.design_check.verdict, row.attention.level, row.attention.reasons.includes(`Differs from the approved design ${card.id}`)], ["differs", "designer", true]);
   s.upsertCard({ id: ch.id, design_check: null });
   assert.equal(s.listCards({ kind: "change" })[0].design_check, null);
+});
+
+// docs/watch.md → A new push, docs/desk.md → Needs a designer: a difference keeps its identity, and
+// a person's action on it, across comparisons; only open ones count.
+test("differences from the approved design last across pushes: kept, fixed, new; Fix in code, Fine as built, Ask the designer", () => {
+  const s = fresh();
+  const a = s.addAsset({ kind: "variant", contentType: "text/html", data: Buffer.from("<p>A</p>").toString("base64") }).asset.id;
+  const pic = s.addAsset({ kind: "image", contentType: "image/png", data: Buffer.from("png").toString("base64") }).asset.id;
+  const lou = { email: "lou@example.com", role: "ui-dev-owner" }, pat = { email: "pat@example.com", role: "pm" };
+  const { card } = s.createRequest(alice, { title: "Daily limits", problem: "People do not see the limit." });
+  s.upsertCard({ id: card.id, triage: { verdict: "design" }, status: "feedback", variants: [{ id: "v1", name: "Limits", asset: a }] });
+  s.act(card.id, alice, "approve", "v1");
+  s.upsertCard({ id: card.id, status: "handed-off" });
+  const { card: el } = s.upsertCard({ kind: "element", title: "Limit bar", source: { file: "src/Bar.tsx", export: "Bar" } });
+  const bar = { element: "Limit bar", card: el.id, what: "It stays grey near the limit.", design: pic, shipped: pic };
+  const label = { element: "  Spend   Label ", what: "It says of where the design has a slash." };
+  const check = (sha, differences) => s.upsertCard({ id: ch.id, design_check: { request: card.id, verdict: differences.length ? "differs" : "matches", sha, differences } }).card.design_check;
+  const { card: ch } = s.upsertCard({ kind: "change", title: "Limits", source: { repo: "acme/widgets", pr: 45, url: "https://github.com/acme/widgets/pull/45" }, attention: { level: "designer", reasons: ["A new element: the limit bar."] } });
+  assert.throws(() => check("nothex", [bar]), /sha/);
+  assert.throws(() => check("aaaaaaa", [bar, { ...bar, what: "Again." }]), /listed twice/);
+  assert.throws(() => s.upsertCard({ id: ch.id, design_check: { request: card.id, verdict: "matches", differences: [bar] } }), /a match lists no differences/);
+  let k = check("aaaaaaa", [bar, label]);
+  assert.deepEqual(k.differences.map((d) => [d.key, "new_in" in d]), [[el.id, false], ["spend label", false]], "keyed by its element card, else its name as partKey writes it; nothing new on a first check");
+
+  // Linked and judged: For Developers, the differences first the UI dev owner's.
+  const row = () => s.listCards({ kind: "change" }).find((x) => x.id === ch.id);
+  assert.deepEqual([s.getCard(ch.id).for, row().for, row().attention.level, row().attention.reasons], ["developers", "developers", "developer", ["A new element: the limit bar.", `Differs from the approved design ${card.id}`]]);
+
+  // Who may: designers, admins, UI dev owners; on a change against a decision in force, designers and admins only.
+  for (const who of [bob, pat]) assert.throws(() => s.designDifference(ch.id, who, "spend label", "fine"), (e) => e.status === 403, who.role);
+  assert.throws(() => s.designDifference(ch.id, lou, "nothing", "fine"), /not in the comparison/);
+  assert.throws(() => s.designDifference(ch.id, lou, "spend label", "maybe"), /action must be/);
+  assert.throws(() => s.designDifference(ch.id, lou, "spend label", "fix", " "), /text/);
+
+  // Fix in code: a draft about it in the person's feedback, beside their others; sent, its conversation names it.
+  s.addDraft(ch.id, lou, { text: "And the title." });
+  const fix = s.designDifference(ch.id, lou, "spend label", "fix", "Use the slash, as designed.");
+  assert.deepEqual(fix.drafts.map((d) => [d.design || null, d.text]), [[null, "And the title."], ["spend label", "Use the slash, as designed."]]);
+  s.designDifference(ch.id, lou, "spend label", "fix", "Use the slash.");
+  assert.deepEqual(s.drafts(ch.id, lou).drafts.filter((d) => d.design).map((d) => d.text), ["Use the slash."], "one draft per person and difference");
+  assert.equal(s.getCard(ch.id).design_check.differences[1].fix.by.email, lou.email);
+  assert.deepEqual(s.drafts(ch.id, alice).drafts, [], "only the person's own feedback");
+  // Fine as built and Ask the designer: one action per difference.
+  s.designDifference(ch.id, lou, el.id, "ask");
+  assert.deepEqual(row().attention, { level: "designer", reasons: ["A new element: the limit bar.", `Differs from the approved design ${card.id}`, "A UI dev owner asks a designer: Limit bar"] }, "an asked one puts it in Needs a designer, whatever its tab");
+  assert.equal(row().for, "developers");
+  const bell = s.notifications(alice).items.find((x) => x.event === "design-asked");
+  assert.deepEqual([bell?.item, bell?.detail, bell?.for_you, bell?.by.email], [ch.id, "Limit bar", true, lou.email], "For you to whoever approved the design");
+  assert.equal(s.notifications({ email: "dee@example.com", role: "designer" }).items.find((x) => x.event === "design-asked")?.for_you, false, "a designer approved it: not every designer's");
+  assert.equal(s.notifications(lou).items.some((x) => x.event === "design-asked"), false, "never your own doing");
+  s.designDifference(ch.id, alice, el.id, "fine");
+  k = s.getCard(ch.id).design_check;
+  assert.deepEqual([k.differences[0].accepted.by.email, k.differences[0].asked, k.differences[0].fix], [alice.email, undefined, undefined]);
+  assert.equal(s.notifications(alice).items.some((x) => x.event === "design-asked"), false, "settled, the ask is gone");
+  const sent = s.sendReview(ch.id, lou, { verdict: "comment" }).review;
+  assert.deepEqual(sent.threads.map((t) => s.thread(t).design || null), [null, "spend label"], "the draft's conversation names its difference");
+
+  // A push: the person's actions stay by key, a difference gone is fixed on that head, a new one is new.
+  const icon = { element: "Warning icon", what: "It is missing." };
+  k = check("bbbbbbbbbb", [{ ...bar, what: "Still grey." }, icon]);
+  assert.deepEqual(k.differences.map((d) => [d.key, d.what, Boolean(d.accepted), d.new_in || null, d.fixed?.sha || null]),
+    [[el.id, "Still grey.", true, null, null], ["warning icon", "It is missing.", false, "bbbbbbbbbb", null], ["spend label", "It says of where the design has a slash.", false, null, "bbbbbbbbbb"]]);
+  assert.equal(k.differences[2].fix.by.email, lou.email, "a fixed one keeps who asked for the fix");
+  assert.deepEqual(row().design_check.differences.map((d) => d.key), ["warning icon"], "the list carries only the open ones");
+  assert.equal(row().design_check.accepted, 1);
+  assert.deepEqual(s.getCard(card.id).build_prs[0].differences, 1, "the request's Build line counts open ones");
+  // A fixed one that comes back is open again; one fixed stays so, with its first head.
+  k = check("ccccccc", [bar, icon, label]);
+  assert.deepEqual(k.differences.map((d) => [d.key, Boolean(d.fixed), "new_in" in d]), [[el.id, false, false], ["warning icon", false, false], ["spend label", false, false]]);
+  k = check("ddddddd", []);
+  assert.deepEqual([k.verdict, k.differences.map((d) => [d.key, d.fixed.sha])], ["matches", [[el.id, "ddddddd"], ["warning icon", "ddddddd"], ["spend label", "ddddddd"]]]);
+  k = check("eeeeeee", [icon]);
+  assert.deepEqual(k.differences.map((d) => [d.key, d.fixed?.sha || null]), [["warning icon", null], [el.id, "ddddddd"], ["spend label", "ddddddd"]]);
+  assert.throws(() => s.designDifference(ch.id, lou, el.id, "fine"), /fixed already/);
+
+  // Only open ones count: none open → no reason; none takes an action back.
+  s.designDifference(ch.id, lou, "warning icon", "fine");
+  assert.deepEqual([row().attention.reasons, s.getCard(card.id).build_prs[0].differences], [["A new element: the limit bar."], 0]);
+  s.designDifference(ch.id, lou, "warning icon", "none");
+  assert.ok(row().attention.reasons.includes(`Differs from the approved design ${card.id}`));
+  // Fix in code taken out of the feedback takes the action back.
+  const again = s.designDifference(ch.id, lou, "warning icon", "fix", "Add it.").drafts.find((d) => d.design);
+  s.removeDraft(ch.id, lou, again.id);
+  assert.equal(s.getCard(ch.id).design_check.differences[0].fix, undefined);
+
+  // A decision in force it goes against: a designer's.
+  const d = s.addDecision({ concepts: ["limits"], text: "Limits show in red", author: { login: "alice" }, origin: { kind: "pr", url: "https://github.com/acme/widgets/pull/4" } }).decision;
+  s.upsertCard({ id: ch.id, conflicts: [{ decision: d.id, why: "It stays grey." }] });
+  assert.throws(() => s.designDifference(ch.id, lou, "warning icon", "fine"), /decision in force/);
+  s.designDifference(ch.id, alice, "warning icon", "ask");
+  assert.ok(row().attention.reasons.includes("A designer asks a designer: Warning icon"), "the asker's role");
+
+  // Shipped waits for open differences: merged with one open, the request stays to build; settled, it is done.
+  s.upsertCard({ id: ch.id, conflicts: [] });
+  s.upsertCard({ id: ch.id, source: { ...ch.source, merged_at: "2026-11-10T10:00:00Z" } });
+  assert.equal(s.getCard(card.id).built, undefined, "an open difference leaves it for a person");
+  assert.throws(() => s.designDifference(ch.id, lou, "warning icon", "fix", "Add it."), /merged/);
+  s.designDifference(ch.id, lou, "warning icon", "fine");
+  assert.equal(s.getCard(card.id).built.change, ch.id, "the last one settled marks it done");
+  const same = s.upsertCard({ kind: "change", title: "Limits again", source: { repo: "acme/widgets", pr: 46 }, attention: { level: "fyi", reasons: ["Nothing differs."] }, design_check: { request: card.id, verdict: "matches" } }).card;
+  assert.deepEqual([s.getCard(same.id).for, s.getCard(same.id).attention], ["developers", { level: "fyi", reasons: ["Nothing differs."] }], "one that matches stays auto handled");
 });
 
 test("an item read against its frame in Figma: what differs, how much, each side; a request names its option", () => {

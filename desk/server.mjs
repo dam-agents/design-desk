@@ -293,6 +293,8 @@ async function viewerRoute(req, res, url, who) {
   if (m === "POST" && p[1] === "cards" && p[3] === "built") { need("built"); return send(res, 200, store.markBuilt(p[2], actor, b.built !== false)); }
   // A change linked to an approved design, or turned down for it (Link / Not this one; docs/desk.md → GitHub on the Desk).
   if (m === "POST" && p[1] === "cards" && p[3] === "build-link") { if (!can(who.deskRole, "handle-small", s.prototypeRoles)) need("handle"); return send(res, 200, withPing(store.linkBuild(p[2], actor, String(b.request || ""), b.link !== false), s, who)); }
+  // A difference from the approved design settled: Fix in code, Fine as built, Ask the designer, or taken back (docs/desk.md → Needs a designer).
+  if (m === "POST" && p[1] === "cards" && p[3] === "design-difference") { if (!can(who.deskRole, "handle-small", s.prototypeRoles)) need("handle"); return send(res, 200, store.designDifference(p[2], actor, b.key, b.action, b.text)); }
   if (m === "POST" && p[1] === "cards" && p[3] === "handled") { if (!can(who.deskRole, "handle-small", s.prototypeRoles)) need("handle"); return send(res, 200, store.handle(p[2], actor, b.handled !== false)); }
   // A difference from Figma taken off an item's table, or brought back (docs/desk.md → Differences from Figma).
   if (m === "POST" && p[1] === "cards" && p[3] === "figma-close") { need("handle"); if (!s.figma) throw new DeskError(400, "Figma is not connected to this Desk yet."); return send(res, 200, store.closeFigma(p[2], actor, b.on !== false)); }

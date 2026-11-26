@@ -135,14 +135,17 @@ steps say; the decision notes of step 4 are always yours to read.
     ([desk.md](desk.md) → GitHub on the Desk); none → nothing. (The card's `builds` says what it
     builds and `how`: `explicit` or `confirmed`. A merged change whose pull request is the spec's
     or links its issue, that a person linked, or whose `design_check` says `matches`, marks that
-    design done on Designs: the store does it with the card's write.) For that one: `design desk fetch` the option, look at it next to
+    design done on Designs once none of its differences is open: the store does it.) For that one: `design desk fetch` the option, look at it next to
     the change's screens element by element, and put `design_check` on the card: `{request,
-    verdict, summary, differences: [{element, card, what, design, shipped}]}`, at most 12
+    verdict, summary, sha, differences: [{element, card, what, design, shipped}]}` (`sha` the head
+    compared), always every difference the head has: the store keeps each by its `card`, else its
+    `element`, with what people did with it, and marks one gone fixed ([desk.md](desk.md) → Needs a
+    designer); at most 12
     differences (the store refuses more, and a request only in `may_build` or in `not_builds`; group the rest into one) — `verdict`
     `matches` or `differs`; per element that looks or behaves otherwise than approved, `what`
     in one sentence, `card` its design catalog card (`in_catalog`, by element), `design` and `shipped` a
     picture of it in each (`design shot --element`, `--kind image`). Copy, spacing, colour and
-    a missing state count; sample data does not. `differs` waits for a designer.
+    a missing state count; sample data does not.
     With `figma: enabled`, also compare the change with its frames in Figma: the frame of the
     request it builds, else a figma.com link in the PR or the issue it closes, else those of
     the screens and elements it touched (the `figma` skill →
@@ -173,7 +176,7 @@ whose commits touch no UI file only moves the recorded head; one that does is a 
 entry, with `head`, `before` (the head the card was judged on) and the push's `ui_files`. Claim
 it, and update the card the PR already has (the store finds it by the PR): what the new commits
 (`git diff <before> <head> -- <ui files>`) change for people, its screens when they changed, its
-`attention`, and step 11's comparison on the new head; then step 13 and `ledger.sh open <repo>
+`attention`, and step 11's comparison on the new head (its `sha`; people's actions stay); then step 13 and `ledger.sh open <repo>
 <pr> <card id> <head>`, also when nothing people see changed.
 
 ## A linked design
@@ -274,7 +277,8 @@ and is logged and reported as below. Else:
    gave feedback on this UI change on the Design Desk: **Changes requested** | **Approved** | **Comments**",
    the note, then each comment as a bullet led by what it is about in bold (the change or part
    it names, else nothing) — one that started from a difference from Figma (`figma` on its
-   conversation) led by "**<change>** · from Figma:" — then "✓ Looks good: <name>, <name>" from its
+   conversation) led by "**<change>** · from Figma:", one from a difference from the approved design
+   (`design`, its `key` in the card's `design_check`) by "**<element>** · from the design:" — then "✓ Looks good: <name>, <name>" from its
    `looks_good`, then "Fine as it is (from Figma): <part>, <part>" from its `figma_fine`, then `[Open on the Design Desk](<card link>)` when `desk_link` is
    set. The person by their roster name, else the part of the address before the @; never an
    address. Their words as written; nothing of yours ([desk.md](desk.md) → Writing on the Desk).

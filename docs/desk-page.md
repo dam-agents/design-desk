@@ -402,6 +402,15 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   comment ↓**. A taken one is a note like any other, so no Looks good stands beside it; it shows
   once, there, not again over the box. Someone else sees the differences only in the item's box
   ([desk.md](desk.md) → Differences from Figma).
+- **Differences from the approved design**, on a change that builds one: **⚠ Differs from the
+  approved design R-<n>** (**✓ Settled** once every one is kept as built), then a table like the
+  Figma one — per difference its state (**New**; **Fix asked**, **Asked a designer** or **Fine as
+  built** · who), its element and its card, what differs, **The approved design** and **As built** —
+  and under what differs, for who may ([desk.md](desk.md) → Needs a designer), **Fix in code** (a
+  box holding Design Desk's words, then **Add to feedback**), **Fine as built**, **Ask the
+  designer**, and **Undo** for the one taken. Fixed ones fold under **Fixed · n**, each "Fixed in
+  <7-character commit>". A line says the UI dev owner settles them first and asks a designer about a
+  bigger one.
 - **Motion.** Short, soft animations, in the `@media (prefers-reduced-motion: no-preference)`
   block of `desk/page.html`'s style, so a person whose system asks for less motion gets none:
   dialogs rise in and fade out with their backdrop, More and the menu under a name pop open,
@@ -738,6 +747,7 @@ icon's upper right corner, gone once the notification is read. The events:
 | Feedback asked | a person hands the drawn options to the team (**Ask for feedback**); For you for every `developer` and `ui-dev-owner` |
 | New decision, Decision revoked | a decision is added or revoked |
 | Developer asks, Marked done | a developer asks a design's designer, or marks it done ([Designs](#designs)) |
+| Asked a designer | a person asks a designer about a difference from the approved design ([desk.md](desk.md) → Needs a designer); For you as Developer asks is |
 | Feedback sent, New version | a person sends feedback (on a pull request's change, For you for every `developer` and `ui-dev-owner`); new commits arrive on a pull request a review asked changes of ([desk.md](desk.md) → Reviews) |
 
 Every row is at most three lines, each cut short with … when long, and says the same things in the same places: an icon and what happened, who (when known),
@@ -775,7 +785,8 @@ shows, read-only: a status strip (**Approved**, **Build** — on its To build ro
 and who marked it done) holding the links to the issue or pull request it went to, the pull request it comes from
 (a PR change it adjusts, or its origin) and the Figma frame, and **Mark as done** (`POST /api/cards/R-<n>/built`, `built: {by, at}`; **Not done yet**
 takes it back, `not_built`). The store marks it done itself (`built: {by: {agent}, at, change}`) when a merged change card
-that builds it is written: its pull request is the spec's or links its issue, a person linked it, or its `design_check` says `matches`;
+that builds it is written: its pull request is the spec's or links its issue, a person linked it, or its `design_check` says `matches`,
+and none of its differences is open (one merged with open ones waits for a person's Mark as done);
 never one a person took back. And **Open the request**, the same request on Requests; the
 approved option as approved, **UX decisions** (`dev_summary`, the [handoff](handoff.md)'s step 7,
 AI-marked; none, none shown), the issue's text (the sent spec) and **Ask the designer**: a
@@ -790,9 +801,9 @@ who reopened it and when, its issue, its summary and its questions, with no box 
 Mark as done.
 
 A request sent to developers shows **Build** under its issue's row: one line per pull request that
-builds it (`build_prs: [{card, title, pr, repo, url, state, how, verdict, differences}]`) — its pill
+builds it (`build_prs: [{card, title, pr, repo, url, state, how, verdict, differences, accepted}]`) — its pill
 (**Draft**, **Open**, **Merged**, **Closed**), its title, its verdict (**Matches the design**, **N
-differences**) and its card on PR Changes — then any other pull request its issue lists on GitHub;
+differences** open, ", M fine as built"; **Fine as built** with none open) and its card on PR Changes — then any other pull request its issue lists on GitHub;
 **None yet** while none does. A change that builds one says **Builds R-<n>** with its link
 (`builds: {card, title, url, how}`; once linked by a person, who, and **Not this one**); each
 suggestion reads **May build R-<n>**: its reason, with **Link** and **Not this one** for who may

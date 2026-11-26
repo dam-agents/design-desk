@@ -748,10 +748,11 @@
   .figdiffs { display: grid; gap: 20px; margin: 8px 0 12px; max-width: var(--measure); } .figdiffs p { margin: 0; }
   .swatch { display: inline-block; width: 11px; height: 11px; border-radius: var(--r-sm); border: 1px solid var(--line); vertical-align: -1px; margin-right: 4px; }
   .row .prov .fig-ok { color: var(--ok); }
-  .diffs { display: grid; gap: 12px; margin: 8px 0 0; }
-  .diffs .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .diffs figure { margin: 0; } .diffs figcaption { font-size: var(--fs-meta); color: var(--muted); }
-  .diffs img { width: 100%; border: 1px solid var(--line); border-radius: var(--r-sm); background: #fff; }
+  /* Differences from the approved design: the Figma table's rows, a state chip first, the actions under what differs. */
+  .dcheck { max-width: 980px; margin: 12px 0; } .dcheck > p { margin: 2px 0; }
+  .ftab.dtab { grid-template-columns: auto minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr); }
+  .dtab .fd-k { flex-wrap: wrap; } .dtab .fp-acts, .dtab .fp-edit { margin-top: 8px; }
+  .dc-fixed > summary { cursor: pointer; color: var(--muted); font-size: var(--fs-meta); margin: 8px 0 0; }
   /* Where the change is on a picture: boxes the agent measured, shown while "Outline what changed" is on. */
   .shot .pic { max-height: var(--shot-h); overflow: hidden; background: var(--soft); }
   .shot .pic img, .zoom .canvas img { min-height: 0; max-height: none; height: auto; object-fit: initial; }
