@@ -1770,6 +1770,48 @@ test("linked builds: explicit and confirmed links count, a suggestion does not; 
   assert.deepEqual([s.getCard(fifth.id).builds.card, s.getCard(fifth.id).builds.how], [r4.id, "explicit"]);
 });
 
+// docs/desk.md → GitHub on the Desk, Needs a designer: Link and Not this one move the card; a
+// difference settled otherwise takes everyone's Fix in code draft about it; a draft back is no Build.
+test("linked builds move the card; a settled difference leaves nobody's fix in feedback; the GitHub copy says a pull request is a draft", () => {
+  let t = 0;
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { needsApproval: everyCounts, clock: () => new Date(Date.UTC(2026, 10, 1) + ++t * 3600e3).toISOString().replace(/\.\d{3}Z$/, "Z") });
+  const a = s.addAsset({ kind: "variant", contentType: "text/html", data: Buffer.from("<p>A</p>").toString("base64") }).asset.id;
+  const lou = { email: "lou@example.com", role: "ui-dev-owner" };
+  const { card: r } = s.createRequest(alice, { title: "Limits", problem: "Why." });
+  s.upsertCard({ id: r.id, triage: { verdict: "design" }, status: "feedback", variants: [{ id: "v1", name: "A", asset: a }] });
+  s.act(r.id, alice, "approve", "v1");
+  s.upsertCard({ id: r.id, status: "handed-off" });
+  const ch = s.upsertCard({ kind: "change", title: "PR 60", source: { repo: "acme/widgets", pr: 60, url: "https://github.com/acme/widgets/pull/60" } }).card;
+  let at = s.card(ch.id).updated;
+  s.linkBuild(ch.id, lou, r.id);
+  assert.ok(s.card(ch.id).updated > at, "Link moves the card");
+  at = s.card(ch.id).updated;
+  s.linkBuild(ch.id, lou, r.id, false);
+  assert.ok(s.card(ch.id).updated > at, "Not this one moves the card");
+  s.linkBuild(ch.id, lou, r.id);
+
+  // Two people ask for the same fix; Fine as built, Ask the designer or none leaves it in nobody's feedback.
+  s.upsertCard({ id: ch.id, design_check: { request: r.id, verdict: "differs", sha: "aaaaaaa", differences: [{ element: "Spend label", what: "No slash." }] } });
+  const fixes = () => [lou, alice].map((who) => s.drafts(ch.id, who).drafts.filter((d) => d.design).length);
+  for (const action of ["fine", "ask", "none"]) {
+    s.designDifference(ch.id, alice, "spend label", "fix", "Use the slash.");
+    s.addDraft(ch.id, alice, { text: "And the title." });
+    s.designDifference(ch.id, lou, "spend label", "fix", "The slash, please.");
+    assert.deepEqual(fixes(), [1, 1]);
+    s.designDifference(ch.id, lou, "spend label", action);
+    assert.deepEqual(fixes(), [0, 0], action);
+    assert.ok(s.drafts(ch.id, alice).drafts.some((d) => d.text === "And the title."), "the person's other drafts stay");
+  }
+
+  // Back to draft on GitHub: the Desk's copy keeps it, and the request is not in Build.
+  assert.equal(s.getCard(r.id).building, true);
+  s.putGithub([{ key: "acme/widgets#60", kind: "pr", title: "PR 60", state: "open", draft: true }]);
+  assert.equal(s.github(["acme/widgets#60"])[0].draft, true);
+  assert.deepEqual([s.getCard(r.id).build_prs[0].state, s.getCard(r.id).building], ["draft", false]);
+  s.putGithub([{ key: "acme/widgets#60", kind: "pr", title: "PR 60", state: "closed", draft: true }]);
+  assert.equal(s.getCard(r.id).build_prs[0].state, "closed", "closed wins");
+});
+
 test("Draw it: a designer or a PM queues a drawing of an issue, once", () => {
   const s = fresh();
   const pm = { email: "pat@example.com", role: "pm" };
@@ -2558,6 +2600,15 @@ test("a decision someone other than a designer made is approved by a designer; i
   const gone = s.addDecision({ concepts: ["rows"], text: "Rows stay roomy", author: { login: "dana" }, origin: pr }).decision;
   s.revokeDecision(gone.id, alice, { reason: "Dense now." });
   assert.throws(() => s.approveDecision(gone.id, alice), /restore it first/);
+  // Never one's own: by any of the person's addresses, or their GitHub username.
+  const lou = { email: "lou@example.com", emails: ["lou@example.com", "lou@home.example.com"], role: "ui-dev-owner" };
+  const roster = rosterOf([{ email: "lead@example.com", role: "admin" }, { email: "lou@example.com, lou@home.example.com", role: "ui-dev-owner" }]);
+  const byMail = s.addDecision({ concepts: ["limits"], text: "Limits stay grey", author: { email: "LOU@home.example.com" }, origin: pr }).decision;
+  assert.throws(() => s.approveDecision(byMail.id, lou), (e) => e.status === 403 && /someone else approves it/.test(e.message));
+  s.setLogin({ email: "lead@example.com", role: "admin" }, "lou@example.com", "lou-dev", roster);
+  const byLogin = s.addDecision({ concepts: ["limits"], text: "Limits show a bar", author: { login: "Lou-Dev" }, origin: pr }).decision;
+  assert.throws(() => s.approveDecision(byLogin.id, lou), (e) => e.status === 403);
+  assert.equal(s.approveDecision(byLogin.id, alice).decision.approved.by.email, alice.email, "someone else does");
 });
 
 // docs/desk.md → Decisions → Approved, Needs a designer: Fine as built is a decision in force at once.
@@ -2614,9 +2665,28 @@ test("Fine as built records a decision in force, approved by who accepted it, ci
   const again = s.decision(diff().accepted.decision);
   assert.deepEqual([again.id !== mine.id, again.status, s.decision(mine.id).status], [true, "active", "revoked"], "a revoke a designer made is not undone by restoring it");
   mine = again;
-  // A later push that no longer shows it marks it fixed: its decision stays, true when it was accepted.
-  s.upsertCard({ id: ch.id, design_check: { request: card.id, verdict: "matches", sha: "bbbbbbb" } });
-  assert.deepEqual([Boolean(diff().fixed), diff().accepted.decision, s.decision(mine.id).status], [true, mine.id, "active"]);
+  // A later push that no longer shows it marks it fixed: its decision goes with it, and stays cited for the record.
+  s.upsertCard({ id: ch.id, design_check: { request: card.id, verdict: "matches", sha: "bbbbbbbbbb" } });
+  assert.deepEqual([Boolean(diff().fixed), diff().accepted.decision, s.decision(mine.id).status, s.decision(mine.id).revoked.reason], [true, mine.id, "revoked", "Fixed in bbbbbbb: built as designed after all"]);
+  // Back in a later push, it is open again: its Fine as built went with the fix.
+  s.upsertCard({ id: ch.id, design_check: { request: card.id, verdict: "differs", sha: "ccccccc", differences: [label] } });
+  assert.deepEqual([diff().fixed, diff().accepted], [undefined, undefined]);
+  // The comparison dropped (Not this one, Link to another design, or the agent's null) takes back what it kept as built.
+  const kept = () => { s.designDifference(ch.id, lou, "spend label", "fine"); return diff().accepted.decision; };
+  let gone = kept();
+  s.upsertCard({ id: ch.id, design_check: null });
+  assert.deepEqual([s.decision(gone).status, s.decision(gone).revoked.reason], ["revoked", `Its pull request no longer builds ${card.id}`]);
+  const relink = () => s.upsertCard({ id: ch.id, design_check: { request: card.id, verdict: "differs", sha: "ddddddd", differences: [label] } });
+  relink(); gone = kept();
+  s.linkBuild(ch.id, lou, card.id, false);
+  assert.deepEqual([s.decision(gone).status, s.decision(gone).revoked.reason, s.decision(gone).revoked.by.email], ["revoked", `Its pull request no longer builds ${card.id}`, lou.email]);
+  s.linkBuild(ch.id, lou, card.id);
+  relink(); gone = kept();
+  const r2 = s.createRequest(alice, { title: "Another", problem: "Why." }).card;
+  s.upsertCard({ id: r2.id, triage: { verdict: "design" }, status: "feedback", variants: [{ id: "v1", name: "B", asset: a }] });
+  s.act(r2.id, alice, "approve", "v1");
+  s.linkBuild(ch.id, lou, r2.id);
+  assert.equal(s.decision(gone).status, "revoked", "linked to another design");
 
   // A UI dev owner approves a decision a pull request recorded; a developer does not.
   const pr = s.addDecision({ concepts: ["limits"], text: "Limits reset weekly", author: { login: "dana" }, origin: { kind: "pr", url: "https://github.com/acme/widgets/pull/40" } }).decision;

@@ -18,7 +18,9 @@ case "$args" in
   # As the pre-flight's --jq asks: the first line of each commit's message between two tags, or the files a push changed.
   *repos/*/compare/*)
     t="$(printf '%s' "$args" | sed -E 's#.*compare/([^ ?]+).*#\1#; s#[^A-Za-z0-9.-]#_#g')"
-    cat "$STUB_DIR/compare-$t.txt" 2>/dev/null || { echo "stub: no compare $t" >&2; exit 1; };;
+    # compare-<a>...<b>.fail holds what gh prints when GitHub fails it (a 502); with neither file, gh's 404.
+    [ -f "$STUB_DIR/compare-$t.fail" ] && { cat "$STUB_DIR/compare-$t.fail" >&2; exit 1; }
+    cat "$STUB_DIR/compare-$t.txt" 2>/dev/null || { echo "gh: Not Found (HTTP 404)" >&2; exit 1; };;
   *repos/*/issues/*)
     n="$(printf '%s' "$args" | sed -E 's#.*issues/([0-9]+).*#\1#')"
     cat "$STUB_DIR/issue-$n.state" 2>/dev/null || echo open;;

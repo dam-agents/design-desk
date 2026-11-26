@@ -319,7 +319,9 @@ test("a decision says whose it is: the design side or a developer, by the role n
   const claimedD = (await d.viewer("alice@example.com", `/api/decisions/${claimed}`)).body.decision;
   assert.deepEqual([claimedD.side, claimedD.unapproved], [null, true], "the role an issue claims is not read");
   assert.deepEqual(await pending(), [ids[3], ids[4], claimed, mailed].sort());
-  assert.equal((await d.viewer("alice@example.com", `/api/decisions/${mailed}/approve`, {})).status, 200, "a designer approves one from GitHub");
+  const own = await d.viewer("alice@example.com", `/api/decisions/${mailed}/approve`, {});
+  assert.deepEqual([own.status, own.body.error], [403, "You made this decision: someone else approves it."], "never one's own");
+  assert.equal((await d.viewer("lee@example.com", `/api/decisions/${mailed}/approve`, {})).status, 200, "someone else approves one from GitHub");
 
   // What a check reads: by the card's concepts, or by the concepts and words asked for instead.
   const card = (await d.agent("/agent/cards", { kind: "change", title: "Rows", concepts: ["rows"], source: { repo: "acme/widgets", pr: 3 } })).body.card.id;

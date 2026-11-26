@@ -32,6 +32,7 @@ test("github-sync reads each ref with its comments and reviews, posts them, merg
   assert.deepEqual(issue.linked, [{ title: "Build the red", url: "https://github.com/acme/widgets/pull/8", state: "open", author: "bot" }], "an issue knows the pull requests that build it");
   assert.deepEqual([pr.kind, pr.state, pr.comments.map((c) => c.body)], ["pr", "merged", ["[review: APPROVED] Fine."]], "a pull request's reviews with a body are its comments");
   assert.equal(pr.head, undefined, "a merged pull request's head is not read: no review waits on it");
+  assert.deepEqual([pr.draft, "draft" in issue], [false, false], "a pull request says whether it is a draft; an issue has none");
   assert.equal(issue.head, undefined);
   assert.deepEqual([out.synced, out.failed.map((x) => x.key), out.fresh.map((x) => x.key)], [2, ["acme/widgets#9"], ["acme/widgets#3"]]);
   assert.match(out.failed[0].error, /404/);
@@ -41,7 +42,7 @@ test("github-sync reads each ref with its comments and reviews, posts them, merg
 
 test("github-sync reads an open pull request's head commit, for a review waiting on a new version", async () => {
   const OPEN = {
-    "repos/acme/widgets/issues/8": [{ title: "Rows", state: "open", pull_request: {}, html_url: "https://github.com/acme/widgets/pull/8", user: { login: "bob" }, labels: [], body: "", updated_at: "2026-11-02T10:00:00Z" }],
+    "repos/acme/widgets/issues/8": [{ title: "Rows", state: "open", draft: true, pull_request: {}, html_url: "https://github.com/acme/widgets/pull/8", user: { login: "bob" }, labels: [], body: "", updated_at: "2026-11-02T10:00:00Z" }],
     "repos/acme/widgets/issues/8/comments": [[]], "repos/acme/widgets/pulls/8/reviews": [[]], "repos/acme/widgets/pulls/8": [{ head: { sha: "c".repeat(40) } }],
   };
   const gh8 = (args) => { const path = args[args.length - 1]; return path in OPEN ? { status: 0, stdout: JSON.stringify(OPEN[path]) } : { status: 1, stderr: "HTTP 404: Not Found\n" }; };
@@ -49,4 +50,5 @@ test("github-sync reads an open pull request's head commit, for a review waiting
   const call = async (method, path, body) => (method === "GET" ? { refs: ["acme/widgets#8"] } : (posted.push(body), { fresh: [] }));
   await githubSync(null, { call, gh: gh8, repos: "acme/widgets" });
   assert.equal(posted[0].records[0].head, "c".repeat(40));
+  assert.equal(posted[0].records[0].draft, true, "whether it is a draft: one back to draft is no Build");
 });

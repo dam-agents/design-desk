@@ -242,11 +242,11 @@ watch_mode() {
   if [ -f "$DESK_DIR/releases.json" ] && ! KNOWN_RELS="$(jq -ce '.keys | arrays' "$DESK_DIR/releases.json" 2>/dev/null)"; then
     KNOWN_RELS='[]'; RELS_OK=0; log "the Desk's releases.json cannot be read — no release is due until it can"
   fi
-  local ndue=0 nissues=0 deferred=0 skipped=0 seen=0 lookups=0 unread=0 waiting=0
-  # One files call per new candidate, and per carded open PR its head and, when it moved, the
-  # push's files; a backlog is spread over passes so a pass stays
-  # well inside the Precheck's budget (about 2 s a call through the gateway).
-  local MAX_LOOKUPS="${WATCH_MAX_LOOKUPS:-25}"
+  local ndue=0 nissues=0 deferred=0 skipped=0 seen=0 lookups=0 hlookups=0 unread=0 waiting=0
+  # One files call per new candidate; per carded open PR its head and, when it moved, the push's
+  # files and the PR's own, from a budget of their own. A backlog is spread over passes so a pass
+  # stays well inside the Precheck's budget (about 2 s a call through the gateway).
+  local MAX_LOOKUPS="${WATCH_MAX_LOOKUPS:-25}" MAX_HEAD="${WATCH_MAX_HEAD_LOOKUPS:-15}"
   local stale_s=$((3 * 3600))
   local OPEN_PRS LABEL; OPEN_PRS="$(jq -r '.watch_open_prs' <<<"$CONF")"; LABEL="$(jq -r '.issue_label' <<<"$CONF")"
   # The ledger's last row for (repo, number) decides: kind of work, or a reason to skip.
@@ -290,7 +290,7 @@ watch_mode() {
     paths="$(ui_paths_for "$repo")"; ere="$(globs_to_ere "$paths")"
     local SINCE_Z; SINCE_Z="$(date -u -d "@$(iso2epoch "$SINCE")" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo "$SINCE")"
     # \037, not a tab: an open PR has no merged_at, and a tab is whitespace to IFS.
-    while IFS=$'\037' read -r num state merged title url author draft; do
+    while IFS=$'\037' read -r num state merged title url author draft updated_at; do
       [ -n "$num" ] || continue
       seen=$((seen + 1))
       # Both are UTC ISO times ending in Z, so a text comparison orders them; no `date` per pull request.
@@ -302,11 +302,18 @@ watch_mode() {
       if [ "$kind" = head ]; then
         # A carded open PR: due again only when the commits since the head it was carded on touch
         # UI files. Its row's note holds that head (`head <sha>`, ledger.sh open); a row without
-        # one records the current head and asks for no run. Both reads count as lookups.
-        if [ "$ndue" -ge "$MAXN" ] || [ "$lookups" -ge "$MAX_LOOKUPS" ]; then waiting=$((waiting + 1)); continue; fi
-        lookups=$((lookups + 1))
+        # one records the current head and asks for no run. Its reads come from their own budget,
+        # so they never hold up a new candidate or the cursor: one out of it waits for the next pass.
         card="${LAST_CARD["$repo#$num"]:-}"; before="${LAST_NOTE["$repo#$num"]:-}"
         [[ "$before" =~ ^head\ ([0-9a-f]{7,40})$ ]] && before="${BASH_REMATCH[1]}" || before=""
+        # Not updated since its row (less a margin for a run that read the head and wrote the row
+        # later): no push since, nothing to read. A push moves the PR's updated_at.
+        if [ -n "$before" ] && [ -n "$updated_at" ]; then
+          local pr_s row_s; pr_s="$(iso2epoch "$updated_at")"; row_s="$(iso2epoch "${LAST_UPDATED["$repo#$num"]:-}")"
+          [ "$pr_s" -gt 0 ] && [ "$row_s" -gt 0 ] && [ "$pr_s" -lt $((row_s - 3 * 3600)) ] && continue
+        fi
+        if [ "$ndue" -ge "$MAXN" ] || [ "$hlookups" -ge "$MAX_HEAD" ]; then waiting=$((waiting + 1)); continue; fi
+        hlookups=$((hlookups + 1))
         head="$(gh api ${hostargs[@]+"${hostargs[@]}"} "repos/$slug/pulls/$num" --jq '.head.sha' 2>/dev/null)" && [[ "$head" =~ ^[0-9a-f]{7,40}$ ]] \
           || { log "$repo#$num: could not read its head — retried next run"; continue; }
         [ "$head" = "$before" ] && continue
@@ -314,19 +321,34 @@ watch_mode() {
           printf '%s\t%s\t\topen\t%s\t%s\t%s\thead %s\n' "$repo" "$num" "$card" "$NOW_ISO" "${LAST_ATTEMPTS["$repo#$num"]:-0}" "$head" >> "$LEDGER"
           log "$repo#$num: carded with no head recorded — now at ${head:0:7}"; continue
         fi
-        [ "$lookups" -lt "$MAX_LOOKUPS" ] || { waiting=$((waiting + 1)); continue; }
-        lookups=$((lookups + 1))
-        # A head no longer comparable (a force-push dropped it) falls back to the PR's own files:
-        # compared whole once, never retried every pass.
-        files="$(gh api ${hostargs[@]+"${hostargs[@]}"} "repos/$slug/compare/$before...$head?per_page=1" --jq '.files[]?.filename' 2>/dev/null)" \
-          || { log "$repo#$num: could not compare ${before:0:7} with ${head:0:7} — its files instead"
-               files="$(gh api ${hostargs[@]+"${hostargs[@]}"} "repos/$slug/pulls/$num/files?per_page=100" --paginate --jq '.[].filename' 2>/dev/null)"; } \
-          || { log "$repo#$num: could not read its files — retried next run"; continue; }
+        [ "$hlookups" -lt "$MAX_HEAD" ] || { waiting=$((waiting + 1)); continue; }
+        hlookups=$((hlookups + 1))
+        local errf rc own=0; errf="$(mktemp "${TMPDIR:-/tmp}/design-desk-gh.XXXXXX")"
+        files="$(gh api ${hostargs[@]+"${hostargs[@]}"} "repos/$slug/compare/$before...$head?per_page=1" --jq '.files[]?.filename' 2>"$errf")"; rc=$?
+        local err; err="$(<"$errf")"; rm -f "$errf"; err="${err,,}"
+        if [ "$rc" -ne 0 ]; then
+          # GitHub says the old head is gone (a force-push dropped it): the PR's own files decide,
+          # compared whole once. Any other failure is retried next pass, nothing written.
+          if [[ "$err" == *"http 404"* || ( "$err" == *"http 422"* && ( "$err" == *"no common ancestor"* || "$err" == *"not found"* ) ) ]]; then
+            log "$repo#$num: ${before:0:7} is gone from GitHub — its files instead"; own=1
+          else
+            log "$repo#$num: could not compare ${before:0:7} with ${head:0:7} — retried next run"; continue
+          fi
+        fi
         ui="$(printf '%s\n' "$files" | grep -E "$ere" || true)"
+        # A compare lists what a merge of the default branch brought in too: only the PR's own UI files count.
+        if [ "$own" = 1 ] || [ -n "$ui" ]; then
+          [ "$hlookups" -lt "$MAX_HEAD" ] || { waiting=$((waiting + 1)); continue; }
+          hlookups=$((hlookups + 1))
+          local prfiles; prfiles="$(gh api ${hostargs[@]+"${hostargs[@]}"} "repos/$slug/pulls/$num/files?per_page=100" --paginate --jq '.[].filename' 2>/dev/null)" \
+            || { log "$repo#$num: could not read its files — retried next run"; continue; }
+          if [ "$own" = 1 ]; then ui="$(printf '%s\n' "$prfiles" | grep -E "$ere" || true)"
+          else ui="$(grep -Fxf <(printf '%s\n' "$prfiles") <<<"$ui" || true)"; fi
+        fi
         n=$(printf '%s\n' "$ui" | grep -c . || true)
         if [ "$n" -eq 0 ]; then
           printf '%s\t%s\t\topen\t%s\t%s\t%s\thead %s\n' "$repo" "$num" "$card" "$NOW_ISO" "${LAST_ATTEMPTS["$repo#$num"]:-0}" "$head" >> "$LEDGER"
-          log "$repo#$num: pushed ${head:0:7}, no UI file touched"; continue
+          log "$repo#$num: pushed ${head:0:7}, no UI file of its own touched"; continue
         fi
         kind=push
       else
@@ -351,7 +373,7 @@ watch_mode() {
         '{id:$id, repo:$repo, pr:$pr, state:$state, title:$title, url:$url, merged_at:(if $merged == "" then null else $merged end), author:$author, draft:$draft, kind:$kind, ui_file_count:$n, ui_files:$files}
          + (if $kind == "push" then {head:$head, before:$before} else {} end)' >> "$DUE"
       log "$repo#$num: $state${merged:+ $merged}${head:+, pushed ${head:0:7}}, $n UI files — due ($kind)"
-    done < <(jq -r '.items[] | [(.number | tostring), .state, (.pull_request.merged_at // ""), (.title | gsub("[\t\n\u001f]"; " ")), .html_url, .user.login, (.draft // false | tostring)] | join("\u001f")' <<<"$items")
+    done < <(jq -r '.items[] | [(.number | tostring), .state, (.pull_request.merged_at // ""), (.title | gsub("[\t\n\u001f]"; " ")), .html_url, .user.login, (.draft // false | tostring), (.updated_at // "")] | join("\u001f")' <<<"$items")
     # Issues that ask for design work: a label the team puts on them.
     if [ "$LABEL" != none ]; then
       found="$(search "$repo" "repo:$slug is:issue is:open label:\"$LABEL\"")" || fail_out "could not list the issues labelled $LABEL in $repo"
@@ -418,7 +440,7 @@ watch_mode() {
   [ "$skipped" -gt 0 ] && log "$skipped PRs touch no UI file — skipped"
   [ "$deferred" -gt 0 ] && log "$deferred more PRs wait for the next run (max_changes_per_run=$MAXN, at most $MAX_LOOKUPS file lookups a pass)"
   # A carded open PR whose head waits moves no cursor: the open search does not start from it.
-  [ "$waiting" -gt 0 ] && log "$waiting carded open PRs wait for the next run to compare their head (at most $MAX_LOOKUPS lookups a pass)"
+  [ "$waiting" -gt 0 ] && log "$waiting carded open PRs wait for the next run to compare their head (at most $MAX_HEAD head lookups a pass)"
   printf '%s changes_due=%s issues_due=%s skipped=%s deferred=%s seen=%s\n' "$NOW_ISO" "$ndue" "$nissues" "$skipped" "$deferred" "$seen" >> "$WORK/WATCH.log"
   if [ "$deferred" -eq 0 ] && [ "$unread" -eq 0 ] && [ ! -e "$WORK/.search-partial" ]; then printf '%s\n%s\n' "$NOW_ISO" "$SINCE" > "$CURSOR"; fi
   rm -f "$WORK/.search-partial"

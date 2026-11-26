@@ -72,8 +72,8 @@ steps say; the decision notes of step 4 are always yours to read.
      the issue asks it, the approved design, its Figma frame or a catalog element shows something the
      change lacks or does differently, or a decision that counts is gone against. Never a question you
      thought of yourself; none is a valid card);
-   - `source` — `{repo, pr, url, merged_at, author, draft}` (`draft`: `true` only for a carded
-     pull request gone back to draft; the Desk shows it as the row's Draft dot).
+   - `source` — `{repo, pr, url, merged_at, author, draft}` (`draft` as the entry has it; one
+     gone back to draft since is known from the Desk's GitHub copy, and is no Build).
    - `environment` — only on an open PR whose body links its own running deployment (a line
      such as "Environment: https://…", a preview or demo link the author wrote for this PR),
      each value as the body gives it, never guessed and never from someone else's comment:
@@ -172,9 +172,13 @@ and go on with the next change; the pre-flight retries it up to three times.
 
 ## A new push
 
-The pre-flight compares a carded open PR's head with the one `ledger.sh open` recorded. A push
-whose commits touch no UI file only moves the recorded head; one that does is a `kind: push`
-entry, with `head`, `before` (the head the card was judged on) and the push's `ui_files`. Claim
+The pre-flight compares a carded open PR's head with the one `ledger.sh open` recorded, unless
+GitHub has not updated the PR since that row (less 3 hours). Only the push's UI files that are
+the PR's own count (a merge of the default branch brings others): none only moves the recorded
+head; some make a `kind: push` entry, with `head`, `before` (the head the card was judged on) and
+those `ui_files`. GitHub saying `before` is gone (a force-push) → the PR's own UI files; any other
+failure is retried next pass. These reads have their own budget a pass, and one past it waits
+without holding up a new PR. Claim
 it, and update the card the PR already has (the store finds it by the PR): what the new commits
 (`git diff <before> <head> -- <ui files>`) change for people, its screens when they changed, its
 `attention`, and step 11's comparison on the new head (its `sha`; people's actions stay); then step 13 and `ledger.sh open <repo>

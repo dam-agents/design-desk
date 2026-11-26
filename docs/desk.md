@@ -259,7 +259,8 @@ and `D-12` in text link to it as to a card (Links to an item).
   `side`: a developer, or not known), and every one from a `pr`, `issue`, `commit` or `doc`
   (no one verified who wrote it there), is **Not approved** until a designer, an admin or a UI
   dev owner presses **Approve** in its status box (`POST /api/decisions/<id>/approve`, ability
-  `approve-decision`; `approved: {by, at}`); Fine as built's comes approved by who accepted it.
+  `approve-decision`; `approved: {by, at}`) — someone else than its author, by address or GitHub
+  username on People; Fine as built's comes approved by who accepted it.
   One a UI dev owner approved is For you to every designer and admin (Decision approved), who may revoke it.
   **It counts for nothing meanwhile**: no card is checked against it, none carries it as a
   conflict (the store refuses a new one: `design desk upsert` answers "not approved yet"), none
@@ -816,10 +817,13 @@ Requests use **Your turn** instead): only the cards that wait for a designer's d
   per difference: `fix` (**Fix in code**: `fix: {by, at}`, and `text` becomes their draft
   `{design: key, text}`, [Reviews](#reviews)), `fine` (**Fine as built**: `accepted: {by, at, decision}`, a decision in force at once,
   [Approved](#decisions); taken back or settled otherwise, the store revokes it "Taken back on the
-  Desk"; a second Fine as built cites the same one; revoked on its page, the difference is open again),
+  Desk"; fixed in a later comparison, "Fixed in <sha>: built as designed after all"; its comparison
+  dropped (**Link** to another design, **Not this one**, `design_check: null`), "Its pull request no
+  longer builds R-<n>"; a second Fine as built cites the same one; revoked on its page, the difference is open again),
   `ask` (**Ask the designer**: `asked: {by, at}`; "A UI dev owner asks a designer: <element>",
   by the asker's role, puts the change in Needs a designer whatever its tab, For you to whoever
-  approved the design as Developer asks is), `none` (takes it back). A later comparison keeps them
+  approved the design as Developer asks is), `none` (takes it back). Settled other than `fix`, nobody's
+  draft about it stays. A later comparison keeps them
   by key; one gone is `fixed: {sha, at}`, one new `new_in: <sha>`, a fixed one back is open again.
   Only **open** ones (not fixed, not accepted) count: the Differs reason, the request's Build line
   (`differences`, and `accepted`), and the design marked done once its change merges.

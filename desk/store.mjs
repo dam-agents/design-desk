@@ -684,7 +684,7 @@ export class Store {
       if (!l) continue;
       const src = c.source || {}, gh = own(this.db.github, prKey(c) || "");
       const k = c.design_check?.request === l.r.id ? c.design_check : null;
-      const state = src.merged_at || /^merged$/i.test(gh?.state || "") ? "merged" : /^closed$/i.test(gh?.state || "") ? "closed" : src.draft ? "draft" : "open";
+      const state = src.merged_at || /^merged$/i.test(gh?.state || "") ? "merged" : /^closed$/i.test(gh?.state || "") ? "closed" : src.draft || gh?.draft ? "draft" : "open";
       if (!by.has(l.r.id)) by.set(l.r.id, []);
       by.get(l.r.id).push({ card: c.id, title: c.title, pr: src.pr ?? null, repo: src.repo || null, url: src.url || null, state, how: l.how,
         verdict: k?.verdict || null, differences: k?.verdict === "differs" ? openDifferences(k).length : 0, accepted: acceptedDifferences(k).length });
@@ -693,8 +693,8 @@ export class Store {
   }
 
   // The changes that build one request, and whether it is in Build: the request page's Build section.
-  buildOf(r) {
-    const list = this.buildsByRequest().get(r.id) || [];
+  buildOf(r, index = null) {
+    const list = this.buildsByRequest(index || this.buildsIndex()).get(r.id) || [];
     return { build_prs: list, building: this.buildingOf(r, list) };
   }
 
@@ -714,6 +714,7 @@ export class Store {
     if (["spec", "from"].includes(l?.via) && (l.r.id !== r.id || !on)) throw bad(`This pull request builds ${l.r.id}: ${l.via === "spec" ? "its spec went there" : "the request was filed from it"}.`);
     if (on && l?.r.id === r.id && l.via !== "check") throw bad(`This pull request already builds ${r.id}.`);
     let item = null, dropped = false;
+    const was = c.design_check;
     if (on) {
       c.build_link = { request: r.id, ...stamp };
       c.not_builds = (c.not_builds || []).filter((x) => x.request !== r.id);
@@ -729,6 +730,8 @@ export class Store {
     }
     c.may_build = (c.may_build || []).filter((x) => x.request !== r.id);
     if (!c.not_builds.length) delete c.not_builds;
+    if (dropped) this.endAccepted(was, null, person(who));
+    c.updated = this.clock();
     // A comparison gone takes its reason off the card: the check follows it, as it follows Mark handled.
     if (dropped && ["failing", "passing"].includes(c.ci?.state)) this.pendingOrNew("ci", c.id, who, "Its comparison with a design was dropped: set the check again.");
     this.save();
@@ -830,7 +833,9 @@ export class Store {
     // Each decision the card cites, with its words and whether it is still in force.
     const cited = Object.fromEntries([...(c.decisions || []), ...(c.impact?.decisions || []).map((x) => x.id).filter(Boolean), ...shapedBy(c)]
       .map((id) => { const d = own(this.db.decisions, id); return [id, { text: d?.text || "", status: d?.status || "revoked" }]; }));
-    return { ...c, conflicts, cited, attention: this.attentionOf(c), ...(["request", "change", "issue"].includes(c.kind) ? { for: this.forOf(c) } : {}), ...(c.kind === "request" ? { from_pr: this.fromPr(c), ...this.buildOf(c) } : {}), designed: this.designedOf(c), sent_card: this.sentCardOf(c), builds: this.buildsOf(c), reviews: this.reviewsOf(c), responsible: this.responsibleOf(c), ...(c.kind === "change" ? { looks_good: this.looksGoodOf(c) } : {}), threads: (c.threads || []).map((t) => this.db.threads[t]).filter((t) => sees(t, viewer)), waiting: this.waitingFor(c.id, viewer) };
+    // What links pull requests to designs, built once for this read.
+    const index = ["request", "change"].includes(c.kind) ? this.buildsIndex() : null;
+    return { ...c, conflicts, cited, attention: this.attentionOf(c, index), ...(["request", "change", "issue"].includes(c.kind) ? { for: this.forOf(c, index) } : {}), ...(c.kind === "request" ? { from_pr: this.fromPr(c), ...this.buildOf(c, index) } : {}), designed: this.designedOf(c), sent_card: this.sentCardOf(c), builds: this.buildsOf(c, index), reviews: this.reviewsOf(c), responsible: this.responsibleOf(c), ...(c.kind === "change" ? { looks_good: this.looksGoodOf(c) } : {}), threads: (c.threads || []).map((t) => this.db.threads[t]).filter((t) => sees(t, viewer)), waiting: this.waitingFor(c.id, viewer) };
   }
 
   // The ids of a request's shared parts (docs/requests.md → The same elements in every option). The
@@ -1054,10 +1059,11 @@ export class Store {
     this.save();
     return { drafts: structuredClone(own(own(this.db.drafts, key) || {}, c.id) || []) };
   }
-  // Without saving: the caller saves with the rest of its write.
+  // Without saving: the caller saves with the rest of its write. The person's map is made when missing.
   setDrafts(key, cardId, list) {
-    const mine = own(this.db.drafts, key);
-    if (!mine) return;
+    let mine = own(this.db.drafts, key);
+    if (!mine && !list.length) return;
+    if (!mine) Object.defineProperty(this.db.drafts, key, { value: (mine = {}), enumerable: true, writable: true, configurable: true });
     if (list.length) Object.defineProperty(mine, cardId, { value: list, enumerable: true, writable: true, configurable: true });
     else delete mine[cardId];
     if (!Object.keys(mine).length) delete this.db.drafts[key];
@@ -1272,6 +1278,8 @@ export class Store {
         // No list read this time (`linked` left out): the one from before stays.
         linked: !Array.isArray(x.linked) ? (was?.linked || []) : x.linked.slice(0, 10).filter((p) => /^https:\/\/github\.com\//.test(String(p?.url || ""))).map((p) => ({ title: String(p.title || "").slice(0, LIMITS.title), url: String(p.url).slice(0, 500), state: optText(p.state, 30, "state"), author: optText(p.author, 100, "author") })),
         body: String(x.body ?? "").slice(0, GH.body), updated: optText(x.updated, 40, "updated"), comments, fetched: this.clock(),
+        // Whether a pull request is a draft: one back to draft is no Build (buildsByRequest).
+        ...(x.kind === "pr" ? { draft: x.draft === true } : {}),
         // A pull request's head commit: a review that asked for changes waits for it to move (docs/desk.md → Reviews).
         ...(x.kind === "pr" && /^[0-9a-f]{40}$/.test(String(x.head || "")) ? { head: String(x.head), head_at: x.head === was?.head ? was.head_at || this.clock() : this.clock() }
           : x.kind === "pr" && was?.head ? { head: was.head, head_at: was.head_at || this.clock() } : {}),
@@ -3063,6 +3071,7 @@ export class Store {
     // A summary for Designs alone is not an event: a backfill must not move when a request was sent (docs/desk-page.md → Designs).
     if (!c || Object.keys(fields).some((k) => fields[k] !== undefined && !["id", "dev_summary", "ci", "reminded", "translation", "gist"].includes(k))) next.updated = this.clock();
     this.db.cards[next.id] = next;
+    if (next.kind === "change" && fields.design_check !== undefined) this.endAccepted(c?.design_check, next.design_check, { agent: true });
     if (next.kind === "request" && fields.variants !== undefined) this.markGone(next, c?.variants || []);
     // A design already in the catalog follows every new version of its option and of its states.
     if (next.kind === "request" && next.in_catalog && fields.variants !== undefined) {
@@ -3121,12 +3130,12 @@ export class Store {
     if (action === "fix") d.fix = stamp;
     if (action === "fine") d.accepted = { ...stamp, decision };
     if (action === "ask") d.asked = stamp;
-    const drafts = action === "fix" ? [...list, { id: randomUUID().slice(0, 8), design: d.key, text: words, anchor: null, at: stamp.at }] : list;
-    if (drafts.length) {
-      const all = own(this.db.drafts, mine) || {};
-      Object.defineProperty(all, c.id, { value: drafts, enumerable: true, writable: true, configurable: true });
-      Object.defineProperty(this.db.drafts, mine, { value: all, enumerable: true, writable: true, configurable: true });
-    } else this.setDrafts(mine, c.id, []);
+    // Fix in code replaces the person's draft about it; settled otherwise, nobody's goes out in feedback.
+    if (action === "fix") this.setDrafts(mine, c.id, [...list, { id: randomUUID().slice(0, 8), design: d.key, text: words, anchor: null, at: stamp.at }]);
+    else for (const k of Object.keys(this.db.drafts)) {
+      const theirs = own(this.db.drafts[k], c.id);
+      if (theirs?.some((x) => x.design === d.key)) this.setDrafts(k, c.id, theirs.filter((x) => x.design !== d.key));
+    }
     c.updated = this.clock();
     // The last open one settled on a merged change: the design it builds is shipped now.
     this.shipFrom(c);
@@ -3487,6 +3496,19 @@ export class Store {
     if (["failing", "passing"].includes(c.ci?.state)) this.pendingOrNew("ci", c.id, who, `${d.id} was revoked: a difference from the design is open again.`);
   }
 
+  // A kept-as-built decision lasts no longer than its difference: fixed in a later comparison, or
+  // the comparison dropped, its decision in force is revoked; a fixed one keeps its `accepted`
+  // for the record (docs/desk.md → Needs a designer). Without saving.
+  endAccepted(prev, next, by) {
+    const live = new Set(acceptedDifferences(next).map((d) => d.accepted.decision));
+    for (const p of acceptedDifferences(prev)) {
+      const d = p.accepted.decision && own(this.db.decisions, p.accepted.decision);
+      if (d?.status !== "active" || live.has(d.id)) continue;
+      const now = next?.request === prev.request ? next.differences.find((x) => x.key === (p.key || designDiffKey(p))) : null;
+      this.markRevoked(d, { by, reason: now?.fixed ? `Fixed${now.fixed.sha ? ` in ${now.fixed.sha.slice(0, 7)}` : ""}: built as designed after all` : `Its pull request no longer builds ${prev.request}` });
+    }
+  }
+
   markRevoked(d, { by, reason, replaced_by = null, origin = null }) {
     d.status = "revoked";
     d.revoked = { by, at: this.clock(), reason, replaced_by, ...(origin ? { origin } : {}) };
@@ -3518,6 +3540,10 @@ export class Store {
     const d = this.decision(id);
     if (d.status !== "active") throw bad(`${d.id} is revoked: restore it first`);
     if (d.approved) throw bad(`${d.id} is already approved`);
+    // Never one's own: by any of their addresses, or their GitHub username where the Desk knows it.
+    const login = this.loginOf(who), lc = (x) => String(x || "").toLowerCase();
+    if ((d.author?.email && addressesOf(who).includes(lc(d.author.email))) || (login && d.author?.login && lc(login) === lc(d.author.login)))
+      throw forbidden("You made this decision: someone else approves it.");
     d.approved = { by: approverOf(who), at: this.clock() };
     d.history = [...(d.history || []), { what: "approved", ...d.approved }].slice(-20);
     // From now on it counts: the cards about the same thing are checked against it.
@@ -4164,13 +4190,14 @@ const approverOf = (who) => ({ email: who.email || null, role: who.role || null,
 const openDifferences = (k) => (k?.differences || []).filter((d) => !d.fixed && !d.accepted);
 const acceptedDifferences = (k) => (k?.differences || []).filter((d) => !d.fixed && d.accepted);
 // A comparison written again with the same design keeps each difference by its key: one in both
-// keeps a person's action (fixed, it is open again); one gone is kept as fixed on this head (at
-// most as many as the agent may write, newest first); one new since the last gets `new_in`.
+// keeps a person's action (fixed, it is open again, less the Fine as built its fix revoked); one
+// gone is kept as fixed on this head (at most as many as the agent may write, newest first); one
+// new since the last gets `new_in`.
 function mergeDesignCheck(next, prev) {
   if (!prev || prev.request !== next.request) return next;
   const was = new Map(prev.differences.map((d) => [d.key || designDiffKey(d), d]));
   const now = new Set(next.differences.map((d) => d.key));
-  const kept = (p) => Object.fromEntries(["fix", "accepted", "asked", "decision"].filter((k) => p[k]).map((k) => [k, p[k]]));
+  const kept = (p) => Object.fromEntries(["fix", "accepted", "asked", "decision"].filter((k) => p[k] && !(k === "accepted" && p.fixed)).map((k) => [k, p[k]]));
   const current = next.differences.map((d) => (was.has(d.key) ? { ...d, ...kept(was.get(d.key)) } : { ...d, new_in: next.sha }));
   const fixed = [...was].filter(([k]) => !now.has(k)).map(([k, p]) => { const { new_in, ...rest } = p; return { ...rest, key: k, fixed: p.fixed || { sha: next.sha, at: next.at } }; })
     .sort((a, b) => String(b.fixed.at).localeCompare(String(a.fixed.at))).slice(0, LIMITS.designDifferences);

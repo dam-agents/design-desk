@@ -87,7 +87,7 @@ assert "issue_label none and watch_open_prs disabled turn both off" '(.issues_du
 printf -- '- repos: acme/widgets\n- watch_since: 2026-10-01T00:00:00Z\n- issue_label: none\n- max_changes_per_run: 5\n' > "$WORK_DIR/CONFIG.md"
 rm -f "$WORK_DIR/CHANGES.tsv" "$WORK_DIR/.watch-cursor" "$STUB_DIR/gh.calls"
 printf '{"incomplete_results":false,"items":[]}' > "$STUB_DIR/search.json"
-openpr() { printf '{"number":%s,"title":"PR %s","html_url":"https://github.com/acme/widgets/pull/%s","user":{"login":"erin"},"draft":%s,"pull_request":{"merged_at":null}}' "$1" "$1" "$1" "$2"; }
+openpr() { printf '{"number":%s,"title":"PR %s","html_url":"https://github.com/acme/widgets/pull/%s","user":{"login":"erin"},"draft":%s%s,"pull_request":{"merged_at":null}}' "$1" "$1" "$1" "$2" "${3:+,\"updated_at\":\"$3\"}"; }
 printf '{"incomplete_results":false,"items":[%s,%s]}' "$(openpr 40 true)" "$(openpr 41 false)" > "$STUB_DIR/open.json"
 printf 'src/a.tsx\n' > "$STUB_DIR/files-40.txt"; printf 'src/b.tsx\n' > "$STUB_DIR/files-41.txt"
 outd="$(bash "$ROOT/scripts/preflight.sh" watch)"
@@ -123,6 +123,38 @@ printf 'abcdef44\n' > "$STUB_DIR/pull-41.tsv"; printf 'src/b.tsx\n' > "$STUB_DIR
 printf '{"incomplete_results":false,"items":[%s]}' "$(openpr 41 false)" > "$STUB_DIR/open.json"
 outf="$(bash "$ROOT/scripts/preflight.sh" watch)"
 assert "a head no longer comparable falls back to the PR's files" '[.changes_due[] | select(.pr == 41) | {kind, head, ui_files}] == [{kind: "push", head: "abcdef44", ui_files: ["src/b.tsx"]}]' "$outf"
+# A compare lists what a merge of the default branch brought in too: only the PR's own UI files make a push due.
+bash "$ROOT/scripts/ledger.sh" open acme/widgets 41 C-41 abcdef44 >/dev/null
+bash "$ROOT/scripts/ledger.sh" open acme/widgets 44 C-44 4444aaa1 >/dev/null
+printf 'abcdef55\n' > "$STUB_DIR/pull-41.tsv"; printf 'src/b.tsx\nsrc/main.tsx\n' > "$STUB_DIR/compare-abcdef44...abcdef55.txt"
+printf '4444bbb2\n' > "$STUB_DIR/pull-44.tsv"; printf 'src/main.tsx\n' > "$STUB_DIR/compare-4444aaa1...4444bbb2.txt"; printf 'README.md\n' > "$STUB_DIR/files-44.txt"
+printf '{"incomplete_results":false,"items":[%s,%s]}' "$(openpr 41 false)" "$(openpr 44 false)" > "$STUB_DIR/open.json"
+outm="$(bash "$ROOT/scripts/preflight.sh" watch)"
+assert "only the PR's own UI files make a push due" '[.changes_due[] | {pr, ui_files}] == [{pr: 41, ui_files: ["src/b.tsx"]}]' "$outm"
+assert "one whose UI files all came from a merge only moves its head" '.row.status == "open" and .row.note == "head 4444bbb2"' "$(bash "$ROOT/scripts/ledger.sh" show acme/widgets 44)"
+# Any other compare failure (GitHub down) is retried next pass: nothing written, no fallback.
+bash "$ROOT/scripts/ledger.sh" open acme/widgets 41 C-41 abcdef55 >/dev/null
+printf 'abcdef66\n' > "$STUB_DIR/pull-41.tsv"; printf 'gh: Server Error (HTTP 502)\n' > "$STUB_DIR/compare-abcdef55...abcdef66.fail"
+printf '{"incomplete_results":false,"items":[%s]}' "$(openpr 41 false)" > "$STUB_DIR/open.json"; : > "$STUB_DIR/gh.calls"
+outt="$(bash "$ROOT/scripts/preflight.sh" watch)"
+assert "a compare GitHub fails is due for nothing, and logged" '[.changes_due[]?.pr] == [] and (.logs | map(test("41: could not compare abcdef5 with abcdef6 — retried next run")) | any)' "$outt"
+assert "its row is left as it was" '.row.status == "open" and .row.note == "head abcdef55"' "$(bash "$ROOT/scripts/ledger.sh" show acme/widgets 41)"
+assert "and the PR's files are not read instead" '. == false' "$(grep -q 'pulls/41/files' "$STUB_DIR/gh.calls" && echo true || echo false)"
+rm -f "$STUB_DIR/compare-abcdef55...abcdef66.fail"; printf 'src/b.tsx\n' > "$STUB_DIR/compare-abcdef55...abcdef66.txt"
+# Head checks have a budget of their own: one out of it waits, and holds up neither a new candidate nor the cursor.
+bash "$ROOT/scripts/ledger.sh" open acme/widgets 41 C-41 abcdef55 >/dev/null
+printf 'src/c.tsx\n' > "$STUB_DIR/files-46.txt"; rm -f "$WORK_DIR/.watch-cursor"
+printf '{"incomplete_results":false,"items":[%s,%s]}' "$(openpr 41 false)" "$(openpr 46 false)" > "$STUB_DIR/open.json"
+outb="$(WATCH_MAX_LOOKUPS=1 WATCH_MAX_HEAD_LOOKUPS=1 bash "$ROOT/scripts/preflight.sh" watch)"
+assert "a new candidate is due while a head check waits" '[.changes_due[].pr] == [46] and (.logs | map(test("1 carded open PRs wait")) | any) and (.logs | map(test("more PRs wait")) | any | not)' "$outb"
+assert "the cursor moves" '. == true' "$([ -f "$WORK_DIR/.watch-cursor" ] && echo true || echo false)"
+# Not updated on GitHub since its row was written, less 3 hours: no push since, its head is not read.
+bash "$ROOT/scripts/ledger.sh" open acme/widgets 41 C-41 abcdef55 >/dev/null
+printf '{"incomplete_results":false,"items":[%s]}' "$(openpr 41 false 2026-01-01T00:00:00Z)" > "$STUB_DIR/open.json"; : > "$STUB_DIR/gh.calls"
+assert "a PR not updated since its row is due for nothing" '[.changes_due[]?.pr] == []' "$(bash "$ROOT/scripts/preflight.sh" watch)"
+assert "and its head is not read" '. == false' "$(grep -q 'pulls/41' "$STUB_DIR/gh.calls" && echo true || echo false)"
+printf '{"incomplete_results":false,"items":[%s]}' "$(openpr 41 false "$(date -u -d '-2 hours' +%Y-%m-%dT%H:%M:%SZ)")" > "$STUB_DIR/open.json"
+assert "one updated within the margin is read" '[.changes_due[] | {pr, kind, head}] == [{pr: 41, kind: "push", head: "abcdef66"}]' "$(bash "$ROOT/scripts/preflight.sh" watch)"
 # Back to draft: it keeps its card, and nothing is due for it, not even a head lookup.
 bash "$ROOT/scripts/ledger.sh" open acme/widgets 40 C-40 bbbbbbb2 >/dev/null
 printf 'ggggggg3\n' > "$STUB_DIR/pull-40.tsv"; printf 'src/a.tsx\n' > "$STUB_DIR/compare-bbbbbbb2...ggggggg3.txt"
