@@ -2451,7 +2451,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       "productFilter:decisions": "Every decision the team made, the newest first", "productFilter:kit": "What the product's UI is made of, read from its code: its named values and its components' variants", "productFilter:history": "What happened to the product by day, week or release: the changes that shipped, the decisions made and the requests filed",
       "productFilter:differences": "Where the product differs from its design in Figma: screens, elements, changes, requests and decisions",
       "elFilter:all": "Every element: from the product and from approved designs", "elFilter:product": "Only the product's own elements, drawn from its code", "elFilter:design": "Only elements of approved designs, not in the product yet" }[v]),
-    dstate: (v) => ({ active: "Decisions that hold today", unapproved: "Decisions someone other than a designer made, waiting for a designer to approve them; nothing is checked against them yet", revoked: "Decisions no longer in force", "": "Every decision" }[v]),
+    dstate: (v) => ({ active: "Decisions that hold today", unapproved: "Decisions someone other than a designer made, waiting for a designer, an admin or a UI dev owner to approve them; nothing is checked against them yet", revoked: "Decisions no longer in force", "": "Every decision" }[v]),
     card: (v) => `Opens ${S.cards.find((x) => x.id === v)?.title || v}`,
     decision: (v) => `Opens decision ${v}`,
     ref: (v) => `Opens ${v}`,
@@ -4581,7 +4581,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const named = (a) => a ? esc(a.name || a.login || (a.email ? nameOf(a.email) : "someone")) : "";
   // Who a decision came from, as the server reads it (docs/desk.md → Decisions → Who decided).
   // Where a decision stands: revoked, in force, or in force but not yet approved by a designer.
-  const NOT_APPROVED_TIP = "Someone other than a designer made it. It counts for nothing until a designer approves it: no card is checked against it and none warns";
+  const NOT_APPROVED_TIP = "Someone other than a designer made it. It counts for nothing until a designer, an admin or a UI dev owner approves it: no card is checked against it and none warns";
   const decState = (d) => d.status === "revoked" ? ["revoked", "Revoked", "It no longer holds; it stays here crossed out, with the reason"]
     : d.unapproved ? ["unapproved", "Not approved", `${NOT_APPROVED_TIP}.`] : ["in-force", "In force", "This decision holds today; anything against it warns"];
   const decRef = (id, text = "", gone = false) => `<a href="#${esc(id)}" data-ref="${esc(id)}">${esc(id)}</a>${text ? ` <span class="${gone ? "revoked-text" : ""}">${txt(text)}</span>` : ""}`;
@@ -4916,7 +4916,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     };
     // One list, the newest first.
     const rows = newestFirst(S.decisions).map(row).join("");
-    list.innerHTML = `${bar}${rows || `<div class="empty">${S.decisionState === "revoked" ? "No decision has been revoked." : S.decisionState === "unapproved" ? "Every decision in force is a designer's or approved by one." : "No decisions recorded yet. Approved designs, outcomes of the presentation, comments a designer records and deliberate behaviour Design Desk finds land here."}</div>`}`;
+    list.innerHTML = `${bar}${rows || `<div class="empty">${S.decisionState === "revoked" ? "No decision has been revoked." : S.decisionState === "unapproved" ? "Every decision in force is a designer's or approved." : "No decisions recorded yet. Approved designs, outcomes of the presentation, comments a designer records and deliberate behaviour Design Desk finds land here."}</div>`}`;
   }
   async function loadDecisions() {
     allDecs = null;
@@ -4955,12 +4955,13 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // Who decided it and where, in the status box as a change's PR and author are.
     const meta = [d.author ? `<span><span class="k">by:</span> ${authorIcon(d)}<b>${named(d.author)}</b>${d.author.login && d.author.name ? ` (${esc(d.author.login)})` : ""}</span>` : "",
       d.origin ? `<span><span class="k">from:</span> ${originText(d.origin)}</span>` : "",
-      d.approved ? `<span><span class="k">approved:</span> <b>${named(d.approved.by)}</b> · ${esc(day(d.approved.at))}</span>` : ""].join("");
+      d.approved ? `<span><span class="k">approved by:</span> <b>${named(d.approved.by)}</b> · ${esc(day(d.approved.at))}</span>` : ""].join("");
     const st = decState(d);
     return `${backBar()}<h2 class="${d.status === "revoked" ? "revoked-text" : ""}">${txt(d.text)}${num(d)}${titleLink(d)}</h2>
       <div class="sub"><span>${esc(day(d.at))}</span>${(d.concepts || []).length ? `<span title="What it is about">${esc(d.concepts.join(", "))}</span>` : ""}</div>
       ${ghStatus(d.status === "revoked" ? "closed" : d.unapproved ? "waiting" : "approved", st[1], st[2], meta,
-        can("decide") ? (d.status === "active" ? `${d.unapproved ? `<button class="btn primary" data-approve-decision="${esc(d.id)}">Approve</button>` : ""}<button class="btn" data-revoke="${esc(d.id)}">Revoke…</button>` : `<button class="btn" data-restore="${esc(d.id)}">Restore</button>`) : "", "", { inline: true })}
+        // Approve: a designer, an admin or a UI dev owner; Revoke… and Restore stay a designer's or an admin's.
+        d.status === "active" ? `${d.unapproved && can("approve-decision") ? `<button class="btn primary" data-approve-decision="${esc(d.id)}">Approve</button>` : ""}${can("decide") ? `<button class="btn" data-revoke="${esc(d.id)}">Revoke…</button>` : ""}` : can("decide") ? `<button class="btn" data-restore="${esc(d.id)}">Restore</button>` : "", "", { inline: true })}
       ${rv ? `<div class="against"><p><b>Revoked</b> by ${named(rv.by)} · ${esc(day(rv.at))}</p><p>${txt(rv.reason)}</p>${rv.replaced_by ? `<p>Replaced by ${decRef(rv.replaced_by)}</p>` : ""}${rv.origin ? originLine(rv.origin) : ""}</div>` : ""}
       ${against.map((x) => `<div class="against"><p>⚠ <b>Goes against ${decRef(x.decision)}</b>: ${txt(x.text)}</p><p class="hint">${txt(x.why)}</p></div>`).join("")}
       ${d.why ? `<h3>Why</h3>${md(d.why)}` : ""}
@@ -5924,7 +5925,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const dcPic = (id, cap) => `<div class="ft-c">${id ? `<figure data-zoom="${esc(id)}"><img alt="${esc(cap)}" data-asset="${esc(id)}" /></figure>` : `<span class="hint">No picture</span>`}</div>`;
   const dcState = (d) => [d.new_in !== undefined && !d.fixed ? `<span class="chip info" title="Not in the comparison before this push">New</span>` : "",
     d.fixed ? `<span class="chip ok" title="The push after it no longer shows it">${d.fixed.sha ? `Fixed in <code>${esc(String(d.fixed.sha).slice(0, 7))}</code>` : "Fixed"}</span>`
-    : d.accepted ? `<span class="chip ok" title="Kept as it was built">Fine as built · ${dcWho(d.accepted.by)}</span>`
+    : d.accepted ? `<span class="chip ok" title="Kept as it was built">Fine as built · ${dcWho(d.accepted.by)}</span>${d.accepted.decision ? ` <span title="The decision it recorded">${decRef(d.accepted.decision)}</span>` : ""}`
     : d.asked ? `<span class="chip warn" title="Waits for a designer">Asked a designer · ${dcWho(d.asked.by)}</span>`
     : d.fix ? `<span class="chip" title="A note asking for the fix is in their feedback">Fix asked · ${dcWho(d.fix.by)}</span>` : ""].filter(Boolean).join(" ");
   function dcActs(c, d) {
@@ -10448,6 +10449,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     answer: ["Design Desk answered", "agent", '<path d="M4 5h16v11H9l-5 4z"/><path d="m8.5 10.5 2.5 2.5 4.5-4.5"/>'],
     "agent-asks": ["Design Desk asks", "agent", '<path d="M4 5h16v11H9l-5 4z"/><path d="M12 8v3.5M12 13.5h.01"/>'],
     "new-decision": ["New decision", "decision", '<path d="M12 3v18M5 7h14M5 7l-2.5 6a2.5 2.5 0 0 0 5 0zM19 7l-2.5 6a2.5 2.5 0 0 0 5 0zM8 21h8"/>'],
+    "decision-approved": ["Decision approved", "ok", '<path d="m5 12.5 4.5 4.5L19 7.5"/>'],
     revoked: ["Decision revoked", "closed", '<circle cx="12" cy="12" r="9"/><path d="m9 9 6 6M15 9l-6 6"/>'],
   };
   const NOTE_KIND = { request: "Request", change: "PR change", issue: "Issue", screen: "Screen", element: "Element", decision: "Decision" };

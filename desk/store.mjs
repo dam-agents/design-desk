@@ -96,6 +96,8 @@ export function can(role, action, prototypeRoles = ["designer", "pm", "admin"]) 
     case "queue": case "approve": case "handle": case "choose":
     // Record a decision from a comment, revoke one and restore it (docs/desk.md → Decisions).
     case "decide": return shaper;
+    // Approve a decision someone else made: a UI dev owner too (docs/desk.md → Decisions → Approved).
+    case "approve-decision": return shaper || role === "ui-dev-owner";
     case "build": return prototypeRoles.includes(role);
     case "people": return role === "admin";
     // Designs: what was approved and sent, for developers to build and mark done (docs/desk-page.md → Designs).
@@ -124,7 +126,7 @@ export function forgetIdle(usage, now, writeWindowMs, max = 500) {
 }
 
 // Every action the page asks about: /api/me for its caller, /api/people for each role.
-export const ACTIONS = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "history", "queue", "change", "figma", "screens", "share", "add", "handle", "handle-small", "choose", "draw", "decide", "size", "skip", "people", "designs", "built", "resolve", "before", "stage-propose", "stage-design", "stage-own"];
+export const ACTIONS = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "history", "queue", "change", "figma", "screens", "share", "add", "handle", "handle-small", "choose", "draw", "decide", "approve-decision", "size", "skip", "people", "designs", "built", "resolve", "before", "stage-propose", "stage-design", "stage-own"];
 export const abilities = (role, prototypeRoles) => Object.fromEntries(ACTIONS.map((a) => [a, can(role, a, prototypeRoles)]));
 
 // A role as written in `## Desk people` or `prototype_requesters`: lower case, inner spaces as
@@ -334,10 +336,10 @@ const NOTE_FAMILY = { comment: "talk", reply: "talk", question: "talk", answer: 
 
 export class Store {
   // `needsApproval(decision)`: the server says whether a decision in force still waits for a designer
-  // (docs/desk.md → Decisions → Approved by a designer); it needs the roster, which the store does not read.
+  // (docs/desk.md → Decisions → Approved); it needs the roster, which the store does not read.
   // It has no default: a store that guessed would count every decision, or none.
   constructor(dir, { clock = now, needsApproval } = {}) {
-    if (typeof needsApproval !== "function") throw new TypeError("Store needs needsApproval(decision): which decisions in force wait for a designer's approval");
+    if (typeof needsApproval !== "function") throw new TypeError("Store needs needsApproval(decision): which decisions in force wait for approval");
     this.dir = dir;
     this.clock = clock;
     this.needsApproval = needsApproval;
@@ -1550,6 +1552,8 @@ export class Store {
       const it = { item: d.id, kind: "decision", title: d.text, screen: null, status: d.status };
       push(d.recorded || d.at, "new-decision", it, d.author ? { email: d.author.email, name: d.author.name || d.author.login, role: d.author.role } : null);
       if (d.revoked?.at) push(d.revoked.at, "revoked", it, d.revoked.by || null, { detail: d.revoked.reason || null });
+      // Approved by someone not on the design side: For you to every designer and admin, who may revoke it (docs/desk.md → Decisions → Approved).
+      if (d.approved?.at && !["designer", "admin", "pm"].includes(d.approved.by?.role)) push(d.approved.at, "decision-approved", it, d.approved.by, { detail: String(d.text).replace(/\s+/g, " ").slice(0, 140) }, ["designer", "admin"].includes(who?.role));
     }
     out.sort((a, b) => b.at.localeCompare(a.at) || (b.msg ?? 0) - (a.msg ?? 0));
     // Messages and votes on one item in one day come as one row: the newest leads, with how
@@ -3109,9 +3113,13 @@ export class Store {
     const stamp = { by: person(who), at: this.clock() };
     const list = (own(own(this.db.drafts, mine) || {}, c.id) || []).filter((x) => x.design !== d.key);
     if (action === "fix" && list.length >= LIMITS.draftsPerCard) throw bad(`At most ${LIMITS.draftsPerCard} draft comments wait on one item. Send your feedback first.`);
+    // Fine as built is a decision in force at once; taken back, or settled otherwise, it is revoked.
+    const was = d.accepted?.decision ? own(this.db.decisions, d.accepted.decision) : null;
+    const decision = action === "fine" ? this.acceptAsBuilt(c, d, who) : null;
+    if (action !== "fine" && was?.status === "active") this.markRevoked(was, { by: { email: who.email || null, role: who.role || null }, reason: TAKEN_BACK });
     for (const k of ["fix", "accepted", "asked"]) delete d[k];
     if (action === "fix") d.fix = stamp;
-    if (action === "fine") d.accepted = stamp;
+    if (action === "fine") d.accepted = { ...stamp, decision };
     if (action === "ask") d.asked = stamp;
     const drafts = action === "fix" ? [...list, { id: randomUUID().slice(0, 8), design: d.key, text: words, anchor: null, at: stamp.at }] : list;
     if (drafts.length) {
@@ -3124,6 +3132,26 @@ export class Store {
     this.shipFrom(c);
     this.save();
     return { card: c, drafts: structuredClone(own(own(this.db.drafts, mine) || {}, c.id) || []) };
+  }
+
+  // The decision Fine as built records (docs/desk.md → Decisions): in the person's name, approved by
+  // them, so it counts at once. Never twice for one difference: one in force is cited again, and one
+  // its own acceptor took back is restored; anyone else's taken back, a new one is theirs.
+  acceptAsBuilt(c, d, who) {
+    const old = d.decision ? own(this.db.decisions, d.decision) : null;
+    if (old?.status === "active") return old.id;
+    const me = addressesOf(who);
+    if (old && old.revoked?.reason === TAKEN_BACK && me.includes(String(old.author?.email || "").toLowerCase())) return this.restoreDecision(old.id, who).decision.id;
+    const r = own(this.db.cards, c.design_check.request), role = readRole(who.role), pr = c.source?.pr;
+    const about = (r ? this.conceptsOf(r) : []).length ? this.conceptsOf(r) : [d.element.toLowerCase()];
+    const where = pr ? `PR #${pr}` : c.id, url = /^https?:\/\//i.test(String(c.source?.url || "")) ? c.source.url : null;
+    const { decision } = this.addDecision({
+      concepts: about, text: `${d.element}: kept as built in ${where} — ${d.what}`.slice(0, 600),
+      why: `Accepted as built on the Desk by ${(ASKER[role] || "someone").replace(/^A/, "a")}: it differs from the approved design ${c.design_check.request}, and stays so.`,
+      author: { email: who.email, ...(who.name ? { name: who.name } : {}), ...(ADDABLE_ROLES.includes(role) || role === "admin" ? { role } : {}) },
+      origin: { kind: "desk", label: "Accepted as built", card: c.id, url } }, { approved: who });
+    d.decision = decision.id;
+    return decision.id;
   }
 
   // ---------- how an element or a screen looked before ----------
@@ -3386,7 +3414,8 @@ export class Store {
   // What the team decided, who decided it and where, kept so a later change can say what it
   // follows or goes against (docs/desk.md → Decisions). The agent records them; a person
   // asks for one from a comment, revokes one or restores it.
-  addDecision({ concepts, text, why = "", author, origin, at = null, replaces = [], conflicts = [], pictures = [] }, { onDesk = false } = {}) {
+  // `approved`: a person who stands behind it as they record it (Fine as built), so it counts at once.
+  addDecision({ concepts, text, why = "", author, origin, at = null, replaces = [], conflicts = [], pictures = [] }, { onDesk = false, approved = null } = {}) {
     if (!Array.isArray(concepts) || !concepts.length) throw bad("a decision names at least one concept");
     if (!Array.isArray(replaces)) throw bad("replaces must be a list of D-n");
     if (!Array.isArray(pictures)) throw bad("pictures must be a list of asset ids");
@@ -3406,6 +3435,10 @@ export class Store {
     d.id = this.next("decision", "D");
     if (old.length) d.replaces = old.map((o) => o.id);
     if (against.length) d.conflicts = against;
+    if (approved) {
+      d.approved = { by: approverOf(approved), at: d.recorded };
+      d.history = [{ what: "approved", ...d.approved }];
+    }
     for (const o of old) this.markRevoked(o, { by: d.author, reason: `Replaced by ${d.id}`, replaced_by: d.id, origin: d.origin });
     // The comment it was decided in shows its number.
     const m = d.origin.thread && d.origin.message != null ? own(this.db.threads, d.origin.thread)?.messages[d.origin.message] : null;
@@ -3462,14 +3495,16 @@ export class Store {
     return { decision: d };
   }
 
-  // A designer approves a decision someone else made (docs/desk.md → Decisions → Approved by a
-  // designer). It holds either way; the approval only shows that a designer stands behind it.
+  // A designer, an admin or a UI dev owner approves a decision someone else made (docs/desk.md →
+  // Decisions → Approved); until then it counts for nothing. One a UI dev owner approved is news
+  // to every designer (notifications: decision-approved).
   approveDecision(id, who) {
-    if (!who || who.agent) throw forbidden("Design Desk does not approve decisions: a designer does");
+    if (!who || who.agent) throw forbidden("Design Desk does not approve decisions: a person does");
+    if (!can(who.role, "approve-decision")) throw forbidden("Only designers, admins and UI dev owners approve a decision.");
     const d = this.decision(id);
     if (d.status !== "active") throw bad(`${d.id} is revoked: restore it first`);
     if (d.approved) throw bad(`${d.id} is already approved`);
-    d.approved = { by: { email: who.email || null, role: who.role || null, ...(who.name ? { name: who.name } : {}) }, at: this.clock() };
+    d.approved = { by: approverOf(who), at: this.clock() };
     d.history = [...(d.history || []), { what: "approved", ...d.approved }].slice(-20);
     // From now on it counts: the cards about the same thing are checked against it.
     this.checkAgainst(d);
@@ -4045,7 +4080,7 @@ function cleanConflicts(list, decisions, variants = null, { holds = () => true, 
     const d = own(decisions, String(x?.decision || ""));
     if (!d) throw bad(`conflicts: no decision ${x?.decision}`);
     if (d.status !== "active") throw bad(`conflicts: ${d.id} is no longer in force`);
-    if (!had.has(d.id) && !holds(d)) throw bad(`conflicts: ${d.id} is not approved yet, so nothing is checked against it; a designer approves it first`);
+    if (!had.has(d.id) && !holds(d)) throw bad(`conflicts: ${d.id} is not approved yet, so nothing is checked against it; a designer, an admin or a UI dev owner approves it first`);
     const variant = x.variant == null || x.variant === "" ? null : String(x.variant);
     if (variant && !(variants || []).some((v) => v.id === variant)) throw bad(`conflicts: no option ${variant}`);
     return { decision: d.id, why: clean(x.why, 400, "conflict why"), ...(variant ? { variant } : {}) };
@@ -4107,6 +4142,10 @@ export const designDiffKey = (d) => (d?.card ? String(d.card) : String(d?.elemen
 const DIFF_ACTIONS = ["fix", "fine", "ask", "none"];
 // Who asked a designer about one, in the reason it puts on the card.
 const ASKER = { admin: "An admin", designer: "A designer", "ui-dev-owner": "A UI dev owner" };
+// Why a Fine as built's decision was revoked when its difference was taken back.
+const TAKEN_BACK = "Taken back on the Desk";
+// Who approved a decision, as its record keeps them.
+const approverOf = (who) => ({ email: who.email || null, role: who.role || null, ...(who.name ? { name: who.name } : {}) });
 // Open: neither fixed in a later push nor accepted as built. Only these differ.
 const openDifferences = (k) => (k?.differences || []).filter((d) => !d.fixed && !d.accepted);
 const acceptedDifferences = (k) => (k?.differences || []).filter((d) => !d.fixed && d.accepted);
@@ -4117,7 +4156,7 @@ function mergeDesignCheck(next, prev) {
   if (!prev || prev.request !== next.request) return next;
   const was = new Map(prev.differences.map((d) => [d.key || designDiffKey(d), d]));
   const now = new Set(next.differences.map((d) => d.key));
-  const kept = (p) => Object.fromEntries(["fix", "accepted", "asked"].filter((k) => p[k]).map((k) => [k, p[k]]));
+  const kept = (p) => Object.fromEntries(["fix", "accepted", "asked", "decision"].filter((k) => p[k]).map((k) => [k, p[k]]));
   const current = next.differences.map((d) => (was.has(d.key) ? { ...d, ...kept(was.get(d.key)) } : { ...d, new_in: next.sha }));
   const fixed = [...was].filter(([k]) => !now.has(k)).map(([k, p]) => { const { new_in, ...rest } = p; return { ...rest, key: k, fixed: p.fixed || { sha: next.sha, at: next.at } }; })
     .sort((a, b) => String(b.fixed.at).localeCompare(String(a.fixed.at))).slice(0, LIMITS.designDifferences);

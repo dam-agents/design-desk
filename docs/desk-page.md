@@ -405,7 +405,7 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
 - **Differences from the approved design**, on a change that builds one: **⚠ Differs from the
   approved design R-<n>** (**✓ Settled** once every one is kept as built), then a table like the
   Figma one — per difference its state (**New**; **Fix asked**, **Asked a designer** or **Fine as
-  built** · who), its element and its card, what differs, **The approved design** and **As built** —
+  built** · who, with its decision's number), its element and its card, what differs, **The approved design** and **As built** —
   and under what differs, for who may ([desk.md](desk.md) → Needs a designer), **Fix in code** (a
   box holding Design Desk's words, then **Add to feedback**), **Fine as built**, **Ask the
   designer**, and **Undo** for the one taken. Fixed ones fold under **Fixed · n**, each "Fixed in
@@ -674,7 +674,8 @@ after its PR or issue as a pill that opens it on GitHub, in the list's style: `h
 `at:` when and `shipped:` when; an issue's `by:`, `assigned to:`. A screen's and an element's box
 says what its dot says (Up to date, Out of date, Being drawn, Not drawn) and holds their buttons
 (**Update the drawing**, **Draw how it looked before**, the presentation's); a decision's says In
-force, Not approved or Revoked and holds **Approve** (when not approved), **Revoke…** or **Restore**. A week's page has no state: its chip says
+force, Not approved or Revoked, `approved by:` who approved it, and holds **Approve** (when not approved; a designer, an admin or a UI
+dev owner), **Revoke…** or **Restore** (a designer or an admin). A week's page has no state: its chip says
 Weekly digest. Needs a designer carries a
 small AI tag: Design Desk judges what goes in it, the buttons (**Mark
 handled**, **Adjust the design**; **Design this**) and ⋯ for the presentation. **Draw it** sits
@@ -746,6 +747,7 @@ icon's upper right corner, gone once the notification is read. The events:
 | Back to feedback | a person takes a request's approval back ([desk.md](desk.md) → Taking an approval back); For you for whose approval it was, too |
 | Feedback asked | a person hands the drawn options to the team (**Ask for feedback**); For you for every `developer` and `ui-dev-owner` |
 | New decision, Decision revoked | a decision is added or revoked |
+| Decision approved | someone not on the design side approves a decision, Fine as built's included ([desk.md](desk.md) → Decisions → Approved); For you for every `designer` and `admin` |
 | Developer asks, Marked done | a developer asks a design's designer, or marks it done ([Designs](#designs)) |
 | Asked a designer | a person asks a designer about a difference from the approved design ([desk.md](desk.md) → Needs a designer); For you as Developer asks is |
 | Feedback sent, New version | a person sends feedback (on a pull request's change, For you for every `developer` and `ui-dev-owner`); new commits arrive on a pull request a review asked changes of ([desk.md](desk.md) → Reviews) |

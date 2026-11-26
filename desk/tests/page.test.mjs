@@ -1722,11 +1722,14 @@ test("a folded list leaves Guide and a narrow window their page", (t) => open(t,
   assert.notEqual(await desk.$eval("#list", (l) => getComputedStyle(l).display), "none", "with no item open there, the folded list shows");
 }));
 
-// A decision a developer made waits for a designer's approval; one of the design side does not.
-const APPROVALS = `<script>
+// A decision a developer made waits for approval; one of the design side does not.
+const APPROVALS = (me = { role: "designer", email: "d@example.com", can: { decide: true, "approve-decision": true, build: true } }) => `<script>
 const calls = [];
+const ME_DECIDES = ${JSON.stringify(me)};
 const decisions = [{ id: "D-1", text: "Search sits in the header", status: "active", side: "design", at: "2026-10-01T00:00:00Z", concepts: ["search"], author: { name: "Alice" } },
-  { id: "D-2", text: "Limits reset weekly", status: "active", side: "developer", unapproved: true, at: "2026-10-02T00:00:00Z", concepts: ["limits"], author: { login: "dana" }, origin: { kind: "pr", label: "PR #40", url: "https://github.com/acme/widgets/pull/40" } }];
+  { id: "D-2", text: "Limits reset weekly", status: "active", side: "developer", unapproved: true, at: "2026-10-02T00:00:00Z", concepts: ["limits"], author: { login: "dana" }, origin: { kind: "pr", label: "PR #40", url: "https://github.com/acme/widgets/pull/40" } },
+  { id: "D-3", text: "Width: kept as built in PR #45", status: "active", side: "developer", at: "2026-10-03T00:00:00Z", concepts: ["width"], author: { email: "lou@example.com", role: "ui-dev-owner" },
+    approved: { by: { email: "lou@example.com", name: "Lou", role: "ui-dev-owner" }, at: "2026-10-03T00:00:00Z" }, origin: { kind: "desk", label: "Accepted as built", card: "C-1", url: "https://github.com/acme/widgets/pull/45" } }];
 const cards = [{ id: "C-1", kind: "change", title: "A new header", acked: true, summary: "Follows D-2.", source: { repo: "acme/widgets", pr: 45 } },
   { id: "C-7", kind: "request", title: "Show a daily spend bar", status: "prototype", created: "2026-11-05T09:00:00Z", request: { problem: "Show today's spend." },
     triage: { verdict: "design", reasons: [] }, variants: [], threads: [], prototype: { state: "failed" },
@@ -1734,7 +1737,7 @@ const cards = [{ id: "C-1", kind: "change", title: "A new header", acked: true, 
 window.platform = { async request({ method, path, body }) {
   calls.push({ method, path, body });
   const one = path.startsWith("/api/cards/") && cards.find((c) => c.id === decodeURIComponent(path.slice(11)));
-  const answer = path === "/api/me" ? { role: "designer", email: "d@example.com", can: { decide: true, build: true } }
+  const answer = path === "/api/me" ? ME_DECIDES
     : path === "/api/cards" ? { cards } : path === "/api/agenda" ? { agenda: [] }
     : path.endsWith("/approve") ? { decision: { ...decisions[1], unapproved: false, approved: { by: { email: "d@example.com" }, at: "2026-11-06T10:00:00Z" } } }
     : path.startsWith("/api/decisions/") ? { decision: decisions.find((d) => d.id === path.slice(15)), refs: [] }
@@ -1745,7 +1748,7 @@ window.platform = { async request({ method, path, body }) {
 try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
 </script>`;
 
-test("a decision someone other than a designer made says Not approved in its peek, its row and its page; a designer approves it there; Not approved filters", (t) => open(t, APPROVALS, async (desk) => {
+test("a decision someone other than a designer made says Not approved in its peek, its row and its page; a designer approves it there; Not approved filters", (t) => open(t, APPROVALS(), async (desk) => {
   const base = desk.url().replace(/#.*$/, "");
   await desk.goto(`${base}#C-1`);
   await desk.waitForSelector('#detail a[data-ref="D-2"]');
@@ -1779,6 +1782,19 @@ test("a decision someone other than a designer made says Not approved in its pee
   await ok.click();
   await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/C-7/actions"));
   assert.equal(await desk.evaluate(() => JSON.parse(calls.find((c) => c.method === "POST" && c.path === "/api/cards/C-7/actions").body).overrule), true);
+}));
+
+test("a UI dev owner approves a decision in its status box, and neither revokes nor restores one; its line names who approved it", (t) => open(t, APPROVALS({ role: "ui-dev-owner", email: "lou@example.com", can: { "approve-decision": true, decide: false } }), async (desk) => {
+  const base = desk.url().replace(/#.*$/, "");
+  await desk.goto(`${base}#D-2`);
+  await desk.waitForSelector("#detail [data-approve-decision]");
+  assert.equal(await desk.locator("#detail [data-revoke], #detail [data-restore]").count(), 0, "no Revoke…");
+  await desk.click("#detail [data-approve-decision]");
+  await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/decisions/D-2/approve"));
+  await desk.goto(`${base}#D-3`);
+  await desk.waitForFunction(() => /approved by:/.test(document.querySelector("#detail .status")?.textContent || ""));
+  assert.match(await desk.textContent("#detail .status"), /approved by:\s*Lou/);
+  assert.equal(await desk.locator("#detail [data-approve-decision], #detail [data-revoke]").count(), 0, "approved: nothing to approve, and revoking is a designer's");
 }));
 
 // An option that names the decisions it rests on, one of them revoked.
@@ -3228,7 +3244,7 @@ const cards = [
       { key: "spend label", element: "Spend label", what: "It says of.", new_in: "9c1e7a4f2b" },
       { key: "E-4", element: "Spend pill", card: "E-4", what: "It is blue.", asked: { by: lou, at } },
       { key: "icon", element: "Icon", what: "Missing.", fix: { by: lou, at } },
-      { key: "width", element: "Width", what: "Wider.", accepted: { by: lou, at } },
+      { key: "width", element: "Width", what: "Wider.", accepted: { by: lou, at, decision: "D-9" } },
       { key: "line", element: "Limit line", what: "Gone.", fixed: { sha: "9c1e7a4f2b", at } }] } },
 ];
 window.platform = { async request({ method, path, body }) {
@@ -3250,7 +3266,8 @@ test("differences from the approved design: a table with each one's state; Fix i
     ["New", "Spend label: It says of.", ["Fix in code", "Fine as built", "Ask the designer"]],
     ["Asked a designer · you", "Spend pill E-4: It is blue.", ["Fix in code", "Fine as built", "Undo"]],
     ["Fix asked · you", "Icon: Missing.", ["Fine as built", "Ask the designer", "Undo"]],
-    ["Fine as built · you", "Width: Wider.", ["Fix in code", "Ask the designer", "Undo"]]], "one row per difference not fixed, its state and what may be done");
+    ["Fine as built · you D-9", "Width: Wider.", ["Fix in code", "Ask the designer", "Undo"]]], "one row per difference not fixed, its state and what may be done");
+  assert.equal(await desk.getAttribute('#detail .dcheck .ft-s a[data-ref="D-9"]', "href"), "#D-9", "an accepted one links the decision it recorded");
   assert.equal(await desk.locator("#detail .dcheck > .dtab .ft-r").first().locator("figure, .hint").count(), 2, "both sides, a picture or No picture");
   assert.match(await desk.textContent("#detail .dc-fixed > summary"), /^Fixed · 1$/);
   assert.match(await desk.textContent("#detail .dc-fixed .ft-s"), /^Fixed in 9c1e7a4$/);
@@ -3808,6 +3825,15 @@ test("in simple mode the bell leaves out issues, in its rows and its count, and 
   await desk.click("#bell-btn");
   await desk.click('#notes [data-only="0"]');
   assert.deepEqual(await desk.$$eval("#notes [data-note] .ti .num", (els) => els.map((e) => e.textContent)), ["C-7", "C-8", "C-9", "D-1", "C-2"], "full mode shows every row again");
+}));
+
+// A decision someone not on the design side approved: the bell's row says so (docs/desk-page.md → Notifications).
+test("the bell names a decision a UI dev owner approved: Decision approved", (t) => open(t, SIMPLE_BELL.replace('row(4, "new-decision", "D-1", "decision", "A decision")', 'row(4, "decision-approved", "D-1", "decision", "Limits reset weekly")').replace("simple: true,", "simple: false,"), async (desk) => {
+  await desk.waitForFunction(() => document.querySelector("#bell-count")?.hidden === false);
+  await desk.click("#bell-btn");
+  const text = await desk.$$eval("#notes [data-note]", (els) => els.map((e) => e.textContent).find((x) => /D-1/.test(x)) || "");
+  assert.match(text, /Decision approved/);
+  assert.doesNotMatch(text, /decision-approved/, "its words, not its event");
 }));
 
 test("the bell counts what is For you, opens on it, reads a row only on its click, shows All on a click, and a row lands on its message; a menu button without data-keep still closes its menu", (t) => open(t, BELL, async (desk) => {

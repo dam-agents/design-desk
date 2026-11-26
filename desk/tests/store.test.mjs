@@ -1827,6 +1827,9 @@ test("decisions: a designer asks to record a person's comment, once", () => {
   s.answer(t.id, "Noted.");
   assert.equal(can("designer", "decide"), true);
   assert.equal(can("pm", "decide"), false);
+  // Approving one someone else made is a UI dev owner's too; revoking stays a designer's.
+  assert.deepEqual(["admin", "designer", "ui-dev-owner", "pm", "developer", "guest"].map((r) => [can(r, "approve-decision"), can(r, "decide")]),
+    [[true, true], [true, true], [true, false], [false, false], [false, false], [false, false]]);
   assert.throws(() => s.proposeDecision(t.id, alice, { message: 1 }), /does not decide/);
   assert.throws(() => s.proposeDecision(t.id, alice, { message: 5 }), /pick a message/);
   const { inbox: item } = s.proposeDecision(t.id, alice, { message: 0, note: "Prices always include tax" });
@@ -2555,6 +2558,66 @@ test("a decision someone other than a designer made is approved by a designer; i
   const gone = s.addDecision({ concepts: ["rows"], text: "Rows stay roomy", author: { login: "dana" }, origin: pr }).decision;
   s.revokeDecision(gone.id, alice, { reason: "Dense now." });
   assert.throws(() => s.approveDecision(gone.id, alice), /restore it first/);
+});
+
+// docs/desk.md → Decisions → Approved, Needs a designer: Fine as built is a decision in force at once.
+test("Fine as built records a decision in force, approved by who accepted it, cited on the difference; taken back it is revoked; a UI dev owner approves, designers hear of it", () => {
+  // As the server rules: anyone but a designer or an admin waits for approval.
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { needsApproval: (d) => !["designer", "admin"].includes(d.author?.role) && !d.approved });
+  const lou = { email: "lou@example.com", role: "ui-dev-owner" }, dee = { email: "dee@example.com", role: "designer" };
+  const a = s.addAsset({ kind: "variant", contentType: "text/html", data: Buffer.from("<p>A</p>").toString("base64") }).asset.id;
+  const { card } = s.createRequest(alice, { title: "Daily limits", problem: "People do not see the limit." });
+  s.upsertCard({ id: card.id, triage: { verdict: "design" }, status: "feedback", concepts: ["limits"], variants: [{ id: "v1", name: "Limits", asset: a }] });
+  s.act(card.id, alice, "approve", "v1");
+  s.upsertCard({ id: card.id, status: "handed-off" });
+  const other = s.createRequest(alice, { title: "Limits in the list", problem: "Also there." }).card;
+  s.upsertCard({ id: other.id, triage: { verdict: "design" }, concepts: ["limits"] });
+  const label = { element: "Spend label", what: "It says of where the design has a slash." };
+  const { card: ch } = s.upsertCard({ kind: "change", title: "Limits", source: { repo: "acme/widgets", pr: 45, url: "https://github.com/acme/widgets/pull/45" }, attention: { level: "fyi", reasons: ["Nothing else."] },
+    design_check: { request: card.id, verdict: "differs", sha: "aaaaaaa", differences: [label] } });
+  const diff = () => s.getCard(ch.id).design_check.differences[0];
+
+  s.designDifference(ch.id, lou, "spend label", "fine");
+  const id = diff().accepted.decision, d = s.decision(id);
+  assert.match(id, /^D-\d+$/, "cited on the difference");
+  assert.deepEqual([d.status, d.text, d.concepts, d.author.email, d.author.role, d.approved.by.email, d.approved.by.role, s.holds(d)],
+    ["active", `Spend label: kept as built in PR #45 — ${label.what}`, ["limits"], lou.email, "ui-dev-owner", lou.email, "ui-dev-owner", true], "in force and approved by who accepted it: it counts at once");
+  assert.deepEqual([d.origin.kind, d.origin.label, d.origin.card, d.origin.url], ["desk", "Accepted as built", ch.id, "https://github.com/acme/widgets/pull/45"]);
+  assert.match(d.why, /Accepted as built on the Desk by a UI dev owner/);
+  assert.ok(Object.values(s.db.inbox).some((i) => i.kind === "decision-check" && i.card === other.id && (i.decisions || []).includes(id)), "the cards about the same thing are checked against it");
+  // Designers hear of it once, For you; nobody else's For you, and never the approver's own.
+  const told = (who) => s.notifications(who).items.filter((x) => x.event === "decision-approved" && x.item === id);
+  assert.deepEqual(told(dee).map((x) => [x.for_you, x.by.email, x.detail.startsWith("Spend label: kept as built")]), [[true, lou.email, true]]);
+  assert.deepEqual(told(bob).map((x) => x.for_you), [false]);
+  assert.deepEqual(told(lou), []);
+
+  // Never twice: a second Fine as built cites the same one.
+  const count = () => Object.keys(s.db.decisions).length, n = count();
+  s.designDifference(ch.id, lou, "spend label", "fine");
+  assert.deepEqual([diff().accepted.decision, count()], [id, n]);
+  // Undo revokes it; Fine as built again by its acceptor restores it.
+  s.designDifference(ch.id, lou, "spend label", "none");
+  assert.deepEqual([s.decision(id).status, s.decision(id).revoked.reason, s.holds(s.decision(id)), diff().accepted], ["revoked", "Taken back on the Desk", false, undefined]);
+  s.designDifference(ch.id, lou, "spend label", "fine");
+  assert.deepEqual([diff().accepted.decision, s.decision(id).status, count()], [id, "active", n]);
+  // Settled otherwise it is taken back too; someone else accepting it then decides it in their name.
+  s.designDifference(ch.id, lou, "spend label", "ask");
+  assert.equal(s.decision(id).status, "revoked");
+  s.designDifference(ch.id, alice, "spend label", "fine");
+  const mine = s.decision(diff().accepted.decision);
+  assert.deepEqual([mine.id !== id, mine.author.email, mine.status, count()], [true, alice.email, "active", n + 1]);
+  assert.deepEqual(told(dee).length + s.notifications(dee).items.filter((x) => x.event === "decision-approved" && x.item === mine.id).length, 1, "a designer's own approval is no news");
+  // A later push that no longer shows it marks it fixed: its decision stays, true when it was accepted.
+  s.upsertCard({ id: ch.id, design_check: { request: card.id, verdict: "matches", sha: "bbbbbbb" } });
+  assert.deepEqual([Boolean(diff().fixed), diff().accepted.decision, s.decision(mine.id).status], [true, mine.id, "active"]);
+
+  // A UI dev owner approves a decision a pull request recorded; a developer does not.
+  const pr = s.addDecision({ concepts: ["limits"], text: "Limits reset weekly", author: { login: "dana" }, origin: { kind: "pr", url: "https://github.com/acme/widgets/pull/40" } }).decision;
+  assert.equal(s.holds(pr), false);
+  assert.throws(() => s.approveDecision(pr.id, bob), (e) => e.status === 403);
+  assert.equal(s.approveDecision(pr.id, lou).decision.approved.by.role, "ui-dev-owner");
+  assert.equal(s.holds(s.decision(pr.id)), true);
+  for (const who of [alice, dee]) assert.deepEqual(s.notifications(who).items.filter((x) => x.event === "decision-approved" && x.item === pr.id).map((x) => [x.for_you, x.detail]), [[true, "Limits reset weekly"]], who.email);
 });
 
 test("a designer adds a decision on the Desk in their own name, with its pictures; Design Desk does not", () => {

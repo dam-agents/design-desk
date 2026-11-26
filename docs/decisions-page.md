@@ -8,7 +8,7 @@ must look. Only with `decisions_page: dam` (default `off`; `public`, the first s
 
 `preflight.sh issues` renders it once a day into `work/decisions-page.md`, deterministically
 from the Desk store: the decisions in force that are approved ([desk.md](desk.md) → Decisions →
-Approved by a designer; one waiting is left out, so text no designer confirmed is never
+Approved; one waiting is left out, so text nobody confirmed is never
 published), each with text, why, concepts, when, who decided as a **role**, where as a
 **kind** and what it replaces, an index by concept, and
 the revoked ones in one line each. It holds no names, logins, e-mails, links, keys or pictures.

@@ -780,6 +780,31 @@ test("design-difference: Fix in code, Fine as built, Ask the designer, by who ma
   assert.equal((await act("alice@example.com", { key: "nope", action: "fine" })).status, 400);
 });
 
+// docs/desk.md → Decisions → Approved: a UI dev owner approves too; Fine as built's comes approved.
+test("approving a decision: a designer, an admin or a UI dev owner, never a developer; Fine as built's counts at once; revoking stays a designer's", async (t) => {
+  const d = await desk(t);
+  const can = async (email) => (await d.viewer(email, "/api/me")).body.can;
+  assert.deepEqual(await Promise.all(["lou@example.com", "alice@example.com", "lee@example.com", "bob@example.com", "pat@example.com"].map(async (e) => [(await can(e))["approve-decision"], (await can(e)).decide])),
+    [[true, false], [true, true], [true, true], [false, false], [false, false]], "/api/me tells the page");
+  const pr = (await d.agent("/agent/decisions", { concepts: ["limits"], text: "Limits reset weekly", author: { login: "dana" }, origin: { kind: "pr", url: "https://github.com/acme/widgets/pull/40" } })).body.decision.id;
+  assert.equal((await d.viewer("bob@example.com", `/api/decisions/${pr}/approve`, {})).status, 403, "a developer does not approve one");
+  const ok = await d.viewer("lou@example.com", `/api/decisions/${pr}/approve`, {});
+  assert.deepEqual([ok.status, ok.body.decision.unapproved, ok.body.decision.approved.by.email], [200, false, "lou@example.com"], JSON.stringify(ok.body));
+  assert.equal((await d.viewer("lou@example.com", `/api/decisions/${pr}/revoke`, { reason: "No." })).status, 403, "revoking stays a designer's");
+  const bell = (await d.viewer("alice@example.com", "/api/notifications")).body.items.filter((x) => x.event === "decision-approved");
+  assert.deepEqual(bell.map((x) => [x.item, x.for_you]), [[pr, true]], "designers are told");
+
+  const { body: { card } } = await d.viewer("alice@example.com", "/api/requests", { problem: "People miss the spend." });
+  const { body: { asset } } = await d.agent("/agent/assets", { kind: "variant", name: "v1", contentType: "text/html", data: "<p>Spend</p>", encoding: "utf8" });
+  await d.agent("/agent/cards", { id: card.id, status: "feedback", triage: { verdict: "design", reasons: [] }, variants: [{ id: "v1", name: "Column", asset: asset.id }] });
+  await d.viewer("alice@example.com", `/api/cards/${card.id}/actions`, { action: "approve", variant: "v1" });
+  const chg = (await d.agent("/agent/cards", { kind: "change", title: "Spend", source: { repo: "acme/widgets", pr: 7 }, design_check: { request: card.id, verdict: "differs", sha: "abc1234", differences: [{ element: "Spend label", what: "It says of." }] } })).body.card.id;
+  const fine = await d.viewer("lou@example.com", `/api/cards/${chg}/design-difference`, { key: "spend label", action: "fine" });
+  const id = fine.body.card.design_check.differences[0].accepted.decision;
+  const dec = (await d.viewer("alice@example.com", `/api/decisions/${id}`)).body.decision;
+  assert.deepEqual([dec.status, dec.side, dec.unapproved, dec.approved.by.email, dec.origin.label], ["active", "developer", false, "lou@example.com", "Accepted as built"], "a UI dev owner's, approved by them: in force");
+});
+
 test("reviews: a pull request's review is queued for GitHub only with review_post enabled", async (t) => {
   for (const [config, kind] of [["", null], ["- review_post: enabled\n", "review"]]) {
     const d = await desk(t, config);

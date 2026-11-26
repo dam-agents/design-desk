@@ -460,9 +460,9 @@ def leaks: test(dec_slack) or test(dec_link; "i") or test(dec_email) or test(dec
 JQ
 )"
 # Who a decision came from and whether it counts, as the Desk server reads it (desk/server.mjs →
-# sideOf, withSide; docs/desk.md → Decisions → Approved by a designer): `$roster` maps an e-mail
+# sideOf, withSide; docs/desk.md → Decisions → Approved): `$roster` maps an e-mail
 # to its role (roster_roles). A decision counts when it is in force and is a design-side
-# person's own, or a designer approved it; one that waits for approval counts for nothing.
+# person's own, or approved; one that waits for approval counts for nothing.
 DEC_SIDE_JQ="$(cat <<'JQ'
 def role: (((.origin.kind // "") as $k | if (["desk", "approval", "chat", "call"] | index($k)) != null then .author.role else null end) // $roster[(.author.email // "") | ascii_downcase] // "" | ascii_downcase | gsub("\\s+"; "-") | if . == "lead" then "admin" elif . == "lead-developer" then "ui-dev-owner" else . end);
 def side: role as $r | (.origin.kind // "") as $k

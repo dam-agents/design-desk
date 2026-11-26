@@ -193,7 +193,7 @@ and `D-12` in text link to it as to a card (Links to an item).
   | `issue` | an issue or its comment that settles a question | who wrote it | the issue or comment |
   | `commit`, `doc` | research finds it only in a commit or an architecture page | its author (`git log`) | the commit or page |
   | `slack` | a message in a request's or council's thread that settles something | who wrote it | its permalink |
-  | `desk` | a comment a designer marked **Record as a decision**, or **Close** with a decision (`decisions_due`) | the comment's author; who closed it with a decision | `card`, `thread`, `message`; `card` alone |
+  | `desk` | a comment a designer marked **Record as a decision**, or **Close** with a decision (`decisions_due`); **Fine as built** (`Accepted as built`, the store's, [Needs a designer](#needs-a-designer)) | the comment's author; who closed it with a decision; who accepted it | `card`, `thread`, `message`; `card` alone; the change `card` and its PR |
   | `call` | taken at the design meeting (The presentation) | who decided, as the designer said | the card |
   | `approval` | a design approved ([handoff.md](handoff.md)) | the approver | the card |
   | `chat` | the operator says so in chat | the operator | none needed |
@@ -221,8 +221,8 @@ and `D-12` in text link to it as to a card (Links to an item).
   `impact.decisions[].id`, an option's `reasons[].decision` with the parts it shaped
   ([requests.md](requests.md) → Variants), a section, an answer, a spec, a Slack reply, the digest.
 - **The check**: every step that makes or changes a design, or says what one can be, is read
-  against the decisions that count first (in force and approved: one that waits for a
-  designer's approval counts for nothing, Approved by a designer below) — triage, impact, a
+  against the decisions that count first (in force and approved: one that waits for
+  approval counts for nothing, Approved below) — triage, impact, a
   change card, options (a new one, a person's description, a redraw, notes worked in, three ways of a part, every state), an
   issue's sketch, a live prototype, a new decision, an answer to a question that asks for a
   change, a design asked for in Slack or chat. How a request's screen looks today (`now`,
@@ -242,7 +242,7 @@ and `D-12` in text link to it as to a card (Links to an item).
      read: [D-n]}`; the store stamps when and the option versions it saw. A design written
      without its check, an alternative a person picked, a person's own option, and a decision that
      counts recorded, restored or approved about a card's concepts queue a `decision-check` item
-     (`checks_due`); one that waits for approval queues none until a designer approves it;
+     (`checks_due`); one that waits for approval queues none until it is approved;
      one a decision queued names it (`decisions`) and closes only with a write whose `read` has it.
   4. Outside a card's fields, name what it goes against: an answer or a worked-in note
      `--warns` (`source.kind: decision`), a GitHub or Slack reply and a chat deliverable the
@@ -255,17 +255,19 @@ and `D-12` in text link to it as to a card (Links to an item).
 - **`checks_due`**: claim; `decision-check`; upsert `{id, conflicts, decision_check}`; a
   conflict new to the card also asks in its thread whether `D-<n>` still holds (Revoking); done
   `checked: <n> against`. A card closed or handed off meanwhile: done `not checked: closed`.
-- **Approved by a designer**: a decision whose author is not on the design side (the server's
+- **Approved**: a decision whose author is not on the design side (the server's
   `side`: a developer, or not known), and every one from a `pr`, `issue`, `commit` or `doc`
-  (no one verified who wrote it there), is **Not approved** until a designer or an admin presses
-  **Approve** in its status box (`POST /api/decisions/<id>/approve`; `approved: {by, at}`).
+  (no one verified who wrote it there), is **Not approved** until a designer, an admin or a UI
+  dev owner presses **Approve** in its status box (`POST /api/decisions/<id>/approve`, ability
+  `approve-decision`; `approved: {by, at}`); Fine as built's comes approved by who accepted it.
+  One a UI dev owner approved is For you to every designer and admin (Decision approved), who may revoke it.
   **It counts for nothing meanwhile**: no card is checked against it, none carries it as a
   conflict (the store refuses a new one: `design desk upsert` answers "not approved yet"), none
   waits for a designer, is held or warns because of it, and no text — a card, an answer, a Slack
   reply, a spec — cites it as a reason. `design desk decision-check` lists it apart, under `waiting`,
   so you know it exists; you may name it as "recorded, waiting for a designer to approve it" and no more.
   Its dot, its peek and its page say Not approved, and Decisions has a **Not approved** filter
-  (`GET /api/decisions?state=unapproved`). Once a designer approves it, the cards about the same
+  (`GET /api/decisions?state=unapproved`). Once it is approved, the cards about the same
   thing are queued for a check against it.
 - **Revoking**: a designer or admin revokes one on its page with a reason (and what replaces
   it), or restores it. A new decision that reverses an earlier one names it in `replaces`; the
@@ -304,9 +306,9 @@ with spaces as hyphens (`UI dev owner` → `ui-dev-owner`); `lead-developer`, it
 | `ui-dev-owner`, `pm`, `designer`, `admin` | approve or decide a request straight away ([Deciding straight away](#deciding-straight-away)) |
 | `pm`, `designer`, `admin` | close and reopen a request, delete a closed one |
 | a draft's author, `ui-dev-owner` and `admin` | move a request on before it goes to design, and close it ([Draft and Proposal](#draft-and-proposal)) |
-| `designer`, `admin` | also decide: approve (a design against a decision too), choose what the presentation shows and mark it presented, mark a change handled, remove an option from any request, record or approve a decision |
+| `designer`, `admin` | also decide: approve (a design against a decision too), choose what the presentation shows and mark it presented, mark a change handled, remove an option from any request, record, revoke or restore a decision |
 | `ui-dev-owner` | mark a change or an issue For Developers handled ([For Developers or For Designers](#for-developers-or-for-designers)) |
-| `designer`, `admin`, `ui-dev-owner` | link a change to the design it builds, or say it does not build one (**Link**, **Not this one**; [GitHub on the Desk](#github-on-the-desk)) |
+| `designer`, `admin`, `ui-dev-owner` | link a change to the design it builds, or say it does not build one (**Link**, **Not this one**; [GitHub on the Desk](#github-on-the-desk)); approve a decision ([Decisions](#decisions) → Approved) |
 | roles in `prototype_requesters` (default `designer`, `pm`, `admin`) | start a live prototype |
 | `admin` | also ask you to add a person to the list, and set a person's GitHub username ([People](#people)) |
 | `developer`, `ui-dev-owner`, `admin` | see **Designs** in the menu, ask a design's designer, mark a design done ([Designs](#designs)) |
@@ -812,7 +814,9 @@ Requests use **Your turn** instead): only the cards that wait for a designer's d
   its name). `POST /api/cards/<id>/design-difference {key, action, text}`, by a designer, an admin
   or a UI dev owner (a designer or an admin on a change against a decision in force), one action
   per difference: `fix` (**Fix in code**: `fix: {by, at}`, and `text` becomes their draft
-  `{design: key, text}`, [Reviews](#reviews)), `fine` (**Fine as built**: `accepted: {by, at}`),
+  `{design: key, text}`, [Reviews](#reviews)), `fine` (**Fine as built**: `accepted: {by, at, decision}`, a decision in force at once,
+  [Approved](#decisions); taken back or settled otherwise, the store revokes it "Taken back on the
+  Desk"; a second Fine as built cites the same one),
   `ask` (**Ask the designer**: `asked: {by, at}`; "A UI dev owner asks a designer: <element>",
   by the asker's role, puts the change in Needs a designer whatever its tab, For you to whoever
   approved the design as Developer asks is), `none` (takes it back). A later comparison keeps them

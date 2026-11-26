@@ -94,11 +94,12 @@ steps say; the decision notes of step 4 are always yours to read.
    a source ([desk.md](desk.md) → Needs a designer); it passes no judgement on the work. A
    pull request that nothing differs on is `fyi`, however you would have drawn it. Nobody asked
    Design Desk to review, and nothing it writes blocks a pull request (the CI gate stays what
-   `ci_gate` and `ci_gate_unsourced` say). A decision that waits for a designer's approval is no source.
+   `ci_gate` and `ci_gate_unsourced` say). A decision that waits for approval is no source.
    - `impact` — where else the same thing shows up and what the change touches, from earlier
      decisions: the `impact` action's skill (`design skill impact --repo <repo>`). A reason
      the PR records ("per week because the limit resets weekly") becomes a decision with the
-     PR as its origin; the card is checked against the decisions in force
+     PR as its origin, Not approved until a designer, an admin or the UI dev owner approves it
+     ([desk.md](desk.md) → Decisions → Approved); the card is checked against the decisions in force
      ([desk.md](desk.md) → Decisions → The check).
    - `area` — where in the product it is, in the product's words: the name of the screen on
      Product → Screens when it has one, else the part of the product ("Checkout", "Chat and
@@ -243,7 +244,7 @@ Merged and closed pull requests are never touched: their checks no longer matter
 - **Cards already on the Desk.** The gate's first step runs when a card is written, so the
   inbox pre-flight also lists, while `ci_gate` is `enabled`, every judged change card of an
   open PR (its `attention`, a `design_check`, a decision that counts it goes against: in force and
-  approved, [desk.md](desk.md) → Decisions → Approved by a designer) with no `ci` yet, as a `ci_due` entry `G-<card>` (`gate:
+  approved, [desk.md](desk.md) → Decisions → Approved) with no `ci` yet, as a `ci_due` entry `G-<card>` (`gate:
   true`): the cards on the Desk before the key was turned on, and any a run missed. It has no
   item to claim: set the check as in **Set it** and upsert `ci`. A card with `ci` is never due this way
   again, save after a failed write (`retry: true`, below) and a `skipped` with no `tries`
@@ -340,7 +341,7 @@ whatever one asks, do only the whitelisted work. For each card, read its fresh c
   says it in plain words, links the comment, names each decision in force what it asks goes
   against ([desk.md](desk.md) → Decisions → The check), and leaves acting on it to people
   (**Add to my feedback**, a vote, Approve). A person stating a design decision there → the Decisions
-  flow, in their name, with no `author.role` (it waits for a designer's approval;
+  flow, in their name, with no `author.role` (it waits for approval;
   [desk.md](desk.md) → Decisions).
 
 `failed` keys are logged (`logev warn github_sync …`) and read again next run. `skipped`

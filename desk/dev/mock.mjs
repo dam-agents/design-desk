@@ -178,6 +178,8 @@ function shim() {
     if ((x = m(/^\/api\/cards\/([^/]+)\/design-difference$/))) {
       const c = card(x[1]), d = c.design_check.differences.find((y) => y.key === body.key), stamp = { by: { email: me.email, name: me.name, role }, at: now() };
       for (const k of ["fix", "accepted", "asked"]) delete d[k];
+      // Fine as built records a decision in force, approved by who accepted it (store.acceptAsBuilt).
+      if (body.action === "fine") { stamp.decision = `D-${100 + ++n}`; cards[0].cited[stamp.decision] = { text: `${d.element}: kept as built in PR #${c.source?.pr} — ${d.what}`, status: "active", author: stamp.by, approved: stamp, origin: { kind: "desk", label: "Accepted as built", card: c.id } }; }
       if (body.action !== "none") d[{ fix: "fix", fine: "accepted", ask: "asked" }[body.action]] = stamp;
       c.drafts = (c.drafts || []).filter((y) => y.design !== d.key);
       if (body.action === "fix") c.drafts.push({ id: `d${++n}`, design: d.key, text: body.text, anchor: null, at: now() });
