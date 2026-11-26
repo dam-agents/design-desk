@@ -262,7 +262,7 @@
   .spill[data-s="open"] { --p: var(--ok); } .spill[data-s="dev"] { --p: var(--accent); } .spill[data-s="shipped"] { --p: var(--live); }
   .spill[data-s="none"] { --p: var(--muted); } .spill[data-s="closed"] { --p: var(--bad); }
   .spill[data-s="draft"] { --p: var(--muted); background: transparent; border: 1px dashed color-mix(in srgb, var(--p) 70%, transparent); line-height: 18px; } .spill:is([data-s="proposal"], [data-s="proposed"]) { --p: var(--warn); }
-  .spill[data-s="writing"] { --p: var(--accent); } .spill[data-s="answers"] { --p: var(--turn); } .spill[data-s="specready"] { --p: var(--ok); }
+  .spill[data-s="writing"] { --p: var(--accent); } .spill[data-s="answers"] { --p: var(--turn); } .spill[data-s="specready"] { --p: var(--ok); } .spill[data-s="build"] { --p: var(--accent); }
   /* Simple mode's head of an item: kept in view while the page scrolls. Its moves sit beside the
      title alone; the line of its state and facts takes the whole width under both. The title keeps
      to one line, cut with an ellipsis (its full words on hover), the number and the link close by. */
@@ -515,6 +515,7 @@
   .side-head { display: flex; gap: 8px; align-items: baseline; margin: 16px 4px 8px; font-size: var(--fs-micro); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
   .side-head .n { font-weight: 400; }
   .chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px; font-size: var(--fs-micro); background: var(--soft); color: var(--muted); white-space: nowrap; }
+  .bchip { margin-left: 8px; flex: none; } .maybe-build { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; max-width: var(--measure); margin: 8px 0; padding: 8px 12px; border: 1px dashed var(--line); border-radius: var(--radius); } .maybe-build p { margin: 0; flex: 1 1 240px; }
   .chip.ok { background: var(--ok-soft); color: var(--ok); } .chip.warn { background: var(--warn-soft); color: var(--warn); }
   .chip.bad { background: var(--bad-soft); color: var(--bad); } .chip.info { background: var(--info-soft); color: var(--accent); }
   .chip.live { background: var(--live-soft); color: var(--live); }
@@ -759,10 +760,11 @@
   .figdiffs { display: grid; gap: 20px; margin: 8px 0 12px; max-width: var(--measure); } .figdiffs p { margin: 0; }
   .swatch { display: inline-block; width: 11px; height: 11px; border-radius: var(--r-sm); border: 1px solid var(--line); vertical-align: -1px; margin-right: 4px; }
   .row .prov .fig-ok { color: var(--ok); }
-  .diffs { display: grid; gap: 12px; margin: 8px 0 0; }
-  .diffs .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .diffs figure { margin: 0; } .diffs figcaption { font-size: var(--fs-meta); color: var(--muted); }
-  .diffs img { width: 100%; border: 1px solid var(--line); border-radius: var(--r-sm); background: #fff; }
+  /* Differences from the approved design: the Figma table's rows, a state chip first, the actions under what differs. */
+  .dcheck { max-width: 980px; margin: 12px 0; } .dcheck > p { margin: 2px 0; }
+  .ftab.dtab { grid-template-columns: auto minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr); }
+  .dtab .fd-k { flex-wrap: wrap; } .dtab .fp-acts, .dtab .fp-edit { margin-top: 8px; }
+  .dc-fixed > summary { cursor: pointer; color: var(--muted); font-size: var(--fs-meta); margin: 8px 0 0; }
   /* Where the change is on a picture: boxes the agent measured, shown while "Outline what changed" is on. */
   .shot .pic { max-height: var(--shot-h); overflow: hidden; background: var(--soft); }
   .shot .pic img, .zoom .canvas img { min-height: 0; max-height: none; height: auto; object-fit: initial; }
@@ -1514,7 +1516,7 @@
   /* The spec's versions read as plain text: each a link, the one shown in ink. */
   .spec-versions button { border: 0; background: none; padding: 0; font: inherit; cursor: pointer; color: var(--ink); text-decoration: underline; text-decoration-thickness: 1px; text-decoration-color: color-mix(in srgb, currentColor 28%, transparent); text-underline-offset: 3px; transition: text-decoration-color .12s ease; } .spec-versions button:hover { text-decoration-color: currentColor; }
   .spec-versions button[aria-pressed="true"] { color: var(--ink); font-weight: 600; cursor: default; text-decoration: none; }
-  .follow { margin: 8px 0 4px; } .follow p { margin: 0; } .follow-prs { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+  .follow { margin: 8px 0 4px; } .follow p { margin: 0; } .build-sec > b { display: block; margin-bottom: 4px; } .follow-prs { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
   .follow-prs li { display: grid; grid-template-columns: 60px 1fr; column-gap: 12px; align-items: baseline; } .follow-prs .chip { justify-content: center; }
   .follow-prs li > span:last-child { color: var(--muted); } .follow-prs .ttl { color: var(--ink); } .follow-prs .sep { margin: 0 8px; } .follow-prs .nw { white-space: nowrap; }
   .follow-prs .anchor { font: inherit; background: none; padding: 0; border-radius: 0; color: var(--ink); text-decoration: underline; text-decoration-thickness: 1px; text-decoration-color: color-mix(in srgb, currentColor 28%, transparent); text-underline-offset: 3px; transition: text-decoration-color .12s ease; max-width: none; } .follow-prs .anchor:hover { text-decoration-color: currentColor; } .follow-prs .num { font-size: .8em; } .follow .chip[data-o="gh-open"] { background: color-mix(in srgb, var(--gh-open) 14%, var(--panel)); color: var(--gh-open); } .follow .chip[data-o="gh-merged"] { background: color-mix(in srgb, var(--gh-merged) 14%, var(--panel)); color: var(--gh-merged); }
@@ -2159,6 +2161,7 @@
     spec: "This option gets built. Design Desk writes the developer spec from it, then sends it to developers.",
     "spec-review": "Approved. Design Desk writes the developer spec; you read it, edit it or ask for changes, and press Send to developers. Nothing goes to GitHub before that.",
     "handed-off": "Approved and with developers. When it ships, it appears under PR Changes.",
+    build: "With developers: a pull request that builds it is open and ready for review. Build, below, says how each one compares with the design.",
     declined: "Nobody works on this request any more and nothing goes to developers. A designer can reopen it.",
     decided: "Closed with a decision instead of a design. The decision is under Product, Decisions. Nobody works on it any more; a designer can reopen it.",
   };
@@ -2194,7 +2197,9 @@
   // The state's word, the same in the list and on the page.
   // Writing the spec and sending it are two steps: the word says which (docs/handoff.md → Review before it goes).
   const specWord = (c) => c.status !== "spec" ? "" : c.spec?.review === "draft" ? "Spec draft — read it, then send" : c.spec?.review === "sent" ? "Sending to developers" : "";
-  const stateWord = (c) => tone(c) === "decided" ? "Decided without a design" : preDesign(c) && c.status !== "declined" ? { draft: "Draft", proposal: "Proposal" }[c.stage] : held(c) ? "Options drawn" : checked(c) ? "Checked" : emptied(c) ? "No options" : protoDown(c) ? ((typeof c.prototype === "string" ? c.prototype : c.prototype?.state) === "failed" ? "Prototype didn't work" : "Prototype switched off") : voteEnded(c) ? "Team feedback (finished)" : specWord(c) || STATUS[c.status] || c.status;
+  // Build: sent to developers, not built, and a pull request that builds it is open and ready (the server's `building`).
+  const building = (c) => c?.kind === "request" && c.status === "handed-off" && !c.built && c.building === true;
+  const stateWord = (c) => tone(c) === "decided" ? "Decided without a design" : preDesign(c) && c.status !== "declined" ? { draft: "Draft", proposal: "Proposal" }[c.stage] : held(c) ? "Options drawn" : checked(c) ? "Checked" : emptied(c) ? "No options" : protoDown(c) ? ((typeof c.prototype === "string" ? c.prototype : c.prototype?.state) === "failed" ? "Prototype didn't work" : "Prototype switched off") : voteEnded(c) ? "Team feedback (finished)" : building(c) ? "Build" : specWord(c) || STATUS[c.status] || c.status;
   // On a request's page the state is one of five stages, the same for every request, and a few words on
   // where in the stage it stands (docs/desk-page.md → A request's state). Each stage ends with a person's
   // move: a checked request stays in Checking until someone starts its options.
@@ -2213,6 +2218,7 @@
     if (c.status === "feedback") return voteEnded(c) ? "the vote ended" : "votes and comments";
     if (["prototype", "testing"].includes(c.status)) return protoDown(c) ? (proto === "failed" ? "the live prototype didn't work" : "the live prototype is switched off") : proto === "live" ? "the live prototype is up" : "";
     if (c.status === "spec") return c.spec?.review === "draft" ? "the spec waits to be read" : "";
+    if (building(c)) return "Build: a pull request is ready";
     return "";
   };
   const TYPE = { feature: "From a GitHub issue", adjustment: "Touch-up of a developer's change", proposal: "Suggested by Design Desk" };
@@ -2221,7 +2227,7 @@
     decision: "Recording a decision", "decision-check": "Checking the decisions", revise: "Changing the design", alternatives: "Drawing other ways",
     states: "Drawing every state", build: "Building the prototype, up to an hour", handoff: "Writing the spec", "spec-revise": "Changing the spec",
     deliver: "Sending to developers", teardown: "Switching off the prototype", figma: "Working with Figma", agenda: "Writing the brief",
-    slack: "Posting to Slack", "slack-send": "Sending to Slack", draw: "Drawing it", screens: "Checking the screenshots", ci: "Updating the check on GitHub", review: "Posting the feedback on GitHub" };
+    slack: "Posting to Slack", "slack-send": "Sending to Slack", draw: "Drawing it", screens: "Checking the screenshots", ci: "Updating the check on GitHub", review: "Posting the feedback on GitHub", "design-check": "Comparing with the design" };
   // What an open request waits for when nobody needs to press anything.
   const WORK = {
     request: "Design Desk looks at how the screen works, who else is changing it, and what a design change can do.",
@@ -2233,6 +2239,7 @@
     "decision-check": "Checking the design against the decisions in force; what it goes against shows here.",
     ci: "Setting Design Desk's check on the pull request to follow the handled mark.",
     review: "Design Desk posts the feedback on the pull request, as a comment.",
+    "design-check": "Comparing the pull request with the design it was linked to; what differs shows here.",
     revise: "Changing the design as you asked.",
     alternatives: "Drawing other ways the part you picked could look, as you described it. They appear above the design; pick the one to keep.",
     states: "Drawing every state of this element. Each state appears here and in the design workspace as it is drawn, with the use case it covers.",
@@ -2444,7 +2451,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       "productFilter:decisions": "Every decision the team made, the newest first", "productFilter:kit": "What the product's UI is made of, read from its code: its named values and its components' variants", "productFilter:history": "What happened to the product by day, week or release: the changes that shipped, the decisions made and the requests filed",
       "productFilter:differences": "Where the product differs from its design in Figma: screens, elements, changes, requests and decisions",
       "elFilter:all": "Every element: from the product and from approved designs", "elFilter:product": "Only the product's own elements, drawn from its code", "elFilter:design": "Only elements of approved designs, not in the product yet" }[v]),
-    dstate: (v) => ({ active: "Decisions that hold today", unapproved: "Decisions someone other than a designer made, waiting for a designer to approve them; nothing is checked against them yet", revoked: "Decisions no longer in force", "": "Every decision" }[v]),
+    dstate: (v) => ({ active: "Decisions that hold today", unapproved: "Decisions someone other than a designer made, waiting for a designer, an admin or a UI dev owner to approve them; nothing is checked against them yet", revoked: "Decisions no longer in force", "": "Every decision" }[v]),
     card: (v) => `Opens ${S.cards.find((x) => x.id === v)?.title || v}`,
     decision: (v) => `Opens decision ${v}`,
     ref: (v) => `Opens ${v}`,
@@ -3678,7 +3685,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (c.kind === "request") {
       if (c.status === "declined") return { state: "closed", pill: "closed" };
       if (preDesign(c)) return { state: c.stage, pill: c.stage === "proposal" ? "proposed" : null };
-      if (c.status === "handed-off") return c.built ? { state: "closed", pill: "shipped" } : { state: "dev", pill: null };
+      // In dev; Build while a pull request that builds it is ready (docs/desk-page.md → A request's state in the list).
+      if (c.status === "handed-off") return c.built ? { state: "closed", pill: "shipped" } : { state: "dev", pill: building(c) ? "build" : null };
       // Approved, its spec not yet sent: still in its review, the pill naming where the spec stands.
       // Only a spec sent is In dev (docs/desk-page.md → A request's state in the list).
       const sp = specPhase(c);
@@ -3701,13 +3709,13 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const simStates = () => SIM_ALL.filter(([k]) => seesStage(k));
   const SIM_KINDS = [["request", "Requests"], ["change", "PR changes"]];
   const SIM_PILL = { draft: "Draft", proposal: "Dev review", proposed: "Proposal", open: "Design review", dev: "In dev", shipped: "Shipped", none: "No review needed", closed: "Closed",
-    writing: "Writing spec", answers: "Answers needed", specready: "Spec ready" };
+    writing: "Writing spec", answers: "Answers needed", specready: "Spec ready", build: "Build" };
   const SIM_TIP = { draft: "A draft: only its author sees it until they send it on", proposal: "Dev review: the dev team approves it for dev or sends it to design; everyone may read it",
     proposed: "A proposal: the dev team approves it for dev or sends it to design; everyone may read it",
     open: "Design review: it needs a design decision", dev: "Approved: developers are building it",
     writing: "Design Desk is writing the developer spec; nothing has gone to developers yet", answers: "Design Desk has questions before it writes the spec",
     specready: "The spec is written; someone who may approve it reads it and sends it", shipped: "Approved by a person and shipped",
-    none: "Merged; Design Desk found nothing to review", closed: "Closed without being built" };
+    none: "Merged; Design Desk found nothing to review", closed: "Closed without being built", build: "Build: a pull request that builds it is ready for review" };
   // The filter: states and kinds, any of each; kept in this browser (desk-simFilter). By default
   // Design review for a designer, Draft and Dev review for a developer or a UI dev owner, every
   // state before In dev for anyone else; a kept state they cannot see is left out.
@@ -3888,7 +3896,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const parts = [
       [against.length, [againstBox(c), ...(c.variants || []).map((v) => againstBox(c, v.id))].join("")],
       [reasons.length, reasons.length ? `<h4>What to look at</h4><ul>${reasons.map((x) => `<li>${txt(x)}</li>`).join("")}</ul>` : ""],
-      [check && check.verdict !== "matches" ? 1 : 0, check ? designCheckBox(c) : ""],
+      [dcDiffers(check) ? 1 : 0, check ? designCheckBox(c) : ""],
       [ci ? 1 : 0, ci ? `<p>Design Desk's check on GitHub holds the pull request until a designer approves it.</p>` : ""],
       [figmaOn() && c.figma_check?.verdict === "differs" && figShown(c.figma_check).length ? 1 : 0, figmaBox(c)]];
     const body = parts.map(([, html]) => html).filter((x) => x && x.trim()).join("");
@@ -3947,11 +3955,24 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (ok) { toast("Marked as good. It goes with your feedback."); return; }
     toast(`Added to your feedback (${plural(r.drafts.filter((d) => !d.ok).length, "comment", "comments")}). Nobody sees it until you send it.`);
   }
-  async function removeDraft(c, id) { S.drafts[c.id] = (await api("DELETE", `/api/cards/${encodeURIComponent(c.id)}/drafts/${encodeURIComponent(id)}`)).drafts; renderDetail(); if (S.ws.open) renderWorkspace(); }
+  async function diffAct(c, key, action, text = null) {
+    const r = await api("POST", `/api/cards/${encodeURIComponent(c.id)}/design-difference`, { key, action, ...(text ? { text } : {}) });
+    S.dcEdit = null;
+    if (Array.isArray(r?.drafts)) S.drafts[c.id] = r.drafts;
+    await refreshList(); await openCard(c.id);
+    if (action === "fix") toast("Added to your feedback. It goes to the developer when you send it.");
+  }
+  async function removeDraft(c, id) {
+    const was = draftsOf(c).find((d) => d.id === id);
+    S.drafts[c.id] = (await api("DELETE", `/api/cards/${encodeURIComponent(c.id)}/drafts/${encodeURIComponent(id)}`)).drafts;
+    // A Fix in code taken out takes its action back: the card says so again.
+    if (was?.design && S.card?.id === c.id) { await openCard(c.id); return; }
+    renderDetail(); if (S.ws.open) renderWorkspace();
+  }
   // A comment to work in: what it is about, and its first words.
   const workInOf = (c, d) => (c.threads || []).find((th) => th.id === d.work_in);
   const workInWords = (c, d) => `Work in: ${String(workInOf(c, d)?.messages?.[0]?.text || "a comment").replace(/\s+/g, " ").slice(0, 120)}`;
-  const draftAbout = (c, d) => aboutOf(c, d.work_in ? workInOf(c, d)?.anchor : d.anchor, d.change);
+  const draftAbout = (c, d) => d.design ? `From the design · ${dcDiff(c, d.design)?.element || d.design}` : aboutOf(c, d.work_in ? workInOf(c, d)?.anchor : d.anchor, d.change);
   // What a draft or a review's comment is about, in words: its option, state and part, or the change it names.
   function aboutOf(c, a, change) {
     const v = a?.variant && (c.variants || []).find((x) => x.id === a.variant);
@@ -4453,7 +4474,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       <span class="sline"><span class="sdate"><span class="when">${esc(sWhen(lastChange(c)))}</span>${sNum(c)}</span>${simpleWho(c) ? `<span class="sby">${simpleWho(c)}</span>` : ""}${atWork(c) ? `<span class="dd-spin" title="Design Desk is working on it"></span>` : ""}</span>${simplePill(c)}</button></div>`;
     if (simpleList()) list.innerHTML = filters + drawn.map(simpleRow).join("") + (drawn.length < cards.length ? `<div class="list-more" data-list-more>Loading more…</div>` : "");
     else list.innerHTML = filters + drawn.map((c) => `<div class="row item${overdue(c) ? " overdue" : ""}${c.design ? " fromdesign" : ""}${c.read === false ? " unread" : ""}">
-      <button class="open" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}"><div class="t"><span title="${esc(c.title)}">${esc(c.title)}</span>${onDiffs() ? figNum(c) : S.tab === "designs" ? designNum(c) : num(c)}${S.tab === "designs" ? "" : rowDot(c)}</div>${againstDot(c)}</button>
+      <button class="open" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}"><div class="t"><span title="${esc(c.title)}">${esc(c.title)}</span>${onDiffs() ? figNum(c) : S.tab === "designs" ? designNum(c) : num(c)}${S.tab === "designs" ? buildChip(c) : rowDot(c)}</div>${againstDot(c)}</button>
       ${S.tab === "product" && S.productFilter === "differences" ? figmaFacts(c) : sourced ? origin(c) : c.summary ? `<div class="s">${esc(c.summary)}</div>` : ""}</div>`).join("")
       + (drawn.length < cards.length ? `<div class="list-more" data-list-more>Loading more…</div>` : "");
     listMore.disconnect();
@@ -4461,6 +4482,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (more) listMore.observe(more);
   }
   const LIST_PAGE = 20;
+  // A design under To build that a ready pull request builds says so on its row (docs/desk-page.md → Designs).
+  const buildChip = (c) => (building(c) && !c.send ? `<span class="chip bchip" data-o="approved" title="${esc(SIM_TIP.build)}">Build</span>` : "");
   const listMore = new IntersectionObserver((seen) => {
     if (!seen.some((x) => x.isIntersecting)) return;
     listMore.disconnect();
@@ -4558,7 +4581,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const named = (a) => a ? esc(a.name || a.login || (a.email ? nameOf(a.email) : "someone")) : "";
   // Who a decision came from, as the server reads it (docs/desk.md → Decisions → Who decided).
   // Where a decision stands: revoked, in force, or in force but not yet approved by a designer.
-  const NOT_APPROVED_TIP = "Someone other than a designer made it. It counts for nothing until a designer approves it: no card is checked against it and none warns";
+  const NOT_APPROVED_TIP = "Someone other than a designer made it. It counts for nothing until a designer, an admin or a UI dev owner approves it: no card is checked against it and none warns";
   const decState = (d) => d.status === "revoked" ? ["revoked", "Revoked", "It no longer holds; it stays here crossed out, with the reason"]
     : d.unapproved ? ["unapproved", "Not approved", `${NOT_APPROVED_TIP}.`] : ["in-force", "In force", "This decision holds today; anything against it warns"];
   const decRef = (id, text = "", gone = false) => `<a href="#${esc(id)}" data-ref="${esc(id)}">${esc(id)}</a>${text ? ` <span class="${gone ? "revoked-text" : ""}">${txt(text)}</span>` : ""}`;
@@ -4608,7 +4631,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     none: ["info", "No design", "Shipped without a design on the Desk"],
     fix: ["", "Fix or polish", "Fixes or polishes what was already there"],
   };
-  const histOrigin = (c) => c.design_check?.verdict === "differs" ? "differs" : c.builds || c.design_check?.verdict === "matches" ? "designed" : c.fix ? "fix" : "none";
+  const histOrigin = (c) => dcDiffers(c.design_check) ? "differs" : c.builds || c.design_check?.verdict === "matches" ? "designed" : c.fix ? "fix" : "none";
   // Days and weeks are UTC, as the weekly digest's (docs/digest.md): a week is Monday to Sunday, `2026-W46`.
   const utcDay = (iso) => String(iso).slice(0, 10);
   const isoWeek = (iso) => {
@@ -4893,7 +4916,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     };
     // One list, the newest first.
     const rows = newestFirst(S.decisions).map(row).join("");
-    list.innerHTML = `${bar}${rows || `<div class="empty">${S.decisionState === "revoked" ? "No decision has been revoked." : S.decisionState === "unapproved" ? "Every decision in force is a designer's or approved by one." : "No decisions recorded yet. Approved designs, outcomes of the presentation, comments a designer records and deliberate behaviour Design Desk finds land here."}</div>`}`;
+    list.innerHTML = `${bar}${rows || `<div class="empty">${S.decisionState === "revoked" ? "No decision has been revoked." : S.decisionState === "unapproved" ? "Every decision in force is a designer's or approved." : "No decisions recorded yet. Approved designs, outcomes of the presentation, comments a designer records and deliberate behaviour Design Desk finds land here."}</div>`}`;
   }
   async function loadDecisions() {
     allDecs = null;
@@ -4932,12 +4955,13 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // Who decided it and where, in the status box as a change's PR and author are.
     const meta = [d.author ? `<span><span class="k">by:</span> ${authorIcon(d)}<b>${named(d.author)}</b>${d.author.login && d.author.name ? ` (${esc(d.author.login)})` : ""}</span>` : "",
       d.origin ? `<span><span class="k">from:</span> ${originText(d.origin)}</span>` : "",
-      d.approved ? `<span><span class="k">approved:</span> <b>${named(d.approved.by)}</b> · ${esc(day(d.approved.at))}</span>` : ""].join("");
+      d.approved ? `<span><span class="k">approved by:</span> <b>${named(d.approved.by)}</b> · ${esc(day(d.approved.at))}</span>` : ""].join("");
     const st = decState(d);
     return `${backBar()}<h2 class="${d.status === "revoked" ? "revoked-text" : ""}">${txt(d.text)}${num(d)}${titleLink(d)}</h2>
       <div class="sub"><span>${esc(day(d.at))}</span>${(d.concepts || []).length ? `<span title="What it is about">${esc(d.concepts.join(", "))}</span>` : ""}</div>
       ${ghStatus(d.status === "revoked" ? "closed" : d.unapproved ? "waiting" : "approved", st[1], st[2], meta,
-        can("decide") ? (d.status === "active" ? `${d.unapproved ? `<button class="btn primary" data-approve-decision="${esc(d.id)}">Approve</button>` : ""}<button class="btn" data-revoke="${esc(d.id)}">Revoke…</button>` : `<button class="btn" data-restore="${esc(d.id)}">Restore</button>`) : "", "", { inline: true })}
+        // Approve: a designer, an admin or a UI dev owner; Revoke… and Restore stay a designer's or an admin's.
+        d.status === "active" ? `${d.unapproved && can("approve-decision") && !isMe(d.author?.email) ? `<button class="btn primary" data-approve-decision="${esc(d.id)}">Approve</button>` : ""}${can("decide") ? `<button class="btn" data-revoke="${esc(d.id)}">Revoke…</button>` : ""}` : can("decide") ? `<button class="btn" data-restore="${esc(d.id)}">Restore</button>` : "", "", { inline: true })}
       ${rv ? `<div class="against"><p><b>Revoked</b> by ${named(rv.by)} · ${esc(day(rv.at))}</p><p>${txt(rv.reason)}</p>${rv.replaced_by ? `<p>Replaced by ${decRef(rv.replaced_by)}</p>` : ""}${rv.origin ? originLine(rv.origin) : ""}</div>` : ""}
       ${against.map((x) => `<div class="against"><p>⚠ <b>Goes against ${decRef(x.decision)}</b>: ${txt(x.text)}</p><p class="hint">${txt(x.why)}</p></div>`).join("")}
       ${d.why ? `<h3>Why</h3>${md(d.why)}` : ""}
@@ -5252,7 +5276,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const shippedOf = (id) => S.cards.filter((x) => x.kind === "change" && x.design_check?.request === id).sort((a, b) => String(b.updated).localeCompare(String(a.updated)))[0] || null;
   // Whether a shipped change differs from the approved design in this element of the catalog:
   // a difference names its card, or its name.
-  const differsIn = (sh, c) => (sh.design_check.differences || []).some((x) => (x.card ? x.card === c.id : partKey(x.element) === partKey(c.title)));
+  const differsIn = (sh, c) => dcOpen(sh.design_check).some((x) => (x.card ? x.card === c.id : partKey(x.element) === partKey(c.title)));
   // The approved option, once a request is approved: its elements can go to the design catalog.
   const approvedOption = (c) => c.approved && ["spec", "handed-off"].includes(c.status)
     ? (c.variants || []).find((x) => x.id === c.approved.variant) || ((c.variants || []).length === 1 ? c.variants[0] : null) : null;
@@ -5730,11 +5754,29 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     return parts.length ? `<span class="one-line">${parts.join(" ")}</span>` : "";
   }
   const mapStatus = (c, buttons, more = "") => { const [w, tip] = MAP_STATE[c.status] || MAP_STATE.current; return ghStatus(MAP_TONE[c.status] || "approved", w, tip, c.status === "building" || c.status === "dropped" ? "" : mapMeta(c), buttons, more, { inline: true }); };
+  // The design a change builds (docs/desk-page.md → Designs): Builds R-<n>, explicit or linked by a person;
+  // else what it may build, each with Design Desk's reason and Link / Not this one for who may mark a change
+  // For Developers handled. `brief`: simple mode's one line each.
+  function buildsBox(c, brief = false) {
+    const b = c.builds, may = can("handle-small");
+    const link = (id, title) => `<button class="anchor" data-card="${esc(id)}">${esc(title || id)}</button>${num({ id })}`;
+    const by = c.build_link?.request === b?.card && c.build_link?.by ? ` Linked by ${esc(personName(c.build_link.by.email, c.build_link.by.name || "someone"))}.` : "";
+    const undo = b?.how === "confirmed" && may ? ` <button class="btn small" data-not-builds="${esc(b.card)}" title="It does not build this design: the link and its comparison go">Not this one</button>` : "";
+    const issue = b?.url && ghRef(b.url) && !ghRef(b.url).pr ? `, sent to developers as <a href="${safeUrl(b.url)}" target="_blank" rel="noopener noreferrer">Issue #${esc(ghRef(b.url).n)} ↗</a>` : "";
+    const builds = !b ? "" : brief ? `<p class="hint builds">Builds ${esc(b.card)}: ${link(b.card, b.title)}.${by}${undo}</p>`
+      : `<div class="sent builds"><b>Builds ${esc(b.card)}</b><p>This pull request builds ${link(b.card, b.title)}${issue}; its design and spec are there.${by}${undo}</p></div>`;
+    const maybe = (c.may_build || []).filter((x) => x.request !== b?.card).map((x) => {
+      const r = S.cards.find((y) => y.id === x.request);
+      const acts = may ? `<span class="actions"><button class="btn small" data-build-link="${esc(x.request)}" title="It builds this design: Design Desk compares it with the design">Link</button><button class="btn small" data-not-builds="${esc(x.request)}" title="It does not build this design: the suggestion goes, and is not made again">Not this one</button></span>` : "";
+      return `<div class="maybe-build"><p><b>May build ${esc(x.request)}</b>${r ? ` (${link(r.id, r.title)})` : ""}: ${txt(x.reason)}</p>${acts}</div>`;
+    }).join("");
+    return builds + maybe;
+  }
   function renderChange(c) {
     const src = c.source || {};
     if (simple()) return `${backBar()}${simpleHead(c)}
       ${c.summary ? `<div class="slead">${md(c.summary)}</div>` : ""}
-      ${c.builds ? `<p class="hint">It builds the design of <button class="anchor" data-card="${esc(c.builds.card)}">${esc(c.builds.title)}</button>${num({ id: c.builds.card })}.</p>` : ""}${requestsFrom(c)}
+      ${buildsBox(c, true)}${requestsFrom(c)}
       ${yourReview(c)}
       ${changeView(c)}
       ${renderEnvironment(c)}${renderInstance(c)}
@@ -5762,7 +5804,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         return ghStatus(o, word, tip, meta, adjust + handle, agendaButton(c) + size, { pill, inline: true });
       })()}`}
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
-      ${c.builds ? `<div class="sent"><b>Builds a design from Design Desk</b><p>This pull request builds <button class="anchor" data-card="${esc(c.builds.card)}">${esc(c.builds.title)}</button>${num({ id: c.builds.card })}${c.builds.url && ghRef(c.builds.url) && !ghRef(c.builds.url).pr ? `, sent to developers as <a href="${safeUrl(c.builds.url)}" target="_blank" rel="noopener noreferrer">Issue #${esc(ghRef(c.builds.url).n)} ↗</a>` : ""}; its design and spec are there.</p></div>` : ""}
+      ${buildsBox(c)}
       ${requestsFrom(c)}
       ${attentionLine(c)}
       ${againstBox(c)}${designCheckBox(c)}${followsLine(c)}
@@ -5868,15 +5910,44 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // What a shipped change does otherwise than the approved design it builds (docs/watch.md →
   // Approved design): per element, what differs, the design and the shipped look side by side.
   const reqRef = (id) => { const r = S.cards.find((x) => x.id === id); return `<button class="anchor" data-ref="${esc(id)}">${esc(r?.title || id)}</button>${r ? num(r) : ""}`; };
+  // Each difference keeps its identity across pushes (`key`) and the action a person took on it: the
+  // UI dev owner settles it first — Fix in code (a note in their feedback), Fine as built, or Ask the
+  // designer; one gone from a later push is fixed, folded under the table (docs/desk.md → Needs a designer).
+  const dcOpen = (k) => (k?.differences || []).filter((d) => !d.fixed && !d.accepted);
+  const dcDiffers = (k) => k?.verdict === "differs" && dcOpen(k).length > 0;
+  // Its key as the store has it; one written before keys were kept, by its card, else its name (partKey).
+  const dcKey = (d) => d.key || d.card || partKey(d.element);
+  const dcDiff = (c, key) => (c?.design_check?.differences || []).find((d) => dcKey(d) === key) || null;
+  // A designer or an admin; a UI dev owner on a change that goes against no decision in force.
+  const mayDiff = (c) => c?.kind === "change" && c.status !== "archived" && can("handle-small")
+    && (can("handle") || !(Array.isArray(c.conflicts) ? c.conflicts.some((x) => x.status === "active") : (c.against || []).length));
+  const dcWho = (by) => esc(shortName(by?.email, by?.name) || "someone");
+  const dcPic = (id, cap) => `<div class="ft-c">${id ? `<figure data-zoom="${esc(id)}"><img alt="${esc(cap)}" data-asset="${esc(id)}" /></figure>` : `<span class="hint">No picture</span>`}</div>`;
+  const dcState = (d) => [d.new_in !== undefined && !d.fixed ? `<span class="chip info" title="Not in the comparison before this push">New</span>` : "",
+    d.fixed ? `<span class="chip ok" title="The push after it no longer shows it">${d.fixed.sha ? `Fixed in <code>${esc(String(d.fixed.sha).slice(0, 7))}</code>` : "Fixed"}</span>`
+    : d.accepted ? `<span class="chip ok" title="Kept as it was built">Fine as built · ${dcWho(d.accepted.by)}</span>${d.accepted.decision ? ` <span title="The decision it recorded">${decRef(d.accepted.decision)}</span>` : ""}`
+    : d.asked ? `<span class="chip warn" title="Waits for a designer">Asked a designer · ${dcWho(d.asked.by)}</span>`
+    : d.fix ? `<span class="chip" title="A note asking for the fix is in their feedback">Fix asked · ${dcWho(d.fix.by)}</span>` : ""].filter(Boolean).join(" ");
+  function dcActs(c, d) {
+    if (d.fixed || !mayDiff(c)) return "";
+    if (S.dcEdit?.card === c.id && S.dcEdit.key === dcKey(d)) return `<div class="fp-edit"><textarea data-dc-text aria-label="${esc(`What to fix in ${d.element}`)}">${esc(S.dcEdit.text ?? d.what)}</textarea><div class="bar"><span class="grow"></span><button class="btn small" data-dc-cancel>Cancel</button><button class="btn small primary" data-dc-add="${esc(dcKey(d))}">Add to feedback</button></div></div>`;
+    const now = d.accepted ? "fine" : d.asked ? "ask" : d.fix ? "fix" : null, merged = Boolean(c.source?.merged_at);
+    const b = (act, label, tip) => (now === act || (act === "fix" && merged) ? "" : `<button class="btn small${act === "fix" && !now ? " primary" : ""}" data-dd-act="${act}" data-dd-key="${esc(dcKey(d))}" title="${esc(tip)}">${label}</button>`);
+    return `<div class="fp-acts">${b("fix", "Fix in code", "Adds a note asking for the fix to your feedback; it goes to the developer when you send it")}${b("fine", `${CHECK}Fine as built`, "Keeps it as it was built: it no longer counts as a difference")}${b("ask", "Ask the designer", "A bigger change: a designer decides; the item waits for one")}${now ? `<button class="link" data-dd-act="none" data-dd-key="${esc(dcKey(d))}" title="Takes the action back: the difference waits again">Undo</button>` : ""}</div>`;
+  }
+  const dcRow = (c, d) => `<div class="ft-r" role="row"><div class="ft-s"><span class="fd-k">${dcState(d)}</span></div><div class="ft-d"><p><b>${esc(d.element)}</b>${d.card ? ` <button class="anchor" data-ref="${esc(d.card)}">${esc(d.card)}</button>` : ""}: ${txt(d.what)}</p>${dcActs(c, d)}</div>${dcPic(d.design, "The approved design")}${dcPic(d.shipped, "As built")}</div>`;
+  const dcTable = (c, ds) => `<div class="ftab dtab" role="table"><div class="ft-h" role="row"><span role="columnheader" aria-label="State"></span><span role="columnheader">Difference</span><span role="columnheader">The approved design</span><span role="columnheader">As built</span></div>${ds.map((d) => dcRow(c, d)).join("")}</div>`;
   function designCheckBox(c) {
     const k = c.design_check;
     if (!k) return "";
     const of = `${reqRef(k.request)}${k.version ? `, version ${esc(k.version)}` : ""}`;
-    if (k.verdict === "matches") return `<p class="hint" style="max-width:var(--measure)"><span class="chip ok" title="Design Desk compared what shipped with the approved design">✓ As designed</span> It builds the approved design ${of}, and matches it.${k.summary ? ` ${txt(k.summary)}` : ""}</p>`;
-    const fig = (id, cap) => (id ? `<figure data-zoom="${esc(id)}"><img alt="${esc(cap)}" data-asset="${esc(id)}" /><figcaption>${esc(cap)}</figcaption></figure>` : `<figure class="nopic-f"><div class="nopic-box">No picture</div><figcaption>${esc(cap)}</figcaption></figure>`);
-    return `<div class="against"><p>⚠ <b>Differs from the approved design</b> ${of}</p>${k.summary ? `<p class="hint">${txt(k.summary)}</p>` : ""}
-      <div class="diffs">${k.differences.map((d) => `<div><p><b>${esc(d.element)}</b>${d.card ? ` <button class="anchor" data-ref="${esc(d.card)}">${esc(d.card)}</button>` : ""}: ${txt(d.what)}</p>${d.design || d.shipped ? `<div class="two">${fig(d.design, "The approved design")}${fig(d.shipped, "As it shipped")}</div>` : ""}</div>`).join("")}</div>
-      <p class="hint">A designer decides whether it stays: ask for a fix with Adjust the design, or accept it with Mark handled.</p></div>`;
+    const fixed = (k.differences || []).filter((d) => d.fixed), shown = (k.differences || []).filter((d) => !d.fixed);
+    const fold = fixed.length ? `<details class="fold dc-fixed"><summary>Fixed · ${fixed.length}</summary>${dcTable(c, fixed)}</details>` : "";
+    if (!shown.length) return `<div class="dcheck"><p class="hint"><span class="chip ok" title="Design Desk compared the change with the approved design">✓ As designed</span> It builds the approved design ${of}, and matches it.${k.summary ? ` ${txt(k.summary)}` : ""}</p>${fold}</div>`;
+    const open = dcOpen(k).length;
+    return `<div class="${open ? "against " : ""}dcheck"><p>${open ? `⚠ <b>Differs from the approved design</b> ${of}` : `✓ <b>Settled with the approved design</b> ${of}: every difference is kept as built`}</p>${k.summary ? `<p class="hint">${txt(k.summary)}</p>` : ""}
+      ${dcTable(c, shown)}${fold}
+      ${open ? `<p class="hint">The UI dev owner settles each one first: fix it in code, keep it as built, or ask a designer about a bigger one.</p>` : ""}</div>`;
   }
   // ---------- compared with Figma ----------
   // Where an item differs from its frame in Figma (the figma skill), shown only with Figma on for
@@ -5967,7 +6038,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   function shippedLine(c) {
     const sh = c.kind === "request" ? shippedOf(c.id) : null;
     if (!sh) return "";
-    const bad = sh.design_check.verdict === "differs";
+    const bad = dcDiffers(sh.design_check);
     return `<p class="hint" style="max-width:var(--measure)"><span class="chip ${bad ? "bad" : "ok"}" title="Design Desk compared the shipped change with this approved design">${bad ? "⚠ Shipped differently" : "✓ Shipped as designed"}</span> in <button class="anchor" data-ref="${esc(sh.id)}">${esc(sh.title)}</button>${num(sh)}${bad ? ": open it to see what differs" : ""}.</p>`;
   }
 
@@ -6491,7 +6562,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const ws = live(c) && (c.variants || []).length ? `<button class="btn small ws ws-way" data-act="workspace">${wsMark()}${can("revise") && !locked(c) ? "Design workspace" : "Comment on the design"}</button>` : "";
     const moves = row.length || who || ws ? `<div class="moves">${row.length ? `<span class="mv-k">${busy.length && !asks.length ? "Now:" : "Next:"}</span>${row.join(`<span class="mv-or">or</span>`)}` : ""}${who}${ws}</div>` : "";
     // The state's help hangs under its word: what is happening now and every way on from here.
-    const own = STATUS_TIP[tone(c) === "decided" ? "decided" : held(c) ? "held" : checked(c) ? "checked" : emptied(c) ? "emptied" : protoDown(c) ? "down" : asking(c) ? "asking" : c.status === "spec" && S.me?.spec_review && !c.approved?.auto_send ? "spec-review" : c.status];
+    const own = STATUS_TIP[tone(c) === "decided" ? "decided" : held(c) ? "held" : checked(c) ? "checked" : emptied(c) ? "emptied" : protoDown(c) ? "down" : asking(c) ? "asking" : c.status === "spec" && S.me?.spec_review && !c.approved?.auto_send ? "spec-review" : building(c) ? "build" : c.status];
     const help = nextHelp(c, own, c.status === "declined" ? "" : nx.text);
     return `<div class="status req" data-o="${tone(c)}"${busy.length ? " data-busy" : ""}>
       <div class="s-line"><div class="s-word"><span class="help"${help.text ? ` tabindex="0" role="note" aria-label="${esc(help.text)}"` : ""}><span class="s-mark"></span>${esc(i < 0 ? stateWord(c) : STAGES[i])}${sub ? `<span class="s-sub">${esc(sub)}</span>` : ""}${help.text ? `<span class="tip" aria-hidden="true">${help.html}</span>` : ""}</span></div>${turn}${act}${live(c) && c.prototype.login ? `<span class="hint s-meta" title="Sign in to the prototype with this demo account, not your own: everything in it is made-up data">${demoLogin(c.prototype.login)}</span>` : ""}</div>
@@ -6868,7 +6939,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const buttons = `${back}${url ? out(url, m?.[1] === "pull" ? "PR" : "Issue", "Where the design was sent to developers, on GitHub") : ""}${pr}${figma ? out(figma, "Figma", "The design in Figma") : ""}${done}`;
     return `${backBar()}
       <h2>${txt(c.title)}${designNum(c)}${titleLink(c)}</h2>
-      <div class="status" data-o="approved"><div class="s-line"><div class="s-word"><span class="s-mark"></span>${c.send ? "Closed" : c.built ? "Done" : "Approved"}</div>
+      <div class="status" data-o="approved"><div class="s-line"><div class="s-word"><span class="s-mark"></span>${c.send ? "Closed" : c.built ? "Done" : building(c) ? "Build" : "Approved"}</div>
         <span class="hint s-meta">${fact("approved by", c.approved)}${fact("done by", c.built)}${fact("reopened by", c.closed)}</span></div>
         ${c.send ? `<p class="hint">An earlier send: the request was reopened, so this design no longer goes to developers.</p>` : ""}
         ${buttons ? `<div class="next"><div class="actions">${buttons}</div></div>` : ""}</div>
@@ -6899,7 +6970,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const what = m ? `${m[1] === "pull" ? "PR" : "Issue"} #${m[2]}` : c.spec?.pr_url ? "The pull request" : "The issue";
     const card = c.sent_card && S.cards.find((x) => x.id === c.sent_card);
     return `<div class="sent"><b>${brief ? `Sent${sent && c.updated ? ` ${esc(day(c.updated))}` : ""}` : `Sent to developers${sent && c.updated ? ` on ${esc(day(c.updated))}` : ""}`}</b>
-      ${followWork(url, c, what, card)}${more ? `<div class="actions">${more}</div>` : ""}</div>`;
+      ${followWork(url, c, what, card)}${buildSection(c)}${more ? `<div class="actions">${more}</div>` : ""}</div>`;
   }
   // Where the work stands on GitHub, as the Desk's copy has it (docs/desk.md → GitHub on the
   // Desk): the issue's state, who has it, its labels, and every pull request that builds it.
@@ -6907,13 +6978,17 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // One row per item, in one form: a state label, the GitHub link (Issue #n ↗ or PR #n ↗), then
   // grey facts and the item's card on the Desk. The labels share a width, so the links align.
   // No pull request yet is a grey None row.
+  const fwGh = (u, text) => `<a href="${safeUrl(u)}" target="_blank" rel="noopener noreferrer">${esc(text)} ↗</a>`;
+  const fwDesk = (x, page) => `see it in <span class="nw"><button class="anchor" data-card="${esc(x.id)}" title="Its card on the Desk: ${esc(x.title)}">${esc(page)}</button>${num(x)}</span>`;
+  const fwChip = (word, o = "", tip = "") => `<span class="chip"${o ? ` data-o="${o}"` : ""}${tip ? ` title="${esc(tip)}"` : ""}>${esc(word)}</span>`;
+  const fwRow = (label, main, facts = []) => `<li>${label}<span>${main}${facts.filter(Boolean).map((f) => `<span class="sep">·</span>${f}`).join("")}</span></li>`;
+  const fwState = (st) => { const [w, o] = GH_STATE[st] || [st || "?", "gh-draft"]; return fwChip(w, o); };
+  // A pull request already on PR Changes links to its card there.
+  const fwPrCard = (u) => { const k = ghRef(u)?.key, x = k && S.cards.find((y) => y.kind === "change" && ghRef(y.source?.url)?.key === k); return x ? fwDesk(x, "PR Changes") : ""; };
   function followWork(url, c, what = "", card = null) {
-    const gh = (u, text) => `<a href="${safeUrl(u)}" target="_blank" rel="noopener noreferrer">${esc(text)} ↗</a>`;
-    const desk = (x, page) => `see it in <span class="nw"><button class="anchor" data-card="${esc(x.id)}" title="Its card on the Desk: ${esc(x.title)}">${esc(page)}</button>${num(x)}</span>`;
-    const chip = (word, o = "", tip = "") => `<span class="chip"${o ? ` data-o="${o}"` : ""}${tip ? ` title="${esc(tip)}"` : ""}>${esc(word)}</span>`;
-    const row = (label, main, facts = []) => `<li>${label}<span>${main}${facts.filter(Boolean).map((f) => `<span class="sep">·</span>${f}`).join("")}</span></li>`;
+    const gh = fwGh, chip = fwChip, row = fwRow;
     const list = (rows) => `<div class="follow"><ul class="follow-prs">${rows.join("")}</ul></div>`;
-    const onIssues = card ? desk(card, "Issues") : "";
+    const onIssues = card ? fwDesk(card, "Issues") : "";
     const ref = ghRef(url);
     if (!url) return "";
     if (!ref) return list([row(chip("Sent"), gh(url, what), [onIssues])]);
@@ -6930,14 +7005,24 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     }
     const g = S.gh[ref.key];
     if (!g) return list([row(chip("?", "", "Design Desk has not read it on GitHub yet; its next check does"), gh(url, what), [onIssues])]);
-    const state = (st) => { const [w, o] = GH_STATE[st] || [st || "?", "gh-draft"]; return chip(w, o); };
     const people = (xs, k) => (xs || []).length ? `${k} <span class="ttl">${esc(xs.join(", "))}</span>` : "";
-    // A pull request already on PR Changes links to its card there.
-    const prCard = (u) => { const k = ghRef(u)?.key, x = k && S.cards.find((y) => y.kind === "change" && ghRef(y.source?.url)?.key === k); return x ? desk(x, "PR Changes") : ""; };
-    const prs = (g.linked || []).map((p) => { const n = ghRef(p.url)?.n; return row(state(p.state), gh(p.url, n ? `PR #${n}` : "Pull request"), [p.title ? `<span class="ttl">${esc(p.title)}</span>` : "", people(p.author ? [p.author] : [], "by"), prCard(p.url)]); });
+    return list([row(fwState(g.state), gh(url, what), [people(g.assignees, "assigned to"), (g.labels || []).length ? esc(g.labels.join(", ")) : "", g.kind === "pr" ? fwPrCard(url) : onIssues])]);
+  }
+  // Build: every pull request that builds a request sent to developers, one line each — its state, its
+  // title, how it compares with the design and its card on PR Changes (the server's `build_prs`), then
+  // any other the spec's issue lists on GitHub; None yet while none does (docs/desk-page.md → Designs).
+  function buildSection(c) {
+    if (c.kind !== "request" || c.status !== "handed-off" || c.send) return "";
+    const list = c.build_prs || [], ref = ghRef(c.spec?.issue_url || ""), g = ref ? S.gh?.[ref.key] : null;
+    // Open differences only; those kept as built say so (docs/desk.md → Needs a designer).
+    const verdict = (x) => (x.verdict === "matches" ? "Matches the design" : x.verdict !== "differs" ? "" : x.differences ? `${plural(x.differences, "difference", "differences")}${x.accepted ? `, ${x.accepted} fine as built` : ""}` : "Fine as built");
+    const pr = (u, n) => (u ? fwGh(u, n ? `PR #${n}` : "Pull request") : esc(n ? `PR #${n}` : "Pull request"));
+    const rows = list.map((x) => { const ch = S.cards.find((y) => y.id === x.card) || { id: x.card, title: x.title }; return fwRow(fwState(x.state), pr(x.url, x.pr), [x.title ? `<span class="ttl">${esc(x.title)}</span>` : "", verdict(x), fwDesk(ch, "PR Changes")]); });
+    const carded = new Set(list.map((x) => ghRef(x.url || "")?.key).filter(Boolean));
+    for (const p of g?.kind === "issue" ? g.linked || [] : []) if (!carded.has(ghRef(p.url)?.key))
+      rows.push(fwRow(fwState(p.state), pr(p.url, ghRef(p.url)?.n), [p.title ? `<span class="ttl">${esc(p.title)}</span>` : "", p.author ? `by <span class="ttl">${esc(p.author)}</span>` : "", fwPrCard(p.url)]));
     const agent = c.spec?.sent?.implement || c.approved?.implement;
-    const none = g.kind === "issue" ? [row(chip("None", "", agent ? "The coding agent opens one once it starts" : "No pull request builds it yet"), "Pull request")] : [];
-    return list([row(state(g.state), gh(url, what), [people(g.assignees, "assigned to"), (g.labels || []).length ? esc(g.labels.join(", ")) : "", g.kind === "pr" ? prCard(url) : onIssues]), ...(prs.length ? prs : none)]);
+    return `<div class="follow build-sec"><b class="k">Build</b>${rows.length ? `<ul class="follow-prs build-prs">${rows.join("")}</ul>` : `<p class="hint" title="${agent ? "The coding agent opens one once it starts" : "No pull request builds it yet"}">None yet</p>`}</div>`;
   }
   // An issue or a change that already has a request (one not closed) offers no Design this or
   // Adjust the design: the line A request from this links to it. One closed or sent to developers brings the button back.
@@ -9333,6 +9418,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if ("exitPresent" in ds) { $("#present")?.remove(); return; }
     if ("ack" in ds) { await api("POST", `/api/cards/${S.card.id}/ack`); await refreshList(); await openCard(S.card.id); return; }
     if ("handle" in ds) { await api("POST", `/api/cards/${S.card.id}/handled`, { handled: ds.handle === "1" }); await refreshList(); await openCard(S.card.id); return; }
+    // Link / Not this one: a change and the design it may build (docs/desk.md → GitHub on the Desk).
+    if (ds.buildLink || ds.notBuilds) { await api("POST", `/api/cards/${S.card.id}/build-link`, { request: ds.buildLink || ds.notBuilds, link: Boolean(ds.buildLink) }); await refreshList(); await openCard(S.card.id); return; }
     if ("adjust" in ds) { openRequestDialog(S.card); return; }
     if ("addShots" in ds) { openShotsDialog(); return; }
     if (ds.post) { S.convoOpen = true; S.sect.talk = true; await post(ds.post); return; }
@@ -9353,6 +9440,13 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (ds.figEdit) { S.figEdit = { card: S.card.id, part: ds.figEdit }; renderDetail(); $("#el-body [data-fig-text]")?.focus(); return; }
     if ("figEditCancel" in ds) { S.figEdit = null; renderDetail(); return; }
     if (ds.figEditAdd) { const d = figDiff(S.card, ds.figEditAdd), t = el.closest(".fp-r")?.querySelector("[data-fig-text]")?.value.trim(); if (!d || !t) return; S.figEdit = null; await addDraft(S.card, { figma: d.part, change: d.change, text: t, edited: t !== figWords(d) }); return; }
+    // A difference from the approved design settled (docs/desk.md → Needs a designer); Fix in code first opens a box for the words.
+    if (ds.ddAct && S.card) {
+      if (ds.ddAct === "fix") { S.dcEdit = { card: S.card.id, key: ds.ddKey }; renderDetail(); $("#detail [data-dc-text]")?.focus(); return; }
+      await diffAct(S.card, ds.ddKey, ds.ddAct); return;
+    }
+    if ("dcCancel" in ds) { S.dcEdit = null; renderDetail(); return; }
+    if (ds.dcAdd && S.card) { const t = el.closest(".fp-edit")?.querySelector("[data-dc-text]")?.value.trim(); if (!t) return; await diffAct(S.card, ds.dcAdd, "fix", t); return; }
     if ("review" in ds) { await reviewDialog(S.card, ds.review || null); return; }
     // Submit feedback and its panel (docs/desk-page.md → Submit feedback).
     if (ds.fb && S.card) { fbToggle(S.card, ds.fb); return; }
@@ -10349,11 +10443,13 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     "new-version": ["New version", "design", '<path d="M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5"/>'],
     comment: ["New comment", "talk", '<path d="M4 5h16v11H9l-5 4z"/>'],
     reply: ["New reply", "talk", '<path d="M10 8 5 12l5 4"/><path d="M5 12h9a5 5 0 0 1 5 5v1"/>'],
+    "design-asked": ["Asked a designer", "design", '<path d="M3 12h4l3-8 4 16 3-8h4"/>'],
     "dev-question": ["Developer asks", "talk", '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 0 1 5 .5c0 1.7-2.5 2-2.5 3.5M12 17h.01"/>'],
     question: ["New question", "talk", '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 0 1 5 .5c0 1.7-2.5 2-2.5 3.5M12 17h.01"/>'],
     answer: ["Design Desk answered", "agent", '<path d="M4 5h16v11H9l-5 4z"/><path d="m8.5 10.5 2.5 2.5 4.5-4.5"/>'],
     "agent-asks": ["Design Desk asks", "agent", '<path d="M4 5h16v11H9l-5 4z"/><path d="M12 8v3.5M12 13.5h.01"/>'],
     "new-decision": ["New decision", "decision", '<path d="M12 3v18M5 7h14M5 7l-2.5 6a2.5 2.5 0 0 0 5 0zM19 7l-2.5 6a2.5 2.5 0 0 0 5 0zM8 21h8"/>'],
+    "decision-approved": ["Decision approved", "ok", '<path d="m5 12.5 4.5 4.5L19 7.5"/>'],
     revoked: ["Decision revoked", "closed", '<circle cx="12" cy="12" r="9"/><path d="m9 9 6 6M15 9l-6 6"/>'],
   };
   const NOTE_KIND = { request: "Request", change: "PR change", issue: "Issue", screen: "Screen", element: "Element", decision: "Decision" };

@@ -174,6 +174,25 @@ function shim() {
       if (!thumb && !worry) delete box[me.email]; else box[me.email] = { vote: thumb, ...(worry ? { concern: true } : {}), role, at: now() };
       return { votes: c.votes };
     }
+    // A difference from the approved design settled (store.designDifference): one action per difference; Fix in code is a draft about it.
+    if ((x = m(/^\/api\/cards\/([^/]+)\/design-difference$/))) {
+      const c = card(x[1]), d = c.design_check.differences.find((y) => y.key === body.key), stamp = { by: { email: me.email, name: me.name, role }, at: now() };
+      for (const k of ["fix", "accepted", "asked"]) delete d[k];
+      // Fine as built records a decision in force, approved by who accepted it (store.acceptAsBuilt).
+      if (body.action === "fine") { stamp.decision = `D-${100 + ++n}`; cards[0].cited[stamp.decision] = { text: `${d.element}: kept as built in PR #${c.source?.pr} — ${d.what}`, status: "active", author: stamp.by, approved: stamp, origin: { kind: "desk", label: "Accepted as built", card: c.id } }; }
+      if (body.action !== "none") d[{ fix: "fix", fine: "accepted", ask: "asked" }[body.action]] = stamp;
+      c.drafts = (c.drafts || []).filter((y) => y.design !== d.key);
+      if (body.action === "fix") c.drafts.push({ id: `d${++n}`, design: d.key, text: body.text, anchor: null, at: now() });
+      return { card: structuredClone(c), drafts: c.drafts };
+    }
+    // Link / Not this one (store.linkBuild): the suggestion goes; Link makes it the change's design.
+    if ((x = m(/^\/api\/cards\/([^/]+)\/build-link$/))) {
+      const c = card(x[1]), r = card(body.request);
+      c.may_build = (c.may_build || []).filter((y) => y.request !== body.request);
+      if (body.link) { c.build_link = { request: r.id, by: { email: me.email, name: me.name }, at: now() }; c.builds = { card: r.id, title: r.title, at: now(), url: r.spec?.issue_url || null, how: "confirmed" }; c.waiting.push({ kind: "design-check", state: "queued", created: now() }); }
+      else { (c.not_builds ||= []).push({ request: r.id, by: { email: me.email }, at: now() }); if (c.builds?.card === r.id) c.builds = null; }
+      return { card: structuredClone(c) };
+    }
     if ((x = m(/^\/api\/cards\/([^/]+)\/work-in$/))) { const c = card(x[1]); const ts = c.threads.filter((t) => body.threads.includes(t.id)); for (const t of ts) t.kind = "change"; work(c, ts); return {}; }
     if ((x = m(/^\/api\/threads\/([^/]+)\/messages$/))) { const [, t] = thread(x[1]); t?.messages.push({ by: { name: me.name, email: me.email }, at: now(), text: body.text }); return {}; }
     // A question form answered (store.answerForm): its answers, as one reply; a handoff's goes on to the spec.

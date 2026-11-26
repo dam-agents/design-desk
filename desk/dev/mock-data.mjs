@@ -303,7 +303,24 @@ const p2 = pr("P-2", 806, "Reports: denser table rows", 60 * 5, { merged: false,
     { id: "T-82", kind: "comment", review: "U-1", state: "open", may: { reply: true, resolve: true }, messages: [{ by: { ...ALICE, role: "designer" }, at: ago(60 * 4), text: "The header should stay sticky." }] }] });
 const p3 = pr("P-3", 799, "Empty state for the provider list", 60 * 30, { status: "handled", handled: { by: ALICE, at: ago(60 * 29) } });
 const p4 = pr("P-4", 790, "Billing: copy fix in the footer", 60 * 48, { attention: { level: "fyi", reasons: ["Nothing differs from the catalog."] } });
-const p5 = pr("P-5", 785, "Table: one more column", 60 * 3, { attention: { level: "developer", reasons: ["A column in an existing table."] } });
+// Linked builds (docs/desk-page.md → Designs): R-12 sent to developers and in Build, P-7 an open pull
+// request that builds it, P-5 a suggestion with Link / Not this one.
+const r12 = req("R-12", "Agents: a calmer spend column", "handed-off", 60 * 2, { approved: { by: ALICE, at: ago(60 * 20) }, design_id: "G-3", building: true,
+  spec: { issue_url: "https://github.com/example/product/issues/820", review: "sent" },
+  build_prs: [{ card: "P-7", title: "Agents: spend column, as designed", pr: 821, repo: "example/product", url: "https://github.com/example/product/pull/821", state: "open", how: "explicit", verdict: "differs", differences: 3, accepted: 1 }] });
+// Its differences in every state (docs/desk.md → Needs a designer): new in the last push, Fix asked,
+// Asked a designer, Fine as built, one waiting, and one the last push fixed.
+const LOU = { email: "lou@example.com", name: "Lou Park", role: "ui-dev-owner" };
+const p7 = pr("P-7", 821, "Agents: spend column, as designed", 60 * 2, { merged: false, builds: { card: "R-12", title: r12.title, at: ago(60 * 2), url: r12.spec.issue_url, how: "explicit" },
+  attention: { level: "designer", reasons: ["A column in the agents table.", "Differs from the approved design R-12", "A UI dev owner asks a designer: Spend pill"] }, for: "developers",
+  design_check: { request: "R-12", verdict: "differs", sha: "9c1e7a4f2b", summary: "A label and the pill read otherwise; the limit line is gone.", differences: [
+    { key: "spend label", element: "Spend label", what: "It says “of” where the design has a slash.", fix: { by: LOU, at: ago(50) } },
+    { key: "warning icon", element: "Warning icon", what: "The icon by the limit is missing.", new_in: "9c1e7a4f2b" },
+    { key: "spend pill", element: "Spend pill", what: "The pill is blue; the design has it green under the limit.", asked: { by: LOU, at: ago(40) } },
+    { key: "column width", element: "Column width", what: "A little wider than designed.", accepted: { by: LOU, at: ago(45) } },
+    { key: "limit line", element: "Limit line", what: "The thin line at the limit was missing.", fixed: { sha: "9c1e7a4f2b", at: ago(20) } }] } });
+const p5 = pr("P-5", 785, "Table: one more column", 60 * 3, { attention: { level: "developer", reasons: ["A column in an existing table."] },
+  may_build: [{ request: "R-12", reason: "It changes the agents table, which the design changes." }] });
 
 // An open pull request with three changes (docs/desk-page.md → Simple mode → Changes): a screen
 // pair with the after picture's marks, then two lone screens, after only (the first one new),
@@ -334,5 +351,5 @@ const r8 = { ...r3, id: "R-8", title: "Agents list: fewer columns", stage: "draf
   request: { type: "idea", problem: "The agents list has more columns than anyone reads." }, threads: [], votes: {} };
 const r9 = { ...r3, id: "R-9", title: "A quieter usage chart", stage: "proposal", created: ago(300), updated: ago(15),
   request: { type: "idea", problem: "The usage chart pulls the eye from the totals." }, threads: [], votes: {} };
-export const CARDS = [r1, r2, r3, r11, r10, r4, r5, r6, r7, r8, r9, p1, p2, p3, p4, p5, p6];
+export const CARDS = [r1, r2, r3, r11, r10, r4, r5, r12, r6, r7, r8, r9, p1, p2, p3, p4, p5, p6, p7];
 export const ASSETS = A;

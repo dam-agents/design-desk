@@ -402,6 +402,15 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   comment ↓**. A taken one is a note like any other, so no Looks good stands beside it; it shows
   once, there, not again over the box. Someone else sees the differences only in the item's box
   ([desk.md](desk.md) → Differences from Figma).
+- **Differences from the approved design**, on a change that builds one: **⚠ Differs from the
+  approved design R-<n>** (**✓ Settled** once every one is kept as built), then a table like the
+  Figma one — per difference its state (**New**; **Fix asked**, **Asked a designer** or **Fine as
+  built** · who, with its decision's number), its element and its card, what differs, **The approved design** and **As built** —
+  and under what differs, for who may ([desk.md](desk.md) → Needs a designer), **Fix in code** (a
+  box holding Design Desk's words, then **Add to feedback**), **Fine as built**, **Ask the
+  designer**, and **Undo** for the one taken. Fixed ones fold under **Fixed · n**, each "Fixed in
+  <7-character commit>". A line says the UI dev owner settles them first and asks a designer about a
+  bigger one.
 - **Motion.** Short, soft animations, in the `@media (prefers-reduced-motion: no-preference)`
   block of `desk/page.html`'s style, so a person whose system asks for less motion gets none:
   dialogs rise in and fade out with their backdrop, More and the menu under a name pop open,
@@ -640,7 +649,8 @@ whom the request waits on — the same colour as the state on its page: **blue**
 (Checked: start the options; Options drawn: ask the team; No options, every option taken out at
 Options drawn: draw them again; a question to answer; a prototype that
 failed or was switched off; a spec draft to send); green sent to developers, slate decided, red
-closed. It pulses only while Design Desk works on the request, whatever the step (then blue), and
+closed. A request sent to developers and not built reads **Build** while a pull request that builds
+it is open and not a draft (the list's and the card's `building`). It pulses only while Design Desk works on the request, whatever the step (then blue), and
 stays lit otherwise. A request is never blue with a move of a person's own beside it: once
 Design Desk's work is done, Checking reads **Checked** and Drawing options reads **Options drawn**. Team feedback
 reads **Team feedback (finished)** once a person ended the vote, or its vote in Slack ended and no other runs. On the request's page a vote in Slack is a box under its header, not in an option's tab: while it runs, until when; once closed, each option by its number with its 👍, 👎 and ⚠️, read from the result Design Desk wrote (`Name: 7 👍, 2 👎. …`; a result in other words shows as written). Pointing at
@@ -664,7 +674,8 @@ after its PR or issue as a pill that opens it on GitHub, in the list's style: `h
 `at:` when and `shipped:` when; an issue's `by:`, `assigned to:`. A screen's and an element's box
 says what its dot says (Up to date, Out of date, Being drawn, Not drawn) and holds their buttons
 (**Update the drawing**, **Draw how it looked before**, the presentation's); a decision's says In
-force, Not approved or Revoked and holds **Approve** (when not approved), **Revoke…** or **Restore**. A week's page has no state: its chip says
+force, Not approved or Revoked, `approved by:` who approved it, and holds **Approve** (when not approved; a designer, an admin or a UI
+dev owner, never its author), **Revoke…** or **Restore** (a designer or an admin). A week's page has no state: its chip says
 Weekly digest. Needs a designer carries a
 small AI tag: Design Desk judges what goes in it, the buttons (**Mark
 handled**, **Adjust the design**; **Design this**) and ⋯ for the presentation. **Draw it** sits
@@ -686,7 +697,7 @@ rewrites it after Ask for changes), **Answers needed** (magenta: its questions w
 or **Spec ready** (green: the draft waits for **Send to developers**). **Design review** (green; its key `open`): it needs a design decision — the same
 three For Designers. Design Desk at work on an item leaves it in its review: the spinner says so. **In dev** (the accent): it is
 approved and developers build it — a request sent to developers and not yet
-built, a change handled or auto handled whose pull request is not merged, and a change a review asked
+built (its pill **Build** while a pull request builds it, as in full mode), a change handled or auto handled whose pull request is not merged, and a change a review asked
 changes of until new commits arrive (its head says **Changes requested · developer**, and **Changes
 requested · you** to its pull request's author, by the GitHub username People keeps, in both modes; a request a
 review asked changes of stays in its review, its head saying **Changes requested · Design Desk**,
@@ -736,7 +747,9 @@ icon's upper right corner, gone once the notification is read. The events:
 | Back to feedback | a person takes a request's approval back ([desk.md](desk.md) → Taking an approval back); For you for whose approval it was, too |
 | Feedback asked | a person hands the drawn options to the team (**Ask for feedback**); For you for every `developer` and `ui-dev-owner` |
 | New decision, Decision revoked | a decision is added or revoked |
+| Decision approved | someone not on the design side approves a decision, Fine as built's included ([desk.md](desk.md) → Decisions → Approved); For you for every `designer` and `admin` |
 | Developer asks, Marked done | a developer asks a design's designer, or marks it done ([Designs](#designs)) |
+| Asked a designer | a person asks a designer about a difference from the approved design ([desk.md](desk.md) → Needs a designer); For you as Developer asks is |
 | Feedback sent, New version | a person sends feedback (on a pull request's change, For you for every `developer` and `ui-dev-owner`); new commits arrive on a pull request a review asked changes of ([desk.md](desk.md) → Reviews) |
 
 Every row is at most three lines, each cut short with … when long, and says the same things in the same places: an icon and what happened, who (when known),
@@ -770,11 +783,12 @@ A menu tab right after Requests, only for `developer`, `ui-dev-owner` and `admin
 requests sent to developers (`handed-off`), **To build** and **Done**, nothing else. Each send is an
 item of its own with its own number, `G-<n>` (`design_id`, given when the request is handed off; a
 send after a reopen gets a new one), shown on its row and its page. An item
-shows, read-only: a status strip (**Approved**, or **Done**, with who approved it and when,
+shows, read-only: a status strip (**Approved**, **Build** — on its To build row too — while a pull request builds it, or **Done**, with who approved it and when,
 and who marked it done) holding the links to the issue or pull request it went to, the pull request it comes from
 (a PR change it adjusts, or its origin) and the Figma frame, and **Mark as done** (`POST /api/cards/R-<n>/built`, `built: {by, at}`; **Not done yet**
 takes it back, `not_built`). The store marks it done itself (`built: {by: {agent}, at, change}`) when a merged change card
-that builds it is written: its pull request is the spec's or links its issue, or its `design_check` says `matches`;
+that builds it is written: its pull request is the spec's or links its issue, a person linked it, or its `design_check` says `matches`,
+and none of its differences is open (one merged with open ones waits for a person's Mark as done);
 never one a person took back. And **Open the request**, the same request on Requests; the
 approved option as approved, **UX decisions** (`dev_summary`, the [handoff](handoff.md)'s step 7,
 AI-marked; none, none shown), the issue's text (the sent spec) and **Ask the designer**: a
@@ -787,6 +801,15 @@ it is between people. Each closed record of a request reopened after it was sent
 stays under **Done** as its own row (its own `G-<n>`, **· earlier send**; `#R-<n>~<k>` still opens it), read-only: **Closed**,
 who reopened it and when, its issue, its summary and its questions, with no box to ask and no
 Mark as done.
+
+A request sent to developers shows **Build** under its issue's row: one line per pull request that
+builds it (`build_prs: [{card, title, pr, repo, url, state, how, verdict, differences, accepted}]`) — its pill
+(**Draft**, **Open**, **Merged**, **Closed**), its title, its verdict (**Matches the design**, **N
+differences** open, ", M fine as built"; **Fine as built** with none open) and its card on PR Changes — then any other pull request its issue lists on GitHub;
+**None yet** while none does. A change that builds one says **Builds R-<n>** with its link
+(`builds: {card, title, url, how}`; once linked by a person, who, and **Not this one**); each
+suggestion reads **May build R-<n>**: its reason, with **Link** and **Not this one** for who may
+([desk.md](desk.md) → GitHub on the Desk).
 
 ## The look
 

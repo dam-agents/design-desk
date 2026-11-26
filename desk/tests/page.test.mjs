@@ -1722,11 +1722,14 @@ test("a folded list leaves Guide and a narrow window their page", (t) => open(t,
   assert.notEqual(await desk.$eval("#list", (l) => getComputedStyle(l).display), "none", "with no item open there, the folded list shows");
 }));
 
-// A decision a developer made waits for a designer's approval; one of the design side does not.
-const APPROVALS = `<script>
+// A decision a developer made waits for approval; one of the design side does not.
+const APPROVALS = (me = { role: "designer", email: "d@example.com", can: { decide: true, "approve-decision": true, build: true } }) => `<script>
 const calls = [];
+const ME_DECIDES = ${JSON.stringify(me)};
 const decisions = [{ id: "D-1", text: "Search sits in the header", status: "active", side: "design", at: "2026-10-01T00:00:00Z", concepts: ["search"], author: { name: "Alice" } },
-  { id: "D-2", text: "Limits reset weekly", status: "active", side: "developer", unapproved: true, at: "2026-10-02T00:00:00Z", concepts: ["limits"], author: { login: "dana" }, origin: { kind: "pr", label: "PR #40", url: "https://github.com/acme/widgets/pull/40" } }];
+  { id: "D-2", text: "Limits reset weekly", status: "active", side: "developer", unapproved: true, at: "2026-10-02T00:00:00Z", concepts: ["limits"], author: { login: "dana" }, origin: { kind: "pr", label: "PR #40", url: "https://github.com/acme/widgets/pull/40" } },
+  { id: "D-3", text: "Width: kept as built in PR #45", status: "active", side: "developer", at: "2026-10-03T00:00:00Z", concepts: ["width"], author: { email: "lou@example.com", role: "ui-dev-owner" },
+    approved: { by: { email: "lou@example.com", name: "Lou", role: "ui-dev-owner" }, at: "2026-10-03T00:00:00Z" }, origin: { kind: "desk", label: "Accepted as built", card: "C-1", url: "https://github.com/acme/widgets/pull/45" } }];
 const cards = [{ id: "C-1", kind: "change", title: "A new header", acked: true, summary: "Follows D-2.", source: { repo: "acme/widgets", pr: 45 } },
   { id: "C-7", kind: "request", title: "Show a daily spend bar", status: "prototype", created: "2026-11-05T09:00:00Z", request: { problem: "Show today's spend." },
     triage: { verdict: "design", reasons: [] }, variants: [], threads: [], prototype: { state: "failed" },
@@ -1734,7 +1737,7 @@ const cards = [{ id: "C-1", kind: "change", title: "A new header", acked: true, 
 window.platform = { async request({ method, path, body }) {
   calls.push({ method, path, body });
   const one = path.startsWith("/api/cards/") && cards.find((c) => c.id === decodeURIComponent(path.slice(11)));
-  const answer = path === "/api/me" ? { role: "designer", email: "d@example.com", can: { decide: true, build: true } }
+  const answer = path === "/api/me" ? ME_DECIDES
     : path === "/api/cards" ? { cards } : path === "/api/agenda" ? { agenda: [] }
     : path.endsWith("/approve") ? { decision: { ...decisions[1], unapproved: false, approved: { by: { email: "d@example.com" }, at: "2026-11-06T10:00:00Z" } } }
     : path.startsWith("/api/decisions/") ? { decision: decisions.find((d) => d.id === path.slice(15)), refs: [] }
@@ -1745,7 +1748,7 @@ window.platform = { async request({ method, path, body }) {
 try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
 </script>`;
 
-test("a decision someone other than a designer made says Not approved in its peek, its row and its page; a designer approves it there; Not approved filters", (t) => open(t, APPROVALS, async (desk) => {
+test("a decision someone other than a designer made says Not approved in its peek, its row and its page; a designer approves it there; Not approved filters", (t) => open(t, APPROVALS(), async (desk) => {
   const base = desk.url().replace(/#.*$/, "");
   await desk.goto(`${base}#C-1`);
   await desk.waitForSelector('#detail a[data-ref="D-2"]');
@@ -1779,6 +1782,24 @@ test("a decision someone other than a designer made says Not approved in its pee
   await ok.click();
   await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/C-7/actions"));
   assert.equal(await desk.evaluate(() => JSON.parse(calls.find((c) => c.method === "POST" && c.path === "/api/cards/C-7/actions").body).overrule), true);
+}));
+
+test("a UI dev owner approves a decision in its status box, and neither revokes nor restores one; its line names who approved it", (t) => open(t, APPROVALS({ role: "ui-dev-owner", email: "lou@example.com", can: { "approve-decision": true, decide: false } }), async (desk) => {
+  const base = desk.url().replace(/#.*$/, "");
+  await desk.goto(`${base}#D-2`);
+  await desk.waitForSelector("#detail [data-approve-decision]");
+  assert.equal(await desk.locator("#detail [data-revoke], #detail [data-restore]").count(), 0, "no Revoke…");
+  await desk.click("#detail [data-approve-decision]");
+  await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/decisions/D-2/approve"));
+  await desk.goto(`${base}#D-3`);
+  await desk.waitForFunction(() => /approved by:/.test(document.querySelector("#detail .status")?.textContent || ""));
+  assert.match(await desk.textContent("#detail .status"), /approved by:\s*Lou/);
+  assert.equal(await desk.locator("#detail [data-approve-decision], #detail [data-revoke]").count(), 0, "approved: nothing to approve, and revoking is a designer's");
+  // Their own decision waits for someone else: no Approve for its author.
+  await desk.evaluate(() => { decisions.push({ id: "D-9", text: "Rows stay dense", status: "active", side: "developer", unapproved: true, at: "2026-10-04T00:00:00Z", concepts: ["rows"], author: { email: "LOU@example.com", role: "ui-dev-owner" }, origin: { kind: "desk", label: "Added on the Desk" } }); });
+  await desk.goto(`${base}#D-9`);
+  await desk.waitForFunction(() => /Rows stay dense/.test(document.querySelector("#detail")?.textContent || ""));
+  assert.equal(await desk.locator("#detail [data-approve-decision]").count(), 0, "its author does not approve it");
 }));
 
 // An option that names the decisions it rests on, one of them revoked.
@@ -3142,18 +3163,175 @@ test("Sent to developers: one row per issue and pull request; a pull request's c
   const base = desk.url().replace(/[?#].*$/, "");
   const rows = async (id) => {
     await desk.goto(`${base}#${id}`);
-    await desk.waitForFunction((n) => document.querySelector("#detail h2 .num")?.textContent === n && document.querySelectorAll("#detail .follow-prs li").length > 1, id);
+    await desk.waitForFunction((n) => document.querySelector("#detail h2 .num")?.textContent === n && document.querySelectorAll("#detail .follow-prs li").length > (n === "C-1" ? 0 : 1) && !/…/.test(document.querySelector("#detail .follow-prs")?.textContent || "…"), id);
     return desk.$$eval("#detail .follow-prs li", (xs) => xs.map((x) => [x.firstElementChild, x.lastElementChild].map((e) => e.textContent.replace(/\s+/g, " ").trim()).join(" | ")));
   };
-  assert.deepEqual(await rows("C-1"), ["Open | Issue #31 ↗", "None | Pull request"], "no pull request yet is a grey None row; no read time");
-  assert.equal(await desk.locator("#detail .follow-prs .chip:not([data-o])").count(), 1, "None has no state colour");
+  assert.deepEqual(await rows("C-1"), ["Open | Issue #31 ↗"], "the issue's row; no read time");
+  assert.match((await desk.textContent("#detail .build-sec")).trim(), /^Build\s*None yet$/, "no pull request yet: Build says None yet");
   assert.doesNotMatch(await desk.textContent("#detail .sent"), /When it ships|No pull request builds it yet|on GitHub ↗/, "the old lines are gone from the box");
   assert.deepEqual(await rows("C-2"), ["Open | Issue #32 ↗·assigned to dana", "Merged | PR #50 ↗·Spend column·by dana·see it in PR ChangesC-3"], "each pull request on its own row, linked to its card");
   assert.equal(await desk.getAttribute('#detail .follow-prs a[href$="/pull/50"]', "href"), "https://github.com/acme/w/pull/50");
   await desk.click('#detail .follow-prs [data-card="C-3"]');
   await desk.waitForFunction(() => document.querySelector("#detail h2 .num")?.textContent === "C-3");
-  assert.match(await desk.textContent("#detail"), /Builds a design from Design Desk[\s\S]*Being built[\s\S]*Issue #32 ↗/, "the change card links the request it builds");
+  assert.match(await desk.textContent("#detail"), /Builds C-2[\s\S]*Being built[\s\S]*Issue #32 ↗/, "the change card links the request it builds");
   assert.equal(await desk.locator('#detail .sent [data-card="C-2"]').count(), 1);
+}));
+
+// docs/desk-page.md → Designs, A request's state in the list: a request's Build section and its Build
+// state; a change's Builds R-<n> line and a suggestion with Link / Not this one.
+const LINKED = (me) => `<script>
+window.posts = [];
+const at = "2026-11-03T10:00:00Z", triage = { verdict: "design", reasons: [] }, bob = { email: "bob@example.com", role: "designer" };
+const cards = [
+  { id: "R-1", kind: "request", title: "Being built", status: "handed-off", for: "developers", building: true, updated: at, triage, created_by: bob, approved: { by: bob, at }, design_id: "G-1", spec: { issue_url: "https://github.com/acme/w/issues/32" },
+    build_prs: [{ card: "P-1", title: "Spend column", pr: 50, repo: "acme/w", url: "https://github.com/acme/w/pull/50", state: "open", how: "confirmed", verdict: "differs", differences: 2 },
+      { card: "P-3", title: "Spend, part two", pr: 52, repo: "acme/w", url: "https://github.com/acme/w/pull/52", state: "draft", how: "explicit", verdict: "matches", differences: 0 }] },
+  { id: "R-2", kind: "request", title: "Waiting", status: "handed-off", for: "developers", building: false, updated: at, triage, created_by: bob, approved: { by: bob, at }, design_id: "G-2", spec: { issue_url: "https://github.com/acme/w/issues/33" }, build_prs: [] },
+  { id: "P-1", kind: "change", title: "Spend column", status: "new", updated: at, source: { repo: "acme/w", pr: 50, url: "https://github.com/acme/w/pull/50" },
+    builds: { card: "R-1", title: "Being built", at, url: "https://github.com/acme/w/issues/32", how: "confirmed" }, build_link: { request: "R-1", by: { email: "lou@example.com", name: "Lou" }, at } },
+  { id: "P-2", kind: "change", title: "Agents table", status: "new", updated: at, source: { repo: "acme/w", pr: 51, url: "https://github.com/acme/w/pull/51" }, builds: null,
+    may_build: [{ request: "R-2", reason: "It changes the agents table, which the design changes." }] },
+  { id: "P-3", kind: "change", title: "Spend, part two", status: "new", updated: at, source: { repo: "acme/w", pr: 52, url: "https://github.com/acme/w/pull/52", draft: true } },
+];
+const records = [{ key: "acme/w#32", kind: "issue", state: "open", assignees: [], labels: [], linked: [{ title: "Spend column", url: "https://github.com/acme/w/pull/50", state: "open" }] },
+  { key: "acme/w#33", kind: "issue", state: "open", assignees: [], labels: [], linked: [] }];
+window.platform = { async request({ method, path, body }) {
+  if (method === "POST") { posts.push({ path, body: body && JSON.parse(body) }); return { status: 200, contentType: "application/json", body: "{}" }; }
+  const one = path.startsWith("/api/cards/") && cards.find((c) => c.id === decodeURIComponent(path.slice(11)));
+  const answer = path === "/api/me" ? ${JSON.stringify(me)}
+    : path === "/api/cards" ? { cards } : path === "/api/agenda" ? { agenda: [] } : path.startsWith("/api/github") ? { records } : one ? { card: one } : {};
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
+</script>`;
+const LINKER = { role: "ui-dev-owner", email: "lou@example.com", simple: false, can: { "handle-small": true, designs: true, built: true } };
+
+test("linked builds: the request's Build section and Build state, the change's Builds line, Link and Not this one", (t) => open(t, LINKED(LINKER), async (desk) => {
+  const base = desk.url().replace(/[?#].*$/, "");
+  const go = async (id, ready) => { await desk.goto(`${base}#${id}`); await desk.waitForFunction(([n, sel]) => document.querySelector("#detail h2 .num")?.textContent === n && (!sel || document.querySelector(sel)), [id, ready]); };
+  const lines = (sel) => desk.$$eval(sel, (xs) => xs.map((x) => [x.firstElementChild, x.lastElementChild].map((e) => e.textContent.replace(/\s+/g, " ").trim()).join(" | ")));
+  await go("R-1", "#detail .build-prs li");
+  assert.deepEqual(await lines("#detail .build-prs li"), ["Open | PR #50 ↗·Spend column·2 differences·see it in PR ChangesP-1", "Draft | PR #52 ↗·Spend, part two·Matches the design·see it in PR ChangesP-3"],
+    "one line per pull request that builds it, its verdict and its card; the issue's own copy of PR #50 is not a second line");
+  assert.match(await desk.textContent("#detail .status"), /Build: a pull request is ready/, "its state says Build");
+  await go("R-2", "#detail .build-sec");
+  assert.match((await desk.textContent("#detail .build-sec")).trim(), /^Build\s*None yet$/);
+  assert.doesNotMatch(await desk.textContent("#detail .status"), /Build: a pull request/);
+  assert.equal(await desk.evaluate(() => [...document.querySelectorAll("#list .row")].find((r) => r.querySelector('[data-card="R-1"]'))?.querySelector(".sdot .w")?.textContent ?? "not listed"), "Build", "the list's state word");
+
+  await go("P-1");
+  assert.match(await desk.textContent("#detail .builds"), /^Builds R-1\s*This pull request builds Being built\s*R-1, sent to developers as Issue #32 ↗; its design and spec are there\. Linked by you\. Not this one$/, "who linked it, and Not this one to take it back");
+  await go("P-2", "#detail .maybe-build");
+  assert.equal((await desk.textContent("#detail .maybe-build p")).replace(/\s+/g, " ").trim(), "May build R-2 (WaitingR-2): It changes the agents table, which the design changes.");
+  assert.equal(await desk.locator("#detail .builds").count(), 0, "a suggestion is no Builds line");
+  await desk.click('#detail [data-build-link="R-2"]');
+  await desk.waitForFunction(() => window.posts.length === 1);
+  await desk.click('#detail .maybe-build [data-not-builds="R-2"]');
+  await desk.waitForFunction(() => window.posts.length === 2);
+  assert.deepEqual(await desk.evaluate(() => window.posts), [{ path: "/api/cards/P-2/build-link", body: { request: "R-2", link: true } }, { path: "/api/cards/P-2/build-link", body: { request: "R-2", link: false } }]);
+
+  await desk.click('[data-tab="designs"]');
+  await desk.waitForSelector('#list [data-card="R-1"]');
+  assert.deepEqual(await desk.$$eval("#list .row .open", (xs) => xs.map((x) => [x.dataset.card, x.querySelector(".bchip")?.textContent || ""])), [["R-1", "Build"], ["R-2", ""]], "To build says Build on its row");
+}));
+
+// docs/desk-page.md → A change's differences from its design: one row each, its state, the three
+// actions for who may; the fixed ones folded.
+const DIFFS = (me, conflicts = []) => `<script>
+window.posts = [];
+const at = "2026-11-03T10:00:00Z", lou = { email: "lou@example.com", name: "Lou", role: "ui-dev-owner" }, bob = { email: "bob@example.com", role: "designer" };
+const cards = [
+  { id: "R-1", kind: "request", title: "Calmer spend", status: "handed-off", for: "developers", building: true, updated: at, triage: { verdict: "design", reasons: [] }, created_by: bob, approved: { by: bob, at }, design_id: "G-1",
+    build_prs: [{ card: "P-1", title: "Spend column", pr: 50, repo: "acme/w", url: "https://github.com/acme/w/pull/50", state: "open", how: "explicit", verdict: "differs", differences: 3, accepted: 1 }] },
+  { id: "P-1", kind: "change", title: "Spend column", status: "new", updated: at, for: "developers", conflicts: ${JSON.stringify(conflicts)}, source: { repo: "acme/w", pr: 50, url: "https://github.com/acme/w/pull/50" },
+    builds: { card: "R-1", title: "Calmer spend", at, url: null, how: "explicit" },
+    design_check: { request: "R-1", verdict: "differs", sha: "9c1e7a4f2b", summary: "A label reads otherwise.", differences: [
+      { key: "spend label", element: "Spend label", what: "It says of.", new_in: "9c1e7a4f2b" },
+      { key: "E-4", element: "Spend pill", card: "E-4", what: "It is blue.", asked: { by: lou, at } },
+      { key: "icon", element: "Icon", what: "Missing.", fix: { by: lou, at } },
+      { key: "width", element: "Width", what: "Wider.", accepted: { by: lou, at, decision: "D-9" } },
+      { key: "line", element: "Limit line", what: "Gone.", fixed: { sha: "9c1e7a4f2b", at } }] } },
+];
+window.platform = { async request({ method, path, body }) {
+  if (method === "POST") { posts.push({ path, body: body && JSON.parse(body) }); return { status: 200, contentType: "application/json", body: "{}" }; }
+  const one = path.startsWith("/api/cards/") && cards.find((c) => c.id === decodeURIComponent(path.slice(11)));
+  const answer = path === "/api/me" ? ${JSON.stringify(me)} : path === "/api/cards" ? { cards } : path === "/api/agenda" ? { agenda: [] } : one ? { card: one } : {};
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
+</script>`;
+const OWNER = { role: "ui-dev-owner", email: "lou@example.com", simple: false, can: { "handle-small": true, comment: true, designs: true } };
+
+test("differences from the approved design: a table with each one's state; Fix in code, Fine as built, Ask the designer for who may", (t) => open(t, DIFFS(OWNER), async (desk) => {
+  const base = desk.url().replace(/[?#].*$/, "");
+  await desk.goto(`${base}#P-1`);
+  await desk.waitForSelector("#detail .dcheck .dtab");
+  const rows = () => desk.$$eval("#detail .dcheck > .dtab .ft-r", (xs) => xs.map((x) => [x.querySelector(".ft-s").textContent.trim(), x.querySelector(".ft-d p").textContent.trim(), [...x.querySelectorAll("[data-dd-act]")].map((b) => b.textContent.trim())]));
+  assert.deepEqual(await rows(), [
+    ["New", "Spend label: It says of.", ["Fix in code", "Fine as built", "Ask the designer"]],
+    ["Asked a designer · you", "Spend pill E-4: It is blue.", ["Fix in code", "Fine as built", "Undo"]],
+    ["Fix asked · you", "Icon: Missing.", ["Fine as built", "Ask the designer", "Undo"]],
+    ["Fine as built · you D-9", "Width: Wider.", ["Fix in code", "Ask the designer", "Undo"]]], "one row per difference not fixed, its state and what may be done");
+  assert.equal(await desk.getAttribute('#detail .dcheck .ft-s a[data-ref="D-9"]', "href"), "#D-9", "an accepted one links the decision it recorded");
+  assert.equal(await desk.locator("#detail .dcheck > .dtab .ft-r").first().locator("figure, .hint").count(), 2, "both sides, a picture or No picture");
+  assert.match(await desk.textContent("#detail .dc-fixed > summary"), /^Fixed · 1$/);
+  assert.match(await desk.textContent("#detail .dc-fixed .ft-s"), /^Fixed in 9c1e7a4$/);
+  assert.equal(await desk.locator("#detail .dc-fixed [data-dd-act]").count(), 0, "nothing to do on a fixed one");
+  const hint = await desk.textContent("#detail .dcheck");
+  assert.match(hint, /The UI dev owner settles each one first: fix it in code, keep it as built, or ask a designer about a bigger one\./);
+  assert.doesNotMatch(hint, /A designer decides whether it stays/);
+
+  // Fix in code opens a box; its words become the draft.
+  await desk.click('#detail [data-dd-act="fix"][data-dd-key="spend label"]');
+  await desk.waitForSelector("#detail [data-dc-text]");
+  assert.equal(await desk.inputValue("#detail [data-dc-text]"), "It says of.");
+  await desk.fill("#detail [data-dc-text]", "Use the slash.");
+  await desk.click('#detail [data-dc-add="spend label"]');
+  await desk.waitForFunction(() => window.posts.length === 1);
+  await desk.click('#detail [data-dd-act="fine"][data-dd-key="E-4"]');
+  await desk.waitForFunction(() => window.posts.length === 2);
+  await desk.click('#detail [data-dd-act="none"][data-dd-key="width"]');
+  await desk.waitForFunction(() => window.posts.length === 3);
+  await desk.click('#detail [data-dd-act="ask"][data-dd-key="icon"]');
+  await desk.waitForFunction(() => window.posts.length === 4);
+  assert.deepEqual(await desk.evaluate(() => window.posts), [
+    { path: "/api/cards/P-1/design-difference", body: { key: "spend label", action: "fix", text: "Use the slash." } },
+    { path: "/api/cards/P-1/design-difference", body: { key: "E-4", action: "fine" } },
+    { path: "/api/cards/P-1/design-difference", body: { key: "width", action: "none" } },
+    { path: "/api/cards/P-1/design-difference", body: { key: "icon", action: "ask" } }]);
+
+  await desk.goto(`${base}#R-1`);
+  await desk.waitForSelector("#detail .build-prs li");
+  assert.match(await desk.textContent("#detail .build-prs li"), /3 differences, 1 fine as built/, "the Build line counts open ones");
+}));
+
+test("differences from the approved design: no actions for a developer, nor for a UI dev owner on a change against a decision in force", async (t) => {
+  for (const [me, conflicts] of [[{ role: "developer", email: "dev@example.com", simple: false, can: { comment: true } }, []], [OWNER, [{ decision: "D-1", why: "x", status: "active", text: "Pills stay green" }]]]) {
+    await open(t, DIFFS(me, conflicts), async (desk) => {
+      const base = desk.url().replace(/[?#].*$/, "");
+      await desk.goto(`${base}#P-1`);
+      await desk.waitForSelector("#detail .dcheck .dtab");
+      assert.equal(await desk.locator("#detail .dcheck .ft-r").count(), 5, me.role);
+      assert.equal(await desk.locator("#detail [data-dd-act]").count(), 0, `${me.role}: sees them, settles none`);
+      assert.match(await desk.textContent("#detail .dcheck .ft-s"), /New/);
+    });
+  }
+});
+
+test("linked builds: who may not mark a change For Developers handled sees no Link; simple mode's pill reads Build, kept In dev", (t) => open(t, LINKED({ role: "developer", email: "dev@example.com", simple: true, can: {} }), async (desk) => {
+  const base = desk.url().replace(/[?#].*$/, "");
+  await desk.goto(`${base}#P-2`);
+  await desk.waitForSelector("#detail .maybe-build");
+  assert.equal(await desk.locator("#detail [data-build-link], #detail [data-not-builds]").count(), 0);
+  await desk.goto(`${base}#R-1`);
+  await desk.waitForFunction(() => document.querySelector("#detail .sh-line .spill")?.textContent === "Build");
+  assert.equal(await desk.getAttribute("#detail .sh-line .spill", "data-s"), "build");
+  await desk.goto(`${base}#R-2`);
+  await desk.waitForFunction(() => document.querySelector("#detail .sh-line .spill")?.textContent === "In dev");
+  await desk.click("details.sf > summary");
+  await desk.click('[data-simf="states:dev"]');
+  await desk.waitForFunction(() => document.querySelector('#list [data-card="R-1"] .spill'));
+  assert.deepEqual(await desk.$$eval("#list [data-card]", (xs) => xs.filter((x) => x.dataset.card.startsWith("R-")).map((x) => [x.dataset.card, x.querySelector(".spill").textContent])), [["R-1", "Build"], ["R-2", "In dev"]], "in the In dev group");
 }));
 
 // Deciding straight away (docs/desk.md → Deciding straight away): the UI dev owner's buttons,
@@ -3652,6 +3830,15 @@ test("in simple mode the bell leaves out issues, in its rows and its count, and 
   await desk.click("#bell-btn");
   await desk.click('#notes [data-only="0"]');
   assert.deepEqual(await desk.$$eval("#notes [data-note] .ti .num", (els) => els.map((e) => e.textContent)), ["C-7", "C-8", "C-9", "D-1", "C-2"], "full mode shows every row again");
+}));
+
+// A decision someone not on the design side approved: the bell's row says so (docs/desk-page.md → Notifications).
+test("the bell names a decision a UI dev owner approved: Decision approved", (t) => open(t, SIMPLE_BELL.replace('row(4, "new-decision", "D-1", "decision", "A decision")', 'row(4, "decision-approved", "D-1", "decision", "Limits reset weekly")').replace("simple: true,", "simple: false,"), async (desk) => {
+  await desk.waitForFunction(() => document.querySelector("#bell-count")?.hidden === false);
+  await desk.click("#bell-btn");
+  const text = await desk.$$eval("#notes [data-note]", (els) => els.map((e) => e.textContent).find((x) => /D-1/.test(x)) || "");
+  assert.match(text, /Decision approved/);
+  assert.doesNotMatch(text, /decision-approved/, "its words, not its event");
 }));
 
 test("the bell counts what is For you, opens on it, reads a row only on its click, shows All on a click, and a row lands on its message; a menu button without data-keep still closes its menu", (t) => open(t, BELL, async (desk) => {

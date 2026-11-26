@@ -17,7 +17,7 @@
 #   inbox  — what the Desk is waiting for, read from work/desk/inbox.json (a local
 #            file the Desk server rewrites on every change) → questions_due,
 #            requests_due, variants_due, prototypes_due, handoffs_due, teardowns_due,
-#            expiring_due (docs/desk.md), ci_due, reviews_due (docs/watch.md).
+#            expiring_due (docs/desk.md), ci_due, reviews_due, builds_due (docs/watch.md).
 #   issues — the open issues of the watched repositories, for the Desk's Issues page
 #            (docs/issues.md): new or changed ones to read, the sprint's and assigned
 #            ones to draw, closed ones to archive → issue_news_due, drawings_due; and
@@ -242,30 +242,30 @@ watch_mode() {
   if [ -f "$DESK_DIR/releases.json" ] && ! KNOWN_RELS="$(jq -ce '.keys | arrays' "$DESK_DIR/releases.json" 2>/dev/null)"; then
     KNOWN_RELS='[]'; RELS_OK=0; log "the Desk's releases.json cannot be read — no release is due until it can"
   fi
-  local ndue=0 nissues=0 deferred=0 skipped=0 seen=0 lookups=0 unread=0
-  # One files call per new candidate; a backlog is spread over passes so a pass stays
-  # well inside the Precheck's budget (about 2 s a call through the gateway).
-  local MAX_LOOKUPS="${WATCH_MAX_LOOKUPS:-25}"
+  local ndue=0 nissues=0 deferred=0 skipped=0 seen=0 lookups=0 hlookups=0 unread=0 waiting=0
+  # One files call per new candidate; per carded open PR its head and, when it moved, the push's
+  # files and the PR's own, from a budget of their own. A backlog is spread over passes so a pass
+  # stays well inside the Precheck's budget (about 2 s a call through the gateway).
+  local MAX_LOOKUPS="${WATCH_MAX_LOOKUPS:-25}" MAX_HEAD="${WATCH_MAX_HEAD_LOOKUPS:-15}"
   local stale_s=$((3 * 3600))
   local OPEN_PRS LABEL; OPEN_PRS="$(jq -r '.watch_open_prs' <<<"$CONF")"; LABEL="$(jq -r '.issue_label' <<<"$CONF")"
   # The ledger's last row for (repo, number) decides: kind of work, or a reason to skip.
-  declare -A LAST_STATUS=() LAST_UPDATED=() LAST_ATTEMPTS=()
+  declare -A LAST_STATUS=() LAST_UPDATED=() LAST_ATTEMPTS=() LAST_CARD=() LAST_NOTE=()
+  # The ledger is read once, here and not in decide(), which runs in a subshell: no process per
+  # pull request (a fork is slow in a small sandbox), and the loop reads a row's card and note.
+  # The last row of a (repo, number) wins, as `tail -1` did. awk, not `read` on tabs: a tab is
+  # whitespace to IFS, so empty columns would collapse.
+  local _k _s _u _a _c _n
+  while IFS=$'\x1f' read -r _k _s _u _a _c _n; do
+    LAST_STATUS["$_k"]="$_s"; LAST_UPDATED["$_k"]="$_u"; LAST_ATTEMPTS["$_k"]="$_a"; LAST_CARD["$_k"]="$_c"; LAST_NOTE["$_k"]="$_n"
+  done < <(awk -F'\t' -v OFS='\037' 'NR>1 { r[$1 "#" $2]=$4 OFS $6 OFS $7 OFS $5 OFS $8 } END { for (k in r) print k OFS r[k] }' "$LEDGER")
   decide() {  # <repo> <number> <state: merged|open|issue> → prints kind or nothing
     local status updated attempts
-    # The ledger is read once, with no process per pull request (a fork is slow in a small sandbox):
-    # the last row of a (repo, number) wins, as `tail -1` did.
-    if [ -z "${LEDGER_LOADED:-}" ]; then
-      local _k _s _u _a
-      # awk, not `read`: a tab is whitespace to IFS, so empty columns would collapse.
-      while IFS=$'\x1f' read -r _k _s _u _a; do
-        LAST_STATUS["$_k"]="$_s"; LAST_UPDATED["$_k"]="$_u"; LAST_ATTEMPTS["$_k"]="$_a"
-      done < <(awk -F'\t' -v OFS='\037' 'NR>1 { r[$1 "#" $2]=$4 OFS $6 OFS $7 } END { for (k in r) print k OFS r[k] }' "$LEDGER")
-      LEDGER_LOADED=1
-    fi
     status="${LAST_STATUS["$1#$2"]:-}"; updated="${LAST_UPDATED["$1#$2"]:-}"; attempts="${LAST_ATTEMPTS["$1#$2"]:-}"
     case "$status" in
       carded|skipped|dispatched) return 0;;
-      open) [ "$3" = merged ] && echo merged; return 0;;   # carded while open; now it shipped
+      # Carded while open: now it shipped, or, still open, its head is compared with the one carded.
+      open) case "$3" in merged) echo merged;; open) echo head;; esac; return 0;;
       due|in_progress)
         [ $((NOW_EPOCH - $(iso2epoch "$updated"))) -ge "$stale_s" ] || { log "$1#$2: $status since $updated — left to its session"; return 0; }
         echo takeover;;
@@ -282,38 +282,98 @@ watch_mode() {
     items="$(jq -c '.items |= map(. + {state: "merged"})' <<<"$found")"
     # Open pull requests too: a developer's UI is seen, and adjusted, before it ships.
     if [ "$OPEN_PRS" = enabled ]; then
-      more="$(search "$repo" "repo:$slug is:pr is:open created:>=$since_day")" || fail_out "could not list open pull requests of $repo"
+      # Drafts are left out: one is carded once it is ready, and one carded before it went back to
+      # draft keeps its card, with nothing due while it is a draft.
+      more="$(search "$repo" "repo:$slug is:pr is:open draft:false created:>=$since_day")" || fail_out "could not list open pull requests of $repo"
       items="$(jq -c --slurpfile more <(jq -c '.items | map(. + {state: "open"})' <<<"$more") '.items += $more[0]' <<<"$items")"  # a page is too big for an argument
     fi
     paths="$(ui_paths_for "$repo")"; ere="$(globs_to_ere "$paths")"
     local SINCE_Z; SINCE_Z="$(date -u -d "@$(iso2epoch "$SINCE")" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo "$SINCE")"
-    while IFS=$'\t' read -r num state merged title url author draft; do
+    # \037, not a tab: an open PR has no merged_at, and a tab is whitespace to IFS.
+    while IFS=$'\037' read -r num state merged title url author draft updated_at; do
       [ -n "$num" ] || continue
       seen=$((seen + 1))
       # Both are UTC ISO times ending in Z, so a text comparison orders them; no `date` per pull request.
       [ "$state" = open ] || ! [[ "$merged" < "$SINCE_Z" ]] || continue
+      [ "$state" = open ] && [ "$draft" = true ] && continue
       local kind; kind="$(decide "$repo" "$num" "$state")"
       [ -n "$kind" ] || continue
-      if [ "$ndue" -ge "$MAXN" ] || [ "$lookups" -ge "$MAX_LOOKUPS" ]; then deferred=$((deferred + 1)); continue; fi
-      lookups=$((lookups + 1))
-      # Per candidate: its files, to keep only PRs that touch the UI.
-      local files ui n
-      files="$(gh api ${hostargs[@]+"${hostargs[@]}"} "repos/$slug/pulls/$num/files?per_page=100" --paginate --jq '.[].filename' 2>/dev/null)" \
-        || { log "$repo#$num: could not read its files — retried next run"; unread=$((unread + 1)); continue; }
-      ui="$(printf '%s\n' "$files" | grep -E "$ere" || true)"
-      n=$(printf '%s\n' "$ui" | grep -c . || true)
-      if [ "$n" -eq 0 ]; then
-        [ "$state" = merged ] && printf '%s\t%s\t%s\tskipped\t\t%s\t0\tno UI files\n' "$repo" "$num" "$merged" "$NOW_ISO" >> "$LEDGER"
-        skipped=$((skipped + 1)); continue
+      local files ui n head="" before="" card=""
+      if [ "$kind" = head ]; then
+        # A carded open PR: due again only when the commits since the head it was carded on touch
+        # UI files. Its row's note holds that head (`head <sha>`, ledger.sh open); a row without
+        # one records the current head and asks for no run. Its reads come from their own budget,
+        # so they never hold up a new candidate or the cursor: one out of it waits for the next pass.
+        card="${LAST_CARD["$repo#$num"]:-}"; before="${LAST_NOTE["$repo#$num"]:-}"
+        [[ "$before" =~ ^head\ ([0-9a-f]{7,40})$ ]] && before="${BASH_REMATCH[1]}" || before=""
+        # Not updated since its row (less a margin for a run that read the head and wrote the row
+        # later): no push since, nothing to read. A push moves the PR's updated_at.
+        if [ -n "$before" ] && [ -n "$updated_at" ]; then
+          local pr_s row_s; pr_s="$(iso2epoch "$updated_at")"; row_s="$(iso2epoch "${LAST_UPDATED["$repo#$num"]:-}")"
+          [ "$pr_s" -gt 0 ] && [ "$row_s" -gt 0 ] && [ "$pr_s" -lt $((row_s - 3 * 3600)) ] && continue
+        fi
+        if [ "$ndue" -ge "$MAXN" ] || [ "$hlookups" -ge "$MAX_HEAD" ]; then waiting=$((waiting + 1)); continue; fi
+        hlookups=$((hlookups + 1))
+        head="$(gh api ${hostargs[@]+"${hostargs[@]}"} "repos/$slug/pulls/$num" --jq '.head.sha' 2>/dev/null)" && [[ "$head" =~ ^[0-9a-f]{7,40}$ ]] \
+          || { log "$repo#$num: could not read its head — retried next run"; continue; }
+        [ "$head" = "$before" ] && continue
+        if [ -z "$before" ]; then
+          printf '%s\t%s\t\topen\t%s\t%s\t%s\thead %s\n' "$repo" "$num" "$card" "$NOW_ISO" "${LAST_ATTEMPTS["$repo#$num"]:-0}" "$head" >> "$LEDGER"
+          log "$repo#$num: carded with no head recorded — now at ${head:0:7}"; continue
+        fi
+        [ "$hlookups" -lt "$MAX_HEAD" ] || { waiting=$((waiting + 1)); continue; }
+        hlookups=$((hlookups + 1))
+        local errf rc own=0; errf="$(mktemp "${TMPDIR:-/tmp}/design-desk-gh.XXXXXX")"
+        files="$(gh api ${hostargs[@]+"${hostargs[@]}"} "repos/$slug/compare/$before...$head?per_page=1" --jq '.files[]?.filename' 2>"$errf")"; rc=$?
+        local err; err="$(<"$errf")"; rm -f "$errf"; err="${err,,}"
+        if [ "$rc" -ne 0 ]; then
+          # GitHub says the old head is gone (a force-push dropped it): the PR's own files decide,
+          # compared whole once. Any other failure is retried next pass, nothing written.
+          if [[ "$err" == *"http 404"* || ( "$err" == *"http 422"* && ( "$err" == *"no common ancestor"* || "$err" == *"not found"* ) ) ]]; then
+            log "$repo#$num: ${before:0:7} is gone from GitHub — its files instead"; own=1
+          else
+            log "$repo#$num: could not compare ${before:0:7} with ${head:0:7} — retried next run"; continue
+          fi
+        fi
+        ui="$(printf '%s\n' "$files" | grep -E "$ere" || true)"
+        # A compare lists what a merge of the default branch brought in too: only the PR's own UI files count.
+        if [ "$own" = 1 ] || [ -n "$ui" ]; then
+          [ "$hlookups" -lt "$MAX_HEAD" ] || { waiting=$((waiting + 1)); continue; }
+          hlookups=$((hlookups + 1))
+          local prfiles; prfiles="$(gh api ${hostargs[@]+"${hostargs[@]}"} "repos/$slug/pulls/$num/files?per_page=100" --paginate --jq '.[].filename' 2>/dev/null)" \
+            || { log "$repo#$num: could not read its files — retried next run"; continue; }
+          if [ "$own" = 1 ]; then ui="$(printf '%s\n' "$prfiles" | grep -E "$ere" || true)"
+          else ui="$(grep -Fxf <(printf '%s\n' "$prfiles") <<<"$ui" || true)"; fi
+        fi
+        n=$(printf '%s\n' "$ui" | grep -c . || true)
+        if [ "$n" -eq 0 ]; then
+          printf '%s\t%s\t\topen\t%s\t%s\t%s\thead %s\n' "$repo" "$num" "$card" "$NOW_ISO" "${LAST_ATTEMPTS["$repo#$num"]:-0}" "$head" >> "$LEDGER"
+          log "$repo#$num: pushed ${head:0:7}, no UI file of its own touched"; continue
+        fi
+        kind=push
+      else
+        if [ "$ndue" -ge "$MAXN" ] || [ "$lookups" -ge "$MAX_LOOKUPS" ]; then deferred=$((deferred + 1)); continue; fi
+        lookups=$((lookups + 1))
+        # Per candidate: its files, to keep only PRs that touch the UI.
+        files="$(gh api ${hostargs[@]+"${hostargs[@]}"} "repos/$slug/pulls/$num/files?per_page=100" --paginate --jq '.[].filename' 2>/dev/null)" \
+          || { log "$repo#$num: could not read its files — retried next run"; unread=$((unread + 1)); continue; }
+        ui="$(printf '%s\n' "$files" | grep -E "$ere" || true)"
+        n=$(printf '%s\n' "$ui" | grep -c . || true)
+        if [ "$n" -eq 0 ]; then
+          [ "$state" = merged ] && printf '%s\t%s\t%s\tskipped\t\t%s\t0\tno UI files\n' "$repo" "$num" "$merged" "$NOW_ISO" >> "$LEDGER"
+          skipped=$((skipped + 1)); continue
+        fi
       fi
-      printf '%s\t%s\t%s\tdue\t\t%s\t0\t%s, %s UI files\n' "$repo" "$num" "$merged" "$NOW_ISO" "$state" "$n" >> "$LEDGER"
+      printf '%s\t%s\t%s\tdue\t%s\t%s\t0\t%s, %s UI files\n' "$repo" "$num" "$merged" "$card" "$NOW_ISO" "${head:+push $head}${head:-$state}" "$n" >> "$LEDGER"
       ndue=$((ndue + 1))
       jq -cn --arg id "$repo#$num" --arg repo "$repo" --argjson pr "$num" --arg state "$state" --arg title "$title" --arg url "$url" \
         --arg merged "$merged" --arg author "$author" --arg kind "$kind" --argjson n "$n" --argjson draft "${draft:-false}" \
+        --arg head "$head" --arg before "$before" \
         --argjson files "$(printf '%s\n' "$ui" | head -40 | jq -R . | jq -s '[.[] | select(length>0)]')" \
-        '{id:$id, repo:$repo, pr:$pr, state:$state, title:$title, url:$url, merged_at:(if $merged == "" then null else $merged end), author:$author, draft:$draft, kind:$kind, ui_file_count:$n, ui_files:$files}' >> "$DUE"
-      log "$repo#$num: $state${merged:+ $merged}, $n UI files — due ($kind)"
-    done < <(jq -r '.items[] | [.number, .state, (.pull_request.merged_at // ""), (.title | gsub("[\t\n]"; " ")), .html_url, .user.login, (.draft // false | tostring)] | @tsv' <<<"$items")
+        '{id:$id, repo:$repo, pr:$pr, state:$state, title:$title, url:$url, merged_at:(if $merged == "" then null else $merged end), author:$author, draft:$draft, kind:$kind, ui_file_count:$n, ui_files:$files}
+         + (if $kind == "push" then {head:$head, before:$before} else {} end)' >> "$DUE"
+      log "$repo#$num: $state${merged:+ $merged}${head:+, pushed ${head:0:7}}, $n UI files — due ($kind)"
+    done < <(jq -r '.items[] | [(.number | tostring), .state, (.pull_request.merged_at // ""), (.title | gsub("[\t\n\u001f]"; " ")), .html_url, .user.login, (.draft // false | tostring), (.updated_at // "")] | join("\u001f")' <<<"$items")
     # Issues that ask for design work: a label the team puts on them.
     if [ "$LABEL" != none ]; then
       found="$(search "$repo" "repo:$slug is:issue is:open label:\"$LABEL\"")" || fail_out "could not list the issues labelled $LABEL in $repo"
@@ -379,6 +439,8 @@ watch_mode() {
   [ "$ngh" -gt 0 ] && log "$ngh issues or pull requests on the Desk changed on GitHub — github_due"
   [ "$skipped" -gt 0 ] && log "$skipped PRs touch no UI file — skipped"
   [ "$deferred" -gt 0 ] && log "$deferred more PRs wait for the next run (max_changes_per_run=$MAXN, at most $MAX_LOOKUPS file lookups a pass)"
+  # A carded open PR whose head waits moves no cursor: the open search does not start from it.
+  [ "$waiting" -gt 0 ] && log "$waiting carded open PRs wait for the next run to compare their head (at most $MAX_HEAD head lookups a pass)"
   printf '%s changes_due=%s issues_due=%s skipped=%s deferred=%s seen=%s\n' "$NOW_ISO" "$ndue" "$nissues" "$skipped" "$deferred" "$seen" >> "$WORK/WATCH.log"
   if [ "$deferred" -eq 0 ] && [ "$unread" -eq 0 ] && [ ! -e "$WORK/.search-partial" ]; then printf '%s\n%s\n' "$NOW_ISO" "$SINCE" > "$CURSOR"; fi
   rm -f "$WORK/.search-partial"
@@ -420,9 +482,9 @@ def leaks: test(dec_slack) or test(dec_link; "i") or test(dec_email) or test(dec
 JQ
 )"
 # Who a decision came from and whether it counts, as the Desk server reads it (desk/server.mjs →
-# sideOf, withSide; docs/desk.md → Decisions → Approved by a designer): `$roster` maps an e-mail
+# sideOf, withSide; docs/desk.md → Decisions → Approved): `$roster` maps an e-mail
 # to its role (roster_roles). A decision counts when it is in force and is a design-side
-# person's own, or a designer approved it; one that waits for approval counts for nothing.
+# person's own, or approved; one that waits for approval counts for nothing.
 DEC_SIDE_JQ="$(cat <<'JQ'
 def role: (((.origin.kind // "") as $k | if (["desk", "approval", "chat", "call"] | index($k)) != null then .author.role else null end) // $roster[(.author.email // "") | ascii_downcase] // "" | ascii_downcase | gsub("\\s+"; "-") | if . == "lead" then "admin" elif . == "lead-developer" then "ui-dev-owner" else . end);
 def side: role as $r | (.origin.kind // "") as $k
@@ -802,6 +864,7 @@ inbox_mode() {
       checks_due: pick(["decision-check"]),
       ci_due: (pick(["ci"]) + $gate),
       reviews_due: pick(["review"]),
+      builds_due: pick(["design-check"]),
       polls_due: $polls,
       councils_due: $councils,
       expiring_due: $expiring,
@@ -810,13 +873,13 @@ inbox_mode() {
     # A pass with only chores (a Slack vote to sync, a GitHub check to set, a prototype about to expire)
     # follows none of the procedures in docs/desk.md: it reads its own doc or skill instead.
     # The explain skill holds the writing rules and is read whatever is due.
-    | .read_set = ((if ([$items[] | select(.kind != "ci" and .kind != "review")] | length) + (.councils_due | length) > 0 then ["docs/desk.md"] else [] end)
+    | .read_set = ((if ([$items[] | select(.kind != "ci" and .kind != "review" and .kind != "design-check")] | length) + (.councils_due | length) > 0 then ["docs/desk.md"] else [] end)
         + [".agents/skills/explain/SKILL.md"]
         + (if (.requests_due + .variants_due | length) > 0 then ["docs/requests.md", "docs/boundary.md"] else [] end)
         + (if (.stale_due | length) > 0 then ["docs/requests.md"] else [] end)
         + (if (.prototypes_due + .teardowns_due + .expiring_due | length) > 0 then ["docs/prototype.md", "docs/boundary.md"] else [] end)
         + (if (.handoffs_due | length) > 0 then ["docs/handoff.md"] else [] end)
-        + (if (.ci_due + .reviews_due | length) > 0 then ["docs/watch.md"] else [] end)
+        + (if (.ci_due + .reviews_due + .builds_due | length) > 0 then ["docs/watch.md"] else [] end)
         + (if (.catalog_due | length) > 0 then ["docs/catalog.md"] else [] end)
         + (if (.map_due | length) > 0 then ["docs/map.md", "docs/screens.md"] else [] end)
         + (if (.figma_due | length) > 0 then [".agents/skills/figma/SKILL.md"] else [] end)

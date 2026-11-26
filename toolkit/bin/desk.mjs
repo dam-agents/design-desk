@@ -340,7 +340,7 @@ export function ghRecord(key, gh = (args) => run("gh", args)) {
   const linked = read === null ? null : read.filter((e) => e.event === "cross-referenced" && e.source?.issue?.pull_request)
     .map((e) => e.source.issue).filter((p, i, all) => all.findIndex((q) => q.html_url === p.html_url) === i)
     .map((p) => ({ title: p.title, url: p.html_url, state: p.pull_request?.merged_at ? "merged" : p.draft ? "draft" : p.state, author: p.user?.login || "" }));
-  return { key, kind: pr ? "pr" : "issue", title: it.title, state: it.pull_request?.merged_at ? "merged" : it.state, url: it.html_url, author: it.user?.login || "",
+  return { key, kind: pr ? "pr" : "issue", title: it.title, state: it.pull_request?.merged_at ? "merged" : it.state, ...(pr ? { draft: Boolean(it.draft) } : {}), url: it.html_url, author: it.user?.login || "",
     labels: (it.labels || []).map((l) => l.name), assignees: (it.assignees || []).map((a) => a.login), ...(linked === null ? {} : { linked }), body: it.body || "", updated: it.updated_at, ...(head ? { head } : {}), comments: [...said, ...reviews].sort((a, b) => String(a.at).localeCompare(String(b.at))) };
 }
 // Only the watched repositories (`repos`) are read: a ref a person's text names in another one

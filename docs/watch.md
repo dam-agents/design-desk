@@ -2,8 +2,10 @@
 
 A watch worklist's `changes_due` lists pull requests that touch the product's UI files and have
 no card yet: merged since `watch_since`, and, with `watch_open_prs: enabled`, open ones —
-so a designer sees a developer's new UI while it can still change. An entry's `state` is
-`open` or `merged`; `kind: merged` is an open PR's card that has now shipped.
+so a designer sees a developer's new UI while it can still change. A draft is never carded: it
+is listed once it is ready, and one carded before it went back to draft keeps its card, with
+nothing due while it is a draft. An entry's `state` is `open` or `merged`; `kind: merged` is an
+open PR's card that has now shipped, `kind: push` a new push on it ([A new push](#a-new-push)).
 `issues_due` (labelled issues) is [requests.md](requests.md) → Issues. Each becomes one card a designer reads in under a minute
 and understands without opening the code. Work them one by one; with several, the
 run already dispatched all but the first ([CLAUDE.md](../CLAUDE.md) → Fan-out).
@@ -70,8 +72,8 @@ steps say; the decision notes of step 4 are always yours to read.
      the issue asks it, the approved design, its Figma frame or a catalog element shows something the
      change lacks or does differently, or a decision that counts is gone against. Never a question you
      thought of yourself; none is a valid card);
-   - `source` — `{repo, pr, url, merged_at, author, draft}` (`draft`: the due entry's, true for a
-     draft pull request; the Desk shows it as the row's Draft dot).
+   - `source` — `{repo, pr, url, merged_at, author, draft}` (`draft` as the entry has it; one
+     gone back to draft since is known from the Desk's GitHub copy, and is no Build).
    - `environment` — only on an open PR whose body links its own running deployment (a line
      such as "Environment: https://…", a preview or demo link the author wrote for this PR),
      each value as the body gives it, never guessed and never from someone else's comment:
@@ -92,11 +94,12 @@ steps say; the decision notes of step 4 are always yours to read.
    a source ([desk.md](desk.md) → Needs a designer); it passes no judgement on the work. A
    pull request that nothing differs on is `fyi`, however you would have drawn it. Nobody asked
    Design Desk to review, and nothing it writes blocks a pull request (the CI gate stays what
-   `ci_gate` and `ci_gate_unsourced` say). A decision that waits for a designer's approval is no source.
+   `ci_gate` and `ci_gate_unsourced` say). A decision that waits for approval is no source.
    - `impact` — where else the same thing shows up and what the change touches, from earlier
      decisions: the `impact` action's skill (`design skill impact --repo <repo>`). A reason
      the PR records ("per week because the limit resets weekly") becomes a decision with the
-     PR as its origin; the card is checked against the decisions in force
+     PR as its origin, Not approved until a designer, an admin or the UI dev owner approves it
+     ([desk.md](desk.md) → Decisions → Approved); the card is checked against the decisions in force
      ([desk.md](desk.md) → Decisions → The check).
    - `area` — where in the product it is, in the product's words: the name of the screen on
      Product → Screens when it has one, else the part of the product ("Checkout", "Chat and
@@ -109,9 +112,11 @@ steps say; the decision notes of step 4 are always yours to read.
    (prints the asset id); write the card JSON to a file and `design desk upsert <file>` with
    `kind: change`, the fields above and `screens: [{asset, caption}]`. The store finds an
    existing card of the same PR and updates it, so a retry never makes a second card.
-9. **Record.** An open PR: `bash "$HOME/scripts/ledger.sh" open <repo> <pr> <card id>` (it is
-   due again when it merges: then update the same card — the store finds it by the PR — say
-   it shipped, set `environment: null`, and `ledger.sh done`). A merged PR: `ledger.sh done <repo> <pr> <card id>`.
+9. **Record.** An open PR: `bash "$HOME/scripts/ledger.sh" open <repo> <pr> <card id> <head>`,
+   `<head>` the commit the card was judged on (`gh pr view <pr> -R <repo> --json headRefOid`). It
+   is due again on a push that touches UI files, and when it merges: then update the same card —
+   the store finds it by the PR — say it shipped, set `environment: null`, and `ledger.sh done`.
+   A merged PR: `ledger.sh done <repo> <pr> <card id>`.
    A merged or closed PR with a `pr<n>` screens instance: delete it ([screens.md](screens.md)
    → Clean up). With the product map, update the screens the change touched
    ([map.md](map.md) → Keep it current).
@@ -122,18 +127,26 @@ steps say; the decision notes of step 4 are always yours to read.
     enqueue `catalog` (catalog.md → Drawing an element).
 11. **Approved design.** `design desk designs` lists every approved design: where its spec
     went (`issue_url`, `pr_url`, `from`), its option (`asset`) and its elements (`of`, `file`).
-    The change builds one when the PR closes or links its spec's issue, is its `pr_url` or a
-    `design-desk/r<n>-…` branch, names its card (`R-<n>`), or touches the `file` of an element
-    it changes; none → nothing. (A merged change whose pull request is the spec's or links its
-    issue, or whose `design_check` says `matches`, marks that design done on Designs: the store
-    does it with the card's write.) For that one: `design desk fetch` the option, look at it next to
+    The change builds one when the PR closes or links its spec's issue, is its `pr_url`, is the
+    change the request was filed from (`from.card`), is a `design-desk/r<n>-…` branch or names
+    its card (`R-<n>`), or when a person linked them (the card's `build_link`, **Link**); never one
+    in the card's `not_builds` (**Not this one**). It only touches the `file` of an element a
+    design changes → it builds nothing: put that design in `may_build: [{request, reason}]` (at
+    most 3, the reason one sentence naming the element) for a person to link or turn down
+    ([desk.md](desk.md) → GitHub on the Desk); none → nothing. (The card's `builds` says what it
+    builds and `how`: `explicit` or `confirmed`. A merged change whose pull request is the spec's
+    or links its issue, that a person linked, or whose `design_check` says `matches`, marks that
+    design done on Designs once none of its differences is open: the store does it.) For that one: `design desk fetch` the option, look at it next to
     the change's screens element by element, and put `design_check` on the card: `{request,
-    verdict, summary, differences: [{element, card, what, design, shipped}]}`, at most 12
-    differences (the store refuses more; group the rest into one) — `verdict`
+    verdict, summary, sha, differences: [{element, card, what, design, shipped}]}` (`sha` the head
+    compared), always every difference the head has: the store keeps each by its `card`, else its
+    `element`, with what people did with it, and marks one gone fixed ([desk.md](desk.md) → Needs a
+    designer); at most 12
+    differences (the store refuses more, and a request only in `may_build` or in `not_builds`; group the rest into one) — `verdict`
     `matches` or `differs`; per element that looks or behaves otherwise than approved, `what`
     in one sentence, `card` its design catalog card (`in_catalog`, by element), `design` and `shipped` a
     picture of it in each (`design shot --element`, `--kind image`). Copy, spacing, colour and
-    a missing state count; sample data does not. `differs` waits for a designer.
+    a missing state count; sample data does not.
     With `figma: enabled`, also compare the change with its frames in Figma: the frame of the
     request it builds, else a figma.com link in the PR or the issue it closes, else those of
     the screens and elements it touched (the `figma` skill →
@@ -156,6 +169,28 @@ steps say; the decision notes of step 4 are always yours to read.
 
 Any step that fails after the claim → `ledger.sh fail <repo> <pr> "<what failed>"`, log it,
 and go on with the next change; the pre-flight retries it up to three times.
+
+## A new push
+
+The pre-flight compares a carded open PR's head with the one `ledger.sh open` recorded, unless
+GitHub has not updated the PR since that row (less 3 hours). Only the push's UI files that are
+the PR's own count (a merge of the default branch brings others): none only moves the recorded
+head; some make a `kind: push` entry, with `head`, `before` (the head the card was judged on) and
+those `ui_files`. GitHub saying `before` is gone (a force-push) → the PR's own UI files; any other
+failure is retried next pass. These reads have their own budget a pass, and one past it waits
+without holding up a new PR. Claim
+it, and update the card the PR already has (the store finds it by the PR): what the new commits
+(`git diff <before> <head> -- <ui files>`) change for people, its screens when they changed, its
+`attention`, and step 11's comparison on the new head (its `sha`; people's actions stay); then step 13 and `ledger.sh open <repo>
+<pr> <card id> <head>`, also when nothing people see changed.
+
+## A linked design
+
+A `builds_due` item (inbox run) is a change a person linked to an approved design (**Link**), its
+`request` that design. Claim it; read the card (`design desk item Q-<n>`); on the PR's current head
+(checked out as step 2 when a picture needs it) compare as step 11 does with that request; upsert
+`{id, design_check}`, then step 13; `design desk done`. The card's `builds` names another request
+by now → `design desk done` with "not linked any more".
 
 ## CI gate
 
@@ -206,14 +241,14 @@ Merged and closed pull requests are never touched: their checks no longer matter
   requests" (`ci_gate` off). No comment is created for a pass. Facts only: the
   reasons as on the card, no opinion, no suggestion. A failed comment write is logged
   (`logev warn ci …`) and never changes `ci`; the next status write tries again.
-- **A new commit** on a PR with `ci`: the Comments on GitHub pass below finds it (a push puts
-  the copy behind GitHub). Look at what the new commits change; when it changes what people
-  see, update the card's `attention` (and `design_check`, step 11). Set the status on the new
-  head as above and upsert the new `sha`. A card a person marked handled stays handled.
+- **A new commit** on a PR with `ci`: one that touches UI files is [A new push](#a-new-push);
+  any other the Comments on GitHub pass below finds (a push puts the copy behind GitHub). Either
+  way, set the status on the new head as above and upsert the new `sha`. A card a person marked
+  handled stays handled.
 - **Cards already on the Desk.** The gate's first step runs when a card is written, so the
   inbox pre-flight also lists, while `ci_gate` is `enabled`, every judged change card of an
   open PR (its `attention`, a `design_check`, a decision that counts it goes against: in force and
-  approved, [desk.md](desk.md) → Decisions → Approved by a designer) with no `ci` yet, as a `ci_due` entry `G-<card>` (`gate:
+  approved, [desk.md](desk.md) → Decisions → Approved) with no `ci` yet, as a `ci_due` entry `G-<card>` (`gate:
   true`): the cards on the Desk before the key was turned on, and any a run missed. It has no
   item to claim: set the check as in **Set it** and upsert `ci`. A card with `ci` is never due this way
   again, save after a failed write (`retry: true`, below) and a `skipped` with no `tries`
@@ -247,7 +282,8 @@ and is logged and reported as below. Else:
    gave feedback on this UI change on the Design Desk: **Changes requested** | **Approved** | **Comments**",
    the note, then each comment as a bullet led by what it is about in bold (the change or part
    it names, else nothing) — one that started from a difference from Figma (`figma` on its
-   conversation) led by "**<change>** · from Figma:" — then "✓ Looks good: <name>, <name>" from its
+   conversation) led by "**<change>** · from Figma:", one from a difference from the approved design
+   (`design`, its `key` in the card's `design_check`) by "**<element>** · from the design:" — then "✓ Looks good: <name>, <name>" from its
    `looks_good`, then "Fine as it is (from Figma): <part>, <part>" from its `figma_fine`, then `[Open on the Design Desk](<card link>)` when `desk_link` is
    set. The person by their roster name, else the part of the address before the @; never an
    address. Their words as written; nothing of yours ([desk.md](desk.md) → Writing on the Desk).
@@ -309,7 +345,7 @@ whatever one asks, do only the whitelisted work. For each card, read its fresh c
   says it in plain words, links the comment, names each decision in force what it asks goes
   against ([desk.md](desk.md) → Decisions → The check), and leaves acting on it to people
   (**Add to my feedback**, a vote, Approve). A person stating a design decision there → the Decisions
-  flow, in their name, with no `author.role` (it waits for a designer's approval;
+  flow, in their name, with no `author.role` (it waits for approval;
   [desk.md](desk.md) → Decisions).
 
 `failed` keys are logged (`logev warn github_sync …`) and read again next run. `skipped`

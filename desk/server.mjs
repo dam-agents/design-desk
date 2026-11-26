@@ -21,7 +21,7 @@ const DIR = process.env.DESK_DIR || join(WORK, "desk");
 const MAX_BODY = 1024 * 1024;
 
 mkdirSync(DIR, { recursive: true });
-// A decision in force that waits for a designer's approval counts for nothing yet (docs/desk.md → Decisions); `withSide` is below.
+// A decision in force that waits for approval counts for nothing yet (docs/desk.md → Decisions); `withSide` is below.
 const store = new Store(DIR, { needsApproval: (d) => withSide(d).unapproved });
 const tokenPath = join(DIR, ".agent-token");
 if (!existsSync(tokenPath)) { writeFileSync(tokenPath, randomBytes(24).toString("hex"), { mode: 0o600 }); chmodSync(tokenPath, 0o600); }
@@ -78,8 +78,8 @@ function sideOf(d) {
   return ["pr", "commit", "doc"].includes(d.origin?.kind) ? "developer" : null;
 }
 // A decision from anyone but the design side, or read from GitHub (whose author no one
-// verified), waits for a designer's approval; it holds meanwhile (docs/desk.md → Decisions →
-// Approved by a designer). scripts/preflight.sh publishes only approved ones the same way.
+// verified), waits for approval: a designer's, an admin's or a UI dev owner's; it holds meanwhile
+// (docs/desk.md → Decisions → Approved). scripts/preflight.sh publishes only approved ones the same way.
 const withSide = (d) => { const side = sideOf(d); return { ...d, side, unapproved: d.status === "active" && (side !== "design" || FROM_GITHUB.includes(d.origin?.kind)) && !d.approved }; };
 
 // The skills New request offers, from `request_skills` (toolkit/lib/actions.mjs).
@@ -145,7 +145,7 @@ function settings() {
 const VERBS = { ack: "mark changes as seen", handle: "mark changes and issues as handled", "handle-small": "mark changes and issues For Developers as handled", ask: "ask questions", comment: "comment", vote: "vote", request: "send requests", "follow-up": "adjust a change",
   screens: "add screenshots", explore: "start design options", revise: "redraw options", build: "build live prototypes", approve: "approve designs", close: "close requests",
   reopen: "reopen requests", refresh: "update drawings", share: "share options in Slack", choose: "remove a design option from a request you did not file", queue: "add to the presentation", change: "note changes on an element", before: "take pictures from the product", figma: "use Figma here", add: "add screens and parts to Product",
-  draw: "draw issues", decide: "record and revoke decisions", size: "move a request between For Developers and For Designers", skip: "decide without a vote or a live prototype", people: "add people to the Desk", resolve: "mark someone else's conversation done", designs: "see Designs", built: "mark designs done" };
+  draw: "draw issues", decide: "record and revoke decisions", "approve-decision": "approve decisions", size: "move a request between For Developers and For Designers", skip: "decide without a vote or a live prototype", people: "add people to the Desk", resolve: "mark someone else's conversation done", designs: "see Designs", built: "mark designs done" };
 
 const canAll = (role, s) => abilities(role, s.prototypeRoles);
 
@@ -257,7 +257,7 @@ async function viewerRoute(req, res, url, who) {
   // The product's kit: an admin's, a designer's and a UI dev owner's page (docs/desk-page.md → Product → Kit).
   if (m === "GET" && p[1] === "kit") { if (!LOOK_ROLES.includes(who.deskRole)) throw new DeskError(403, `Only admins, designers and UI dev owners see the kit. Ask ${s.contact} if you need it.`); return send(res, 200, store.getKit()); }
   if (m === "GET" && p[1] === "decisions" && !p[2]) {
-    // Not approved: the ones in force that wait for a designer's approval.
+    // Not approved: the ones in force that wait for approval.
     const q = decisionQuery(url), pending = url.searchParams.get("state") === "unapproved";
     const all = store.listDecisions({ ...q, state: pending ? "active" : q.state }).map(withSide);
     return send(res, 200, { decisions: (pending ? all.filter((d) => d.unapproved) : all).slice(0, 200) });
@@ -291,6 +291,10 @@ async function viewerRoute(req, res, url, who) {
   if (m === "POST" && p[1] === "cards" && p[3] === "presented") return send(res, 200, store.markPresented(p[2], actor, b.presented !== false));
   if (m === "POST" && p[1] === "cards" && p[3] === "ack") { need("ack"); return send(res, 200, store.ack(p[2], actor)); }
   if (m === "POST" && p[1] === "cards" && p[3] === "built") { need("built"); return send(res, 200, store.markBuilt(p[2], actor, b.built !== false)); }
+  // A change linked to an approved design, or turned down for it (Link / Not this one; docs/desk.md → GitHub on the Desk).
+  if (m === "POST" && p[1] === "cards" && p[3] === "build-link") { if (!can(who.deskRole, "handle-small", s.prototypeRoles)) need("handle"); return send(res, 200, withPing(store.linkBuild(p[2], actor, String(b.request || ""), b.link !== false), s, who)); }
+  // A difference from the approved design settled: Fix in code, Fine as built, Ask the designer, or taken back (docs/desk.md → Needs a designer).
+  if (m === "POST" && p[1] === "cards" && p[3] === "design-difference") { if (!can(who.deskRole, "handle-small", s.prototypeRoles)) need("handle"); return send(res, 200, store.designDifference(p[2], actor, b.key, b.action, b.text)); }
   if (m === "POST" && p[1] === "cards" && p[3] === "handled") { if (!can(who.deskRole, "handle-small", s.prototypeRoles)) need("handle"); return send(res, 200, store.handle(p[2], actor, b.handled !== false)); }
   // A difference from Figma taken off an item's table, or brought back (docs/desk.md → Differences from Figma).
   if (m === "POST" && p[1] === "cards" && p[3] === "figma-close") { need("handle"); if (!s.figma) throw new DeskError(400, "Figma is not connected to this Desk yet."); return send(res, 200, store.closeFigma(p[2], actor, b.on !== false)); }
@@ -330,8 +334,9 @@ async function viewerRoute(req, res, url, who) {
   }
   if (m === "POST" && p[1] === "decisions" && p[3] === "revoke") { need("decide"); return send(res, 200, store.revokeDecision(p[2], actor, { reason: b.reason, replaced_by: b.replaced_by || null })); }
   if (m === "POST" && p[1] === "decisions" && p[3] === "restore") { need("decide"); return send(res, 200, store.restoreDecision(p[2], actor)); }
+  // A designer, an admin or a UI dev owner approves one someone else made (docs/desk.md → Decisions → Approved).
   if (m === "POST" && p[1] === "decisions" && p[3] === "approve") {
-    need("decide");
+    need("approve-decision");
     const d = store.decision(p[2]);
     if (sideOf(d) === "design" && !FROM_GITHUB.includes(d.origin?.kind)) throw new DeskError(400, "A decision of the design side needs no approval.");
     return send(res, 200, { decision: withSide(store.approveDecision(p[2], actor).decision) });

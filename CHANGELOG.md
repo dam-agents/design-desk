@@ -7,6 +7,22 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.121.0 — 2026-11-26
+
+**Upgrade:**
+1. Restart the Desk server ([desk.md](docs/desk.md) → Server): change cards carry `may_build`,
+   `build_link`, `not_builds` and differences that last across pushes (`key`, `fixed`, `new_in`, and
+   `fix`, `accepted` or `asked`); requests read `build_prs` and `building`; a new inbox kind,
+   `design-check`, comes to the watch run as `builds_due`; Fine as built records a decision in force;
+   a UI dev owner approves decisions (`approve-decision`), never their own.
+2. Republish the page ([desk.md](docs/desk.md) → Publishing the page): the request's Build section
+   and the Build state, the change card's Builds line with Link / Not this one, and the differences
+   table with Fix in code, Fine as built and Ask the designer ([desk-page.md](docs/desk-page.md)).
+3. Nothing to migrate: a carded open pull request whose `work/CHANGES.tsv` row records no head gets
+   one on the next watch pass, without a run ([watch.md](docs/watch.md) → A new push); a draft
+   already carded keeps its card; the GitHub copies learn whether a pull request is a draft on their
+   next read; differences already on the Desk get their keys on the next comparison.
+
 ## 1.120.0 — 2026-11-25
 
 **Upgrade:**

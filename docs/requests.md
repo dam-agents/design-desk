@@ -700,8 +700,8 @@ Slack — "design review please" included — gets that, once, in the thread:
    the catalog or the decisions that count: auto handled." Under 120 words.
 3. **No review.** No opinion, no taste, no "I'd suggest", no praise, no list of nits, no
    verdict on whether to merge, no picture of how it could look; a point nothing in a source
-   backs is left out, and the thread is never asked for one. A decision that waits for a
-   designer's approval is not cited. Nothing is posted on the pull request.
+   backs is left out, and the thread is never asked for one. A decision that waits for
+   approval is not cited. Nothing is posted on the pull request.
 4. A question about the card's contents is answered as any question
    ([desk.md](desk.md) → Questions), from the card's sources.
 
