@@ -2604,9 +2604,16 @@ test("Fine as built records a decision in force, approved by who accepted it, ci
   s.designDifference(ch.id, lou, "spend label", "ask");
   assert.equal(s.decision(id).status, "revoked");
   s.designDifference(ch.id, alice, "spend label", "fine");
-  const mine = s.decision(diff().accepted.decision);
+  let mine = s.decision(diff().accepted.decision);
   assert.deepEqual([mine.id !== id, mine.author.email, mine.status, count()], [true, alice.email, "active", n + 1]);
   assert.deepEqual(told(dee).length + s.notifications(dee).items.filter((x) => x.event === "decision-approved" && x.item === mine.id).length, 1, "a designer's own approval is no news");
+  // A designer revoking it on its own page opens the difference again; Fine as built anew decides it afresh.
+  s.revokeDecision(mine.id, dee, { reason: "The slash is the design." });
+  assert.deepEqual([diff().accepted, diff().decision, s.getCard(ch.id).attention.reasons.some((r) => /Differs from the approved design/.test(r))], [undefined, mine.id, true]);
+  s.designDifference(ch.id, alice, "spend label", "fine");
+  const again = s.decision(diff().accepted.decision);
+  assert.deepEqual([again.id !== mine.id, again.status, s.decision(mine.id).status], [true, "active", "revoked"], "a revoke a designer made is not undone by restoring it");
+  mine = again;
   // A later push that no longer shows it marks it fixed: its decision stays, true when it was accepted.
   s.upsertCard({ id: ch.id, design_check: { request: card.id, verdict: "matches", sha: "bbbbbbb" } });
   assert.deepEqual([Boolean(diff().fixed), diff().accepted.decision, s.decision(mine.id).status], [true, mine.id, "active"]);

@@ -816,7 +816,7 @@ Requests use **Your turn** instead): only the cards that wait for a designer's d
   per difference: `fix` (**Fix in code**: `fix: {by, at}`, and `text` becomes their draft
   `{design: key, text}`, [Reviews](#reviews)), `fine` (**Fine as built**: `accepted: {by, at, decision}`, a decision in force at once,
   [Approved](#decisions); taken back or settled otherwise, the store revokes it "Taken back on the
-  Desk"; a second Fine as built cites the same one),
+  Desk"; a second Fine as built cites the same one; revoked on its page, the difference is open again),
   `ask` (**Ask the designer**: `asked: {by, at}`; "A UI dev owner asks a designer: <element>",
   by the asker's role, puts the change in Needs a designer whatever its tab, For you to whoever
   approved the design as Developer asks is), `none` (takes it back). A later comparison keeps them

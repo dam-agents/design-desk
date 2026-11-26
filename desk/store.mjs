@@ -3469,8 +3469,22 @@ export class Store {
     if (rep && (rep.id === d.id || rep.status !== "active")) throw bad("replaced_by names another decision in force");
     const r = who?.agent ? { by: cleanAuthor(by), origin: cleanDecisionOrigin(origin, this.db.cards, this.db.threads) } : { by: { email: who.email || null, role: who.role || null } };
     this.markRevoked(d, { ...r, reason: clean(reason, 600, "reason"), replaced_by: rep?.id || null });
+    this.reopenAccepted(d, who);
     this.save();
     return { decision: d };
+  }
+
+  // A Fine as built revoked on its own page is no longer fine: its difference is open again, for
+  // the UI dev owner to settle anew (docs/desk.md → Needs a designer). It keeps the decision's
+  // number, so a new Fine as built restores or replaces it.
+  reopenAccepted(d, who) {
+    const c = d.origin?.kind === "desk" && d.origin.card ? own(this.db.cards, d.origin.card) : null;
+    if (c?.kind !== "change" || !c.design_check) return;
+    let reopened = false;
+    for (const x of c.design_check.differences || []) if (x.accepted?.decision === d.id) { delete x.accepted; reopened = true; }
+    if (!reopened) return;
+    c.updated = this.clock();
+    if (["failing", "passing"].includes(c.ci?.state)) this.pendingOrNew("ci", c.id, who, `${d.id} was revoked: a difference from the design is open again.`);
   }
 
   markRevoked(d, { by, reason, replaced_by = null, origin = null }) {
