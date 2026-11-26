@@ -3142,18 +3142,92 @@ test("Sent to developers: one row per issue and pull request; a pull request's c
   const base = desk.url().replace(/[?#].*$/, "");
   const rows = async (id) => {
     await desk.goto(`${base}#${id}`);
-    await desk.waitForFunction((n) => document.querySelector("#detail h2 .num")?.textContent === n && document.querySelectorAll("#detail .follow-prs li").length > 1, id);
+    await desk.waitForFunction((n) => document.querySelector("#detail h2 .num")?.textContent === n && document.querySelectorAll("#detail .follow-prs li").length > (n === "C-1" ? 0 : 1) && !/…/.test(document.querySelector("#detail .follow-prs")?.textContent || "…"), id);
     return desk.$$eval("#detail .follow-prs li", (xs) => xs.map((x) => [x.firstElementChild, x.lastElementChild].map((e) => e.textContent.replace(/\s+/g, " ").trim()).join(" | ")));
   };
-  assert.deepEqual(await rows("C-1"), ["Open | Issue #31 ↗", "None | Pull request"], "no pull request yet is a grey None row; no read time");
-  assert.equal(await desk.locator("#detail .follow-prs .chip:not([data-o])").count(), 1, "None has no state colour");
+  assert.deepEqual(await rows("C-1"), ["Open | Issue #31 ↗"], "the issue's row; no read time");
+  assert.match((await desk.textContent("#detail .build-sec")).trim(), /^Build\s*None yet$/, "no pull request yet: Build says None yet");
   assert.doesNotMatch(await desk.textContent("#detail .sent"), /When it ships|No pull request builds it yet|on GitHub ↗/, "the old lines are gone from the box");
   assert.deepEqual(await rows("C-2"), ["Open | Issue #32 ↗·assigned to dana", "Merged | PR #50 ↗·Spend column·by dana·see it in PR ChangesC-3"], "each pull request on its own row, linked to its card");
   assert.equal(await desk.getAttribute('#detail .follow-prs a[href$="/pull/50"]', "href"), "https://github.com/acme/w/pull/50");
   await desk.click('#detail .follow-prs [data-card="C-3"]');
   await desk.waitForFunction(() => document.querySelector("#detail h2 .num")?.textContent === "C-3");
-  assert.match(await desk.textContent("#detail"), /Builds a design from Design Desk[\s\S]*Being built[\s\S]*Issue #32 ↗/, "the change card links the request it builds");
+  assert.match(await desk.textContent("#detail"), /Builds C-2[\s\S]*Being built[\s\S]*Issue #32 ↗/, "the change card links the request it builds");
   assert.equal(await desk.locator('#detail .sent [data-card="C-2"]').count(), 1);
+}));
+
+// docs/desk-page.md → Designs, A request's state in the list: a request's Build section and its Build
+// state; a change's Builds R-<n> line and a suggestion with Link / Not this one.
+const LINKED = (me) => `<script>
+window.posts = [];
+const at = "2026-11-03T10:00:00Z", triage = { verdict: "design", reasons: [] }, bob = { email: "bob@example.com", role: "designer" };
+const cards = [
+  { id: "R-1", kind: "request", title: "Being built", status: "handed-off", for: "developers", building: true, updated: at, triage, created_by: bob, approved: { by: bob, at }, design_id: "G-1", spec: { issue_url: "https://github.com/acme/w/issues/32" },
+    build_prs: [{ card: "P-1", title: "Spend column", pr: 50, repo: "acme/w", url: "https://github.com/acme/w/pull/50", state: "open", how: "confirmed", verdict: "differs", differences: 2 },
+      { card: "P-3", title: "Spend, part two", pr: 52, repo: "acme/w", url: "https://github.com/acme/w/pull/52", state: "draft", how: "explicit", verdict: "matches", differences: 0 }] },
+  { id: "R-2", kind: "request", title: "Waiting", status: "handed-off", for: "developers", building: false, updated: at, triage, created_by: bob, approved: { by: bob, at }, design_id: "G-2", spec: { issue_url: "https://github.com/acme/w/issues/33" }, build_prs: [] },
+  { id: "P-1", kind: "change", title: "Spend column", status: "new", updated: at, source: { repo: "acme/w", pr: 50, url: "https://github.com/acme/w/pull/50" },
+    builds: { card: "R-1", title: "Being built", at, url: "https://github.com/acme/w/issues/32", how: "confirmed" }, build_link: { request: "R-1", by: { email: "lou@example.com", name: "Lou" }, at } },
+  { id: "P-2", kind: "change", title: "Agents table", status: "new", updated: at, source: { repo: "acme/w", pr: 51, url: "https://github.com/acme/w/pull/51" }, builds: null,
+    may_build: [{ request: "R-2", reason: "It changes the agents table, which the design changes." }] },
+  { id: "P-3", kind: "change", title: "Spend, part two", status: "new", updated: at, source: { repo: "acme/w", pr: 52, url: "https://github.com/acme/w/pull/52", draft: true } },
+];
+const records = [{ key: "acme/w#32", kind: "issue", state: "open", assignees: [], labels: [], linked: [{ title: "Spend column", url: "https://github.com/acme/w/pull/50", state: "open" }] },
+  { key: "acme/w#33", kind: "issue", state: "open", assignees: [], labels: [], linked: [] }];
+window.platform = { async request({ method, path, body }) {
+  if (method === "POST") { posts.push({ path, body: body && JSON.parse(body) }); return { status: 200, contentType: "application/json", body: "{}" }; }
+  const one = path.startsWith("/api/cards/") && cards.find((c) => c.id === decodeURIComponent(path.slice(11)));
+  const answer = path === "/api/me" ? ${JSON.stringify(me)}
+    : path === "/api/cards" ? { cards } : path === "/api/agenda" ? { agenda: [] } : path.startsWith("/api/github") ? { records } : one ? { card: one } : {};
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
+</script>`;
+const LINKER = { role: "ui-dev-owner", email: "lou@example.com", simple: false, can: { "handle-small": true, designs: true, built: true } };
+
+test("linked builds: the request's Build section and Build state, the change's Builds line, Link and Not this one", (t) => open(t, LINKED(LINKER), async (desk) => {
+  const base = desk.url().replace(/[?#].*$/, "");
+  const go = async (id, ready) => { await desk.goto(`${base}#${id}`); await desk.waitForFunction(([n, sel]) => document.querySelector("#detail h2 .num")?.textContent === n && (!sel || document.querySelector(sel)), [id, ready]); };
+  const lines = (sel) => desk.$$eval(sel, (xs) => xs.map((x) => [x.firstElementChild, x.lastElementChild].map((e) => e.textContent.replace(/\s+/g, " ").trim()).join(" | ")));
+  await go("R-1", "#detail .build-prs li");
+  assert.deepEqual(await lines("#detail .build-prs li"), ["Open | PR #50 ↗·Spend column·2 differences·see it in PR ChangesP-1", "Draft | PR #52 ↗·Spend, part two·Matches the design·see it in PR ChangesP-3"],
+    "one line per pull request that builds it, its verdict and its card; the issue's own copy of PR #50 is not a second line");
+  assert.match(await desk.textContent("#detail .status"), /Build: a pull request is ready/, "its state says Build");
+  await go("R-2", "#detail .build-sec");
+  assert.match((await desk.textContent("#detail .build-sec")).trim(), /^Build\s*None yet$/);
+  assert.doesNotMatch(await desk.textContent("#detail .status"), /Build: a pull request/);
+  assert.equal(await desk.evaluate(() => [...document.querySelectorAll("#list .row")].find((r) => r.querySelector('[data-card="R-1"]'))?.querySelector(".sdot .w")?.textContent ?? "not listed"), "Build", "the list's state word");
+
+  await go("P-1");
+  assert.match(await desk.textContent("#detail .builds"), /^Builds R-1\s*This pull request builds Being built\s*R-1, sent to developers as Issue #32 ↗; its design and spec are there\. Linked by you\. Not this one$/, "who linked it, and Not this one to take it back");
+  await go("P-2", "#detail .maybe-build");
+  assert.equal((await desk.textContent("#detail .maybe-build p")).replace(/\s+/g, " ").trim(), "May build R-2 (WaitingR-2): It changes the agents table, which the design changes.");
+  assert.equal(await desk.locator("#detail .builds").count(), 0, "a suggestion is no Builds line");
+  await desk.click('#detail [data-build-link="R-2"]');
+  await desk.waitForFunction(() => window.posts.length === 1);
+  await desk.click('#detail .maybe-build [data-not-builds="R-2"]');
+  await desk.waitForFunction(() => window.posts.length === 2);
+  assert.deepEqual(await desk.evaluate(() => window.posts), [{ path: "/api/cards/P-2/build-link", body: { request: "R-2", link: true } }, { path: "/api/cards/P-2/build-link", body: { request: "R-2", link: false } }]);
+
+  await desk.click('[data-tab="designs"]');
+  await desk.waitForSelector('#list [data-card="R-1"]');
+  assert.deepEqual(await desk.$$eval("#list .row .open", (xs) => xs.map((x) => [x.dataset.card, x.querySelector(".bchip")?.textContent || ""])), [["R-1", "Build"], ["R-2", ""]], "To build says Build on its row");
+}));
+
+test("linked builds: who may not mark a change For Developers handled sees no Link; simple mode's pill reads Build, kept In dev", (t) => open(t, LINKED({ role: "developer", email: "dev@example.com", simple: true, can: {} }), async (desk) => {
+  const base = desk.url().replace(/[?#].*$/, "");
+  await desk.goto(`${base}#P-2`);
+  await desk.waitForSelector("#detail .maybe-build");
+  assert.equal(await desk.locator("#detail [data-build-link], #detail [data-not-builds]").count(), 0);
+  await desk.goto(`${base}#R-1`);
+  await desk.waitForFunction(() => document.querySelector("#detail .sh-line .spill")?.textContent === "Build");
+  assert.equal(await desk.getAttribute("#detail .sh-line .spill", "data-s"), "build");
+  await desk.goto(`${base}#R-2`);
+  await desk.waitForFunction(() => document.querySelector("#detail .sh-line .spill")?.textContent === "In dev");
+  await desk.click("details.sf > summary");
+  await desk.click('[data-simf="states:dev"]');
+  await desk.waitForFunction(() => document.querySelector('#list [data-card="R-1"] .spill'));
+  assert.deepEqual(await desk.$$eval("#list [data-card]", (xs) => xs.filter((x) => x.dataset.card.startsWith("R-")).map((x) => [x.dataset.card, x.querySelector(".spill").textContent])), [["R-1", "Build"], ["R-2", "In dev"]], "in the In dev group");
 }));
 
 // Deciding straight away (docs/desk.md → Deciding straight away): the UI dev owner's buttons,

@@ -72,8 +72,8 @@ steps say; the decision notes of step 4 are always yours to read.
      the issue asks it, the approved design, its Figma frame or a catalog element shows something the
      change lacks or does differently, or a decision that counts is gone against. Never a question you
      thought of yourself; none is a valid card);
-   - `source` — `{repo, pr, url, merged_at, author, draft}` (`draft`: the due entry's, true for a
-     draft pull request; the Desk shows it as the row's Draft dot).
+   - `source` — `{repo, pr, url, merged_at, author, draft}` (`draft`: `true` only for a carded
+     pull request gone back to draft; the Desk shows it as the row's Draft dot).
    - `environment` — only on an open PR whose body links its own running deployment (a line
      such as "Environment: https://…", a preview or demo link the author wrote for this PR),
      each value as the body gives it, never guessed and never from someone else's comment:
@@ -126,14 +126,19 @@ steps say; the decision notes of step 4 are always yours to read.
     enqueue `catalog` (catalog.md → Drawing an element).
 11. **Approved design.** `design desk designs` lists every approved design: where its spec
     went (`issue_url`, `pr_url`, `from`), its option (`asset`) and its elements (`of`, `file`).
-    The change builds one when the PR closes or links its spec's issue, is its `pr_url` or a
-    `design-desk/r<n>-…` branch, names its card (`R-<n>`), or touches the `file` of an element
-    it changes; none → nothing. (A merged change whose pull request is the spec's or links its
-    issue, or whose `design_check` says `matches`, marks that design done on Designs: the store
-    does it with the card's write.) For that one: `design desk fetch` the option, look at it next to
+    The change builds one when the PR closes or links its spec's issue, is its `pr_url`, is the
+    change the request was filed from (`from.card`), is a `design-desk/r<n>-…` branch or names
+    its card (`R-<n>`), or when a person linked them (the card's `build_link`, **Link**); never one
+    in the card's `not_builds` (**Not this one**). It only touches the `file` of an element a
+    design changes → it builds nothing: put that design in `may_build: [{request, reason}]` (at
+    most 3, the reason one sentence naming the element) for a person to link or turn down
+    ([desk.md](desk.md) → GitHub on the Desk); none → nothing. (The card's `builds` says what it
+    builds and `how`: `explicit` or `confirmed`. A merged change whose pull request is the spec's
+    or links its issue, that a person linked, or whose `design_check` says `matches`, marks that
+    design done on Designs: the store does it with the card's write.) For that one: `design desk fetch` the option, look at it next to
     the change's screens element by element, and put `design_check` on the card: `{request,
     verdict, summary, differences: [{element, card, what, design, shipped}]}`, at most 12
-    differences (the store refuses more; group the rest into one) — `verdict`
+    differences (the store refuses more, and a request only in `may_build` or in `not_builds`; group the rest into one) — `verdict`
     `matches` or `differs`; per element that looks or behaves otherwise than approved, `what`
     in one sentence, `card` its design catalog card (`in_catalog`, by element), `design` and `shipped` a
     picture of it in each (`design shot --element`, `--kind image`). Copy, spacing, colour and
@@ -170,6 +175,14 @@ it, and update the card the PR already has (the store finds it by the PR): what 
 (`git diff <before> <head> -- <ui files>`) change for people, its screens when they changed, its
 `attention`, and step 11's comparison on the new head; then step 13 and `ledger.sh open <repo>
 <pr> <card id> <head>`, also when nothing people see changed.
+
+## A linked design
+
+A `builds_due` item (inbox run) is a change a person linked to an approved design (**Link**), its
+`request` that design. Claim it; read the card (`design desk item Q-<n>`); on the PR's current head
+(checked out as step 2 when a picture needs it) compare as step 11 does with that request; upsert
+`{id, design_check}`, then step 13; `design desk done`. The card's `builds` names another request
+by now → `design desk done` with "not linked any more".
 
 ## CI gate
 

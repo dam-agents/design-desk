@@ -188,7 +188,7 @@ export const ISSUE_BUCKETS = ["sprint", "next", "assigned", "label"];
 // writes the deadline, `undo_until`, and the page shows Undo only before it
 // (docs/desk.md → The presentation).
 const endOfDay = (iso) => { const t = Date.parse(iso); return Number.isNaN(t) ? null : new Date(Math.floor(t / 864e5) * 864e5 + 864e5 - 1000).toISOString().replace(/\.\d{3}Z$/, "Z"); };
-const INBOX_KINDS = ["question", "request", "explore", "revise", "states", "build", "handoff", "teardown", "follow-up", "catalog", "map", "agenda", "figma", "screens", "slack", "draw", "person", "decision", "decision-check", "ci", "review"];
+const INBOX_KINDS = ["question", "request", "explore", "revise", "states", "build", "handoff", "teardown", "follow-up", "catalog", "map", "agenda", "figma", "screens", "slack", "draw", "person", "decision", "decision-check", "ci", "review", "design-check"];
 // Where a screen on a card came from: the pull request, the agent's screens instance, a
 // person, a live prototype, or a rebuild drawn from the code.
 const SCREEN_SOURCES = ["pr", "issue", "instance", "person", "prototype", "rebuild", "sketch", "test"];
@@ -428,7 +428,7 @@ export class Store {
     const p = join(this.dir, "inbox.json"), tmp = `${p}.tmp-${process.pid}`;
     writeFileSync(tmp, JSON.stringify(doc, null, 1));
     renameSync(tmp, p);
-    function pick(i) { return { id: i.id, kind: i.kind, card: i.card, thread: i.thread || null, created: i.created, ...(priv.has(i.thread) ? { private: true, context: priv.get(i.thread) } : {}), ...(i.person ? { person: i.person } : {}), ...(i.scope ? { scope: i.scope } : {}), ...(i.ask_first ? { ask_first: true } : {}), ...(i.implement ? { implement: true } : {}), ...(i.close_earlier ? { close_earlier: i.close_earlier } : {}), ...(i.comment_on ? { comment_on: i.comment_on } : {}), ...(i.variant ? { variant: i.variant } : {}), ...(i.element ? { element: i.element } : {}), ...(i.part ? { part: i.part } : {}), ...(i.review ? { review: i.review } : {}) }; }
+    function pick(i) { return { id: i.id, kind: i.kind, card: i.card, thread: i.thread || null, created: i.created, ...(priv.has(i.thread) ? { private: true, context: priv.get(i.thread) } : {}), ...(i.person ? { person: i.person } : {}), ...(i.scope ? { scope: i.scope } : {}), ...(i.ask_first ? { ask_first: true } : {}), ...(i.implement ? { implement: true } : {}), ...(i.close_earlier ? { close_earlier: i.close_earlier } : {}), ...(i.comment_on ? { comment_on: i.comment_on } : {}), ...(i.variant ? { variant: i.variant } : {}), ...(i.element ? { element: i.element } : {}), ...(i.part ? { part: i.part } : {}), ...(i.review ? { review: i.review } : {}), ...(i.request ? { request: i.request } : {}) }; }
   }
 
   next(kind, prefix) { this.db.seq[kind] += 1; return `${prefix}-${this.db.seq[kind]}`; }
@@ -550,8 +550,10 @@ export class Store {
   listCards({ kind, status, viewer, who = null } = {}) {
     const me = addressesOf(who), login = this.loginOf(who), wrote = this.wroteIndex(me);
     // One index of the pull requests sent requests are built by, for the whole list.
-    let index = null;
+    let index = null, byRequest = null;
     const builds = (c) => (c.kind === "change" ? this.buildsOf(c, (index ||= this.buildsIndex())) : null);
+    // A request in Build: a pull request that builds it is open and ready (docs/desk-page.md → A request's state in the list).
+    const building = (c) => c.kind === "request" && c.status === "handed-off" && this.buildingOf(c, (byRequest ||= this.buildsByRequest((index ||= this.buildsIndex()))).get(c.id));
     return Object.values(this.db.cards)
       .filter((c) => (!kind || c.kind === kind) && (!status || c.status === status) && this.visibleTo(c, who))
       .sort((a, b) => b.updated.localeCompare(a.updated))
@@ -601,7 +603,7 @@ export class Store {
         attention: this.attentionOf(c), conflicts: this.activeConflicts(c).length,
         // The decisions in force it goes against, by number: the list's red ! (docs/desk.md → Decisions).
         against: [...new Set(this.activeConflicts(c).map((x) => x.decision))],
-        designed: this.designedOf(c), sent_card: this.sentCardOf(c), builds: builds(c),
+        designed: this.designedOf(c), sent_card: this.sentCardOf(c), builds: builds(c), building: building(c),
         // An element from an approved design, not from the product (docs/catalog.md → From approved designs).
         design: c.design ? { card: c.design.card, option: c.design.option, version: c.design.version, change: c.design.change, of: c.design.of } : null,
         design_check: c.design_check ? { verdict: c.design_check.verdict, request: c.design_check.request, differences: c.design_check.differences.map((x) => ({ element: x.element, card: x.card })) } : null,
@@ -629,25 +631,118 @@ export class Store {
     return r ? { card: r.id, title: r.title, at: r.updated, url: r.spec?.issue_url || r.spec?.pr_url || null } : null;
   }
 
-  // The request a change's pull request builds: its spec went to this pull request, or to the
-  // issue whose pull requests (the Desk's GitHub copy, `linked`) include it. The newest send
-  // wins. The index maps each such pull request's key to its request, built once per read.
+  // The request a change's pull request builds, explicitly: its spec went to this pull request, or
+  // to the issue whose pull requests (the Desk's GitHub copy, `linked`) include it; or the request
+  // was filed from its card while it was open (`request.from`). The newest send wins. The index
+  // maps each such pull request's key to its request, built once per read.
   buildsIndex() {
     const index = new Map();
     const sent = Object.values(this.db.cards).filter((x) => x.kind === "request" && x.spec)
       .sort((a, b) => b.updated.localeCompare(a.updated));
     for (const r of sent) {
       const keys = [issueKey(r.spec.pr_url), ...(own(this.db.github, issueKey(r.spec.issue_url) || "")?.linked || []).map((p) => issueKey(p.url))];
-      for (const k of keys) if (k && !index.has(k)) index.set(k, r);
+      for (const k of keys) if (k && !index.has(k)) index.set(k, { r, via: "spec" });
+    }
+    for (const r of Object.values(this.db.cards)) {
+      const ch = r.kind === "request" && r.approved && r.request?.from ? own(this.db.cards, r.request.from) : null;
+      const k = ch?.kind === "change" && (!ch.source?.merged_at || ch.source.merged_at > r.created) ? prKey(ch) : null;
+      if (k && !index.has(k)) index.set(k, { r, via: "from" });
     }
     return index;
   }
 
+  // What a change builds and how (docs/watch.md → Approved design): explicitly (the index, else the
+  // request the agent compared it with, `design_check`) or confirmed by a person (`build_link`, Link).
+  // A suggestion (`may_build`) builds nothing; a request a person turned down (`not_builds`) never counts.
+  linkOf(c, index = null) {
+    if (c?.kind !== "change") return null;
+    const not = new Set((c.not_builds || []).map((x) => x.request));
+    const key = prKey(c), hit = key && (index || this.buildsIndex()).get(key);
+    if (hit && !not.has(hit.r.id)) return { r: hit.r, how: "explicit", via: hit.via };
+    const link = c.build_link && own(this.db.cards, c.build_link.request);
+    if (link?.kind === "request") return { r: link, how: "confirmed", via: "link" };
+    const check = c.design_check?.request && own(this.db.cards, c.design_check.request);
+    if (check?.kind === "request" && !not.has(check.id)) return { r: check, how: "explicit", via: "check" };
+    return null;
+  }
+
   buildsOf(c, index = null) {
-    if (c.kind !== "change") return null;
-    const key = issueKey(c.source?.url) || (c.source?.repo && c.source?.pr ? `${String(c.source.repo).toLowerCase()}#${c.source.pr}` : null);
-    const r = key && (index || this.buildsIndex()).get(key);
-    return r ? { card: r.id, title: r.title, at: r.updated, url: r.spec.issue_url || r.spec.pr_url || null } : null;
+    const l = this.linkOf(c, index);
+    return l ? { card: l.r.id, title: l.r.title, at: l.r.updated, url: l.r.spec?.issue_url || l.r.spec?.pr_url || null, how: l.how } : null;
+  }
+
+  // Every change linked to each request, by request id, built once per read: one line each on the
+  // request's Build section (docs/desk-page.md → A request's state in the list).
+  buildsByRequest(index = this.buildsIndex()) {
+    const by = new Map();
+    for (const c of Object.values(this.db.cards).filter((x) => x.kind === "change").sort((a, b) => b.updated.localeCompare(a.updated))) {
+      const l = this.linkOf(c, index);
+      if (!l) continue;
+      const src = c.source || {}, gh = own(this.db.github, prKey(c) || "");
+      const k = c.design_check?.request === l.r.id ? c.design_check : null;
+      const state = src.merged_at || /^merged$/i.test(gh?.state || "") ? "merged" : /^closed$/i.test(gh?.state || "") ? "closed" : src.draft ? "draft" : "open";
+      if (!by.has(l.r.id)) by.set(l.r.id, []);
+      by.get(l.r.id).push({ card: c.id, title: c.title, pr: src.pr ?? null, repo: src.repo || null, url: src.url || null, state, how: l.how,
+        verdict: k?.verdict || null, differences: k?.verdict === "differs" ? k.differences.length : 0 });
+    }
+    return by;
+  }
+
+  // The changes that build one request, and whether it is in Build: the request page's Build section.
+  buildOf(r) {
+    const list = this.buildsByRequest().get(r.id) || [];
+    return { build_prs: list, building: this.buildingOf(r, list) };
+  }
+
+  // A request sent to developers and not built is in Build while a pull request that builds it is open and not a draft.
+  buildingOf(r, list) { return r.kind === "request" && r.status === "handed-off" && !r.built && (list || []).some((x) => x.state === "open"); }
+
+  // Who links a change to a design, or says it builds another one: whoever marks a change For
+  // Developers handled — designers, admins, UI dev owners (docs/desk.md → GitHub on the Desk).
+  // Link queues the comparison (`design-check`); Not this one drops the link, the suggestion and the comparison.
+  linkBuild(cardId, who, request, on = true) {
+    const c = this.card(cardId);
+    if (c.kind !== "change") throw bad("Only a pull request's change builds a design.");
+    if (!who?.agent && !can(who?.role, "handle-small")) throw forbidden("Only designers, admins and UI dev owners link a pull request to a design.");
+    const r = own(this.db.cards, String(request || ""));
+    if (r?.kind !== "request" || !r.approved) throw bad(`${request} is not an approved design.`);
+    const l = this.linkOf(c), stamp = { by: person(who), at: this.clock() };
+    if (["spec", "from"].includes(l?.via) && (l.r.id !== r.id || !on)) throw bad(`This pull request builds ${l.r.id}: ${l.via === "spec" ? "its spec went there" : "the request was filed from it"}.`);
+    if (on && l?.r.id === r.id && l.via !== "check") throw bad(`This pull request already builds ${r.id}.`);
+    let item = null, dropped = false;
+    if (on) {
+      c.build_link = { request: r.id, ...stamp };
+      c.not_builds = (c.not_builds || []).filter((x) => x.request !== r.id);
+      if (c.design_check && c.design_check.request !== r.id) { c.design_check = null; dropped = true; }
+      const note = `Linked to ${r.id}: compare the change with its approved design.`;
+      if (!c.design_check) { item = this.pendingOrNew("design-check", c.id, who, note); Object.assign(item, { request: r.id, note }); }
+    } else {
+      c.not_builds = [...(c.not_builds || []).filter((x) => x.request !== r.id), { request: r.id, ...stamp }].slice(-20);
+      if (c.build_link?.request === r.id) delete c.build_link;
+      if (c.design_check?.request === r.id) { c.design_check = null; dropped = true; }
+      for (const it of Object.values(this.db.inbox)) if (it.card === c.id && it.kind === "design-check" && it.state === "open" && it.request === r.id)
+        Object.assign(it, { state: "done", done_at: this.clock(), outcome: `not compared: a person said it does not build ${r.id}` });
+    }
+    c.may_build = (c.may_build || []).filter((x) => x.request !== r.id);
+    if (!c.not_builds.length) delete c.not_builds;
+    // A comparison gone takes its reason off the card: the check follows it, as it follows Mark handled.
+    if (dropped && ["failing", "passing"].includes(c.ci?.state)) this.pendingOrNew("ci", c.id, who, "Its comparison with a design was dropped: set the check again.");
+    this.save();
+    return { card: c, inbox: item };
+  }
+
+  // Refused on a change's write: a comparison with a request a person turned down or that is only
+  // suggested, and a suggestion of a request turned down or already linked.
+  checkBuildLinks(next) {
+    const not = new Set((next.not_builds || []).map((x) => x.request)), may = new Set((next.may_build || []).map((x) => x.request));
+    const dc = next.design_check?.request;
+    if (dc && not.has(dc)) throw bad(`design_check: a person said this pull request does not build ${dc} (Not this one)`);
+    if (dc && may.has(dc)) throw bad(`design_check: ${dc} is only suggested for this pull request; it is compared once a person links it (Link)`);
+    const { design_check, ...rest } = next, l = this.linkOf(rest);
+    for (const x of next.may_build || []) {
+      if (not.has(x.request)) throw bad(`may_build: a person said this pull request does not build ${x.request} (Not this one)`);
+      if (l?.r.id === x.request) throw bad(`may_build: this pull request already builds ${x.request}`);
+    }
   }
 
   // The open pull request a request came from (`request.from`, a change card): its spec may go
@@ -723,7 +818,7 @@ export class Store {
     // Each decision the card cites, with its words and whether it is still in force.
     const cited = Object.fromEntries([...(c.decisions || []), ...(c.impact?.decisions || []).map((x) => x.id).filter(Boolean), ...shapedBy(c)]
       .map((id) => { const d = own(this.db.decisions, id); return [id, { text: d?.text || "", status: d?.status || "revoked" }]; }));
-    return { ...c, conflicts, cited, attention: this.attentionOf(c), ...(["request", "change", "issue"].includes(c.kind) ? { for: this.forOf(c) } : {}), ...(c.kind === "request" ? { from_pr: this.fromPr(c) } : {}), designed: this.designedOf(c), sent_card: this.sentCardOf(c), builds: this.buildsOf(c), reviews: this.reviewsOf(c), responsible: this.responsibleOf(c), ...(c.kind === "change" ? { looks_good: this.looksGoodOf(c) } : {}), threads: (c.threads || []).map((t) => this.db.threads[t]).filter((t) => sees(t, viewer)), waiting: this.waitingFor(c.id, viewer) };
+    return { ...c, conflicts, cited, attention: this.attentionOf(c), ...(["request", "change", "issue"].includes(c.kind) ? { for: this.forOf(c) } : {}), ...(c.kind === "request" ? { from_pr: this.fromPr(c), ...this.buildOf(c) } : {}), designed: this.designedOf(c), sent_card: this.sentCardOf(c), builds: this.buildsOf(c), reviews: this.reviewsOf(c), responsible: this.responsibleOf(c), ...(c.kind === "change" ? { looks_good: this.looksGoodOf(c) } : {}), threads: (c.threads || []).map((t) => this.db.threads[t]).filter((t) => sees(t, viewer)), waiting: this.waitingFor(c.id, viewer) };
   }
 
   // The ids of a request's shared parts (docs/requests.md → The same elements in every option). The
@@ -2690,7 +2785,7 @@ export class Store {
   // request). Only the listed fields are the agent's; people's acks, votes and threads
   // are never overwritten.
   upsertCard(fields) {
-    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "shared_elements", "research", "brief", "origin", "impact", "instance", "environment", "shotlist", "path", "how", "concepts", "changes", "period", "attention", "bucket", "needs", "sketches", "style", "draw", "issue_brief", "grill", "decisions", "conflicts", "design_check", "decision_check", "figma_check", "figma_search", "dev_summary", "ci", "now", "before_shots", "area", "fix", "reminded", "translation", "gist"];
+    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "shared_elements", "research", "brief", "origin", "impact", "instance", "environment", "shotlist", "path", "how", "concepts", "changes", "period", "attention", "bucket", "needs", "sketches", "style", "draw", "issue_brief", "grill", "decisions", "conflicts", "design_check", "may_build", "decision_check", "figma_check", "figma_search", "dev_summary", "ci", "now", "before_shots", "area", "fix", "reminded", "translation", "gist"];
     let c = fields.id ? own(this.db.cards, fields.id) : null, goneLive = null;
     if (fields.id && !c) throw missing(`no card ${fields.id}`);
     if (!c && !["change", "request", "element", "screen", "digest", "issue"].includes(fields.kind)) throw bad("a new card needs kind change, request, element, screen, digest or issue");
@@ -2803,6 +2898,11 @@ export class Store {
         if (next.kind !== "change") throw bad("design_check belongs to a change card");
         next.design_check = fields.design_check === null ? null : cleanDesignCheck(fields.design_check, this.db.cards, this.db.assets, this.clock());
       }
+      // Requests a change may build, each with its reason: suggestions a person confirms or turns down (docs/watch.md → Approved design).
+      else if (k === "may_build") {
+        if (next.kind !== "change") throw bad("may_build belongs to a change card");
+        next.may_build = cleanMayBuild(fields.may_build, this.db.cards);
+      }
       // Where the search for a screen's or an element's frame in Figma stands, so it runs once
       // (the figma skill → Finding the frame); null: search again.
       else if (k === "figma_search") {
@@ -2900,6 +3000,7 @@ export class Store {
     if (c && sends && this.openAsks(c))
       throw bad("Design Desk's questions on this request are still open: wait for the answers, then write the spec (docs/handoff.md step 2).");
     if (!next.title) throw bad("a card needs a title");
+    if (next.kind === "change" && (fields.design_check !== undefined || fields.may_build !== undefined)) this.checkBuildLinks(next);
     // Every option of a request shows the request's elements, or says why not (docs/requests.md → The same elements in every option).
     if (next.kind === "request" && next.shared_elements?.length && (fields.variants !== undefined || fields.shared_elements !== undefined))
       next.variants = (next.variants || []).map((v, i) => alignOption(v, next.shared_elements, i + 1));
@@ -2949,9 +3050,10 @@ export class Store {
       Object.assign(it, { state: "done", done_at: this.clock(), outcome: "not built: its option was taken off the card" });
     if (moved && fields.decision_check === undefined) this.queueCheck(next, { agent: true }, "Its design changed without a check against the decisions.");
     // A merged change that builds a sent design marks it done (docs/desk-page.md → Designs): its pull
-    // request is the spec's, or its check says it matches the design.
+    // request is the spec's, a person linked it (Link), or its check says it matches the design.
     if (next.kind === "change" && next.source?.merged_at) {
-      const hit = this.buildsOf(next)?.card || (next.design_check?.verdict === "matches" ? next.design_check.request : null);
+      const l = this.linkOf(next);
+      const hit = ["spec", "link"].includes(l?.via) ? l.r.id : next.design_check?.verdict === "matches" ? next.design_check.request : null;
       const r = hit ? own(this.db.cards, String(hit)) : null;
       if (r && r.kind === "request" && r.status === "handed-off" && !r.built && !r.not_built) r.built = { by: { agent: true }, at: this.clock(), change: next.id };
       // Shipped, its approved option's elements join the design catalog, as Add to the design catalog would (docs/catalog.md → From approved designs).
@@ -3785,6 +3887,10 @@ function researchRefs(c) {
   return [...new Set(urls.map(githubKey).filter(Boolean))];
 }
 
+// A change's pull request as the Desk's GitHub copy keys it: by its url, else by its repo and number.
+function prKey(c) {
+  return issueKey(c?.source?.url) || (c?.source?.repo && c?.source?.pr ? `${String(c.source.repo).toLowerCase()}#${c.source.pr}` : null);
+}
 function issueKey(url) {
   const m = /^https?:\/\/[^/]+\/([^/\s]+\/[^/\s]+)\/(?:issues|pull)\/(\d+)/i.exec(String(url || ""));
   return m ? `${m[1].toLowerCase()}#${m[2]}` : null;
@@ -3923,6 +4029,21 @@ function cleanDesignCheck(o, cards, assets, at) {
       if (card && own(cards, card)?.kind !== "element") throw bad(`design_check difference ${i + 1}: ${card} is not an element`);
       return { element: clean(x.element, 80, "element"), what: clean(x.what, 400, "what differs"), card, design: pic(x.design, "design"), shipped: pic(x.shipped, "shipped") };
     }) };
+}
+
+// Requests a change may build (docs/watch.md → Approved design): each an approved request, with
+// the reason Design Desk found, at most three; null or an empty list clears them.
+function cleanMayBuild(list, cards) {
+  if (list === null) return [];
+  if (!Array.isArray(list) || list.length > 3) throw bad("may_build is a list of at most 3 {request, reason}");
+  const seen = new Set();
+  return list.map((x, i) => {
+    const r = own(cards, String(x?.request || ""));
+    if (r?.kind !== "request" || !r.approved) throw bad(`may_build ${i + 1}: ${x?.request} is not an approved request`);
+    if (seen.has(r.id)) throw bad(`may_build: ${r.id} is named twice`);
+    seen.add(r.id);
+    return { request: r.id, reason: clean(x.reason, 200, "reason") };
+  });
 }
 
 // Where an item differs from its frame in Figma (the figma skill → Compare with the product):

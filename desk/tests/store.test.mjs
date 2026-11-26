@@ -1691,7 +1691,7 @@ test("a change whose pull request builds a sent request's issue, or got its spec
   assert.equal(s.getCard(viaIssue.id).builds, null, "not before the Desk read the issue's pull requests");
   s.putGithub([{ key: "acme/widgets#31", kind: "issue", title: "Spend column", state: "open", linked: [
     { title: "Build it", url: "https://github.com/Acme/Widgets/pull/40", state: "open" }, { title: "No url", url: "https://github.com/acme/widgets/pull/43", state: "open" }] }]);
-  assert.deepEqual(s.getCard(viaIssue.id).builds, { card: r.id, title: "Spend column", at: s.getCard(r.id).updated, url: "https://github.com/acme/widgets/issues/31" },
+  assert.deepEqual(s.getCard(viaIssue.id).builds, { card: r.id, title: "Spend column", at: s.getCard(r.id).updated, url: "https://github.com/acme/widgets/issues/31", how: "explicit" },
     "a pull request listed under the spec's issue; builds names the issue the spec went to");
   assert.equal(s.getCard(noUrl.id).builds?.card, r.id, "a change with no source url is matched by its repo and number");
   const r2 = sent("Tidy", { pr_url: "https://github.com/acme/widgets/pull/41" });
@@ -1699,6 +1699,73 @@ test("a change whose pull request builds a sent request's issue, or got its spec
   const r3 = sent("Spend column again", { issue_url: "https://github.com/acme/widgets/issues/31" });
   const rows = Object.fromEntries(s.listCards({ kind: "change" }).map((c) => [c.id, c.builds?.card || null]));
   assert.deepEqual(rows, { [viaIssue.id]: r3.id, [direct.id]: r2.id, [noUrl.id]: r3.id, [other.id]: null }, "the newest send wins; an unrelated pull request links nothing");
+});
+
+// docs/watch.md → Approved design, docs/desk.md → GitHub on the Desk: what a change builds.
+test("linked builds: explicit and confirmed links count, a suggestion does not; Not this one stays; Build needs a ready open pull request", () => {
+  const s = fresh();
+  const a = s.addAsset({ kind: "variant", contentType: "text/html", data: Buffer.from("<p>A</p>").toString("base64") }).asset.id;
+  const pic = s.addAsset({ kind: "image", contentType: "image/png", data: Buffer.from("png").toString("base64") }).asset.id;
+  const lou = { email: "lou@example.com", role: "ui-dev-owner" };
+  const approved = (title, extra = {}) => {
+    const { card } = s.createRequest(alice, { title, problem: "Why.", ...extra });
+    s.upsertCard({ id: card.id, triage: { verdict: "design" }, status: "feedback", variants: [{ id: "v1", name: "A", asset: a }] });
+    s.act(card.id, alice, "approve", "v1");
+    return extra.from ? s.card(card.id) : s.upsertCard({ id: card.id, status: "handed-off" }).card;
+  };
+  const pr = (n, fields = {}) => s.upsertCard({ kind: "change", title: `PR ${n}`, source: { repo: "acme/widgets", pr: n, url: `https://github.com/acme/widgets/pull/${n}` }, ...fields }).card;
+  const r1 = approved("Spend column"), r2 = approved("Limits");
+  const ch = pr(50, { may_build: [{ request: r1.id, reason: "It changes the agents table, which the design changes." }] });
+  assert.equal(s.getCard(ch.id).builds, null, "a suggestion builds nothing");
+  assert.deepEqual(s.getCard(ch.id).may_build, [{ request: r1.id, reason: "It changes the agents table, which the design changes." }]);
+  assert.deepEqual([s.getCard(r1.id).build_prs, s.getCard(r1.id).building], [[], false]);
+  assert.throws(() => s.upsertCard({ id: ch.id, design_check: { request: r1.id, verdict: "matches" } }), /only suggested/, "no comparison with a suggestion");
+  const draft = s.createRequest(alice, { title: "Not yet", problem: "Why." }).card;
+  assert.throws(() => s.upsertCard({ id: ch.id, may_build: [{ request: draft.id, reason: "Same table." }] }), /not an approved request/);
+  assert.throws(() => s.upsertCard({ id: ch.id, may_build: [1, 2, 3, 4].map(() => ({ request: r1.id, reason: "x" })) }), /at most 3/);
+
+  // Link: whoever marks a change For Developers handled; it queues the comparison.
+  assert.throws(() => s.linkBuild(ch.id, bob, r1.id), /Only designers, admins and UI dev owners/);
+  const { inbox: it } = s.linkBuild(ch.id, lou, r1.id);
+  assert.deepEqual([it.kind, it.request, inbox(s).open.find((x) => x.id === it.id).request], ["design-check", r1.id, r1.id]);
+  const linked = s.getCard(ch.id);
+  assert.deepEqual([linked.builds.card, linked.builds.how, linked.build_link.request, linked.build_link.by.email, linked.may_build], [r1.id, "confirmed", r1.id, lou.email, []]);
+  assert.throws(() => s.linkBuild(ch.id, lou, r1.id), /already builds/);
+  assert.throws(() => s.upsertCard({ id: ch.id, may_build: [{ request: r1.id, reason: "x" }] }), /already builds/, "no suggestion of what it builds");
+  const line = { card: ch.id, title: "PR 50", pr: 50, repo: "acme/widgets", url: "https://github.com/acme/widgets/pull/50", state: "open", how: "confirmed", verdict: null, differences: 0 };
+  assert.deepEqual(s.getCard(r1.id).build_prs, [line], "the request lists the change that builds it");
+  assert.deepEqual([s.getCard(r1.id).building, s.listCards({ kind: "request" }).find((x) => x.id === r1.id).building], [true, true], "sent, not built, an open ready pull request: Build");
+  s.upsertCard({ id: ch.id, design_check: { request: r1.id, verdict: "differs", differences: [{ element: "Bar", what: "Grey.", design: pic, shipped: pic }, { element: "Label", what: "Bold.", design: pic, shipped: pic }] } });
+  assert.deepEqual(s.getCard(r1.id).build_prs[0], { ...line, verdict: "differs", differences: 2 });
+  s.upsertCard({ id: ch.id, source: { ...ch.source, draft: true } });
+  assert.deepEqual([s.getCard(r1.id).build_prs[0].state, s.getCard(r1.id).building], ["draft", false], "a pull request back to draft is no Build");
+  s.upsertCard({ id: ch.id, source: { ...ch.source, draft: false, merged_at: "2026-11-02T10:00:00Z" } });
+  assert.deepEqual([s.getCard(r1.id).build_prs[0].state, Boolean(s.getCard(r1.id).built), s.getCard(r1.id).building], ["merged", true, false], "a confirmed link merged marks the design built");
+
+  // Not this one: the suggestion, the comparison and the link go, and stay refused.
+  const other = pr(51, { may_build: [{ request: r2.id, reason: "Same dialog." }] });
+  s.linkBuild(other.id, alice, r2.id, false);
+  assert.deepEqual([s.getCard(other.id).may_build, s.getCard(other.id).not_builds.map((x) => [x.request, x.by.email])], [[], [[r2.id, alice.email]]]);
+  assert.throws(() => s.upsertCard({ id: other.id, may_build: [{ request: r2.id, reason: "Same dialog." }] }), /does not build/, "not suggested again");
+  assert.throws(() => s.upsertCard({ id: other.id, design_check: { request: r2.id, verdict: "matches" } }), /does not build/, "nor compared");
+  assert.equal(s.getCard(other.id).builds, null);
+  s.linkBuild(other.id, lou, r2.id);
+  assert.equal(s.getCard(other.id).builds.how, "confirmed", "a person's Link takes it back");
+  s.upsertCard({ id: other.id, design_check: { request: r2.id, verdict: "matches" } });
+  s.linkBuild(other.id, lou, r2.id, false);
+  assert.deepEqual([s.getCard(other.id).builds, s.getCard(other.id).design_check, s.getCard(other.id).build_link], [null, null, undefined], "Not this one on a link drops it and its comparison");
+
+  // Explicit: the agent's comparison (a design-desk branch, R-<n> named), the spec's pull request, the change a request was filed from.
+  const third = pr(52, { design_check: { request: r2.id, verdict: "matches" } });
+  assert.equal(s.getCard(third.id).builds.how, "explicit");
+  assert.deepEqual(s.getCard(r2.id).build_prs.map((x) => [x.card, x.how, x.verdict]), [[third.id, "explicit", "matches"]]);
+  const r3 = s.upsertCard({ id: approved("Tidy").id, spec: { pr_url: "https://github.com/acme/widgets/pull/53" } }).card;
+  const fourth = pr(53);
+  assert.throws(() => s.linkBuild(fourth.id, alice, r3.id, false), /its spec went there/);
+  assert.throws(() => s.linkBuild(fourth.id, alice, r2.id), /builds R-/);
+  const fifth = pr(54);
+  const r4 = approved("Calmer", { from: fifth.id });
+  assert.deepEqual([s.getCard(fifth.id).builds.card, s.getCard(fifth.id).builds.how], [r4.id, "explicit"]);
 });
 
 test("Draw it: a designer or a PM queues a drawing of an issue, once", () => {

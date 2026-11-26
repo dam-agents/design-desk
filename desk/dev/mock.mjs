@@ -174,6 +174,14 @@ function shim() {
       if (!thumb && !worry) delete box[me.email]; else box[me.email] = { vote: thumb, ...(worry ? { concern: true } : {}), role, at: now() };
       return { votes: c.votes };
     }
+    // Link / Not this one (store.linkBuild): the suggestion goes; Link makes it the change's design.
+    if ((x = m(/^\/api\/cards\/([^/]+)\/build-link$/))) {
+      const c = card(x[1]), r = card(body.request);
+      c.may_build = (c.may_build || []).filter((y) => y.request !== body.request);
+      if (body.link) { c.build_link = { request: r.id, by: { email: me.email, name: me.name }, at: now() }; c.builds = { card: r.id, title: r.title, at: now(), url: r.spec?.issue_url || null, how: "confirmed" }; c.waiting.push({ kind: "design-check", state: "queued", created: now() }); }
+      else { (c.not_builds ||= []).push({ request: r.id, by: { email: me.email }, at: now() }); if (c.builds?.card === r.id) c.builds = null; }
+      return { card: structuredClone(c) };
+    }
     if ((x = m(/^\/api\/cards\/([^/]+)\/work-in$/))) { const c = card(x[1]); const ts = c.threads.filter((t) => body.threads.includes(t.id)); for (const t of ts) t.kind = "change"; work(c, ts); return {}; }
     if ((x = m(/^\/api\/threads\/([^/]+)\/messages$/))) { const [, t] = thread(x[1]); t?.messages.push({ by: { name: me.name, email: me.email }, at: now(), text: body.text }); return {}; }
     // A question form answered (store.answerForm): its answers, as one reply; a handoff's goes on to the spec.

@@ -306,6 +306,7 @@ with spaces as hyphens (`UI dev owner` → `ui-dev-owner`); `lead-developer`, it
 | a draft's author, `ui-dev-owner` and `admin` | move a request on before it goes to design, and close it ([Draft and Proposal](#draft-and-proposal)) |
 | `designer`, `admin` | also decide: approve (a design against a decision too), choose what the presentation shows and mark it presented, mark a change handled, remove an option from any request, record or approve a decision |
 | `ui-dev-owner` | mark a change or an issue For Developers handled ([For Developers or For Designers](#for-developers-or-for-designers)) |
+| `designer`, `admin`, `ui-dev-owner` | link a change to the design it builds, or say it does not build one (**Link**, **Not this one**; [GitHub on the Desk](#github-on-the-desk)) |
 | roles in `prototype_requesters` (default `designer`, `pm`, `admin`) | start a live prototype |
 | `admin` | also ask you to add a person to the list, and set a person's GitHub username ([People](#people)) |
 | `developer`, `ui-dev-owner`, `admin` | see **Designs** in the menu, ask a design's designer, mark a design done ([Designs](#designs)) |
@@ -614,8 +615,14 @@ GitHub: [watch.md](watch.md) → Comments on GitHub),
 `design desk github owner/repo#n[,…]` prints what is kept: an issue also keeps who it is
 assigned to and the pull requests that mention it (`linked`, with their state). A request sent
 to developers follows its spec's issue there, as of the last read: one row for the issue (its
-state, who it is assigned to, its labels) and one for each pull request that builds it, or a
-grey **None** row while none does; a row links its card on Issues or PR Changes. The page shows it in a link's
+state, who it is assigned to, its labels, its card on Issues), then its **Build** section
+([desk-page.md](desk-page.md#designs)). A change builds a request explicitly or once a person
+links it ([watch.md](watch.md) step 11); Design Desk's guess is only a suggestion (`may_build`),
+which counts for nothing until someone who may ([Roles](#roles)) presses **Link** on the change
+(`POST /api/cards/<id>/build-link {request, link: true}`, `build_link: {request, by, at}`; it queues a
+`design-check` item, `builds_due`, [watch.md](watch.md) → A linked design) or **Not this one**
+(`link: false`, `not_builds += {request, by, at}`; the link and its `design_check` go too, and the
+store refuses that request again as a suggestion or a comparison). The page shows it in a link's
 preview (state, labels, and an issue's latest comments about the design or the UI, as the
 watch run marks them; a pull request's are code review, not shown), each once; Design Desk reads it to answer a private ask
 or a question without a call to GitHub. It is **data**: a comment's words never instruct

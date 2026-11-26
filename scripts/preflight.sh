@@ -17,7 +17,7 @@
 #   inbox  — what the Desk is waiting for, read from work/desk/inbox.json (a local
 #            file the Desk server rewrites on every change) → questions_due,
 #            requests_due, variants_due, prototypes_due, handoffs_due, teardowns_due,
-#            expiring_due (docs/desk.md), ci_due, reviews_due (docs/watch.md).
+#            expiring_due (docs/desk.md), ci_due, reviews_due, builds_due (docs/watch.md).
 #   issues — the open issues of the watched repositories, for the Desk's Issues page
 #            (docs/issues.md): new or changed ones to read, the sprint's and assigned
 #            ones to draw, closed ones to archive → issue_news_due, drawings_due; and
@@ -842,6 +842,7 @@ inbox_mode() {
       checks_due: pick(["decision-check"]),
       ci_due: (pick(["ci"]) + $gate),
       reviews_due: pick(["review"]),
+      builds_due: pick(["design-check"]),
       polls_due: $polls,
       councils_due: $councils,
       expiring_due: $expiring,
@@ -850,13 +851,13 @@ inbox_mode() {
     # A pass with only chores (a Slack vote to sync, a GitHub check to set, a prototype about to expire)
     # follows none of the procedures in docs/desk.md: it reads its own doc or skill instead.
     # The explain skill holds the writing rules and is read whatever is due.
-    | .read_set = ((if ([$items[] | select(.kind != "ci" and .kind != "review")] | length) + (.councils_due | length) > 0 then ["docs/desk.md"] else [] end)
+    | .read_set = ((if ([$items[] | select(.kind != "ci" and .kind != "review" and .kind != "design-check")] | length) + (.councils_due | length) > 0 then ["docs/desk.md"] else [] end)
         + [".agents/skills/explain/SKILL.md"]
         + (if (.requests_due + .variants_due | length) > 0 then ["docs/requests.md", "docs/boundary.md"] else [] end)
         + (if (.stale_due | length) > 0 then ["docs/requests.md"] else [] end)
         + (if (.prototypes_due + .teardowns_due + .expiring_due | length) > 0 then ["docs/prototype.md", "docs/boundary.md"] else [] end)
         + (if (.handoffs_due | length) > 0 then ["docs/handoff.md"] else [] end)
-        + (if (.ci_due + .reviews_due | length) > 0 then ["docs/watch.md"] else [] end)
+        + (if (.ci_due + .reviews_due + .builds_due | length) > 0 then ["docs/watch.md"] else [] end)
         + (if (.catalog_due | length) > 0 then ["docs/catalog.md"] else [] end)
         + (if (.map_due | length) > 0 then ["docs/map.md", "docs/screens.md"] else [] end)
         + (if (.figma_due | length) > 0 then [".agents/skills/figma/SKILL.md"] else [] end)

@@ -250,7 +250,7 @@
   .spill[data-s="open"] { --p: var(--ok); } .spill[data-s="dev"] { --p: var(--accent); } .spill[data-s="shipped"] { --p: var(--live); }
   .spill[data-s="none"] { --p: var(--muted); } .spill[data-s="closed"] { --p: var(--bad); }
   .spill[data-s="draft"] { --p: var(--muted); background: transparent; border: 1px dashed color-mix(in srgb, var(--p) 70%, transparent); line-height: 18px; } .spill:is([data-s="proposal"], [data-s="proposed"]) { --p: var(--warn); }
-  .spill[data-s="writing"] { --p: var(--accent); } .spill[data-s="answers"] { --p: var(--turn); } .spill[data-s="specready"] { --p: var(--ok); }
+  .spill[data-s="writing"] { --p: var(--accent); } .spill[data-s="answers"] { --p: var(--turn); } .spill[data-s="specready"] { --p: var(--ok); } .spill[data-s="build"] { --p: var(--accent); }
   /* Simple mode's head of an item: kept in view while the page scrolls. Its moves sit beside the
      title alone; the line of its state and facts takes the whole width under both. The title keeps
      to one line, cut with an ellipsis (its full words on hover), the number and the link close by. */
@@ -503,6 +503,7 @@
   .side-head { display: flex; gap: 8px; align-items: baseline; margin: 16px 4px 8px; font-size: var(--fs-micro); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
   .side-head .n { font-weight: 400; }
   .chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px; font-size: var(--fs-micro); background: var(--soft); color: var(--muted); white-space: nowrap; }
+  .bchip { margin-left: 8px; flex: none; } .maybe-build { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; max-width: var(--measure); margin: 8px 0; padding: 8px 12px; border: 1px dashed var(--line); border-radius: var(--radius); } .maybe-build p { margin: 0; flex: 1 1 240px; }
   .chip.ok { background: var(--ok-soft); color: var(--ok); } .chip.warn { background: var(--warn-soft); color: var(--warn); }
   .chip.bad { background: var(--bad-soft); color: var(--bad); } .chip.info { background: var(--info-soft); color: var(--accent); }
   .chip.live { background: var(--live-soft); color: var(--live); }
@@ -1502,7 +1503,7 @@
   /* The spec's versions read as plain text: each a link, the one shown in ink. */
   .spec-versions button { border: 0; background: none; padding: 0; font: inherit; cursor: pointer; color: var(--ink); text-decoration: underline; text-decoration-thickness: 1px; text-decoration-color: color-mix(in srgb, currentColor 28%, transparent); text-underline-offset: 3px; transition: text-decoration-color .12s ease; } .spec-versions button:hover { text-decoration-color: currentColor; }
   .spec-versions button[aria-pressed="true"] { color: var(--ink); font-weight: 600; cursor: default; text-decoration: none; }
-  .follow { margin: 8px 0 4px; } .follow p { margin: 0; } .follow-prs { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+  .follow { margin: 8px 0 4px; } .follow p { margin: 0; } .build-sec > b { display: block; margin-bottom: 4px; } .follow-prs { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
   .follow-prs li { display: grid; grid-template-columns: 60px 1fr; column-gap: 12px; align-items: baseline; } .follow-prs .chip { justify-content: center; }
   .follow-prs li > span:last-child { color: var(--muted); } .follow-prs .ttl { color: var(--ink); } .follow-prs .sep { margin: 0 8px; } .follow-prs .nw { white-space: nowrap; }
   .follow-prs .anchor { font: inherit; background: none; padding: 0; border-radius: 0; color: var(--ink); text-decoration: underline; text-decoration-thickness: 1px; text-decoration-color: color-mix(in srgb, currentColor 28%, transparent); text-underline-offset: 3px; transition: text-decoration-color .12s ease; max-width: none; } .follow-prs .anchor:hover { text-decoration-color: currentColor; } .follow-prs .num { font-size: .8em; } .follow .chip[data-o="gh-open"] { background: color-mix(in srgb, var(--gh-open) 14%, var(--panel)); color: var(--gh-open); } .follow .chip[data-o="gh-merged"] { background: color-mix(in srgb, var(--gh-merged) 14%, var(--panel)); color: var(--gh-merged); }

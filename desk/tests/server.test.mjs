@@ -735,6 +735,28 @@ test("reviews: a guest sends Comment only; asking changes of a request takes the
   assert.deepEqual([(read.card || read).status, (read.card || read).reviews.length], ["handled", 1]);
 });
 
+// docs/desk.md → GitHub on the Desk: Link and Not this one, by whoever marks a change For Developers handled.
+test("build-link: a designer or a UI dev owner links a change to an approved design or turns it down; a developer does not", async (t) => {
+  const d = await desk(t);
+  const { body: { card } } = await d.viewer("alice@example.com", "/api/requests", { problem: "People miss the spend." });
+  const { body: { asset } } = await d.agent("/agent/assets", { kind: "variant", name: "v1", contentType: "text/html", data: "<p>Spend</p>", encoding: "utf8" });
+  assert.equal((await d.agent("/agent/cards", { id: card.id, status: "feedback", triage: { verdict: "design", reasons: [] }, variants: [{ id: "v1", name: "Column", asset: asset.id }] })).status, 200);
+  assert.equal((await d.viewer("alice@example.com", `/api/cards/${card.id}/actions`, { action: "approve", variant: "v1" })).status, 200);
+  const up = await d.agent("/agent/cards", { kind: "change", title: "Spend", source: { repo: "acme/widgets", pr: 7 }, may_build: [{ request: card.id, reason: "It changes the agents table." }] });
+  assert.equal(up.status, 200, JSON.stringify(up.body));
+  const chg = up.body.card.id, link = (email, on) => d.viewer(email, `/api/cards/${chg}/build-link`, { request: card.id, link: on });
+  for (const email of ["bob@example.com", "pat@example.com", "guest@example.com"]) assert.equal((await link(email, true)).status, 403, email);
+  const lou = await link("lou@example.com", true);
+  assert.equal(lou.status, 200, JSON.stringify(lou.body));
+  assert.deepEqual([lou.body.card.build_link.request, lou.body.inbox.kind, lou.body.inbox.request], [card.id, "design-check", card.id]);
+  const read = (await d.viewer("alice@example.com", `/api/cards/${chg}`)).body.card;
+  assert.deepEqual([read.builds.card, read.builds.how, read.may_build], [card.id, "confirmed", []]);
+  const no = await link("alice@example.com", false);
+  assert.equal(no.status, 200, JSON.stringify(no.body));
+  assert.deepEqual([no.body.card.build_link, no.body.card.not_builds.map((x) => x.request)], [undefined, [card.id]]);
+  assert.equal((await d.viewer("alice@example.com", `/api/cards/${chg}/build-link`, { request: "R-99", link: true })).status, 400);
+});
+
 test("reviews: a pull request's review is queued for GitHub only with review_post enabled", async (t) => {
   for (const [config, kind] of [["", null], ["- review_post: enabled\n", "review"]]) {
     const d = await desk(t, config);
