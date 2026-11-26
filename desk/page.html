@@ -4961,7 +4961,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       <div class="sub"><span>${esc(day(d.at))}</span>${(d.concepts || []).length ? `<span title="What it is about">${esc(d.concepts.join(", "))}</span>` : ""}</div>
       ${ghStatus(d.status === "revoked" ? "closed" : d.unapproved ? "waiting" : "approved", st[1], st[2], meta,
         // Approve: a designer, an admin or a UI dev owner; Revoke… and Restore stay a designer's or an admin's.
-        d.status === "active" ? `${d.unapproved && can("approve-decision") ? `<button class="btn primary" data-approve-decision="${esc(d.id)}">Approve</button>` : ""}${can("decide") ? `<button class="btn" data-revoke="${esc(d.id)}">Revoke…</button>` : ""}` : can("decide") ? `<button class="btn" data-restore="${esc(d.id)}">Restore</button>` : "", "", { inline: true })}
+        d.status === "active" ? `${d.unapproved && can("approve-decision") && !isMe(d.author?.email) ? `<button class="btn primary" data-approve-decision="${esc(d.id)}">Approve</button>` : ""}${can("decide") ? `<button class="btn" data-revoke="${esc(d.id)}">Revoke…</button>` : ""}` : can("decide") ? `<button class="btn" data-restore="${esc(d.id)}">Restore</button>` : "", "", { inline: true })}
       ${rv ? `<div class="against"><p><b>Revoked</b> by ${named(rv.by)} · ${esc(day(rv.at))}</p><p>${txt(rv.reason)}</p>${rv.replaced_by ? `<p>Replaced by ${decRef(rv.replaced_by)}</p>` : ""}${rv.origin ? originLine(rv.origin) : ""}</div>` : ""}
       ${against.map((x) => `<div class="against"><p>⚠ <b>Goes against ${decRef(x.decision)}</b>: ${txt(x.text)}</p><p class="hint">${txt(x.why)}</p></div>`).join("")}
       ${d.why ? `<h3>Why</h3>${md(d.why)}` : ""}

@@ -1795,6 +1795,11 @@ test("a UI dev owner approves a decision in its status box, and neither revokes 
   await desk.waitForFunction(() => /approved by:/.test(document.querySelector("#detail .status")?.textContent || ""));
   assert.match(await desk.textContent("#detail .status"), /approved by:\s*Lou/);
   assert.equal(await desk.locator("#detail [data-approve-decision], #detail [data-revoke]").count(), 0, "approved: nothing to approve, and revoking is a designer's");
+  // Their own decision waits for someone else: no Approve for its author.
+  await desk.evaluate(() => { decisions.push({ id: "D-9", text: "Rows stay dense", status: "active", side: "developer", unapproved: true, at: "2026-10-04T00:00:00Z", concepts: ["rows"], author: { email: "LOU@example.com", role: "ui-dev-owner" }, origin: { kind: "desk", label: "Added on the Desk" } }); });
+  await desk.goto(`${base}#D-9`);
+  await desk.waitForFunction(() => /Rows stay dense/.test(document.querySelector("#detail")?.textContent || ""));
+  assert.equal(await desk.locator("#detail [data-approve-decision]").count(), 0, "its author does not approve it");
 }));
 
 // An option that names the decisions it rests on, one of them revoked.

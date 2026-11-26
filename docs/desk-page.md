@@ -675,7 +675,7 @@ after its PR or issue as a pill that opens it on GitHub, in the list's style: `h
 says what its dot says (Up to date, Out of date, Being drawn, Not drawn) and holds their buttons
 (**Update the drawing**, **Draw how it looked before**, the presentation's); a decision's says In
 force, Not approved or Revoked, `approved by:` who approved it, and holds **Approve** (when not approved; a designer, an admin or a UI
-dev owner), **Revoke…** or **Restore** (a designer or an admin). A week's page has no state: its chip says
+dev owner, never its author), **Revoke…** or **Restore** (a designer or an admin). A week's page has no state: its chip says
 Weekly digest. Needs a designer carries a
 small AI tag: Design Desk judges what goes in it, the buttons (**Mark
 handled**, **Adjust the design**; **Design this**) and ⋯ for the presentation. **Draw it** sits
